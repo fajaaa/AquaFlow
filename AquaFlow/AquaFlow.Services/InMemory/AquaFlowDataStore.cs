@@ -6,6 +6,32 @@ public static class AquaFlowDataStore
 {
     private static readonly DateTime SeedTime = DateTime.UtcNow;
 
+    static AquaFlowDataStore()
+    {
+        foreach (var user in Users)
+        {
+            if (user.UserRole != null && !user.UserRole.Users.Contains(user))
+            {
+                user.UserRole.Users.Add(user);
+            }
+        }
+
+        foreach (var userRolePermission in UserRolePermissions)
+        {
+            if (userRolePermission.UserRole != null &&
+                !userRolePermission.UserRole.UserRolePermissions.Contains(userRolePermission))
+            {
+                userRolePermission.UserRole.UserRolePermissions.Add(userRolePermission);
+            }
+
+            if (userRolePermission.Permission != null &&
+                !userRolePermission.Permission.UserRolePermissions.Contains(userRolePermission))
+            {
+                userRolePermission.Permission.UserRolePermissions.Add(userRolePermission);
+            }
+        }
+    }
+
     public static IList<UserRole> UserRoles { get; } = new List<UserRole>
     {
         new()
@@ -30,6 +56,183 @@ public static class AquaFlowDataStore
             Name = "Customer",
             Description = "Customer portal user.",
             IsActive = true,
+            CreatedAt = SeedTime.AddDays(-30)
+        }
+    };
+
+    public static IList<Permission> Permissions { get; } = new List<Permission>
+    {
+        new()
+        {
+            Id = 1,
+            Code = "Users.Read",
+            Name = "View users",
+            Module = "Users",
+            Description = "Allows reading user accounts.",
+            IsActive = true,
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 2,
+            Code = "Users.Manage",
+            Name = "Manage users",
+            Module = "Users",
+            Description = "Allows creating, updating, and deleting user accounts.",
+            IsActive = true,
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 3,
+            Code = "MeterReadings.Manage",
+            Name = "Manage meter readings",
+            Module = "MeterReadings",
+            Description = "Allows collectors to create and update meter readings.",
+            IsActive = true,
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 4,
+            Code = "Invoices.Read",
+            Name = "View invoices",
+            Module = "Invoices",
+            Description = "Allows reading invoices.",
+            IsActive = true,
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 5,
+            Code = "Payments.Read",
+            Name = "View payments",
+            Module = "Payments",
+            Description = "Allows reading payment records.",
+            IsActive = true,
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 6,
+            Code = "FaultReports.Manage",
+            Name = "Manage fault reports",
+            Module = "FaultReports",
+            Description = "Allows managing fault reports and related work.",
+            IsActive = true,
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 7,
+            Code = "Notifications.Manage",
+            Name = "Manage notifications",
+            Module = "Notifications",
+            Description = "Allows publishing and updating notifications.",
+            IsActive = true,
+            CreatedAt = SeedTime.AddDays(-30)
+        }
+    };
+
+    public static IList<UserRolePermission> UserRolePermissions { get; } = new List<UserRolePermission>
+    {
+        new()
+        {
+            Id = 1,
+            UserRoleId = 1,
+            UserRole = UserRoles[0],
+            PermissionId = 1,
+            Permission = Permissions[0],
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 2,
+            UserRoleId = 1,
+            UserRole = UserRoles[0],
+            PermissionId = 2,
+            Permission = Permissions[1],
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 3,
+            UserRoleId = 1,
+            UserRole = UserRoles[0],
+            PermissionId = 3,
+            Permission = Permissions[2],
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 4,
+            UserRoleId = 1,
+            UserRole = UserRoles[0],
+            PermissionId = 4,
+            Permission = Permissions[3],
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 5,
+            UserRoleId = 1,
+            UserRole = UserRoles[0],
+            PermissionId = 5,
+            Permission = Permissions[4],
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 6,
+            UserRoleId = 1,
+            UserRole = UserRoles[0],
+            PermissionId = 6,
+            Permission = Permissions[5],
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 7,
+            UserRoleId = 1,
+            UserRole = UserRoles[0],
+            PermissionId = 7,
+            Permission = Permissions[6],
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 8,
+            UserRoleId = 2,
+            UserRole = UserRoles[1],
+            PermissionId = 3,
+            Permission = Permissions[2],
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 9,
+            UserRoleId = 2,
+            UserRole = UserRoles[1],
+            PermissionId = 6,
+            Permission = Permissions[5],
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 10,
+            UserRoleId = 3,
+            UserRole = UserRoles[2],
+            PermissionId = 4,
+            Permission = Permissions[3],
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 11,
+            UserRoleId = 3,
+            UserRole = UserRoles[2],
+            PermissionId = 5,
+            Permission = Permissions[4],
             CreatedAt = SeedTime.AddDays(-30)
         }
     };

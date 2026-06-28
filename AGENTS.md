@@ -31,6 +31,8 @@ Local URLs:
 - `http://localhost:5161/scalar/v1` - Scalar API reference UI.
 - `http://localhost:5161/Users` - sample AquaFlow endpoint.
 - `http://localhost:5161/UserRoles` - user role lookup/CRUD endpoint.
+- `http://localhost:5161/Permissions` - permission lookup/CRUD endpoint.
+- `http://localhost:5161/UserRolePermissions` - role-permission assignment endpoint.
 - `http://localhost:5161/WaterMeters` - sample AquaFlow endpoint.
 
 ## Current Foundation
@@ -40,6 +42,7 @@ Local URLs:
 - Persistence is currently in-memory through `AquaFlow.Services/InMemory/AquaFlowDataStore.cs`.
 - Entity classes are in `AquaFlow.Services/Database`.
 - Users are linked to roles through `UserRoleId` and the `UserRole` entity; do not reintroduce a free-form `User.Role` string.
+- Role permissions are modeled through `Permission` and `UserRolePermission`; do not store permissions as comma-separated strings.
 - No real `DbContext`, migrations, authentication, authorization, or SQL persistence has been implemented yet unless added in a later iteration.
 - Removed template artifacts should stay removed: `Class1`, `WeatherForecast`, `WeatherForecastController`, and the default `/weatherforecast` sample.
 
@@ -82,7 +85,7 @@ When adding a new AquaFlow resource, follow this checklist:
 
 The domain is based on AquaFlow water utility models:
 
-- users, user roles, customer profiles, collector profiles
+- users, user roles, permissions, customer profiles, collector profiles
 - settlements, service locations, water meters
 - meter readings, tariffs, invoices, invoice items, payments
 - fault reports, notifications, user notifications
@@ -109,6 +112,8 @@ Then check:
 
 - `http://localhost:5169/Users?IncludeTotalCount=true`
 - `http://localhost:5169/UserRoles?IncludeTotalCount=true`
+- `http://localhost:5169/Permissions?IncludeTotalCount=true`
+- `http://localhost:5169/UserRolePermissions?IncludeTotalCount=true&UserRoleId=1`
 - `http://localhost:5169/Users?IncludeTotalCount=true&UserRole=Admin`
 - `http://localhost:5169/WaterMeters?IncludeTotalCount=true`
 - `http://localhost:5169/scalar/v1`

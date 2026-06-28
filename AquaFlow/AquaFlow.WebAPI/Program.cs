@@ -19,11 +19,17 @@ builder.Services.AddOpenApi();
 var mapperConfig = TypeAdapterConfig.GlobalSettings;
 mapperConfig.NewConfig<User, UserResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name);
+mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
+    .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
+    .Map(destination => destination.PermissionCode, source => source.Permission == null ? string.Empty : source.Permission.Code)
+    .Map(destination => destination.PermissionName, source => source.Permission == null ? string.Empty : source.Permission.Name);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
 builder.Services.AddScoped<IBaseCRUDService<UserResponse, UserSearchObject, UserInsertRequest, UserUpdateRequest>, UserService>();
 AddCrud<UserRole, UserRoleResponse, UserRoleSearchObject, UserRoleInsertRequest, UserRoleUpdateRequest>(AquaFlowDataStore.UserRoles);
+builder.Services.AddScoped<IBaseCRUDService<PermissionResponse, PermissionSearchObject, PermissionInsertRequest, PermissionUpdateRequest>, PermissionService>();
+builder.Services.AddScoped<IBaseCRUDService<UserRolePermissionResponse, UserRolePermissionSearchObject, UserRolePermissionInsertRequest, UserRolePermissionUpdateRequest>, UserRolePermissionService>();
 AddCrud<CustomerProfile, CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest>(AquaFlowDataStore.CustomerProfiles);
 AddCrud<CollectorProfile, CollectorProfileResponse, CollectorProfileSearchObject, CollectorProfileInsertRequest, CollectorProfileUpdateRequest>(AquaFlowDataStore.CollectorProfiles);
 AddCrud<Settlement, SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest>(AquaFlowDataStore.Settlements);
@@ -44,6 +50,10 @@ builder.Services.AddScoped<IValidator<UserInsertRequest>, UserInsertValidator>()
 builder.Services.AddScoped<IValidator<UserUpdateRequest>, UserUpdateValidator>();
 builder.Services.AddScoped<IValidator<UserRoleInsertRequest>, UserRoleInsertValidator>();
 builder.Services.AddScoped<IValidator<UserRoleUpdateRequest>, UserRoleUpdateValidator>();
+builder.Services.AddScoped<IValidator<PermissionInsertRequest>, PermissionInsertValidator>();
+builder.Services.AddScoped<IValidator<PermissionUpdateRequest>, PermissionUpdateValidator>();
+builder.Services.AddScoped<IValidator<UserRolePermissionInsertRequest>, UserRolePermissionInsertValidator>();
+builder.Services.AddScoped<IValidator<UserRolePermissionUpdateRequest>, UserRolePermissionUpdateValidator>();
 builder.Services.AddScoped<IValidator<CustomerProfileInsertRequest>, CustomerProfileInsertValidator>();
 builder.Services.AddScoped<IValidator<CustomerProfileUpdateRequest>, CustomerProfileUpdateValidator>();
 builder.Services.AddScoped<IValidator<CollectorProfileInsertRequest>, CollectorProfileInsertValidator>();
