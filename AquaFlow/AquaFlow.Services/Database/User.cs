@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AquaFlow.Services.Database;
 
@@ -15,9 +14,8 @@ public class User : EntityBase
     [MaxLength(30)]
     public string Phone { get; set; } = string.Empty;
 
-    [Required]
-    [MaxLength(30)]
-    public string Role { get; set; } = string.Empty;
+    public int UserRoleId { get; set; }
+    public UserRole? UserRole { get; set; }
 
     public bool IsActive { get; set; } = true;
     public CustomerProfile? CustomerProfile { get; set; }

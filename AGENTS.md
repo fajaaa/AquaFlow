@@ -30,6 +30,7 @@ Local URLs:
 - `http://localhost:5161` - redirects to the API reference in development.
 - `http://localhost:5161/scalar/v1` - Scalar API reference UI.
 - `http://localhost:5161/Users` - sample AquaFlow endpoint.
+- `http://localhost:5161/UserRoles` - user role lookup/CRUD endpoint.
 - `http://localhost:5161/WaterMeters` - sample AquaFlow endpoint.
 
 ## Current Foundation
@@ -38,6 +39,7 @@ Local URLs:
 - The API currently uses generic read/CRUD infrastructure modeled after the RS2 eCommerce V1 example.
 - Persistence is currently in-memory through `AquaFlow.Services/InMemory/AquaFlowDataStore.cs`.
 - Entity classes are in `AquaFlow.Services/Database`.
+- Users are linked to roles through `UserRoleId` and the `UserRole` entity; do not reintroduce a free-form `User.Role` string.
 - No real `DbContext`, migrations, authentication, authorization, or SQL persistence has been implemented yet unless added in a later iteration.
 - Removed template artifacts should stay removed: `Class1`, `WeatherForecast`, `WeatherForecastController`, and the default `/weatherforecast` sample.
 
@@ -49,6 +51,7 @@ Local URLs:
 - Avoid placing business logic directly inside controllers.
 - Use `BaseReadController` and `BaseCRUDController` for standard endpoints.
 - Use `BaseReadService`, `BaseCRUDService`, and `InMemoryCrudService` for current in-memory CRUD behavior.
+- Use a resource-specific service when generic CRUD needs extra relationship wiring, such as `UserService` resolving `UserRoleId` to `UserRole`.
 - Use `ExceptionFilter` for validation/client/server error responses.
 - Use FluentValidation validators in `AquaFlow.Services/Validators`.
 - Use Mapster for DTO/entity mapping.
@@ -79,7 +82,7 @@ When adding a new AquaFlow resource, follow this checklist:
 
 The domain is based on AquaFlow water utility models:
 
-- users, customer profiles, collector profiles
+- users, user roles, customer profiles, collector profiles
 - settlements, service locations, water meters
 - meter readings, tariffs, invoices, invoice items, payments
 - fault reports, notifications, user notifications
@@ -105,6 +108,8 @@ dotnet run --no-build --project .\AquaFlow\AquaFlow.WebAPI\AquaFlow.WebAPI.cspro
 Then check:
 
 - `http://localhost:5169/Users?IncludeTotalCount=true`
+- `http://localhost:5169/UserRoles?IncludeTotalCount=true`
+- `http://localhost:5169/Users?IncludeTotalCount=true&UserRole=Admin`
 - `http://localhost:5169/WaterMeters?IncludeTotalCount=true`
 - `http://localhost:5169/scalar/v1`
 

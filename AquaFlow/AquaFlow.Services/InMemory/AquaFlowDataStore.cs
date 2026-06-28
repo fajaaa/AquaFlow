@@ -6,6 +6,34 @@ public static class AquaFlowDataStore
 {
     private static readonly DateTime SeedTime = DateTime.UtcNow;
 
+    public static IList<UserRole> UserRoles { get; } = new List<UserRole>
+    {
+        new()
+        {
+            Id = 1,
+            Name = "Admin",
+            Description = "System administrator with full access.",
+            IsActive = true,
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 2,
+            Name = "Collector",
+            Description = "Field collector responsible for meter readings.",
+            IsActive = true,
+            CreatedAt = SeedTime.AddDays(-30)
+        },
+        new()
+        {
+            Id = 3,
+            Name = "Customer",
+            Description = "Customer portal user.",
+            IsActive = true,
+            CreatedAt = SeedTime.AddDays(-30)
+        }
+    };
+
     public static IList<User> Users { get; } = new List<User>
     {
         new()
@@ -14,7 +42,8 @@ public static class AquaFlowDataStore
             Email = "admin@aquaflow.ba",
             PasswordHash = "demo-admin-hash",
             Phone = "+38733111222",
-            Role = "Admin",
+            UserRoleId = 1,
+            UserRole = UserRoles[0],
             IsActive = true,
             CreatedAt = SeedTime.AddDays(-30)
         },
@@ -24,7 +53,8 @@ public static class AquaFlowDataStore
             Email = "collector@aquaflow.ba",
             PasswordHash = "demo-collector-hash",
             Phone = "+38761111222",
-            Role = "Collector",
+            UserRoleId = 2,
+            UserRole = UserRoles[1],
             IsActive = true,
             CreatedAt = SeedTime.AddDays(-20)
         },
@@ -34,7 +64,8 @@ public static class AquaFlowDataStore
             Email = "customer@aquaflow.ba",
             PasswordHash = "demo-customer-hash",
             Phone = "+38762111222",
-            Role = "Customer",
+            UserRoleId = 3,
+            UserRole = UserRoles[2],
             IsActive = true,
             CreatedAt = SeedTime.AddDays(-15)
         }

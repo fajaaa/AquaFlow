@@ -9,6 +9,7 @@ public class UserInsertValidator : AbstractValidator<UserInsertRequest>
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(150);
         RuleFor(x => x.PasswordHash).NotEmpty();
-        RuleFor(x => x.Role).NotEmpty().MaximumLength(30);
+        RuleFor(x => x.Phone).MaximumLength(30);
+        RuleFor(x => x.UserRoleId).GreaterThan(0);
     }
 }
