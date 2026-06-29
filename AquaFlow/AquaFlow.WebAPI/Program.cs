@@ -9,12 +9,19 @@ using AquaFlow.WebAPI.Filters;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
+using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers(options => options.Filters.Add<ExceptionFilter>());
 builder.Services.AddOpenApi();
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrWhiteSpace(connectionString))
+{
+    builder.Services.AddDbContext<AquaFlowDbContext>(options => options.UseSqlServer(connectionString));
+}
 
 var mapperConfig = TypeAdapterConfig.GlobalSettings;
 mapperConfig.NewConfig<User, UserResponse>()
