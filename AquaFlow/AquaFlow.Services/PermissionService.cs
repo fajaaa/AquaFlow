@@ -3,41 +3,42 @@ using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
-using AquaFlow.Services.InMemory;
 using FluentValidation;
 using MapsterMapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace AquaFlow.Services;
 
-public class PermissionService : InMemoryCrudService<Permission, PermissionResponse, PermissionSearchObject, PermissionInsertRequest, PermissionUpdateRequest>
+public class PermissionService : EfCrudService<Permission, PermissionResponse, PermissionSearchObject, PermissionInsertRequest, PermissionUpdateRequest>
 {
+    private readonly AquaFlowDbContext _dbContext;
+
     public PermissionService(
+        AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<PermissionInsertRequest>> insertValidators,
         IEnumerable<IValidator<PermissionUpdateRequest>> updateValidators)
-        : base(AquaFlowDataStore.Permissions, mapper, insertValidators, updateValidators)
+        : base(dbContext, mapper, insertValidators, updateValidators)
     {
+        _dbContext = dbContext;
     }
 
-    protected override Permission MapInsertRequestToEntity(PermissionInsertRequest request)
+    protected override Task BeforeInsertAsync(PermissionInsertRequest request)
     {
-        EnsureUniqueCode(request.Code);
-
-        return base.MapInsertRequestToEntity(request);
+        return EnsureUniqueCodeAsync(request.Code);
     }
 
-    protected override void MapUpdateRequestToEntity(PermissionUpdateRequest request, Permission entity)
+    protected override Task BeforeUpdateAsync(int id, PermissionUpdateRequest request, Permission entity)
     {
-        EnsureUniqueCode(request.Code, entity.Id);
-
-        base.MapUpdateRequestToEntity(request, entity);
+        return EnsureUniqueCodeAsync(request.Code, id);
     }
 
-    private static void EnsureUniqueCode(string code, int? excludedId = null)
+    private async Task EnsureUniqueCodeAsync(string code, int? excludedId = null)
     {
-        var alreadyExists = AquaFlowDataStore.Permissions.Any(permission =>
+        var normalizedCode = code.ToLowerInvariant();
+        var alreadyExists = await _dbContext.Permissions.AnyAsync(permission =>
             permission.Id != excludedId &&
-            string.Equals(permission.Code, code, StringComparison.OrdinalIgnoreCase));
+            permission.Code.ToLower() == normalizedCode);
 
         if (alreadyExists)
         {

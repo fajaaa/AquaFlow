@@ -62,7 +62,7 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
         return query;
     }
 
-    public Task<PageResult<TResponse>> GetAllAsync(TSearch? search = null)
+    public virtual Task<PageResult<TResponse>> GetAllAsync(TSearch? search = null)
     {
         var query = ApplyFilters(GetDataSource(), search).ToList();
 
@@ -88,7 +88,7 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
         return Task.FromResult(result);
     }
 
-    public Task<TResponse> GetByIdAsync(int id)
+    public virtual Task<TResponse> GetByIdAsync(int id)
     {
         var entity = GetDataSource().FirstOrDefault(item => item.Id == id);
         if (entity == null)
