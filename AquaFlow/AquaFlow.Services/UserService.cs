@@ -1,4 +1,5 @@
 using AquaFlow.Common.Services.CryptoService;
+using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -73,6 +74,7 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
     public override async Task<UserResponse> InsertAsync(UserInsertRequest request)
     {
         await ValidateInsertAsync(request);
+        await EnsureUniqueEmailAsync(request.Email);
 
         var entity = MapInsertRequestToEntity(request);
         entity.CreatedAt = DateTime.UtcNow;
@@ -90,6 +92,11 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
 
         var entity = await _dbContext.Users.Include(u => u.UserRole).FirstOrDefaultAsync(u => u.Id == id)
             ?? throw new KeyNotFoundException($"User with id {id} was not found.");
+
+        if (request.Email != null)
+        {
+            await EnsureUniqueEmailAsync(request.Email, id);
+        }
 
         Mapper.Map(request, entity);
         if (request.Password != null)
@@ -111,6 +118,8 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
 
         var entity = await _dbContext.Users.Include(u => u.UserRole).FirstOrDefaultAsync(u => u.Id == id)
             ?? throw new KeyNotFoundException($"User with id {id} was not found.");
+
+        await EnsureUniqueEmailAsync(request.Email, id);
 
         Mapper.Map(request, entity);
         SetPassword(entity, request.Password);
@@ -148,6 +157,17 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         await _dbContext.SaveChangesAsync();
     }
 
+    private async Task EnsureUniqueEmailAsync(string email, int? excludedId = null)
+    {
+        var alreadyExists = await _dbContext.Users.AnyAsync(u =>
+            u.Email == email && u.Id != excludedId);
+
+        if (alreadyExists)
+        {
+            throw new ClientException($"User with email '{email}' already exists.");
+        }
+    }
+
     private void SetPassword(User entity, string password)
     {
         var salt = _cryptoService.GenerateSalt();
@@ -157,8 +177,6 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
 
     private async Task ReloadUserRoleAsync(User entity)
     {
-        var reference = _dbContext.Entry(entity).Reference(u => u.UserRole);
-        reference.IsLoaded = false;
-        await reference.LoadAsync();
+        entity.UserRole = await _dbContext.UserRoles.FindAsync(entity.UserRoleId);
     }
 }
