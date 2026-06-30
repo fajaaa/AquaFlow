@@ -1,7 +1,10 @@
+using System.Linq.Expressions;
+using System.Reflection;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
 using MapsterMapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace AquaFlow.Services;
 
@@ -16,6 +19,9 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
         nameof(BaseSearchObject.IncludeTotalCount)
     };
 
+    private static readonly MethodInfo StringContainsMethod =
+        typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) })!;
+
     protected readonly IMapper Mapper;
 
     protected BaseReadService(IMapper mapper)
@@ -23,9 +29,9 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
         Mapper = mapper;
     }
 
-    protected abstract IEnumerable<TEntity> GetDataSource();
+    protected abstract IQueryable<TEntity> GetDataSource();
 
-    protected virtual IEnumerable<TEntity> ApplyFilters(IEnumerable<TEntity> query, TSearch? search)
+    protected virtual IQueryable<TEntity> ApplyFilters(IQueryable<TEntity> query, TSearch? search)
     {
         if (search == null)
         {
@@ -56,61 +62,88 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
                 continue;
             }
 
-            query = query.Where(entity => ValuesMatch(entityProperty.GetValue(entity), searchValue));
+            var predicate = BuildFilterPredicate(entityProperty, searchValue);
+            if (predicate != null)
+            {
+                query = query.Where(predicate);
+            }
         }
 
         return query;
     }
 
-    public virtual Task<PageResult<TResponse>> GetAllAsync(TSearch? search = null)
+    public virtual async Task<PageResult<TResponse>> GetAllAsync(TSearch? search = null)
     {
-        var query = ApplyFilters(GetDataSource(), search).ToList();
+        var query = ApplyFilters(GetDataSource(), search);
 
         int? totalCount = null;
         if (search?.IncludeTotalCount == true)
         {
-            totalCount = query.Count;
+            totalCount = await query.CountAsync();
         }
 
         var page = search?.Page ?? 1;
         var pageSize = search?.PageSize ?? 10;
         if (page > 0 && pageSize > 0)
         {
-            query = query.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            query = query.Skip((page - 1) * pageSize).Take(pageSize);
         }
 
-        var result = new PageResult<TResponse>
+        var entities = await query.ToListAsync();
+
+        return new PageResult<TResponse>
         {
-            Items = query.Select(item => Mapper.Map<TResponse>(item)).ToList(),
+            Items = entities.Select(entity => Mapper.Map<TResponse>(entity)).ToList(),
             TotalCount = totalCount
         };
-
-        return Task.FromResult(result);
     }
 
-    public virtual Task<TResponse> GetByIdAsync(int id)
+    public virtual async Task<TResponse> GetByIdAsync(int id)
     {
-        var entity = GetDataSource().FirstOrDefault(item => item.Id == id);
+        var entity = await GetDataSource().FirstOrDefaultAsync(item => item.Id == id);
         if (entity == null)
         {
             throw new KeyNotFoundException($"{typeof(TEntity).Name} with id {id} was not found.");
         }
 
-        return Task.FromResult(Mapper.Map<TResponse>(entity));
+        return Mapper.Map<TResponse>(entity);
     }
 
-    private static bool ValuesMatch(object? entityValue, object searchValue)
+    // Builds an EF-translatable predicate so filtering, paging and counting run in SQL
+    // instead of materializing the whole table and filtering in memory.
+    private static Expression<Func<TEntity, bool>>? BuildFilterPredicate(PropertyInfo entityProperty, object searchValue)
     {
-        if (entityValue == null)
+        var parameter = Expression.Parameter(typeof(TEntity), "entity");
+        var member = Expression.Property(parameter, entityProperty);
+
+        Expression body;
+        if (searchValue is string text)
         {
-            return false;
+            if (entityProperty.PropertyType != typeof(string))
+            {
+                return null;
+            }
+
+            body = Expression.Call(member, StringContainsMethod, Expression.Constant(text, typeof(string)));
+        }
+        else
+        {
+            Expression constant = Expression.Constant(searchValue);
+            if (constant.Type != member.Type)
+            {
+                var canConvert = member.Type.IsAssignableFrom(constant.Type) ||
+                    Nullable.GetUnderlyingType(member.Type) == constant.Type;
+                if (!canConvert)
+                {
+                    return null;
+                }
+
+                constant = Expression.Convert(constant, member.Type);
+            }
+
+            body = Expression.Equal(member, constant);
         }
 
-        if (searchValue is string searchText)
-        {
-            return entityValue.ToString()?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true;
-        }
-
-        return entityValue.Equals(searchValue);
+        return Expression.Lambda<Func<TEntity, bool>>(body, parameter);
     }
 }

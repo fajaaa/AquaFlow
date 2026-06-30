@@ -27,9 +27,9 @@ public class EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateR
 
     protected DbSet<TEntity> DbSet => _dbContext.Set<TEntity>();
 
-    protected override IEnumerable<TEntity> GetDataSource()
+    protected override IQueryable<TEntity> GetDataSource()
     {
-        return IncludeForRead(DbSet.AsNoTracking()).AsEnumerable();
+        return IncludeForRead(DbSet.AsNoTracking());
     }
 
     protected override IList<TEntity> GetWritableDataSource()
@@ -65,17 +65,6 @@ public class EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateR
     protected virtual Task BeforePatchAsync(int id, TPatchRequest request, TEntity entity)
     {
         return Task.CompletedTask;
-    }
-
-    public override async Task<TResponse> GetByIdAsync(int id)
-    {
-        var entity = await IncludeForRead(DbSet.AsNoTracking()).FirstOrDefaultAsync(item => item.Id == id);
-        if (entity == null)
-        {
-            throw new KeyNotFoundException($"{typeof(TEntity).Name} with id {id} was not found.");
-        }
-
-        return Mapper.Map<TResponse>(entity);
     }
 
     public override async Task<TResponse> InsertAsync(TInsertRequest request)

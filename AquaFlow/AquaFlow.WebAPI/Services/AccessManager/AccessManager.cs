@@ -80,9 +80,15 @@ public class AccessManager : IAccessManager
             throw new ClientException("Refresh token has expired.");
         }
 
-        var userResponse = await _userService.GetByIdAsync(storedToken.UserId);
-        var user = await _userService.GetByEmailAsync(userResponse.Email)
-            ?? throw new ClientException("User not found.");
+        UserResponse user;
+        try
+        {
+            user = await _userService.GetByIdAsync(storedToken.UserId);
+        }
+        catch (KeyNotFoundException)
+        {
+            throw new ClientException("User not found.");
+        }
 
         if (!user.IsActive)
         {
@@ -108,7 +114,7 @@ public class AccessManager : IAccessManager
         };
     }
 
-    private string GenerateJwtToken(UserSensitiveResponse user)
+    private string GenerateJwtToken(UserResponse user)
     {
         var secretKey = Encoding.UTF8.GetBytes(_configuration["JwtToken:SecretKey"] ?? string.Empty);
 

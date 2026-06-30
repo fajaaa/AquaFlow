@@ -23,8 +23,8 @@ public class RefreshTokenService : IRefreshTokenService
 
     public async Task DeleteAllUserRefreshTokensAsync(int userId)
     {
-        var tokens = _context.RefreshTokens.Where(rt => rt.UserId == userId);
-        _context.RefreshTokens.RemoveRange(tokens);
-        await _context.SaveChangesAsync();
+        await _context.RefreshTokens
+            .Where(rt => rt.UserId == userId)
+            .ExecuteDeleteAsync();
     }
 }

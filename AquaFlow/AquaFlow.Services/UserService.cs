@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using AquaFlow.Model.Access;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -26,13 +25,13 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         _dbContext = dbContext;
     }
 
-    protected override IEnumerable<User> GetDataSource() =>
-        _dbContext.Users.Include(u => u.UserRole).AsEnumerable();
+    protected override IQueryable<User> GetDataSource() =>
+        _dbContext.Users.AsNoTracking().Include(u => u.UserRole);
 
     protected override IList<User> GetWritableDataSource() =>
-        _dbContext.Users.Include(u => u.UserRole).ToList();
+        throw new NotSupportedException($"{nameof(UserService)} writes through Entity Framework.");
 
-    protected override IEnumerable<User> ApplyFilters(IEnumerable<User> query, UserSearchObject? search)
+    protected override IQueryable<User> ApplyFilters(IQueryable<User> query, UserSearchObject? search)
     {
         if (search == null)
         {
@@ -41,7 +40,7 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
 
         if (!string.IsNullOrWhiteSpace(search.Email))
         {
-            query = query.Where(u => u.Email.Contains(search.Email, StringComparison.OrdinalIgnoreCase));
+            query = query.Where(u => u.Email.Contains(search.Email));
         }
 
         if (search.UserRoleId.HasValue)
@@ -51,7 +50,7 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
 
         if (!string.IsNullOrWhiteSpace(search.UserRole))
         {
-            query = query.Where(u => u.UserRole?.Name.Contains(search.UserRole, StringComparison.OrdinalIgnoreCase) == true);
+            query = query.Where(u => u.UserRole != null && u.UserRole.Name.Contains(search.UserRole));
         }
 
         if (search.IsActive.HasValue)
@@ -136,28 +135,6 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
             .FirstOrDefaultAsync(u => u.Email == email);
 
         return user == null ? null : Mapper.Map<UserSensitiveResponse>(user);
-    }
-
-    public async Task<UserResponse?> LoginAsync(UserLoginRequest request)
-    {
-        var user = await _dbContext.Users.Include(u => u.UserRole)
-            .FirstOrDefaultAsync(u => u.Email == request.Email);
-
-        if (user == null || !user.IsActive)
-        {
-            return null;
-        }
-
-        var hash = HashPassword(request.Password, user.PasswordSalt);
-        if (hash != user.PasswordHash)
-        {
-            return null;
-        }
-
-        user.LastLoginAt = DateTime.UtcNow;
-        await _dbContext.SaveChangesAsync();
-
-        return Mapper.Map<UserResponse>(user);
     }
 
     public async Task UpdateLastLoginAtAsync(int id)

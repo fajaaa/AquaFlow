@@ -60,6 +60,16 @@ public partial class AquaFlowDbContext : DbContext
             foreignKey.DeleteBehavior = DeleteBehavior.Restrict;
         }
 
+        // Hot lookup columns: login resolves users by email, token refresh resolves by token value.
+        // Without these indexes every login/refresh is a full table scan.
+        modelBuilder.Entity<User>()
+            .HasIndex(user => user.Email)
+            .IsUnique();
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(token => token.Token)
+            .IsUnique();
+
         CreateSeed(modelBuilder);
     }
 }
