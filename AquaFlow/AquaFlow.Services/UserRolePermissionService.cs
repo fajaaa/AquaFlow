@@ -3,57 +3,75 @@ using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
-using AquaFlow.Services.InMemory;
 using FluentValidation;
 using MapsterMapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace AquaFlow.Services;
 
 public class UserRolePermissionService
-    : InMemoryCrudService<UserRolePermission, UserRolePermissionResponse, UserRolePermissionSearchObject, UserRolePermissionInsertRequest, UserRolePermissionUpdateRequest>
+    : EfCrudService<UserRolePermission, UserRolePermissionResponse, UserRolePermissionSearchObject, UserRolePermissionInsertRequest, UserRolePermissionUpdateRequest, UserRolePermissionPatchRequest>
 {
+    private readonly AquaFlowDbContext _dbContext;
+
     public UserRolePermissionService(
+        AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<UserRolePermissionInsertRequest>> insertValidators,
-        IEnumerable<IValidator<UserRolePermissionUpdateRequest>> updateValidators)
-        : base(AquaFlowDataStore.UserRolePermissions, mapper, insertValidators, updateValidators)
+        IEnumerable<IValidator<UserRolePermissionUpdateRequest>> updateValidators,
+        IEnumerable<IValidator<UserRolePermissionPatchRequest>> patchValidators)
+        : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
+        _dbContext = dbContext;
     }
 
-    protected override UserRolePermission MapInsertRequestToEntity(UserRolePermissionInsertRequest request)
+    protected override IQueryable<UserRolePermission> IncludeForRead(IQueryable<UserRolePermission> query)
     {
-        EnsureUniqueAssignment(request.UserRoleId, request.PermissionId);
-
-        var entity = base.MapInsertRequestToEntity(request);
-        SetReferences(entity, request.UserRoleId, request.PermissionId);
-
-        return entity;
+        return query
+            .Include(item => item.UserRole)
+            .Include(item => item.Permission);
     }
 
-    protected override void MapUpdateRequestToEntity(UserRolePermissionUpdateRequest request, UserRolePermission entity)
+    protected override IQueryable<UserRolePermission> IncludeForUpdate(IQueryable<UserRolePermission> query)
     {
-        EnsureUniqueAssignment(request.UserRoleId, request.PermissionId, entity.Id);
-
-        base.MapUpdateRequestToEntity(request, entity);
-        SetReferences(entity, request.UserRoleId, request.PermissionId);
+        return IncludeForRead(query);
     }
 
-    public override Task DeleteAsync(int id)
+    protected override async Task BeforeInsertAsync(UserRolePermissionInsertRequest request)
     {
-        var entity = AquaFlowDataStore.UserRolePermissions.FirstOrDefault(item => item.Id == id);
-        if (entity == null)
+        await EnsureReferencesExistAsync(request.UserRoleId, request.PermissionId);
+        await EnsureUniqueAssignmentAsync(request.UserRoleId, request.PermissionId);
+    }
+
+    protected override async Task BeforeUpdateAsync(int id, UserRolePermissionUpdateRequest request, UserRolePermission entity)
+    {
+        await EnsureReferencesExistAsync(request.UserRoleId, request.PermissionId);
+        await EnsureUniqueAssignmentAsync(request.UserRoleId, request.PermissionId, id);
+    }
+
+    protected override async Task BeforePatchAsync(int id, UserRolePermissionPatchRequest request, UserRolePermission entity)
+    {
+        if (!request.UserRoleId.HasValue && !request.PermissionId.HasValue)
         {
-            throw new KeyNotFoundException($"{nameof(UserRolePermission)} with id {id} was not found.");
+            return;
         }
 
-        RemoveReferences(entity);
+        var userRoleId = request.UserRoleId ?? entity.UserRoleId;
+        var permissionId = request.PermissionId ?? entity.PermissionId;
 
-        return base.DeleteAsync(id);
+        await EnsureReferencesExistAsync(userRoleId, permissionId);
+        await EnsureUniqueAssignmentAsync(userRoleId, permissionId, id);
     }
 
-    private static void EnsureUniqueAssignment(int userRoleId, int permissionId, int? excludedId = null)
+    protected override async Task LoadReferencesAsync(UserRolePermission entity)
     {
-        var alreadyExists = AquaFlowDataStore.UserRolePermissions.Any(item =>
+        await _dbContext.Entry(entity).Reference(item => item.UserRole).LoadAsync();
+        await _dbContext.Entry(entity).Reference(item => item.Permission).LoadAsync();
+    }
+
+    private async Task EnsureUniqueAssignmentAsync(int userRoleId, int permissionId, int? excludedId = null)
+    {
+        var alreadyExists = await _dbContext.UserRolePermissions.AnyAsync(item =>
             item.UserRoleId == userRoleId &&
             item.PermissionId == permissionId &&
             item.Id != excludedId);
@@ -64,51 +82,16 @@ public class UserRolePermissionService
         }
     }
 
-    private static void SetReferences(UserRolePermission userRolePermission, int userRoleId, int permissionId)
+    private async Task EnsureReferencesExistAsync(int userRoleId, int permissionId)
     {
-        var userRole = AquaFlowDataStore.UserRoles.FirstOrDefault(role => role.Id == userRoleId);
-        if (userRole == null)
+        if (!await _dbContext.UserRoles.AnyAsync(role => role.Id == userRoleId))
         {
             throw new ClientException($"User role with id {userRoleId} was not found.");
         }
 
-        var permission = AquaFlowDataStore.Permissions.FirstOrDefault(item => item.Id == permissionId);
-        if (permission == null)
+        if (!await _dbContext.Permissions.AnyAsync(permission => permission.Id == permissionId))
         {
             throw new ClientException($"Permission with id {permissionId} was not found.");
         }
-
-        RemoveReferences(userRolePermission);
-
-        userRolePermission.UserRoleId = userRole.Id;
-        userRolePermission.UserRole = userRole;
-        userRolePermission.PermissionId = permission.Id;
-        userRolePermission.Permission = permission;
-
-        if (!userRole.UserRolePermissions.Contains(userRolePermission))
-        {
-            userRole.UserRolePermissions.Add(userRolePermission);
-        }
-
-        if (!permission.UserRolePermissions.Contains(userRolePermission))
-        {
-            permission.UserRolePermissions.Add(userRolePermission);
-        }
-    }
-
-    private static void RemoveReferences(UserRolePermission userRolePermission)
-    {
-        foreach (var userRole in AquaFlowDataStore.UserRoles)
-        {
-            userRole.UserRolePermissions.Remove(userRolePermission);
-        }
-
-        foreach (var permission in AquaFlowDataStore.Permissions)
-        {
-            permission.UserRolePermissions.Remove(userRolePermission);
-        }
-
-        userRolePermission.UserRole = null;
-        userRolePermission.Permission = null;
     }
 }

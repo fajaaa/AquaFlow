@@ -11,6 +11,9 @@ public class User : EntityBase
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 
+    [Required]
+    public string PasswordSalt { get; set; } = string.Empty;
+
     [MaxLength(30)]
     public string Phone { get; set; } = string.Empty;
 
@@ -18,6 +21,7 @@ public class User : EntityBase
     public UserRole? UserRole { get; set; }
 
     public bool IsActive { get; set; } = true;
+    public DateTime? LastLoginAt { get; set; }
     public CustomerProfile? CustomerProfile { get; set; }
     public CollectorProfile? CollectorProfile { get; set; }
     public UserPreference? UserPreference { get; set; }

@@ -1,10 +1,12 @@
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AquaFlow.WebAPI.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public abstract class BaseReadController<TResponse, TSearch, TService> : ControllerBase

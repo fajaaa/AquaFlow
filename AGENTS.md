@@ -25,6 +25,22 @@ Run the Web API locally:
 dotnet run --project .\AquaFlow\AquaFlow.WebAPI\AquaFlow.WebAPI.csproj --launch-profile http
 ```
 
+Run the SQL Server container:
+
+```powershell
+cd .\AquaFlow
+docker compose up -d
+```
+
+The SQL Server container maps host port `1435` to container port `1433`. Use `localhost,1435` from the host machine.
+
+Apply EF Core migrations locally:
+
+```powershell
+$env:ConnectionStrings__DefaultConnection='Server=localhost,1435;Database=AquaFlow;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False'
+dotnet ef database update --project .\AquaFlow\AquaFlow.Services --startup-project .\AquaFlow\AquaFlow.WebAPI
+```
+
 Local URLs:
 
 - `http://localhost:5161` - redirects to the API reference in development.
@@ -39,11 +55,15 @@ Local URLs:
 
 - Foundation work is on branch `webapi-foundation`.
 - The API currently uses generic read/CRUD infrastructure modeled after the RS2 eCommerce V1 example.
-- Persistence is currently in-memory through `AquaFlow.Services/InMemory/AquaFlowDataStore.cs`.
+- Many runtime CRUD endpoints still use in-memory persistence through `AquaFlow.Services/InMemory/AquaFlowDataStore.cs`; do not assume an endpoint reads/writes SQL until its service has explicitly been moved to EF Core.
+- EF Core infrastructure exists through `AquaFlow.Services/Database/AquaFlowDbContext.cs`, migrations in `AquaFlow.Services/Migrations`, and SQL Server registration in `AquaFlow.WebAPI/Program.cs` when `ConnectionStrings:DefaultConnection` is configured.
+- Initial SQL seed data is implemented in `AquaFlow.Services/Database/AquaFlowDbContextSeed.cs` through the partial `AquaFlowDbContext.CreateSeed(ModelBuilder modelBuilder)` method.
+- Current seed data includes user roles, permissions, role-permission assignments, users, settlements, and company settings.
 - Entity classes are in `AquaFlow.Services/Database`.
 - Users are linked to roles through `UserRoleId` and the `UserRole` entity; do not reintroduce a free-form `User.Role` string.
+- Users store both `PasswordHash` and `PasswordSalt`; do not store plain-text passwords.
 - Role permissions are modeled through `Permission` and `UserRolePermission`; do not store permissions as comma-separated strings.
-- No real `DbContext`, migrations, authentication, authorization, or SQL persistence has been implemented yet unless added in a later iteration.
+- Authentication and authorization have not been implemented yet unless added in a later iteration.
 - Removed template artifacts should stay removed: `Class1`, `WeatherForecast`, `WeatherForecastController`, and the default `/weatherforecast` sample.
 
 ## Architecture Rules
@@ -58,6 +78,9 @@ Local URLs:
 - Use `ExceptionFilter` for validation/client/server error responses.
 - Use FluentValidation validators in `AquaFlow.Services/Validators`.
 - Use Mapster for DTO/entity mapping.
+- Keep EF Core model configuration in `AquaFlowDbContext` partials under `AquaFlow.Services/Database`.
+- Use anonymous objects in `HasData` calls to avoid nullable and navigation-property issues in EF Core seed data.
+- Keep connection strings out of committed `appsettings*.json` unless explicitly requested; prefer environment variables or user secrets for local database work.
 
 ## File Style
 
@@ -78,8 +101,10 @@ When adding a new AquaFlow resource, follow this checklist:
 5. Add validators in `AquaFlow.Services/Validators/{Name}InsertValidator.cs` and `{Name}UpdateValidator.cs`.
 6. Add controller in `AquaFlow.WebAPI/Controllers/{Names}Controller.cs`.
 7. Add seed data to `AquaFlow.Services/InMemory/AquaFlowDataStore.cs` if the endpoint should return demo data.
-8. Register the CRUD service and validators in `AquaFlow.WebAPI/Program.cs`.
-9. Run `dotnet build .\AquaFlow\AquaFlow.sln`.
+8. Add EF seed data in `AquaFlow.Services/Database/AquaFlowDbContextSeed.cs` if the SQL database should contain initial rows.
+9. Register the CRUD service and validators in `AquaFlow.WebAPI/Program.cs`.
+10. Add and apply an EF Core migration if entity shape or SQL seed data changed.
+11. Run `dotnet build .\AquaFlow\AquaFlow.sln`.
 
 ## Domain Notes
 
@@ -119,6 +144,8 @@ Then check:
 - `http://localhost:5169/scalar/v1`
 
 If build fails because DLL files are locked, check for an already running `AquaFlow.WebAPI` process and stop it before rebuilding.
+
+If database update fails on `localhost,1433`, check for a local SQL Server process using that port. The Docker SQL Server container is intentionally mapped to host port `1435`.
 
 ## Git Notes
 
