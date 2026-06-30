@@ -1,5 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
+using AquaFlow.Common.Services.CryptoService;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -13,9 +12,11 @@ namespace AquaFlow.Services;
 public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject, UserInsertRequest, UserUpdateRequest, UserPatchRequest>, IUserService
 {
     private readonly AquaFlowDbContext _dbContext;
+    private readonly ICryptoService _cryptoService;
 
     public UserService(
         AquaFlowDbContext dbContext,
+        ICryptoService cryptoService,
         IMapper mapper,
         IEnumerable<IValidator<UserInsertRequest>> insertValidators,
         IEnumerable<IValidator<UserUpdateRequest>> updateValidators,
@@ -23,6 +24,7 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         : base(mapper, insertValidators, updateValidators, patchValidators)
     {
         _dbContext = dbContext;
+        _cryptoService = cryptoService;
     }
 
     protected override IQueryable<User> GetDataSource() =>
@@ -146,30 +148,11 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         await _dbContext.SaveChangesAsync();
     }
 
-    private static void SetPassword(User entity, string password)
+    private void SetPassword(User entity, string password)
     {
-        var salt = GenerateSalt();
+        var salt = _cryptoService.GenerateSalt();
         entity.PasswordSalt = salt;
-        entity.PasswordHash = HashPassword(password, salt);
-    }
-
-    private static string GenerateSalt()
-    {
-        using var rng = RandomNumberGenerator.Create();
-        byte[] bytes = new byte[16];
-        rng.GetBytes(bytes);
-        return Convert.ToBase64String(bytes);
-    }
-
-    private static string HashPassword(string password, string salt)
-    {
-        using var pbkdf2 = new Rfc2898DeriveBytes(
-            password,
-            Encoding.UTF8.GetBytes(salt),
-            10000,
-            HashAlgorithmName.SHA256);
-
-        return Convert.ToBase64String(pbkdf2.GetBytes(20));
+        entity.PasswordHash = _cryptoService.GenerateHash(password, salt);
     }
 
     private async Task ReloadUserRoleAsync(User entity)

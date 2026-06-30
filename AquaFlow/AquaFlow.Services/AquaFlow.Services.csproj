@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AquaFlow.Model\AquaFlow.Model.csproj" />
+    <ProjectReference Include="..\AquaFlow.Common.Services\AquaFlow.Common.Services.csproj" />
   </ItemGroup>
 
   <ItemGroup>
