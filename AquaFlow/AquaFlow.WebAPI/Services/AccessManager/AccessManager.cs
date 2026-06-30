@@ -34,7 +34,7 @@ public class AccessManager : IAccessManager
     public async Task<UserLoginResponse> LoginAsync(UserLoginRequest request)
     {
         var user = await _userService.GetByEmailAsync(request.Email)
-            ?? throw new ClientException($"User with email {request.Email} not found.");
+            ?? throw new ClientException("Invalid credentials.");
 
         if (!_cryptoService.Verify(user.PasswordHash, user.PasswordSalt, request.Password))
         {
@@ -45,6 +45,8 @@ public class AccessManager : IAccessManager
         {
             throw new ClientException("User account is not active.");
         }
+
+        await _userService.UpdateLastLoginAtAsync(user.Id);
 
         var accessToken = GenerateJwtToken(user);
         var refreshTokenValue = GenerateRefreshTokenValue();
@@ -108,7 +110,7 @@ public class AccessManager : IAccessManager
 
     private string GenerateJwtToken(UserSensitiveResponse user)
     {
-        var secretKey = Encoding.ASCII.GetBytes(_configuration["JwtToken:SecretKey"] ?? string.Empty);
+        var secretKey = Encoding.UTF8.GetBytes(_configuration["JwtToken:SecretKey"] ?? string.Empty);
 
         var descriptor = new SecurityTokenDescriptor
         {

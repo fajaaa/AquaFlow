@@ -9,4 +9,5 @@ public interface IUserService : IBaseCRUDService<UserResponse, UserSearchObject,
 {
     Task<UserSensitiveResponse?> GetByEmailAsync(string email);
     Task<UserResponse?> LoginAsync(UserLoginRequest request);
+    Task UpdateLastLoginAtAsync(int id);
 }

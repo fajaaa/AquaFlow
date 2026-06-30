@@ -138,6 +138,15 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         return Mapper.Map<UserResponse>(user);
     }
 
+    public async Task UpdateLastLoginAtAsync(int id)
+    {
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id)
+            ?? throw new KeyNotFoundException($"User with id {id} was not found.");
+
+        user.LastLoginAt = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync();
+    }
+
     private static void SetPassword(User entity, string password)
     {
         var salt = GenerateSalt();

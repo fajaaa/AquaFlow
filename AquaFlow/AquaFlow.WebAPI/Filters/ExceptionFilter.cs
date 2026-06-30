@@ -1,7 +1,9 @@
 using AquaFlow.Model.Exceptions;
 using FluentValidation;
+using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.EntityFrameworkCore;
 using System.Net;
 
 namespace AquaFlow.WebAPI.Filters;
@@ -33,6 +35,12 @@ public class ExceptionFilter : ExceptionFilterAttribute
             context.HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             _logger.LogWarning("Client error: {Message}", clientException.Message);
         }
+        else if (IsForeignKeyConstraintException(context.Exception))
+        {
+            context.ModelState.AddModelError("foreignKey", "Invalid related resource reference.");
+            context.HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            _logger.LogWarning(context.Exception, "Foreign key constraint validation failed.");
+        }
         else
         {
             context.ModelState.AddModelError("serverError", "Server side error, please check logs.");
@@ -55,5 +63,12 @@ public class ExceptionFilter : ExceptionFilterAttribute
             errors
         });
         context.ExceptionHandled = true;
+    }
+
+    private static bool IsForeignKeyConstraintException(Exception exception)
+    {
+        return exception is DbUpdateException { InnerException: SqlException sqlException } &&
+            sqlException.Number == 547 &&
+            sqlException.Message.Contains("FOREIGN KEY", StringComparison.OrdinalIgnoreCase);
     }
 }

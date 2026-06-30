@@ -2,7 +2,9 @@ using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using FluentValidation;
+using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AquaFlow.WebAPI.Controllers;
 
@@ -64,6 +66,7 @@ public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUp
 
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
@@ -75,6 +78,10 @@ public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUp
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (DbUpdateException exception) when (IsForeignKeyConstraintException(exception))
+        {
+            return BadRequest(CreateForeignKeyErrorResponse("Cannot delete resource because it has related records."));
         }
     }
 
@@ -106,5 +113,25 @@ public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUp
                 ["clientError"] = new() { exception.Message }
             }
         };
+    }
+
+    private static object CreateForeignKeyErrorResponse(string message)
+    {
+        return new
+        {
+            message,
+            errors = new Dictionary<string, List<string>>
+            {
+                ["foreignKey"] = new() { message }
+            }
+        };
+    }
+
+    private static bool IsForeignKeyConstraintException(DbUpdateException exception)
+    {
+        return exception.InnerException is SqlException sqlException &&
+            sqlException.Number == 547 &&
+            (sqlException.Message.Contains("FOREIGN KEY", StringComparison.OrdinalIgnoreCase) ||
+                sqlException.Message.Contains("REFERENCE constraint", StringComparison.OrdinalIgnoreCase));
     }
 }
