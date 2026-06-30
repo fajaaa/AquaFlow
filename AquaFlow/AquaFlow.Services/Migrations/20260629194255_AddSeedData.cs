@@ -1213,9 +1213,9 @@ namespace AquaFlow.Services.Migrations
                 columns: new[] { "Id", "CreatedAt", "Email", "IsActive", "LastLoginAt", "PasswordHash", "PasswordSalt", "Phone", "UpdatedAt", "UserRoleId" },
                 values: new object[,]
                 {
-                    { 1, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "admin@aquaflow.ba", true, null, "XohImNooBHFR0OniI2HVFw==", "AquaFlowSalt2026==", "+38733111222", null, 1 },
-                    { 2, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "collector@aquaflow.ba", true, null, "XohImNooBHFR0OniI2HVFw==", "AquaFlowSalt2026==", "+38761111222", null, 2 },
-                    { 3, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "customer@aquaflow.ba", true, null, "XohImNooBHFR0OniI2HVFw==", "AquaFlowSalt2026==", "+38762111222", null, 3 }
+                    { 1, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "admin@aquaflow.ba", true, null, "ILjw1fxwixrewU7K3VLOIm/0INU=", "AquaFlowSalt2026==", "+38733111222", null, 1 },
+                    { 2, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "collector@aquaflow.ba", true, null, "ILjw1fxwixrewU7K3VLOIm/0INU=", "AquaFlowSalt2026==", "+38761111222", null, 2 },
+                    { 3, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "customer@aquaflow.ba", true, null, "ILjw1fxwixrewU7K3VLOIm/0INU=", "AquaFlowSalt2026==", "+38762111222", null, 3 }
                 });
 
             migrationBuilder.CreateIndex(

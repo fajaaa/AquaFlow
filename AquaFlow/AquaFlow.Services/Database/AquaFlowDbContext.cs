@@ -35,6 +35,7 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<ReadingRoute> ReadingRoutes => Set<ReadingRoute>();
     public DbSet<ReadingRouteItem> ReadingRouteItems => Set<ReadingRouteItem>();
     public DbSet<Recommendation> Recommendations => Set<Recommendation>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<ServiceLocation> ServiceLocations => Set<ServiceLocation>();
     public DbSet<Settlement> Settlements => Set<Settlement>();
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();

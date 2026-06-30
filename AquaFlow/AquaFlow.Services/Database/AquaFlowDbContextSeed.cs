@@ -230,7 +230,7 @@ public partial class AquaFlowDbContext
             {
                 Id = 1,
                 Email = "admin@aquaflow.ba",
-                PasswordHash = "XohImNooBHFR0OniI2HVFw==",
+                PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                 PasswordSalt = "AquaFlowSalt2026==",
                 Phone = "+38733111222",
                 UserRoleId = 1,
@@ -243,7 +243,7 @@ public partial class AquaFlowDbContext
             {
                 Id = 2,
                 Email = "collector@aquaflow.ba",
-                PasswordHash = "XohImNooBHFR0OniI2HVFw==",
+                PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                 PasswordSalt = "AquaFlowSalt2026==",
                 Phone = "+38761111222",
                 UserRoleId = 2,
@@ -256,7 +256,7 @@ public partial class AquaFlowDbContext
             {
                 Id = 3,
                 Email = "customer@aquaflow.ba",
-                PasswordHash = "XohImNooBHFR0OniI2HVFw==",
+                PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                 PasswordSalt = "AquaFlowSalt2026==",
                 Phone = "+38762111222",
                 UserRoleId = 3,

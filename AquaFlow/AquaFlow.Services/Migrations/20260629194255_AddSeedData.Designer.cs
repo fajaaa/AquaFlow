@@ -1667,7 +1667,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "admin@aquaflow.ba",
                             IsActive = true,
-                            PasswordHash = "XohImNooBHFR0OniI2HVFw==",
+                            PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38733111222",
                             UserRoleId = 1
@@ -1678,7 +1678,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "collector@aquaflow.ba",
                             IsActive = true,
-                            PasswordHash = "XohImNooBHFR0OniI2HVFw==",
+                            PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38761111222",
                             UserRoleId = 2
@@ -1689,7 +1689,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "customer@aquaflow.ba",
                             IsActive = true,
-                            PasswordHash = "XohImNooBHFR0OniI2HVFw==",
+                            PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38762111222",
                             UserRoleId = 3
