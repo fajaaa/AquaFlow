@@ -1,4 +1,5 @@
 using AquaFlow.Model.Exceptions;
+using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using FluentValidation;
@@ -10,6 +11,7 @@ namespace AquaFlow.WebAPI.Controllers;
 
 public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUpdateRequest, TService>
     : BaseReadController<TResponse, TSearch, TService>
+    where TResponse : AuditableResponse
     where TSearch : BaseSearchObject
     where TService : IBaseCRUDService<TResponse, TSearch, TInsertRequest, TUpdateRequest>
 {
@@ -25,9 +27,8 @@ public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUp
         try
         {
             var result = await Service.InsertAsync(request);
-            var id = result?.GetType().GetProperty("Id")?.GetValue(result);
 
-            return CreatedAtAction(nameof(GetById), new { id }, result);
+            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
         catch (ValidationException exception)
         {
