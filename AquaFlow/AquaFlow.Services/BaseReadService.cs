@@ -16,7 +16,9 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
     {
         nameof(BaseSearchObject.Page),
         nameof(BaseSearchObject.PageSize),
-        nameof(BaseSearchObject.IncludeTotalCount)
+        nameof(BaseSearchObject.IncludeTotalCount),
+        nameof(BaseSearchObject.SortBy),
+        nameof(BaseSearchObject.SortDescending)
     };
 
     private static readonly MethodInfo StringContainsMethod =
@@ -30,6 +32,11 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
     }
 
     protected abstract IQueryable<TEntity> GetDataSource();
+
+    // Optional whitelist of property names a resource allows sorting by. When null
+    // (default) any existing entity property may be sorted on; override and return a
+    // concrete set to restrict sorting to specific, safe columns.
+    protected virtual HashSet<string>? SortableProperties => null;
 
     protected virtual IQueryable<TEntity> ApplyFilters(IQueryable<TEntity> query, TSearch? search)
     {
@@ -72,6 +79,42 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
         return query;
     }
 
+    // Applies ordering before pagination using an EF-translatable key selector built
+    // from an Expression tree (no string-based OrderBy), so no user input is ever
+    // compiled into a dynamic LINQ query. Unknown or non-whitelisted SortBy values are
+    // ignored rather than throwing, matching ApplyFilters' lenient behaviour.
+    protected virtual IQueryable<TEntity> ApplySorting(IQueryable<TEntity> query, TSearch? search)
+    {
+        var sortBy = search?.SortBy;
+        if (string.IsNullOrWhiteSpace(sortBy))
+        {
+            return query;
+        }
+
+        var sortable = SortableProperties;
+        if (sortable != null && !sortable.Contains(sortBy, StringComparer.OrdinalIgnoreCase))
+        {
+            return query;
+        }
+
+        var entityProperty = typeof(TEntity).GetProperty(
+            sortBy,
+            BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+        if (entityProperty == null)
+        {
+            return query;
+        }
+
+        var parameter = Expression.Parameter(typeof(TEntity), "entity");
+        var member = Expression.Property(parameter, entityProperty);
+        var keySelector = Expression.Lambda<Func<TEntity, object>>(
+            Expression.Convert(member, typeof(object)), parameter);
+
+        return search!.SortDescending
+            ? query.OrderByDescending(keySelector)
+            : query.OrderBy(keySelector);
+    }
+
     public virtual async Task<PageResult<TResponse>> GetAllAsync(TSearch? search = null)
     {
         var query = ApplyFilters(GetDataSource(), search);
@@ -81,6 +124,8 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
         {
             totalCount = await query.CountAsync();
         }
+
+        query = ApplySorting(query, search);
 
         var page = search?.Page ?? 1;
         var pageSize = search?.PageSize ?? 10;

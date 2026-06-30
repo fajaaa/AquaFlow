@@ -109,7 +109,8 @@ To call a protected endpoint manually: `POST /Access/login` with `{"email":"admi
 
 ## API Conventions
 
-- List endpoints (`GET /<Resource>`) return `PageResult<T>` = `{ "items": [...], "totalCount": <int?> }`. Paging/search comes from `BaseSearchObject`: `Page` (default 1), `PageSize` (default 10), `IncludeTotalCount` (default false), plus resource-specific filters (e.g. `Users?Email=...&UserRoleId=...&UserRole=...&IsActive=...`).
+- List endpoints (`GET /<Resource>`) return `PageResult<T>` = `{ "items": [...], "totalCount": <int?> }`. Paging/search comes from `BaseSearchObject`: `Page` (default 1), `PageSize` (default 10), `IncludeTotalCount` (default false), `SortBy` (entity property name, null = no sort), `SortDescending` (default false), plus resource-specific filters (e.g. `Users?Email=...&UserRoleId=...&UserRole=...&IsActive=...`).
+- Sorting in `BaseReadService.ApplySorting` is applied before paging using an Expression-tree key selector (no string-based/dynamic LINQ, no injection risk). An unknown `SortBy` is ignored (same lenient behaviour as filtering), and `SortBy` is matched case-insensitively against entity property names. To restrict which columns a resource can sort by, override `protected virtual HashSet<string>? SortableProperties` and return a whitelist; null (default) allows any existing entity property.
 - Standard CRUD verbs per resource: `GET` (list), `GET /{id}`, `POST`, `PUT /{id}`, `PATCH /{id}`, `DELETE /{id}`.
 
 ## File Style
