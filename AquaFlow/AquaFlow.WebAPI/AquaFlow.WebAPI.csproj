@@ -1,9 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>bd8fac25-c2f1-4679-a9b9-7c89fe069c5a</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AquaFlow.Services\AquaFlow.Services.csproj" />
+    <ProjectReference Include="..\AquaFlow.Common.Services\AquaFlow.Common.Services.csproj" />
   </ItemGroup>
 
 </Project>

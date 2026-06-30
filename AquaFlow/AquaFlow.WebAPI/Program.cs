@@ -18,13 +18,19 @@ builder.Services.AddControllers(options => options.Filters.Add<ExceptionFilter>(
 builder.Services.AddOpenApi();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (!string.IsNullOrWhiteSpace(connectionString))
+if (string.IsNullOrWhiteSpace(connectionString))
 {
-    builder.Services.AddDbContext<AquaFlowDbContext>(options => options.UseSqlServer(connectionString));
+    throw new InvalidOperationException(
+        "Connection string 'DefaultConnection' is required because UserService uses AquaFlowDbContext. " +
+        "Set it with the ConnectionStrings__DefaultConnection environment variable or user secrets.");
 }
+
+builder.Services.AddDbContext<AquaFlowDbContext>(options => options.UseSqlServer(connectionString));
 
 var mapperConfig = TypeAdapterConfig.GlobalSettings;
 mapperConfig.NewConfig<User, UserResponse>()
+    .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name);
+mapperConfig.NewConfig<User, UserSensitiveResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name);
 mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
@@ -33,7 +39,9 @@ mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
-builder.Services.AddScoped<IBaseCRUDService<UserResponse, UserSearchObject, UserInsertRequest, UserUpdateRequest>, UserService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IBaseCRUDService<UserResponse, UserSearchObject, UserInsertRequest, UserUpdateRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IUserService>());
 AddCrud<UserRole, UserRoleResponse, UserRoleSearchObject, UserRoleInsertRequest, UserRoleUpdateRequest>(AquaFlowDataStore.UserRoles);
 builder.Services.AddScoped<IBaseCRUDService<PermissionResponse, PermissionSearchObject, PermissionInsertRequest, PermissionUpdateRequest>, PermissionService>();
 builder.Services.AddScoped<IBaseCRUDService<UserRolePermissionResponse, UserRolePermissionSearchObject, UserRolePermissionInsertRequest, UserRolePermissionUpdateRequest>, UserRolePermissionService>();

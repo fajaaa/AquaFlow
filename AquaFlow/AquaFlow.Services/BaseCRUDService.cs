@@ -35,9 +35,19 @@ public abstract class BaseCRUDService<TEntity, TResponse, TSearch, TInsertReques
         Mapper.Map(request, entity);
     }
 
+    protected Task ValidateInsertAsync(TInsertRequest request)
+    {
+        return ValidateAsync(_insertValidator, request);
+    }
+
+    protected Task ValidateUpdateAsync(TUpdateRequest request)
+    {
+        return ValidateAsync(_updateValidator, request);
+    }
+
     public virtual async Task<TResponse> InsertAsync(TInsertRequest request)
     {
-        await ValidateAsync(_insertValidator, request);
+        await ValidateInsertAsync(request);
 
         var entity = MapInsertRequestToEntity(request);
         entity.Id = GenerateNewId();
@@ -50,7 +60,7 @@ public abstract class BaseCRUDService<TEntity, TResponse, TSearch, TInsertReques
 
     public virtual async Task<TResponse> UpdateAsync(int id, TUpdateRequest request)
     {
-        await ValidateAsync(_updateValidator, request);
+        await ValidateUpdateAsync(request);
 
         var dataSource = GetWritableDataSource();
         var entity = dataSource.FirstOrDefault(item => item.Id == id);
