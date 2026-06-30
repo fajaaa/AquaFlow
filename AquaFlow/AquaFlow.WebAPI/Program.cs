@@ -121,6 +121,7 @@ AddCrud<UserNotification, UserNotificationResponse, UserNotificationSearchObject
 AddCrud<CompanySettings, CompanySettingsResponse, CompanySettingsSearchObject, CompanySettingsInsertRequest, CompanySettingsUpdateRequest, CompanySettingsPatchRequest>();
 AddCrud<PaymentSettings, PaymentSettingsResponse, PaymentSettingsSearchObject, PaymentSettingsInsertRequest, PaymentSettingsUpdateRequest, PaymentSettingsPatchRequest>();
 
+builder.Services.AddScoped<IValidator<UserRegisterRequest>, UserRegisterValidator>();
 builder.Services.AddScoped<IValidator<UserInsertRequest>, UserInsertValidator>();
 builder.Services.AddScoped<IValidator<UserUpdateRequest>, UserUpdateValidator>();
 builder.Services.AddScoped<IValidator<UserPatchRequest>, UserPatchValidator>();

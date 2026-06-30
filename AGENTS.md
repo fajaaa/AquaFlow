@@ -73,7 +73,7 @@ When running with only `--urls http://...`, the HTTPS redirect middleware logs `
 Authentication is implemented with JWT bearer tokens.
 
 - `BaseReadController` is annotated `[Authorize]`, so every controller deriving from `BaseReadController`/`BaseCRUDController` requires a valid bearer token. Unauthenticated calls return `401`.
-- `AccessController` (`/Access`) is anonymous: `POST /Access/login` and `POST /Access/refresh`.
+- `AccessController` (`/Access`) is anonymous: `POST /Access/login`, `POST /Access/refresh`, and `POST /Access/register` (public self-registration; always creates a `Customer`, ignoring any caller-supplied role).
 - `AccessManager` validates credentials, issues the JWT (claims: id, email, userRole, isActive), and stores a refresh token (`RefreshToken` entity, 7-day expiry). Refresh rotates tokens.
 - Passwords are hashed with `ICryptoService` (PBKDF2 / `Rfc2898DeriveBytes`, SHA256, 10000 iterations, 20-byte hash, salt base64). Users store `PasswordHash` + `PasswordSalt`; never store plaintext.
 
