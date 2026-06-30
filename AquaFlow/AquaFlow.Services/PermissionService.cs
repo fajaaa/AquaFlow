@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AquaFlow.Services;
 
-public class PermissionService : EfCrudService<Permission, PermissionResponse, PermissionSearchObject, PermissionInsertRequest, PermissionUpdateRequest>
+public class PermissionService : EfCrudService<Permission, PermissionResponse, PermissionSearchObject, PermissionInsertRequest, PermissionUpdateRequest, PermissionPatchRequest>
 {
     private readonly AquaFlowDbContext _dbContext;
 
@@ -17,8 +17,9 @@ public class PermissionService : EfCrudService<Permission, PermissionResponse, P
         AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<PermissionInsertRequest>> insertValidators,
-        IEnumerable<IValidator<PermissionUpdateRequest>> updateValidators)
-        : base(dbContext, mapper, insertValidators, updateValidators)
+        IEnumerable<IValidator<PermissionUpdateRequest>> updateValidators,
+        IEnumerable<IValidator<PermissionPatchRequest>> patchValidators)
+        : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _dbContext = dbContext;
     }
@@ -31,6 +32,11 @@ public class PermissionService : EfCrudService<Permission, PermissionResponse, P
     protected override Task BeforeUpdateAsync(int id, PermissionUpdateRequest request, Permission entity)
     {
         return EnsureUniqueCodeAsync(request.Code, id);
+    }
+
+    protected override Task BeforePatchAsync(int id, PermissionPatchRequest request, Permission entity)
+    {
+        return request.Code == null ? Task.CompletedTask : EnsureUniqueCodeAsync(request.Code, id);
     }
 
     private async Task EnsureUniqueCodeAsync(string code, int? excludedId = null)

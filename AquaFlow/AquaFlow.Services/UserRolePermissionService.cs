@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AquaFlow.Services;
 
 public class UserRolePermissionService
-    : EfCrudService<UserRolePermission, UserRolePermissionResponse, UserRolePermissionSearchObject, UserRolePermissionInsertRequest, UserRolePermissionUpdateRequest>
+    : EfCrudService<UserRolePermission, UserRolePermissionResponse, UserRolePermissionSearchObject, UserRolePermissionInsertRequest, UserRolePermissionUpdateRequest, UserRolePermissionPatchRequest>
 {
     private readonly AquaFlowDbContext _dbContext;
 
@@ -18,8 +18,9 @@ public class UserRolePermissionService
         AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<UserRolePermissionInsertRequest>> insertValidators,
-        IEnumerable<IValidator<UserRolePermissionUpdateRequest>> updateValidators)
-        : base(dbContext, mapper, insertValidators, updateValidators)
+        IEnumerable<IValidator<UserRolePermissionUpdateRequest>> updateValidators,
+        IEnumerable<IValidator<UserRolePermissionPatchRequest>> patchValidators)
+        : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _dbContext = dbContext;
     }
@@ -46,6 +47,20 @@ public class UserRolePermissionService
     {
         await EnsureReferencesExistAsync(request.UserRoleId, request.PermissionId);
         await EnsureUniqueAssignmentAsync(request.UserRoleId, request.PermissionId, id);
+    }
+
+    protected override async Task BeforePatchAsync(int id, UserRolePermissionPatchRequest request, UserRolePermission entity)
+    {
+        if (!request.UserRoleId.HasValue && !request.PermissionId.HasValue)
+        {
+            return;
+        }
+
+        var userRoleId = request.UserRoleId ?? entity.UserRoleId;
+        var permissionId = request.PermissionId ?? entity.PermissionId;
+
+        await EnsureReferencesExistAsync(userRoleId, permissionId);
+        await EnsureUniqueAssignmentAsync(userRoleId, permissionId, id);
     }
 
     protected override async Task LoadReferencesAsync(UserRolePermission entity)

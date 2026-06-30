@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AquaFlow.Services;
 
 public class CollectorProfileService
-    : EfCrudService<CollectorProfile, CollectorProfileResponse, CollectorProfileSearchObject, CollectorProfileInsertRequest, CollectorProfileUpdateRequest>
+    : EfCrudService<CollectorProfile, CollectorProfileResponse, CollectorProfileSearchObject, CollectorProfileInsertRequest, CollectorProfileUpdateRequest, CollectorProfilePatchRequest>
 {
     private readonly AquaFlowDbContext _dbContext;
 
@@ -18,8 +18,9 @@ public class CollectorProfileService
         AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<CollectorProfileInsertRequest>> insertValidators,
-        IEnumerable<IValidator<CollectorProfileUpdateRequest>> updateValidators)
-        : base(dbContext, mapper, insertValidators, updateValidators)
+        IEnumerable<IValidator<CollectorProfileUpdateRequest>> updateValidators,
+        IEnumerable<IValidator<CollectorProfilePatchRequest>> patchValidators)
+        : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _dbContext = dbContext;
     }
@@ -36,6 +37,20 @@ public class CollectorProfileService
         await EnsureUserExistsAsync(request.UserId);
         await EnsureAssignedAreaExistsAsync(request.AssignedAreaId);
         await EnsureUserDoesNotHaveCollectorProfileAsync(request.UserId, id);
+    }
+
+    protected override async Task BeforePatchAsync(int id, CollectorProfilePatchRequest request, CollectorProfile entity)
+    {
+        if (request.UserId.HasValue)
+        {
+            await EnsureUserExistsAsync(request.UserId.Value);
+            await EnsureUserDoesNotHaveCollectorProfileAsync(request.UserId.Value, id);
+        }
+
+        if (request.AssignedAreaId.HasValue)
+        {
+            await EnsureAssignedAreaExistsAsync(request.AssignedAreaId.Value);
+        }
     }
 
     private async Task EnsureUserExistsAsync(int userId)

@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AquaFlow.Services;
 
 public class CustomerProfileService
-    : EfCrudService<CustomerProfile, CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest>
+    : EfCrudService<CustomerProfile, CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest, CustomerProfilePatchRequest>
 {
     private readonly AquaFlowDbContext _dbContext;
 
@@ -18,8 +18,9 @@ public class CustomerProfileService
         AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<CustomerProfileInsertRequest>> insertValidators,
-        IEnumerable<IValidator<CustomerProfileUpdateRequest>> updateValidators)
-        : base(dbContext, mapper, insertValidators, updateValidators)
+        IEnumerable<IValidator<CustomerProfileUpdateRequest>> updateValidators,
+        IEnumerable<IValidator<CustomerProfilePatchRequest>> patchValidators)
+        : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _dbContext = dbContext;
     }
@@ -34,6 +35,17 @@ public class CustomerProfileService
     {
         await EnsureUserExistsAsync(request.UserId);
         await EnsureUserDoesNotHaveCustomerProfileAsync(request.UserId, id);
+    }
+
+    protected override async Task BeforePatchAsync(int id, CustomerProfilePatchRequest request, CustomerProfile entity)
+    {
+        if (!request.UserId.HasValue)
+        {
+            return;
+        }
+
+        await EnsureUserExistsAsync(request.UserId.Value);
+        await EnsureUserDoesNotHaveCustomerProfileAsync(request.UserId.Value, id);
     }
 
     private async Task EnsureUserExistsAsync(int userId)

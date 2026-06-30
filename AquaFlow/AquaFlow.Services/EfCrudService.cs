@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AquaFlow.Services;
 
-public class EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest>
-    : BaseCRUDService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest>
+public class EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>
+    : BaseCRUDService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>
     where TEntity : EntityBase
     where TSearch : BaseSearchObject
 {
@@ -17,7 +17,8 @@ public class EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateR
         AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<TInsertRequest>> insertValidators,
-        IEnumerable<IValidator<TUpdateRequest>> updateValidators) : base(mapper, insertValidators, updateValidators)
+        IEnumerable<IValidator<TUpdateRequest>> updateValidators,
+        IEnumerable<IValidator<TPatchRequest>> patchValidators) : base(mapper, insertValidators, updateValidators, patchValidators)
     {
         _dbContext = dbContext;
     }
@@ -61,6 +62,11 @@ public class EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateR
         return Task.CompletedTask;
     }
 
+    protected virtual Task BeforePatchAsync(int id, TPatchRequest request, TEntity entity)
+    {
+        return Task.CompletedTask;
+    }
+
     public override async Task<TResponse> GetByIdAsync(int id)
     {
         var entity = await IncludeForRead(DbSet.AsNoTracking()).FirstOrDefaultAsync(item => item.Id == id);
@@ -100,6 +106,28 @@ public class EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateR
         await BeforeUpdateAsync(id, request, entity);
 
         MapUpdateRequestToEntity(request, entity);
+        entity.Id = id;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+        await LoadReferencesAsync(entity);
+
+        return Mapper.Map<TResponse>(entity);
+    }
+
+    public override async Task<TResponse> PatchAsync(int id, TPatchRequest request)
+    {
+        await ValidatePatchAsync(request);
+
+        var entity = await IncludeForUpdate(DbSet).FirstOrDefaultAsync(item => item.Id == id);
+        if (entity == null)
+        {
+            throw new KeyNotFoundException($"{typeof(TEntity).Name} with id {id} was not found.");
+        }
+
+        await BeforePatchAsync(id, request, entity);
+
+        MapPatchRequestToEntity(request, entity);
         entity.Id = id;
         entity.UpdatedAt = DateTime.UtcNow;
 

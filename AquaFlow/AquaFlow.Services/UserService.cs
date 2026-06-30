@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AquaFlow.Services;
 
-public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject, UserInsertRequest, UserUpdateRequest>, IUserService
+public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject, UserInsertRequest, UserUpdateRequest, UserPatchRequest>, IUserService
 {
     private readonly AquaFlowDbContext _dbContext;
 
@@ -19,8 +19,9 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<UserInsertRequest>> insertValidators,
-        IEnumerable<IValidator<UserUpdateRequest>> updateValidators)
-        : base(mapper, insertValidators, updateValidators)
+        IEnumerable<IValidator<UserUpdateRequest>> updateValidators,
+        IEnumerable<IValidator<UserPatchRequest>> patchValidators)
+        : base(mapper, insertValidators, updateValidators, patchValidators)
     {
         _dbContext = dbContext;
     }
@@ -82,6 +83,27 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         return Mapper.Map<UserResponse>(entity);
     }
 
+    public override async Task<UserResponse> PatchAsync(int id, UserPatchRequest request)
+    {
+        await ValidatePatchAsync(request);
+
+        var entity = await _dbContext.Users.Include(u => u.UserRole).FirstOrDefaultAsync(u => u.Id == id)
+            ?? throw new KeyNotFoundException($"User with id {id} was not found.");
+
+        Mapper.Map(request, entity);
+        if (request.Password != null)
+        {
+            SetPassword(entity, request.Password);
+        }
+
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+        await ReloadUserRoleAsync(entity);
+
+        return Mapper.Map<UserResponse>(entity);
+    }
+
     public override async Task<UserResponse> UpdateAsync(int id, UserUpdateRequest request)
     {
         await ValidateUpdateAsync(request);
@@ -94,7 +116,7 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
-        await _dbContext.Entry(entity).Reference(u => u.UserRole).LoadAsync();
+        await ReloadUserRoleAsync(entity);
 
         return Mapper.Map<UserResponse>(entity);
     }
@@ -171,5 +193,12 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
             HashAlgorithmName.SHA256);
 
         return Convert.ToBase64String(pbkdf2.GetBytes(20));
+    }
+
+    private async Task ReloadUserRoleAsync(User entity)
+    {
+        var reference = _dbContext.Entry(entity).Reference(u => u.UserRole);
+        reference.IsLoaded = false;
+        await reference.LoadAsync();
     }
 }

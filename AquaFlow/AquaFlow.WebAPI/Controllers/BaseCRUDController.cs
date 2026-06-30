@@ -9,11 +9,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AquaFlow.WebAPI.Controllers;
 
-public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUpdateRequest, TService>
+public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest, TService>
     : BaseReadController<TResponse, TSearch, TService>
     where TResponse : AuditableResponse
     where TSearch : BaseSearchObject
-    where TService : IBaseCRUDService<TResponse, TSearch, TInsertRequest, TUpdateRequest>
+    where TService : IBaseCRUDService<TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>
 {
     protected BaseCRUDController(TService service) : base(service)
     {
@@ -49,6 +49,31 @@ public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUp
         try
         {
             var result = await Service.UpdateAsync(id, request);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ValidationException exception)
+        {
+            return BadRequest(CreateValidationErrorResponse(exception));
+        }
+        catch (ClientException exception)
+        {
+            return BadRequest(CreateClientErrorResponse(exception));
+        }
+    }
+
+    [HttpPatch("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TResponse>> Patch(int id, [FromBody] TPatchRequest request)
+    {
+        try
+        {
+            var result = await Service.PatchAsync(id, request);
             return Ok(result);
         }
         catch (KeyNotFoundException)

@@ -95,65 +95,89 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IAccessManager, AccessManager>();
 builder.Services.AddScoped<ICryptoService, CryptoService>();
-builder.Services.AddScoped<IBaseCRUDService<UserResponse, UserSearchObject, UserInsertRequest, UserUpdateRequest>>(
+AddPatchMapping<UserPatchRequest, User>();
+builder.Services.AddScoped<IBaseCRUDService<UserResponse, UserSearchObject, UserInsertRequest, UserUpdateRequest, UserPatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IUserService>());
-AddCrud<UserRole, UserRoleResponse, UserRoleSearchObject, UserRoleInsertRequest, UserRoleUpdateRequest>();
-builder.Services.AddScoped<IBaseCRUDService<PermissionResponse, PermissionSearchObject, PermissionInsertRequest, PermissionUpdateRequest>, PermissionService>();
-builder.Services.AddScoped<IBaseCRUDService<UserRolePermissionResponse, UserRolePermissionSearchObject, UserRolePermissionInsertRequest, UserRolePermissionUpdateRequest>, UserRolePermissionService>();
-builder.Services.AddScoped<IBaseCRUDService<CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest>, CustomerProfileService>();
-builder.Services.AddScoped<IBaseCRUDService<CollectorProfileResponse, CollectorProfileSearchObject, CollectorProfileInsertRequest, CollectorProfileUpdateRequest>, CollectorProfileService>();
-AddCrud<Settlement, SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest>();
-AddCrud<ServiceLocation, ServiceLocationResponse, ServiceLocationSearchObject, ServiceLocationInsertRequest, ServiceLocationUpdateRequest>();
-AddCrud<WaterMeter, WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest>();
-AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest>();
-AddCrud<Tariff, TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest>();
-AddCrud<Invoice, InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest>();
-AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest>();
-AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest>();
-AddCrud<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest>();
-AddCrud<Notification, NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest>();
-AddCrud<UserNotification, UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest>();
-AddCrud<CompanySettings, CompanySettingsResponse, CompanySettingsSearchObject, CompanySettingsInsertRequest, CompanySettingsUpdateRequest>();
-AddCrud<PaymentSettings, PaymentSettingsResponse, PaymentSettingsSearchObject, PaymentSettingsInsertRequest, PaymentSettingsUpdateRequest>();
+AddCrud<UserRole, UserRoleResponse, UserRoleSearchObject, UserRoleInsertRequest, UserRoleUpdateRequest, UserRolePatchRequest>();
+AddPatchMapping<PermissionPatchRequest, Permission>();
+builder.Services.AddScoped<IBaseCRUDService<PermissionResponse, PermissionSearchObject, PermissionInsertRequest, PermissionUpdateRequest, PermissionPatchRequest>, PermissionService>();
+AddPatchMapping<UserRolePermissionPatchRequest, UserRolePermission>();
+builder.Services.AddScoped<IBaseCRUDService<UserRolePermissionResponse, UserRolePermissionSearchObject, UserRolePermissionInsertRequest, UserRolePermissionUpdateRequest, UserRolePermissionPatchRequest>, UserRolePermissionService>();
+AddPatchMapping<CustomerProfilePatchRequest, CustomerProfile>();
+builder.Services.AddScoped<IBaseCRUDService<CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest, CustomerProfilePatchRequest>, CustomerProfileService>();
+AddPatchMapping<CollectorProfilePatchRequest, CollectorProfile>();
+builder.Services.AddScoped<IBaseCRUDService<CollectorProfileResponse, CollectorProfileSearchObject, CollectorProfileInsertRequest, CollectorProfileUpdateRequest, CollectorProfilePatchRequest>, CollectorProfileService>();
+AddCrud<Settlement, SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>();
+AddCrud<ServiceLocation, ServiceLocationResponse, ServiceLocationSearchObject, ServiceLocationInsertRequest, ServiceLocationUpdateRequest, ServiceLocationPatchRequest>();
+AddCrud<WaterMeter, WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>();
+AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>();
+AddCrud<Tariff, TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>();
+AddCrud<Invoice, InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>();
+AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
+AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
+AddCrud<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>();
+AddCrud<Notification, NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>();
+AddCrud<UserNotification, UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>();
+AddCrud<CompanySettings, CompanySettingsResponse, CompanySettingsSearchObject, CompanySettingsInsertRequest, CompanySettingsUpdateRequest, CompanySettingsPatchRequest>();
+AddCrud<PaymentSettings, PaymentSettingsResponse, PaymentSettingsSearchObject, PaymentSettingsInsertRequest, PaymentSettingsUpdateRequest, PaymentSettingsPatchRequest>();
 
 builder.Services.AddScoped<IValidator<UserInsertRequest>, UserInsertValidator>();
 builder.Services.AddScoped<IValidator<UserUpdateRequest>, UserUpdateValidator>();
+builder.Services.AddScoped<IValidator<UserPatchRequest>, UserPatchValidator>();
 builder.Services.AddScoped<IValidator<UserRoleInsertRequest>, UserRoleInsertValidator>();
 builder.Services.AddScoped<IValidator<UserRoleUpdateRequest>, UserRoleUpdateValidator>();
+builder.Services.AddScoped<IValidator<UserRolePatchRequest>, UserRolePatchValidator>();
 builder.Services.AddScoped<IValidator<PermissionInsertRequest>, PermissionInsertValidator>();
 builder.Services.AddScoped<IValidator<PermissionUpdateRequest>, PermissionUpdateValidator>();
+builder.Services.AddScoped<IValidator<PermissionPatchRequest>, PermissionPatchValidator>();
 builder.Services.AddScoped<IValidator<UserRolePermissionInsertRequest>, UserRolePermissionInsertValidator>();
 builder.Services.AddScoped<IValidator<UserRolePermissionUpdateRequest>, UserRolePermissionUpdateValidator>();
+builder.Services.AddScoped<IValidator<UserRolePermissionPatchRequest>, UserRolePermissionPatchValidator>();
 builder.Services.AddScoped<IValidator<CustomerProfileInsertRequest>, CustomerProfileInsertValidator>();
 builder.Services.AddScoped<IValidator<CustomerProfileUpdateRequest>, CustomerProfileUpdateValidator>();
+builder.Services.AddScoped<IValidator<CustomerProfilePatchRequest>, CustomerProfilePatchValidator>();
 builder.Services.AddScoped<IValidator<CollectorProfileInsertRequest>, CollectorProfileInsertValidator>();
 builder.Services.AddScoped<IValidator<CollectorProfileUpdateRequest>, CollectorProfileUpdateValidator>();
+builder.Services.AddScoped<IValidator<CollectorProfilePatchRequest>, CollectorProfilePatchValidator>();
 builder.Services.AddScoped<IValidator<SettlementInsertRequest>, SettlementInsertValidator>();
 builder.Services.AddScoped<IValidator<SettlementUpdateRequest>, SettlementUpdateValidator>();
+builder.Services.AddScoped<IValidator<SettlementPatchRequest>, SettlementPatchValidator>();
 builder.Services.AddScoped<IValidator<ServiceLocationInsertRequest>, ServiceLocationInsertValidator>();
 builder.Services.AddScoped<IValidator<ServiceLocationUpdateRequest>, ServiceLocationUpdateValidator>();
+builder.Services.AddScoped<IValidator<ServiceLocationPatchRequest>, ServiceLocationPatchValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterInsertRequest>, WaterMeterInsertValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterUpdateRequest>, WaterMeterUpdateValidator>();
+builder.Services.AddScoped<IValidator<WaterMeterPatchRequest>, WaterMeterPatchValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingInsertRequest>, MeterReadingInsertValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingUpdateRequest>, MeterReadingUpdateValidator>();
+builder.Services.AddScoped<IValidator<MeterReadingPatchRequest>, MeterReadingPatchValidator>();
 builder.Services.AddScoped<IValidator<TariffInsertRequest>, TariffInsertValidator>();
 builder.Services.AddScoped<IValidator<TariffUpdateRequest>, TariffUpdateValidator>();
+builder.Services.AddScoped<IValidator<TariffPatchRequest>, TariffPatchValidator>();
 builder.Services.AddScoped<IValidator<InvoiceInsertRequest>, InvoiceInsertValidator>();
 builder.Services.AddScoped<IValidator<InvoiceUpdateRequest>, InvoiceUpdateValidator>();
+builder.Services.AddScoped<IValidator<InvoicePatchRequest>, InvoicePatchValidator>();
 builder.Services.AddScoped<IValidator<InvoiceItemInsertRequest>, InvoiceItemInsertValidator>();
 builder.Services.AddScoped<IValidator<InvoiceItemUpdateRequest>, InvoiceItemUpdateValidator>();
+builder.Services.AddScoped<IValidator<InvoiceItemPatchRequest>, InvoiceItemPatchValidator>();
 builder.Services.AddScoped<IValidator<PaymentInsertRequest>, PaymentInsertValidator>();
 builder.Services.AddScoped<IValidator<PaymentUpdateRequest>, PaymentUpdateValidator>();
+builder.Services.AddScoped<IValidator<PaymentPatchRequest>, PaymentPatchValidator>();
 builder.Services.AddScoped<IValidator<FaultReportInsertRequest>, FaultReportInsertValidator>();
 builder.Services.AddScoped<IValidator<FaultReportUpdateRequest>, FaultReportUpdateValidator>();
+builder.Services.AddScoped<IValidator<FaultReportPatchRequest>, FaultReportPatchValidator>();
 builder.Services.AddScoped<IValidator<NotificationInsertRequest>, NotificationInsertValidator>();
 builder.Services.AddScoped<IValidator<NotificationUpdateRequest>, NotificationUpdateValidator>();
+builder.Services.AddScoped<IValidator<NotificationPatchRequest>, NotificationPatchValidator>();
 builder.Services.AddScoped<IValidator<UserNotificationInsertRequest>, UserNotificationInsertValidator>();
 builder.Services.AddScoped<IValidator<UserNotificationUpdateRequest>, UserNotificationUpdateValidator>();
+builder.Services.AddScoped<IValidator<UserNotificationPatchRequest>, UserNotificationPatchValidator>();
 builder.Services.AddScoped<IValidator<CompanySettingsInsertRequest>, CompanySettingsInsertValidator>();
 builder.Services.AddScoped<IValidator<CompanySettingsUpdateRequest>, CompanySettingsUpdateValidator>();
+builder.Services.AddScoped<IValidator<CompanySettingsPatchRequest>, CompanySettingsPatchValidator>();
 builder.Services.AddScoped<IValidator<PaymentSettingsInsertRequest>, PaymentSettingsInsertValidator>();
 builder.Services.AddScoped<IValidator<PaymentSettingsUpdateRequest>, PaymentSettingsUpdateValidator>();
+builder.Services.AddScoped<IValidator<PaymentSettingsPatchRequest>, PaymentSettingsPatchValidator>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -194,10 +218,19 @@ app.MapControllers();
 
 app.Run();
 
-void AddCrud<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest>()
+void AddCrud<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>()
     where TEntity : EntityBase
     where TSearch : BaseSearchObject
 {
-    builder.Services.AddScoped<IBaseCRUDService<TResponse, TSearch, TInsertRequest, TUpdateRequest>>(serviceProvider =>
-        ActivatorUtilities.CreateInstance<EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest>>(serviceProvider));
+    AddPatchMapping<TPatchRequest, TEntity>();
+
+    builder.Services.AddScoped<IBaseCRUDService<TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>>(serviceProvider =>
+        ActivatorUtilities.CreateInstance<EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>>(serviceProvider));
+}
+
+void AddPatchMapping<TPatchRequest, TEntity>()
+    where TEntity : EntityBase
+{
+    mapperConfig.NewConfig<TPatchRequest, TEntity>()
+        .IgnoreNullValues(true);
 }
