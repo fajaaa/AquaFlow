@@ -1,3 +1,4 @@
+using System.Data;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Responses;
 using AquaFlow.Services.Database;
@@ -80,12 +81,20 @@ public class BaseInvoiceState
     // Records a payment against the invoice and moves it to Paid or PartiallyPaid depending on the
     // remaining balance. The new Payment row, the status change and the history entry are persisted
     // in a single SaveChanges so they commit atomically.
+    //
+    // The whole "sum existing payments -> check the balance -> insert the payment" sequence runs
+    // inside a Serializable transaction. Without it two concurrent payments can both read the same
+    // paid total, both pass the balance check, and overpay the invoice. Serializable range locks the
+    // rows the balance is computed from, so a second concurrent payment waits for this one to commit.
     protected async Task<InvoiceResponse> RecordPaymentInternalAsync(int id, decimal amount)
     {
         if (amount <= 0)
         {
             throw new ClientException("Payment amount must be greater than zero.");
         }
+
+        await using var transaction = await DbContext.Database
+            .BeginTransactionAsync(IsolationLevel.Serializable);
 
         var entity = await GetInvoiceAsync(id);
 
@@ -112,6 +121,8 @@ public class BaseInvoiceState
 
         var newStatus = remaining - amount <= 0m ? "Paid" : "PartiallyPaid";
         await TransitionToAsync(entity, newStatus, ChangedById, $"Recorded payment of {amount:0.00}.");
+
+        await transaction.CommitAsync();
         return Mapper.Map<InvoiceResponse>(entity);
     }
 

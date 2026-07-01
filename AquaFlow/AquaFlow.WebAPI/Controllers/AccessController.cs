@@ -2,10 +2,12 @@ using AquaFlow.Model.Access;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Services;
+using AquaFlow.WebAPI.RateLimiting;
 using AquaFlow.WebAPI.Services.AccessManager;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AquaFlow.WebAPI.Controllers;
 
@@ -32,6 +34,7 @@ public class AccessController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting(RateLimitingPolicies.Authentication)]
     public async Task<ActionResult<UserLoginResponse>> Login([FromBody] UserLoginRequest request)
     {
         var result = await _accessManager.LoginAsync(request);
@@ -39,6 +42,7 @@ public class AccessController : ControllerBase
     }
 
     [HttpPost("refresh")]
+    [EnableRateLimiting(RateLimitingPolicies.Authentication)]
     public async Task<ActionResult<UserLoginResponse>> Refresh([FromBody] RefreshAccessTokenRequest request)
     {
         var result = await _accessManager.LoginWithRefreshTokenAsync(request);

@@ -21,8 +21,44 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
         nameof(BaseSearchObject.SortDescending)
     };
 
+    // Reflection results are the same for every request of a given closed generic type, so they are
+    // computed once per <TEntity, TResponse, TSearch> and cached in these static fields instead of
+    // walking the type's properties on every list call.
+    private static readonly (PropertyInfo SearchProperty, PropertyInfo EntityProperty)[] FilterableProperties =
+        BuildFilterableProperties();
+
+    private static readonly Dictionary<string, PropertyInfo> EntityProperties =
+        typeof(TEntity)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .GroupBy(property => property.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
     private static readonly MethodInfo StringContainsMethod =
         typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) })!;
+
+    // Pairs each non-infrastructure search property with the matching entity property (by exact
+    // name), skipping search properties that have no entity counterpart.
+    private static (PropertyInfo, PropertyInfo)[] BuildFilterableProperties()
+    {
+        var pairs = new List<(PropertyInfo, PropertyInfo)>();
+        foreach (var searchProperty in typeof(TSearch).GetProperties())
+        {
+            if (SearchInfrastructureProperties.Contains(searchProperty.Name))
+            {
+                continue;
+            }
+
+            var entityProperty = typeof(TEntity).GetProperty(searchProperty.Name);
+            if (entityProperty == null)
+            {
+                continue;
+            }
+
+            pairs.Add((searchProperty, entityProperty));
+        }
+
+        return pairs.ToArray();
+    }
 
     protected readonly IMapper Mapper;
 
@@ -45,13 +81,8 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
             return query;
         }
 
-        foreach (var searchProperty in typeof(TSearch).GetProperties())
+        foreach (var (searchProperty, entityProperty) in FilterableProperties)
         {
-            if (SearchInfrastructureProperties.Contains(searchProperty.Name))
-            {
-                continue;
-            }
-
             var searchValue = searchProperty.GetValue(search);
             if (searchValue == null)
             {
@@ -59,12 +90,6 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
             }
 
             if (searchValue is string text && string.IsNullOrWhiteSpace(text))
-            {
-                continue;
-            }
-
-            var entityProperty = typeof(TEntity).GetProperty(searchProperty.Name);
-            if (entityProperty == null)
             {
                 continue;
             }
@@ -97,10 +122,7 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
             return query;
         }
 
-        var entityProperty = typeof(TEntity).GetProperty(
-            sortBy,
-            BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-        if (entityProperty == null)
+        if (!EntityProperties.TryGetValue(sortBy, out var entityProperty))
         {
             return query;
         }

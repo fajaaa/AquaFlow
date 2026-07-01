@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using AquaFlow.Common.Services.CryptoService;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
@@ -8,11 +9,13 @@ using AquaFlow.Services.Database;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Validators;
 using AquaFlow.WebAPI.Filters;
+using AquaFlow.WebAPI.RateLimiting;
 using AquaFlow.WebAPI.Services.AccessManager;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -216,6 +219,21 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 
+// Throttle the credential endpoints so /Access/login (and /refresh) cannot be brute-forced.
+// Partitioned per client IP: 5 attempts per minute, further requests get 429.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(RateLimitingPolicies.Authentication, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -229,6 +247,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 
