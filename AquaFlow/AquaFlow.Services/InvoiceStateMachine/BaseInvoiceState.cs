@@ -11,7 +11,7 @@ namespace AquaFlow.Services.InvoiceStateMachine;
 // Every action is virtual and rejects by default; a concrete state overrides only the transitions
 // it permits. This class is purely a state: resolving the concrete state for an invoice's current
 // status is the job of IInvoiceStateResolver, which InvoiceService uses to delegate the action.
-public class BaseInvoiceState
+public abstract class BaseInvoiceState
 {
     // Payment rows counted towards an invoice's paid total carry this status.
     protected const string CompletedPaymentStatus = PaymentStatus.Completed;
@@ -25,6 +25,11 @@ public class BaseInvoiceState
         Mapper = mapper;
     }
 
+    // The InvoiceStatus this state represents (must be one of the InvoiceStatus constants, matching
+    // the keyed registration in Program.cs). Drives the status-dependent rejection message below so
+    // NotAllowed no longer has to derive the name from the concrete type via reflection.
+    public abstract string Status { get; }
+
     // The id of the user performing the transition is passed through each action call so that
     // TransitionToAsync can stamp the InvoiceStatusHistory row with who made the change.
     public virtual Task<InvoiceResponse> IssueAsync(int id, int changedById) => throw NotAllowed("Issue");
@@ -35,6 +40,15 @@ public class BaseInvoiceState
 
     public virtual Task<InvoiceResponse> MarkOverdueAsync(int id, int changedById) => throw NotAllowed("Mark overdue");
 
+    // The actions a state advertises here MUST be exactly the transition methods it overrides
+    // (IssueAsync -> InvoiceAction.Issue, RecordPaymentAsync -> InvoiceAction.RecordPayment,
+    // CancelAsync -> InvoiceAction.Cancel, MarkOverdueAsync -> InvoiceAction.MarkOverdue). This list
+    // is the public contract for GET {id}/allowed-actions, so it is intentionally hand-maintained
+    // next to the overrides in each state: when you add or remove an override, update this list in
+    // the same file. To guard against drift, a unit test can reflect over each registered state and
+    // assert GetAllowedActions() equals the set of action methods whose DeclaringType is the state
+    // itself (i.e. that it actually overrode). Values come from InvoiceAction so the verbs stay in
+    // one place. Terminal states (Paid/Cancelled) override nothing and return an empty list.
     public virtual List<string> GetAllowedActions() => new();
 
     // Loads the tracked invoice so a state can mutate it, or throws 404 when it does not exist.
@@ -129,7 +143,6 @@ public class BaseInvoiceState
 
     private ClientException NotAllowed(string action)
     {
-        var stateName = GetType().Name.Replace("InvoiceState", string.Empty);
-        return new ClientException($"'{action}' is not allowed while the invoice is in status '{stateName}'.");
+        return new ClientException($"'{action}' is not allowed while the invoice is in status '{Status}'.");
     }
 }

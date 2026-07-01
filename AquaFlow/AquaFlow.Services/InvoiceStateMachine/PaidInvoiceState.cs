@@ -11,5 +11,7 @@ public class PaidInvoiceState : BaseInvoiceState
     {
     }
 
+    public override string Status => InvoiceStatus.Paid;
+
     public override List<string> GetAllowedActions() => new();
 }

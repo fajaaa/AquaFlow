@@ -11,5 +11,7 @@ public class CancelledInvoiceState : BaseInvoiceState
     {
     }
 
+    public override string Status => InvoiceStatus.Cancelled;
+
     public override List<string> GetAllowedActions() => new();
 }
