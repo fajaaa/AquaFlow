@@ -38,42 +38,32 @@ public class InvoiceService
 
     public async Task<InvoiceResponse> IssueAsync(int id, int changedById)
     {
-        var state = await ResolveStateAsync(id);
-        return await state.IssueAsync(id, changedById);
+        var invoice = await LoadInvoiceAsync(id);
+        return await _stateResolver.Resolve(invoice.Status).IssueAsync(invoice, changedById);
     }
 
     public async Task<InvoiceResponse> RecordPaymentAsync(int id, decimal amount, int changedById)
     {
-        var state = await ResolveStateAsync(id);
-        return await state.RecordPaymentAsync(id, amount, changedById);
+        var invoice = await LoadInvoiceAsync(id);
+        return await _stateResolver.Resolve(invoice.Status).RecordPaymentAsync(invoice, amount, changedById);
     }
 
     public async Task<InvoiceResponse> CancelAsync(int id, int changedById)
     {
-        var state = await ResolveStateAsync(id);
-        return await state.CancelAsync(id, changedById);
+        var invoice = await LoadInvoiceAsync(id);
+        return await _stateResolver.Resolve(invoice.Status).CancelAsync(invoice, changedById);
     }
 
     public async Task<InvoiceResponse> MarkOverdueAsync(int id, int changedById)
     {
-        var state = await ResolveStateAsync(id);
-        return await state.MarkOverdueAsync(id, changedById);
+        var invoice = await LoadInvoiceAsync(id);
+        return await _stateResolver.Resolve(invoice.Status).MarkOverdueAsync(invoice, changedById);
     }
 
     public async Task<List<string>> GetAllowedActionsAsync(int id)
     {
-        var status = await GetStatusAsync(id);
-        return _stateResolver.Resolve(status).GetAllowedActions();
-    }
-
-    private async Task<BaseInvoiceState> ResolveStateAsync(int id)
-    {
-        var status = await GetStatusAsync(id);
-        return _stateResolver.Resolve(status);
-    }
-
-    private async Task<string> GetStatusAsync(int id)
-    {
+        // Read-only lookup: only the status is needed to resolve the state, so avoid loading (and
+        // tracking) the whole entity here.
         var status = await _dbContext.Invoices
             .Where(invoice => invoice.Id == id)
             .Select(invoice => invoice.Status)
@@ -83,6 +73,20 @@ public class InvoiceService
             throw new KeyNotFoundException($"Invoice with id {id} was not found.");
         }
 
-        return status;
+        return _stateResolver.Resolve(status).GetAllowedActions();
+    }
+
+    // Loads the tracked Invoice once so the resolved state can both resolve from Status and mutate the
+    // same entity, or throws 404 when it does not exist. This replaces the former two-query path
+    // (status-only read to resolve the state, then a second full read inside the state).
+    private async Task<Invoice> LoadInvoiceAsync(int id)
+    {
+        var invoice = await _dbContext.Invoices.FirstOrDefaultAsync(invoice => invoice.Id == id);
+        if (invoice == null)
+        {
+            throw new KeyNotFoundException($"Invoice with id {id} was not found.");
+        }
+
+        return invoice;
     }
 }

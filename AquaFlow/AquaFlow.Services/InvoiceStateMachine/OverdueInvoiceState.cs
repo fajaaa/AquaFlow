@@ -15,11 +15,11 @@ public class OverdueInvoiceState : BaseInvoiceState
 
     // A partial payment on an overdue invoice keeps it Overdue (it is still past due); only a full
     // payment clears it to Paid. Passing Overdue here is what preserves the overdue marker.
-    public override Task<InvoiceResponse> RecordPaymentAsync(int id, decimal amount, int changedById)
-        => RecordPaymentInternalAsync(id, amount, changedById, InvoiceStatus.Overdue);
+    public override Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, decimal amount, int changedById)
+        => RecordPaymentInternalAsync(invoice, amount, changedById, InvoiceStatus.Overdue);
 
-    public override Task<InvoiceResponse> CancelAsync(int id, int changedById)
-        => TransitionByIdAsync(id, InvoiceStatus.Cancelled, "Invoice cancelled while overdue.", changedById);
+    public override Task<InvoiceResponse> CancelAsync(Invoice invoice, int changedById)
+        => TransitionAsync(invoice, InvoiceStatus.Cancelled, "Invoice cancelled while overdue.", changedById);
 
     public override List<string> GetAllowedActions() => new() { InvoiceAction.RecordPayment, InvoiceAction.Cancel };
 }

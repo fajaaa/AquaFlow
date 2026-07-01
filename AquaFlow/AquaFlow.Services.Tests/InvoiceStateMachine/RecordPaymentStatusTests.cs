@@ -73,12 +73,14 @@ public class RecordPaymentStatusTests
     }
 
     // Resolves the state under test the same way production does (keyed by the invoice's status) and
-    // records the payment through the public RecordPaymentAsync entry point.
+    // records the payment through the public RecordPaymentAsync entry point. Like InvoiceService, it
+    // loads the tracked invoice once and hands that entity to the state.
     private static async Task RecordPaymentAsync(DbContextOptions<AquaFlowDbContext> options, string status, decimal amount)
     {
         await using var context = new AquaFlowDbContext(options);
         var state = CreateState(status, context);
-        await state.RecordPaymentAsync(InvoiceId, amount, ChangedById);
+        var invoice = await context.Invoices.FirstAsync(i => i.Id == InvoiceId);
+        await state.RecordPaymentAsync(invoice, amount, ChangedById);
     }
 
     private static BaseInvoiceState CreateState(string status, AquaFlowDbContext context)

@@ -30,15 +30,17 @@ public abstract class BaseInvoiceState
     // NotAllowed no longer has to derive the name from the concrete type via reflection.
     public abstract string Status { get; }
 
-    // The id of the user performing the transition is passed through each action call so that
-    // TransitionToAsync can stamp the InvoiceStatusHistory row with who made the change.
-    public virtual Task<InvoiceResponse> IssueAsync(int id, int changedById) => throw NotAllowed("Issue");
+    // InvoiceService loads the tracked Invoice once, resolves the state from its Status and passes the
+    // entity in, so a state never re-reads the invoice for a plain transition. The id of the user
+    // performing the transition is passed through each action call so that TransitionToAsync can stamp
+    // the InvoiceStatusHistory row with who made the change.
+    public virtual Task<InvoiceResponse> IssueAsync(Invoice invoice, int changedById) => throw NotAllowed("Issue");
 
-    public virtual Task<InvoiceResponse> RecordPaymentAsync(int id, decimal amount, int changedById) => throw NotAllowed("Record payment");
+    public virtual Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, decimal amount, int changedById) => throw NotAllowed("Record payment");
 
-    public virtual Task<InvoiceResponse> CancelAsync(int id, int changedById) => throw NotAllowed("Cancel");
+    public virtual Task<InvoiceResponse> CancelAsync(Invoice invoice, int changedById) => throw NotAllowed("Cancel");
 
-    public virtual Task<InvoiceResponse> MarkOverdueAsync(int id, int changedById) => throw NotAllowed("Mark overdue");
+    public virtual Task<InvoiceResponse> MarkOverdueAsync(Invoice invoice, int changedById) => throw NotAllowed("Mark overdue");
 
     // The actions a state advertises here MUST be exactly the transition methods it overrides
     // (IssueAsync -> InvoiceAction.Issue, RecordPaymentAsync -> InvoiceAction.RecordPayment,
@@ -51,24 +53,11 @@ public abstract class BaseInvoiceState
     // one place. Terminal states (Paid/Cancelled) override nothing and return an empty list.
     public virtual List<string> GetAllowedActions() => new();
 
-    // Loads the tracked invoice so a state can mutate it, or throws 404 when it does not exist.
-    protected async Task<Invoice> GetInvoiceAsync(int id)
+    // Applies a plain status transition to the already-loaded invoice and returns the mapped response.
+    protected async Task<InvoiceResponse> TransitionAsync(Invoice invoice, string newStatus, string note, int changedById)
     {
-        var entity = await DbContext.Invoices.FirstOrDefaultAsync(invoice => invoice.Id == id);
-        if (entity == null)
-        {
-            throw new KeyNotFoundException($"Invoice with id {id} was not found.");
-        }
-
-        return entity;
-    }
-
-    // Loads the invoice, applies a plain status transition and returns the mapped response.
-    protected async Task<InvoiceResponse> TransitionByIdAsync(int id, string newStatus, string note, int changedById)
-    {
-        var entity = await GetInvoiceAsync(id);
-        await TransitionToAsync(entity, newStatus, changedById, note);
-        return Mapper.Map<InvoiceResponse>(entity);
+        await TransitionToAsync(invoice, newStatus, changedById, note);
+        return Mapper.Map<InvoiceResponse>(invoice);
     }
 
     // Records a payment against the invoice and moves it to Paid (when the balance is cleared) or to
@@ -82,7 +71,11 @@ public abstract class BaseInvoiceState
     // inside a Serializable transaction. Without it two concurrent payments can both read the same
     // paid total, both pass the balance check, and overpay the invoice. Serializable range locks the
     // rows the balance is computed from, so a second concurrent payment waits for this one to commit.
-    protected async Task<InvoiceResponse> RecordPaymentInternalAsync(int id, decimal amount, int changedById, string partialStatus)
+    //
+    // InvoiceService loads the invoice before this transaction opens (to resolve the state), so that
+    // first read is not covered by the Serializable lock. We re-read the invoice row here, inside the
+    // transaction, so the balance is computed from a locked snapshot and the overpay guarantee holds.
+    protected async Task<InvoiceResponse> RecordPaymentInternalAsync(Invoice invoice, decimal amount, int changedById, string partialStatus)
     {
         if (amount <= 0)
         {
@@ -92,12 +85,13 @@ public abstract class BaseInvoiceState
         await using var transaction = await DbContext.Database
             .BeginTransactionAsync(IsolationLevel.Serializable);
 
-        var entity = await GetInvoiceAsync(id);
+        // Bring the invoice-row read inside the transaction so it is locked together with the payments.
+        await DbContext.Entry(invoice).ReloadAsync();
 
         var alreadyPaid = await DbContext.Payments
-            .Where(payment => payment.InvoiceId == id && payment.Status == CompletedPaymentStatus)
+            .Where(payment => payment.InvoiceId == invoice.Id && payment.Status == CompletedPaymentStatus)
             .SumAsync(payment => (decimal?)payment.Amount) ?? 0m;
-        var remaining = entity.TotalAmount - alreadyPaid;
+        var remaining = invoice.TotalAmount - alreadyPaid;
 
         if (amount > remaining)
         {
@@ -106,8 +100,8 @@ public abstract class BaseInvoiceState
 
         DbContext.Payments.Add(new Payment
         {
-            InvoiceId = entity.Id,
-            CustomerId = entity.CustomerId,
+            InvoiceId = invoice.Id,
+            CustomerId = invoice.CustomerId,
             Amount = amount,
             PaymentMethod = PaymentMethod.Manual,
             Status = CompletedPaymentStatus,
@@ -116,10 +110,10 @@ public abstract class BaseInvoiceState
         });
 
         var newStatus = remaining - amount <= 0m ? InvoiceStatus.Paid : partialStatus;
-        await TransitionToAsync(entity, newStatus, changedById, $"Recorded payment of {amount:0.00}; invoice now {newStatus}.");
+        await TransitionToAsync(invoice, newStatus, changedById, $"Recorded payment of {amount:0.00}; invoice now {newStatus}.");
 
         await transaction.CommitAsync();
-        return Mapper.Map<InvoiceResponse>(entity);
+        return Mapper.Map<InvoiceResponse>(invoice);
     }
 
     // Changes the invoice status and appends the matching InvoiceStatusHistory entry. Any rows the
