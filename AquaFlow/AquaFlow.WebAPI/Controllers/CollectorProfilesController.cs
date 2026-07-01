@@ -6,6 +6,7 @@ using CollectorProfileCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class CollectorProfilesController : BaseCRUDController<CollectorProfileResponse, CollectorProfileSearchObject, CollectorProfileInsertRequest, CollectorProfileUpdateRequest, CollectorProfilePatchRequest, CollectorProfileCrudService>
 {
     public CollectorProfilesController(CollectorProfileCrudService service) : base(service)

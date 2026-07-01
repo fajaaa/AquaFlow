@@ -6,6 +6,7 @@ using NotificationCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Mode
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class NotificationsController : BaseCRUDController<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest, NotificationCrudService>
 {
     public NotificationsController(NotificationCrudService service) : base(service)

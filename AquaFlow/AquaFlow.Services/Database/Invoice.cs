@@ -28,11 +28,16 @@ public class Invoice : EntityBase
     [Column(TypeName = "decimal(18,2)")]
     public decimal TotalAmount { get; set; }
     [MaxLength(30)]
-    public string Status { get; set; } = "Draft";
+    public string Status { get; set; } = InvoiceStatus.Draft;
     public DateTime DueDate { get; set; }
     public int CreatedById { get; set; }
     public User? CreatedBy { get; set; }
     public ICollection<InvoiceItem> InvoiceItems { get; set; } = new List<InvoiceItem>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     public ICollection<InvoiceStatusHistory> StatusHistory { get; set; } = new List<InvoiceStatusHistory>();
+
+    // Optimistic concurrency token: guards status transitions so two parallel
+    // Issue/Cancel/RecordPayment requests cannot both commit against the same row.
+    [Timestamp]
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }

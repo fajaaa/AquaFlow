@@ -6,6 +6,7 @@ using ServiceLocationCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.M
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class ServiceLocationsController : BaseCRUDController<ServiceLocationResponse, ServiceLocationSearchObject, ServiceLocationInsertRequest, ServiceLocationUpdateRequest, ServiceLocationPatchRequest, ServiceLocationCrudService>
 {
     public ServiceLocationsController(ServiceLocationCrudService service) : base(service)

@@ -6,6 +6,7 @@ using SettlementCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class SettlementsController : BaseCRUDController<SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest, SettlementCrudService>
 {
     public SettlementsController(SettlementCrudService service) : base(service)

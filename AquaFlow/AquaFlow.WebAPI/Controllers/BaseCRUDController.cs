@@ -22,7 +22,7 @@ public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUp
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<TResponse>> Create([FromBody] TInsertRequest request)
+    public virtual async Task<ActionResult<TResponse>> Create([FromBody] TInsertRequest request)
     {
         try
         {
@@ -44,7 +44,7 @@ public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUp
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<TResponse>> Update(int id, [FromBody] TUpdateRequest request)
+    public virtual async Task<ActionResult<TResponse>> Update(int id, [FromBody] TUpdateRequest request)
     {
         try
         {
@@ -69,7 +69,7 @@ public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUp
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<TResponse>> Patch(int id, [FromBody] TPatchRequest request)
+    public virtual async Task<ActionResult<TResponse>> Patch(int id, [FromBody] TPatchRequest request)
     {
         try
         {
@@ -94,7 +94,7 @@ public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUp
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(int id)
+    public virtual async Task<IActionResult> Delete(int id)
     {
         try
         {

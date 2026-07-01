@@ -70,6 +70,13 @@ public partial class AquaFlowDbContext : DbContext
             .HasIndex(token => token.Token)
             .IsUnique();
 
+        // Optimistic concurrency for invoice status transitions: every UPDATE carries the
+        // loaded RowVersion in its WHERE clause, so a stale transition affects 0 rows and
+        // surfaces as DbUpdateConcurrencyException instead of silently overwriting.
+        modelBuilder.Entity<Invoice>()
+            .Property(invoice => invoice.RowVersion)
+            .IsRowVersion();
+
         CreateSeed(modelBuilder);
     }
 }

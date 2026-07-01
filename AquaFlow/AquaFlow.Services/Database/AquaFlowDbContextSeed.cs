@@ -140,6 +140,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 8,
+                Code = "Roles.Manage",
+                Name = "Manage roles and permissions",
+                Module = "Roles",
+                Description = "Allows managing user roles, permissions, and their assignments.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -231,6 +242,14 @@ public partial class AquaFlowDbContext
                 Id = 11,
                 UserRoleId = 3,
                 PermissionId = 5,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 12,
+                UserRoleId = 1,
+                PermissionId = 8,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });

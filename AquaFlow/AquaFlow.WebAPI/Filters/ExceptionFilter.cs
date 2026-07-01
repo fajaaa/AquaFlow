@@ -35,6 +35,13 @@ public class ExceptionFilter : ExceptionFilterAttribute
             context.HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             _logger.LogWarning("Client error: {Message}", clientException.Message);
         }
+        else if (context.Exception is DbUpdateConcurrencyException)
+        {
+            context.ModelState.AddModelError("concurrency",
+                "The resource was modified by another request. Please reload the latest state and try again.");
+            context.HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
+            _logger.LogWarning(context.Exception, "Optimistic concurrency conflict.");
+        }
         else if (IsForeignKeyConstraintException(context.Exception))
         {
             context.ModelState.AddModelError("foreignKey", "Invalid related resource reference.");

@@ -6,6 +6,7 @@ using PaymentCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Res
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class PaymentsController : BaseCRUDController<PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest, PaymentCrudService>
 {
     public PaymentsController(PaymentCrudService service) : base(service)

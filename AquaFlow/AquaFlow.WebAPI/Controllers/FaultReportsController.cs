@@ -6,6 +6,7 @@ using FaultReportCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class FaultReportsController : BaseCRUDController<FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest, FaultReportCrudService>
 {
     public FaultReportsController(FaultReportCrudService service) : base(service)

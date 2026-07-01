@@ -573,6 +573,12 @@ namespace AquaFlow.Services.Migrations
                     b.Property<decimal>("PreviousReading")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -1346,6 +1352,16 @@ namespace AquaFlow.Services.Migrations
                             IsActive = true,
                             Module = "Notifications",
                             Name = "Manage notifications"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Code = "Roles.Manage",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows managing user roles, permissions, and their assignments.",
+                            IsActive = true,
+                            Module = "Roles",
+                            Name = "Manage roles and permissions"
                         });
                 });
 
@@ -2144,6 +2160,13 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 5,
                             UserRoleId = 3
+                        },
+                        new
+                        {
+                            Id = 12,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 8,
+                            UserRoleId = 1
                         });
                 });
 

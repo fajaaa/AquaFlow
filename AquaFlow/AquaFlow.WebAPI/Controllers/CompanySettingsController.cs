@@ -6,6 +6,7 @@ using CompanySettingsCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.M
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class CompanySettingsController : BaseCRUDController<CompanySettingsResponse, CompanySettingsSearchObject, CompanySettingsInsertRequest, CompanySettingsUpdateRequest, CompanySettingsPatchRequest, CompanySettingsCrudService>
 {
     public CompanySettingsController(CompanySettingsCrudService service) : base(service)

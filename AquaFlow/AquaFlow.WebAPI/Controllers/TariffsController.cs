@@ -6,6 +6,7 @@ using TariffCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Resp
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class TariffsController : BaseCRUDController<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest, TariffCrudService>
 {
     public TariffsController(TariffCrudService service) : base(service)

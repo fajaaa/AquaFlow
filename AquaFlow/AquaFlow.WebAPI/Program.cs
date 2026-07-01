@@ -1,17 +1,21 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using AquaFlow.Common.Services.CryptoService;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Validators;
 using AquaFlow.WebAPI.Filters;
+using AquaFlow.WebAPI.RateLimiting;
 using AquaFlow.WebAPI.Services.AccessManager;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -93,6 +97,7 @@ builder.Services.AddScoped<IMapper, ServiceMapper>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+builder.Services.AddScoped<IPermissionLookupService, PermissionLookupService>();
 builder.Services.AddScoped<IAccessManager, AccessManager>();
 builder.Services.AddScoped<ICryptoService, CryptoService>();
 AddPatchMapping<UserPatchRequest, User>();
@@ -112,7 +117,21 @@ AddCrud<ServiceLocation, ServiceLocationResponse, ServiceLocationSearchObject, S
 AddCrud<WaterMeter, WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>();
 AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>();
 AddCrud<Tariff, TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>();
-AddCrud<Invoice, InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>();
+// Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
+// it by hand: the patch mapping, IInvoiceService, and the generic IBaseCRUDService alias resolving
+// to the same InvoiceService. Each invoice state is a keyed scoped BaseInvoiceState (status string as
+// key); IInvoiceStateResolver resolves the state for a status through those keyed registrations.
+AddPatchMapping<InvoicePatchRequest, Invoice>();
+builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IBaseCRUDService<InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IInvoiceService>());
+builder.Services.AddKeyedScoped<BaseInvoiceState, DraftInvoiceState>(InvoiceStatus.Draft);
+builder.Services.AddKeyedScoped<BaseInvoiceState, IssuedInvoiceState>(InvoiceStatus.Issued);
+builder.Services.AddKeyedScoped<BaseInvoiceState, PartiallyPaidInvoiceState>(InvoiceStatus.PartiallyPaid);
+builder.Services.AddKeyedScoped<BaseInvoiceState, OverdueInvoiceState>(InvoiceStatus.Overdue);
+builder.Services.AddKeyedScoped<BaseInvoiceState, PaidInvoiceState>(InvoiceStatus.Paid);
+builder.Services.AddKeyedScoped<BaseInvoiceState, CancelledInvoiceState>(InvoiceStatus.Cancelled);
+builder.Services.AddScoped<IInvoiceStateResolver, InvoiceStateResolver>();
 AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
 AddCrud<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>();
@@ -121,6 +140,7 @@ AddCrud<UserNotification, UserNotificationResponse, UserNotificationSearchObject
 AddCrud<CompanySettings, CompanySettingsResponse, CompanySettingsSearchObject, CompanySettingsInsertRequest, CompanySettingsUpdateRequest, CompanySettingsPatchRequest>();
 AddCrud<PaymentSettings, PaymentSettingsResponse, PaymentSettingsSearchObject, PaymentSettingsInsertRequest, PaymentSettingsUpdateRequest, PaymentSettingsPatchRequest>();
 
+builder.Services.AddScoped<IValidator<UserRegisterRequest>, UserRegisterValidator>();
 builder.Services.AddScoped<IValidator<UserInsertRequest>, UserInsertValidator>();
 builder.Services.AddScoped<IValidator<UserUpdateRequest>, UserUpdateValidator>();
 builder.Services.AddScoped<IValidator<UserPatchRequest>, UserPatchValidator>();
@@ -200,6 +220,21 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 
+// Throttle the credential endpoints so /Access/login (and /refresh) cannot be brute-forced.
+// Partitioned per client IP: 5 attempts per minute, further requests get 429.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(RateLimitingPolicies.Authentication, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -213,6 +248,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 
