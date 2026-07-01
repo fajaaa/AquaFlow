@@ -5,6 +5,7 @@ using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Validators;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
@@ -113,7 +114,20 @@ AddCrud<ServiceLocation, ServiceLocationResponse, ServiceLocationSearchObject, S
 AddCrud<WaterMeter, WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>();
 AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>();
 AddCrud<Tariff, TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>();
-AddCrud<Invoice, InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>();
+// Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
+// it by hand: the patch mapping, IInvoiceService, and the generic IBaseCRUDService alias resolving
+// to the same InvoiceService, plus each invoice state as a scoped service for the state factory.
+AddPatchMapping<InvoicePatchRequest, Invoice>();
+builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IBaseCRUDService<InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IInvoiceService>());
+builder.Services.AddScoped<BaseInvoiceState>();
+builder.Services.AddScoped<DraftInvoiceState>();
+builder.Services.AddScoped<IssuedInvoiceState>();
+builder.Services.AddScoped<PartiallyPaidInvoiceState>();
+builder.Services.AddScoped<OverdueInvoiceState>();
+builder.Services.AddScoped<PaidInvoiceState>();
+builder.Services.AddScoped<CancelledInvoiceState>();
 AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
 AddCrud<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>();
