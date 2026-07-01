@@ -27,6 +27,13 @@ public class CryptoService : ICryptoService
     public bool Verify(string hash, string salt, string password)
     {
         var generated = GenerateHash(password, salt);
-        return hash == generated;
+
+        // Constant-time comparison: a plain `hash == generated` short-circuits on the first differing
+        // character, which leaks (via response timing) how much of the hash a guess matched. Comparing
+        // the encoded bytes with FixedTimeEquals always inspects every byte. Working on the UTF-8 bytes
+        // of the base64 strings keeps it robust against a malformed stored value (no decode to throw).
+        return CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(hash),
+            Encoding.UTF8.GetBytes(generated));
     }
 }
