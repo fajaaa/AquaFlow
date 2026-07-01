@@ -71,15 +71,18 @@ public abstract class BaseInvoiceState
         return Mapper.Map<InvoiceResponse>(entity);
     }
 
-    // Records a payment against the invoice and moves it to Paid or PartiallyPaid depending on the
-    // remaining balance. The new Payment row, the status change and the history entry are persisted
-    // in a single SaveChanges so they commit atomically.
+    // Records a payment against the invoice and moves it to Paid (when the balance is cleared) or to
+    // the caller-supplied partialStatus (when a balance remains). The target for a partial payment is
+    // the calling state's decision, not a fixed value: Overdue stays Overdue, while Issued/PartiallyPaid
+    // land on PartiallyPaid. A full payment always transitions to Paid regardless of partialStatus.
+    // The new Payment row, the status change and the history entry are persisted in a single
+    // SaveChanges so they commit atomically.
     //
     // The whole "sum existing payments -> check the balance -> insert the payment" sequence runs
     // inside a Serializable transaction. Without it two concurrent payments can both read the same
     // paid total, both pass the balance check, and overpay the invoice. Serializable range locks the
     // rows the balance is computed from, so a second concurrent payment waits for this one to commit.
-    protected async Task<InvoiceResponse> RecordPaymentInternalAsync(int id, decimal amount, int changedById)
+    protected async Task<InvoiceResponse> RecordPaymentInternalAsync(int id, decimal amount, int changedById, string partialStatus)
     {
         if (amount <= 0)
         {
@@ -112,8 +115,8 @@ public abstract class BaseInvoiceState
             CreatedAt = DateTime.UtcNow
         });
 
-        var newStatus = remaining - amount <= 0m ? InvoiceStatus.Paid : InvoiceStatus.PartiallyPaid;
-        await TransitionToAsync(entity, newStatus, changedById, $"Recorded payment of {amount:0.00}.");
+        var newStatus = remaining - amount <= 0m ? InvoiceStatus.Paid : partialStatus;
+        await TransitionToAsync(entity, newStatus, changedById, $"Recorded payment of {amount:0.00}; invoice now {newStatus}.");
 
         await transaction.CommitAsync();
         return Mapper.Map<InvoiceResponse>(entity);
