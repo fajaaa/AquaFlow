@@ -18,17 +18,20 @@ public class AccessManager : IAccessManager
     private readonly IConfiguration _configuration;
     private readonly ICryptoService _cryptoService;
     private readonly IRefreshTokenService _refreshTokenService;
+    private readonly IPermissionLookupService _permissionLookupService;
 
     public AccessManager(
         IUserService userService,
         IConfiguration configuration,
         ICryptoService cryptoService,
-        IRefreshTokenService refreshTokenService)
+        IRefreshTokenService refreshTokenService,
+        IPermissionLookupService permissionLookupService)
     {
         _userService = userService;
         _configuration = configuration;
         _cryptoService = cryptoService;
         _refreshTokenService = refreshTokenService;
+        _permissionLookupService = permissionLookupService;
     }
 
     public async Task<UserLoginResponse> LoginAsync(UserLoginRequest request)
@@ -48,7 +51,7 @@ public class AccessManager : IAccessManager
 
         await _userService.UpdateLastLoginAtAsync(user.Id);
 
-        var accessToken = GenerateJwtToken(user);
+        var accessToken = await GenerateJwtTokenAsync(user);
         var refreshTokenValue = GenerateRefreshTokenValue();
 
         await _refreshTokenService.InsertAsync(new RefreshToken
@@ -97,7 +100,7 @@ public class AccessManager : IAccessManager
 
         await _refreshTokenService.DeleteAllUserRefreshTokensAsync(user.Id);
 
-        var accessToken = GenerateJwtToken(user);
+        var accessToken = await GenerateJwtTokenAsync(user);
         var refreshTokenValue = GenerateRefreshTokenValue();
 
         await _refreshTokenService.InsertAsync(new RefreshToken
@@ -114,19 +117,27 @@ public class AccessManager : IAccessManager
         };
     }
 
-    private string GenerateJwtToken(UserResponse user)
+    private async Task<string> GenerateJwtTokenAsync(UserResponse user)
     {
         var secretKey = Encoding.UTF8.GetBytes(_configuration["JwtToken:SecretKey"] ?? string.Empty);
 
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimNames.Id, user.Id.ToString()),
+            new Claim(ClaimNames.Email, user.Email),
+            new Claim(ClaimNames.UserRole, user.UserRole),
+            new Claim(ClaimNames.IsActive, user.IsActive.ToString())
+        };
+
+        var permissionCodes = await _permissionLookupService.GetPermissionCodesForRoleAsync(user.UserRoleId);
+        foreach (var permissionCode in permissionCodes)
+        {
+            claims.Add(new Claim(ClaimNames.Permission, permissionCode));
+        }
+
         var descriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimNames.Id, user.Id.ToString()),
-                new Claim(ClaimNames.Email, user.Email),
-                new Claim(ClaimNames.UserRole, user.UserRole),
-                new Claim(ClaimNames.IsActive, user.IsActive.ToString())
-            }),
+            Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMinutes(
                 int.Parse(_configuration["JwtToken:DurationInMinutes"] ?? "60")),
             Issuer = _configuration["JwtToken:Issuer"],

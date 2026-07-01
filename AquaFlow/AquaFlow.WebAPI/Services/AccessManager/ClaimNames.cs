@@ -6,4 +6,5 @@ public static class ClaimNames
     public const string Email = "Email";
     public const string UserRole = "UserRole";
     public const string IsActive = "IsActive";
+    public const string Permission = "Permission";
 }

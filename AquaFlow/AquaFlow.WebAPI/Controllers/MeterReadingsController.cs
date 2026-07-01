@@ -6,6 +6,7 @@ using MeterReadingCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Mode
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class MeterReadingsController : BaseCRUDController<MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest, MeterReadingCrudService>
 {
     public MeterReadingsController(MeterReadingCrudService service) : base(service)

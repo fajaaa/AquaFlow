@@ -6,6 +6,7 @@ using WaterMeterCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class WaterMetersController : BaseCRUDController<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest, WaterMeterCrudService>
 {
     public WaterMetersController(WaterMeterCrudService service) : base(service)

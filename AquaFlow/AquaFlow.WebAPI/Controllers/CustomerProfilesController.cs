@@ -6,6 +6,7 @@ using CustomerProfileCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.M
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class CustomerProfilesController : BaseCRUDController<CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest, CustomerProfilePatchRequest, CustomerProfileCrudService>
 {
     public CustomerProfilesController(CustomerProfileCrudService service) : base(service)

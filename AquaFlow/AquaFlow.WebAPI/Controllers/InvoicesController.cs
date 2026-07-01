@@ -6,6 +6,7 @@ using InvoiceCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Res
 
 namespace AquaFlow.WebAPI.Controllers;
 
+// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class InvoicesController : BaseCRUDController<InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest, InvoiceCrudService>
 {
     public InvoicesController(InvoiceCrudService service) : base(service)

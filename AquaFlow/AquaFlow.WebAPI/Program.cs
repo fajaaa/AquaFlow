@@ -93,6 +93,7 @@ builder.Services.AddScoped<IMapper, ServiceMapper>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+builder.Services.AddScoped<IPermissionLookupService, PermissionLookupService>();
 builder.Services.AddScoped<IAccessManager, AccessManager>();
 builder.Services.AddScoped<ICryptoService, CryptoService>();
 AddPatchMapping<UserPatchRequest, User>();
