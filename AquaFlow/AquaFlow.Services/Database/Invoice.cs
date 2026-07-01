@@ -35,4 +35,9 @@ public class Invoice : EntityBase
     public ICollection<InvoiceItem> InvoiceItems { get; set; } = new List<InvoiceItem>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     public ICollection<InvoiceStatusHistory> StatusHistory { get; set; } = new List<InvoiceStatusHistory>();
+
+    // Optimistic concurrency token: guards status transitions so two parallel
+    // Issue/Cancel/RecordPayment requests cannot both commit against the same row.
+    [Timestamp]
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }
