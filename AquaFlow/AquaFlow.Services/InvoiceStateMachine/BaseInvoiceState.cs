@@ -4,14 +4,13 @@ using AquaFlow.Model.Responses;
 using AquaFlow.Services.Database;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace AquaFlow.Services.InvoiceStateMachine;
 
 // Base state for the Invoice state machine, modelled on the RS2 eCommerce ProductStateMachine.
 // Every action is virtual and rejects by default; a concrete state overrides only the transitions
-// it permits. InvoiceService resolves the state for an invoice's current status through GetState
-// and delegates the requested action to it.
+// it permits. This class is purely a state: resolving the concrete state for an invoice's current
+// status is the job of IInvoiceStateResolver, which InvoiceService uses to delegate the action.
 public class BaseInvoiceState
 {
     // Payment rows counted towards an invoice's paid total carry this status.
@@ -19,13 +18,11 @@ public class BaseInvoiceState
 
     protected AquaFlowDbContext DbContext { get; }
     protected IMapper Mapper { get; }
-    protected IServiceProvider ServiceProvider { get; }
 
-    public BaseInvoiceState(AquaFlowDbContext dbContext, IMapper mapper, IServiceProvider serviceProvider)
+    public BaseInvoiceState(AquaFlowDbContext dbContext, IMapper mapper)
     {
         DbContext = dbContext;
         Mapper = mapper;
-        ServiceProvider = serviceProvider;
     }
 
     // The id of the user performing the transition is passed through each action call so that
@@ -39,22 +36,6 @@ public class BaseInvoiceState
     public virtual Task<InvoiceResponse> MarkOverdueAsync(int id, int changedById) => throw NotAllowed("Mark overdue");
 
     public virtual List<string> GetAllowedActions() => new();
-
-    // Factory: resolves the concrete state registered for a status value. The states are registered
-    // as scoped services in Program.cs, so every resolution shares the current request's DbContext.
-    public BaseInvoiceState GetState(string statusName)
-    {
-        return statusName switch
-        {
-            InvoiceStatus.Draft => ServiceProvider.GetRequiredService<DraftInvoiceState>(),
-            InvoiceStatus.Issued => ServiceProvider.GetRequiredService<IssuedInvoiceState>(),
-            InvoiceStatus.PartiallyPaid => ServiceProvider.GetRequiredService<PartiallyPaidInvoiceState>(),
-            InvoiceStatus.Overdue => ServiceProvider.GetRequiredService<OverdueInvoiceState>(),
-            InvoiceStatus.Paid => ServiceProvider.GetRequiredService<PaidInvoiceState>(),
-            InvoiceStatus.Cancelled => ServiceProvider.GetRequiredService<CancelledInvoiceState>(),
-            _ => throw new ClientException($"Unknown invoice status '{statusName}'.")
-        };
-    }
 
     // Loads the tracked invoice so a state can mutate it, or throws 404 when it does not exist.
     protected async Task<Invoice> GetInvoiceAsync(int id)

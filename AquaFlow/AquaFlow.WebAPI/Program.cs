@@ -119,18 +119,19 @@ AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadi
 AddCrud<Tariff, TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>();
 // Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
 // it by hand: the patch mapping, IInvoiceService, and the generic IBaseCRUDService alias resolving
-// to the same InvoiceService, plus each invoice state as a scoped service for the state factory.
+// to the same InvoiceService. Each invoice state is a keyed scoped BaseInvoiceState (status string as
+// key); IInvoiceStateResolver resolves the state for a status through those keyed registrations.
 AddPatchMapping<InvoicePatchRequest, Invoice>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IBaseCRUDService<InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IInvoiceService>());
-builder.Services.AddScoped<BaseInvoiceState>();
-builder.Services.AddScoped<DraftInvoiceState>();
-builder.Services.AddScoped<IssuedInvoiceState>();
-builder.Services.AddScoped<PartiallyPaidInvoiceState>();
-builder.Services.AddScoped<OverdueInvoiceState>();
-builder.Services.AddScoped<PaidInvoiceState>();
-builder.Services.AddScoped<CancelledInvoiceState>();
+builder.Services.AddKeyedScoped<BaseInvoiceState, DraftInvoiceState>(InvoiceStatus.Draft);
+builder.Services.AddKeyedScoped<BaseInvoiceState, IssuedInvoiceState>(InvoiceStatus.Issued);
+builder.Services.AddKeyedScoped<BaseInvoiceState, PartiallyPaidInvoiceState>(InvoiceStatus.PartiallyPaid);
+builder.Services.AddKeyedScoped<BaseInvoiceState, OverdueInvoiceState>(InvoiceStatus.Overdue);
+builder.Services.AddKeyedScoped<BaseInvoiceState, PaidInvoiceState>(InvoiceStatus.Paid);
+builder.Services.AddKeyedScoped<BaseInvoiceState, CancelledInvoiceState>(InvoiceStatus.Cancelled);
+builder.Services.AddScoped<IInvoiceStateResolver, InvoiceStateResolver>();
 AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
 AddCrud<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>();

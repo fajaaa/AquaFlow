@@ -6,8 +6,8 @@ namespace AquaFlow.Services.InvoiceStateMachine;
 
 public class PartiallyPaidInvoiceState : BaseInvoiceState
 {
-    public PartiallyPaidInvoiceState(AquaFlowDbContext dbContext, IMapper mapper, IServiceProvider serviceProvider)
-        : base(dbContext, mapper, serviceProvider)
+    public PartiallyPaidInvoiceState(AquaFlowDbContext dbContext, IMapper mapper)
+        : base(dbContext, mapper)
     {
     }
 

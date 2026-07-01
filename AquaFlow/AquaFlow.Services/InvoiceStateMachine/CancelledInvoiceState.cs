@@ -6,8 +6,8 @@ namespace AquaFlow.Services.InvoiceStateMachine;
 // Terminal state: a cancelled invoice accepts no further transitions.
 public class CancelledInvoiceState : BaseInvoiceState
 {
-    public CancelledInvoiceState(AquaFlowDbContext dbContext, IMapper mapper, IServiceProvider serviceProvider)
-        : base(dbContext, mapper, serviceProvider)
+    public CancelledInvoiceState(AquaFlowDbContext dbContext, IMapper mapper)
+        : base(dbContext, mapper)
     {
     }
 

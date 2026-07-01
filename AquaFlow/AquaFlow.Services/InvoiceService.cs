@@ -14,7 +14,7 @@ public class InvoiceService
       IInvoiceService
 {
     private readonly AquaFlowDbContext _dbContext;
-    private readonly BaseInvoiceState _invoiceState;
+    private readonly IInvoiceStateResolver _stateResolver;
 
     public InvoiceService(
         AquaFlowDbContext dbContext,
@@ -22,11 +22,11 @@ public class InvoiceService
         IEnumerable<IValidator<InvoiceInsertRequest>> insertValidators,
         IEnumerable<IValidator<InvoiceUpdateRequest>> updateValidators,
         IEnumerable<IValidator<InvoicePatchRequest>> patchValidators,
-        BaseInvoiceState invoiceState)
+        IInvoiceStateResolver stateResolver)
         : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _dbContext = dbContext;
-        _invoiceState = invoiceState;
+        _stateResolver = stateResolver;
     }
 
     // New invoices always start in Draft; every later status change goes through the state machine.
@@ -63,13 +63,13 @@ public class InvoiceService
     public async Task<List<string>> GetAllowedActionsAsync(int id)
     {
         var status = await GetStatusAsync(id);
-        return _invoiceState.GetState(status).GetAllowedActions();
+        return _stateResolver.Resolve(status).GetAllowedActions();
     }
 
     private async Task<BaseInvoiceState> ResolveStateAsync(int id)
     {
         var status = await GetStatusAsync(id);
-        return _invoiceState.GetState(status);
+        return _stateResolver.Resolve(status);
     }
 
     private async Task<string> GetStatusAsync(int id)

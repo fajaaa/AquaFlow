@@ -6,8 +6,8 @@ namespace AquaFlow.Services.InvoiceStateMachine;
 
 public class DraftInvoiceState : BaseInvoiceState
 {
-    public DraftInvoiceState(AquaFlowDbContext dbContext, IMapper mapper, IServiceProvider serviceProvider)
-        : base(dbContext, mapper, serviceProvider)
+    public DraftInvoiceState(AquaFlowDbContext dbContext, IMapper mapper)
+        : base(dbContext, mapper)
     {
     }
 
