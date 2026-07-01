@@ -25,8 +25,6 @@ public abstract class BaseCRUDService<TEntity, TResponse, TSearch, TInsertReques
         _patchValidator = patchValidators.FirstOrDefault();
     }
 
-    protected abstract IList<TEntity> GetWritableDataSource();
-
     protected virtual TEntity MapInsertRequestToEntity(TInsertRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -58,73 +56,13 @@ public abstract class BaseCRUDService<TEntity, TResponse, TSearch, TInsertReques
         return ValidateAsync(_patchValidator, request);
     }
 
-    public virtual async Task<TResponse> InsertAsync(TInsertRequest request)
-    {
-        await ValidateInsertAsync(request);
+    public abstract Task<TResponse> InsertAsync(TInsertRequest request);
 
-        var entity = MapInsertRequestToEntity(request);
-        entity.Id = GenerateNewId();
-        entity.CreatedAt = DateTime.UtcNow;
+    public abstract Task<TResponse> UpdateAsync(int id, TUpdateRequest request);
 
-        GetWritableDataSource().Add(entity);
+    public abstract Task<TResponse> PatchAsync(int id, TPatchRequest request);
 
-        return Mapper.Map<TResponse>(entity);
-    }
-
-    public virtual async Task<TResponse> UpdateAsync(int id, TUpdateRequest request)
-    {
-        await ValidateUpdateAsync(request);
-
-        var dataSource = GetWritableDataSource();
-        var entity = dataSource.FirstOrDefault(item => item.Id == id);
-        if (entity == null)
-        {
-            throw new KeyNotFoundException($"{typeof(TEntity).Name} with id {id} was not found.");
-        }
-
-        MapUpdateRequestToEntity(request, entity);
-        entity.Id = id;
-        entity.UpdatedAt = DateTime.UtcNow;
-
-        return Mapper.Map<TResponse>(entity);
-    }
-
-    public virtual async Task<TResponse> PatchAsync(int id, TPatchRequest request)
-    {
-        await ValidatePatchAsync(request);
-
-        var dataSource = GetWritableDataSource();
-        var entity = dataSource.FirstOrDefault(item => item.Id == id);
-        if (entity == null)
-        {
-            throw new KeyNotFoundException($"{typeof(TEntity).Name} with id {id} was not found.");
-        }
-
-        MapPatchRequestToEntity(request, entity);
-        entity.Id = id;
-        entity.UpdatedAt = DateTime.UtcNow;
-
-        return Mapper.Map<TResponse>(entity);
-    }
-
-    public virtual Task DeleteAsync(int id)
-    {
-        var dataSource = GetWritableDataSource();
-        var entity = dataSource.FirstOrDefault(item => item.Id == id);
-        if (entity == null)
-        {
-            throw new KeyNotFoundException($"{typeof(TEntity).Name} with id {id} was not found.");
-        }
-
-        dataSource.Remove(entity);
-        return Task.CompletedTask;
-    }
-
-    private int GenerateNewId()
-    {
-        var dataSource = GetWritableDataSource();
-        return dataSource.Count == 0 ? 1 : dataSource.Max(item => item.Id) + 1;
-    }
+    public abstract Task DeleteAsync(int id);
 
     private static async Task ValidateAsync<TRequest>(IValidator<TRequest>? validator, TRequest request)
     {

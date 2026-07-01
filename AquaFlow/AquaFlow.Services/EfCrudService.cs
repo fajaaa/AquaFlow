@@ -32,11 +32,6 @@ public class EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateR
         return IncludeForRead(DbSet.AsNoTracking());
     }
 
-    protected override IList<TEntity> GetWritableDataSource()
-    {
-        throw new NotSupportedException($"{GetType().Name} writes through Entity Framework.");
-    }
-
     protected virtual IQueryable<TEntity> IncludeForRead(IQueryable<TEntity> query)
     {
         return query;

@@ -31,9 +31,6 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
     protected override IQueryable<User> GetDataSource() =>
         _dbContext.Users.AsNoTracking().Include(u => u.UserRole);
 
-    protected override IList<User> GetWritableDataSource() =>
-        throw new NotSupportedException($"{nameof(UserService)} writes through Entity Framework.");
-
     protected override IQueryable<User> ApplyFilters(IQueryable<User> query, UserSearchObject? search)
     {
         if (search == null)
