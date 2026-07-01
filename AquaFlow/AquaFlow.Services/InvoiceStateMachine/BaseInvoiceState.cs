@@ -28,17 +28,15 @@ public class BaseInvoiceState
         ServiceProvider = serviceProvider;
     }
 
-    // Id of the user performing the transition. InvoiceService sets it before delegating so that
+    // The id of the user performing the transition is passed through each action call so that
     // TransitionToAsync can stamp the InvoiceStatusHistory row with who made the change.
-    public int ChangedById { get; set; }
+    public virtual Task<InvoiceResponse> IssueAsync(int id, int changedById) => throw NotAllowed("Issue");
 
-    public virtual Task<InvoiceResponse> IssueAsync(int id) => throw NotAllowed("Issue");
+    public virtual Task<InvoiceResponse> RecordPaymentAsync(int id, decimal amount, int changedById) => throw NotAllowed("Record payment");
 
-    public virtual Task<InvoiceResponse> RecordPaymentAsync(int id, decimal amount) => throw NotAllowed("Record payment");
+    public virtual Task<InvoiceResponse> CancelAsync(int id, int changedById) => throw NotAllowed("Cancel");
 
-    public virtual Task<InvoiceResponse> CancelAsync(int id) => throw NotAllowed("Cancel");
-
-    public virtual Task<InvoiceResponse> MarkOverdueAsync(int id) => throw NotAllowed("Mark overdue");
+    public virtual Task<InvoiceResponse> MarkOverdueAsync(int id, int changedById) => throw NotAllowed("Mark overdue");
 
     public virtual List<string> GetAllowedActions() => new();
 
@@ -71,10 +69,10 @@ public class BaseInvoiceState
     }
 
     // Loads the invoice, applies a plain status transition and returns the mapped response.
-    protected async Task<InvoiceResponse> TransitionByIdAsync(int id, string newStatus, string note)
+    protected async Task<InvoiceResponse> TransitionByIdAsync(int id, string newStatus, string note, int changedById)
     {
         var entity = await GetInvoiceAsync(id);
-        await TransitionToAsync(entity, newStatus, ChangedById, note);
+        await TransitionToAsync(entity, newStatus, changedById, note);
         return Mapper.Map<InvoiceResponse>(entity);
     }
 
@@ -86,7 +84,7 @@ public class BaseInvoiceState
     // inside a Serializable transaction. Without it two concurrent payments can both read the same
     // paid total, both pass the balance check, and overpay the invoice. Serializable range locks the
     // rows the balance is computed from, so a second concurrent payment waits for this one to commit.
-    protected async Task<InvoiceResponse> RecordPaymentInternalAsync(int id, decimal amount)
+    protected async Task<InvoiceResponse> RecordPaymentInternalAsync(int id, decimal amount, int changedById)
     {
         if (amount <= 0)
         {
@@ -120,7 +118,7 @@ public class BaseInvoiceState
         });
 
         var newStatus = remaining - amount <= 0m ? InvoiceStatus.Paid : InvoiceStatus.PartiallyPaid;
-        await TransitionToAsync(entity, newStatus, ChangedById, $"Recorded payment of {amount:0.00}.");
+        await TransitionToAsync(entity, newStatus, changedById, $"Recorded payment of {amount:0.00}.");
 
         await transaction.CommitAsync();
         return Mapper.Map<InvoiceResponse>(entity);

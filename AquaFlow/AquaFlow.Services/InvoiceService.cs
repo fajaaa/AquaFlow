@@ -38,26 +38,26 @@ public class InvoiceService
 
     public async Task<InvoiceResponse> IssueAsync(int id, int changedById)
     {
-        var state = await ResolveStateAsync(id, changedById);
-        return await state.IssueAsync(id);
+        var state = await ResolveStateAsync(id);
+        return await state.IssueAsync(id, changedById);
     }
 
     public async Task<InvoiceResponse> RecordPaymentAsync(int id, decimal amount, int changedById)
     {
-        var state = await ResolveStateAsync(id, changedById);
-        return await state.RecordPaymentAsync(id, amount);
+        var state = await ResolveStateAsync(id);
+        return await state.RecordPaymentAsync(id, amount, changedById);
     }
 
     public async Task<InvoiceResponse> CancelAsync(int id, int changedById)
     {
-        var state = await ResolveStateAsync(id, changedById);
-        return await state.CancelAsync(id);
+        var state = await ResolveStateAsync(id);
+        return await state.CancelAsync(id, changedById);
     }
 
     public async Task<InvoiceResponse> MarkOverdueAsync(int id, int changedById)
     {
-        var state = await ResolveStateAsync(id, changedById);
-        return await state.MarkOverdueAsync(id);
+        var state = await ResolveStateAsync(id);
+        return await state.MarkOverdueAsync(id, changedById);
     }
 
     public async Task<List<string>> GetAllowedActionsAsync(int id)
@@ -66,12 +66,10 @@ public class InvoiceService
         return _invoiceState.GetState(status).GetAllowedActions();
     }
 
-    private async Task<BaseInvoiceState> ResolveStateAsync(int id, int changedById)
+    private async Task<BaseInvoiceState> ResolveStateAsync(int id)
     {
         var status = await GetStatusAsync(id);
-        var state = _invoiceState.GetState(status);
-        state.ChangedById = changedById;
-        return state;
+        return _invoiceState.GetState(status);
     }
 
     private async Task<string> GetStatusAsync(int id)

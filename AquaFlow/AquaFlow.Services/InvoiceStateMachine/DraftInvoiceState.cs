@@ -11,11 +11,11 @@ public class DraftInvoiceState : BaseInvoiceState
     {
     }
 
-    public override Task<InvoiceResponse> IssueAsync(int id)
-        => TransitionByIdAsync(id, InvoiceStatus.Issued, "Invoice issued.");
+    public override Task<InvoiceResponse> IssueAsync(int id, int changedById)
+        => TransitionByIdAsync(id, InvoiceStatus.Issued, "Invoice issued.", changedById);
 
-    public override Task<InvoiceResponse> CancelAsync(int id)
-        => TransitionByIdAsync(id, InvoiceStatus.Cancelled, $"Invoice cancelled from {InvoiceStatus.Draft}.");
+    public override Task<InvoiceResponse> CancelAsync(int id, int changedById)
+        => TransitionByIdAsync(id, InvoiceStatus.Cancelled, $"Invoice cancelled from {InvoiceStatus.Draft}.", changedById);
 
     public override List<string> GetAllowedActions() => new() { "Issue", "Cancel" };
 }
