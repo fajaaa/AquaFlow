@@ -15,7 +15,7 @@ public class OverdueInvoiceState : BaseInvoiceState
         => RecordPaymentInternalAsync(id, amount);
 
     public override Task<InvoiceResponse> CancelAsync(int id)
-        => TransitionByIdAsync(id, "Cancelled", "Invoice cancelled while overdue.");
+        => TransitionByIdAsync(id, InvoiceStatus.Cancelled, "Invoice cancelled while overdue.");
 
     public override List<string> GetAllowedActions() => new() { "RecordPayment", "Cancel" };
 }

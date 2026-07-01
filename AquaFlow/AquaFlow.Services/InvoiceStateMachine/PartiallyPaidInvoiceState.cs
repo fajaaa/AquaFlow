@@ -15,7 +15,7 @@ public class PartiallyPaidInvoiceState : BaseInvoiceState
         => RecordPaymentInternalAsync(id, amount);
 
     public override Task<InvoiceResponse> MarkOverdueAsync(int id)
-        => TransitionByIdAsync(id, "Overdue", "Invoice marked overdue.");
+        => TransitionByIdAsync(id, InvoiceStatus.Overdue, "Invoice marked overdue.");
 
     public override List<string> GetAllowedActions() => new() { "RecordPayment", "MarkOverdue" };
 }

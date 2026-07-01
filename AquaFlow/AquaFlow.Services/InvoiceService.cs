@@ -32,7 +32,7 @@ public class InvoiceService
     // New invoices always start in Draft; every later status change goes through the state machine.
     protected override Task BeforeInsertAsync(InvoiceInsertRequest request)
     {
-        request.Status = "Draft";
+        request.Status = InvoiceStatus.Draft;
         return Task.CompletedTask;
     }
 

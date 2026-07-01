@@ -15,10 +15,10 @@ public class IssuedInvoiceState : BaseInvoiceState
         => RecordPaymentInternalAsync(id, amount);
 
     public override Task<InvoiceResponse> MarkOverdueAsync(int id)
-        => TransitionByIdAsync(id, "Overdue", "Invoice marked overdue.");
+        => TransitionByIdAsync(id, InvoiceStatus.Overdue, "Invoice marked overdue.");
 
     public override Task<InvoiceResponse> CancelAsync(int id)
-        => TransitionByIdAsync(id, "Cancelled", "Invoice cancelled.");
+        => TransitionByIdAsync(id, InvoiceStatus.Cancelled, "Invoice cancelled.");
 
     public override List<string> GetAllowedActions() => new() { "RecordPayment", "MarkOverdue", "Cancel" };
 }

@@ -15,7 +15,7 @@ namespace AquaFlow.Services.InvoiceStateMachine;
 public class BaseInvoiceState
 {
     // Payment rows counted towards an invoice's paid total carry this status.
-    protected const string CompletedPaymentStatus = "Completed";
+    protected const string CompletedPaymentStatus = PaymentStatus.Completed;
 
     protected AquaFlowDbContext DbContext { get; }
     protected IMapper Mapper { get; }
@@ -48,12 +48,12 @@ public class BaseInvoiceState
     {
         return statusName switch
         {
-            "Draft" => ServiceProvider.GetRequiredService<DraftInvoiceState>(),
-            "Issued" => ServiceProvider.GetRequiredService<IssuedInvoiceState>(),
-            "PartiallyPaid" => ServiceProvider.GetRequiredService<PartiallyPaidInvoiceState>(),
-            "Overdue" => ServiceProvider.GetRequiredService<OverdueInvoiceState>(),
-            "Paid" => ServiceProvider.GetRequiredService<PaidInvoiceState>(),
-            "Cancelled" => ServiceProvider.GetRequiredService<CancelledInvoiceState>(),
+            InvoiceStatus.Draft => ServiceProvider.GetRequiredService<DraftInvoiceState>(),
+            InvoiceStatus.Issued => ServiceProvider.GetRequiredService<IssuedInvoiceState>(),
+            InvoiceStatus.PartiallyPaid => ServiceProvider.GetRequiredService<PartiallyPaidInvoiceState>(),
+            InvoiceStatus.Overdue => ServiceProvider.GetRequiredService<OverdueInvoiceState>(),
+            InvoiceStatus.Paid => ServiceProvider.GetRequiredService<PaidInvoiceState>(),
+            InvoiceStatus.Cancelled => ServiceProvider.GetRequiredService<CancelledInvoiceState>(),
             _ => throw new ClientException($"Unknown invoice status '{statusName}'.")
         };
     }
@@ -113,13 +113,13 @@ public class BaseInvoiceState
             InvoiceId = entity.Id,
             CustomerId = entity.CustomerId,
             Amount = amount,
-            PaymentMethod = "Manual",
+            PaymentMethod = PaymentMethod.Manual,
             Status = CompletedPaymentStatus,
             PaidAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow
         });
 
-        var newStatus = remaining - amount <= 0m ? "Paid" : "PartiallyPaid";
+        var newStatus = remaining - amount <= 0m ? InvoiceStatus.Paid : InvoiceStatus.PartiallyPaid;
         await TransitionToAsync(entity, newStatus, ChangedById, $"Recorded payment of {amount:0.00}.");
 
         await transaction.CommitAsync();
