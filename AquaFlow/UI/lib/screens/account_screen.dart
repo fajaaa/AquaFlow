@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/customer_profile.dart';
 import '../providers/auth_provider.dart';
 import '../services/profile_service.dart';
+import 'account_edit_screen.dart';
 import 'company_settings_screen.dart';
 
 /// "Nalog" tab body: an account/about card for the signed-in user.
@@ -104,6 +105,27 @@ class _AccountScreenState extends State<AccountScreen> {
                     title: const Text('Email'),
                     subtitle: Text(
                       session.email.isEmpty ? '-' : session.email,
+                    ),
+                  ),
+                ),
+                // Every user - regardless of role - can edit their own contact
+                // data (email/phone) from here.
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 2,
+                  shadowColor: Colors.black26,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.manage_accounts_outlined),
+                    title: const Text('Uredi nalog'),
+                    subtitle: const Text('Izmjena email adrese i telefona'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AccountEditScreen(),
+                      ),
                     ),
                   ),
                 ),

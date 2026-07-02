@@ -8,4 +8,8 @@ public interface IUserService : IBaseCRUDService<UserResponse, UserSearchObject,
 {
     Task<UserSensitiveResponse?> GetByEmailAsync(string email);
     Task UpdateLastLoginAtAsync(int id);
+
+    // Self-service update of the caller's own contact data (Email/Phone only).
+    // Used by AccountController; does not touch role/active/password.
+    Task<UserResponse> UpdateOwnAccountAsync(int id, AccountUpdateRequest request);
 }
