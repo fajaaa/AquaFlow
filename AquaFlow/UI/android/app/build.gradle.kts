@@ -7,7 +7,10 @@ plugins {
 android {
     namespace = "ba.aquaflow.aquaflow_desktop"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // App has no native (C/C++) code, so the NDK is not needed. Leaving it enabled
+    // forces AGP to download the multi-GB NDK; disabled here to avoid that.
+    // Re-enable if you add a plugin that requires a native build.
+    // ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
