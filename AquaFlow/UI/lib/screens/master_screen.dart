@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import 'account_screen.dart';
 
 /// App shell for the mobile client: a fixed top bar (info action on the left,
 /// centered "AquaFlow" title, logout action on the right) and a 4-tab bottom
 /// navigation bar.
 ///
-/// The bottom tabs are placeholders for now - each one's real screen is wired
-/// in later by replacing the matching entry in [_tabs] and its
-/// [NavigationDestination]. Because this widget owns [_selectedIndex], switching
-/// tabs already works; only the tab bodies remain to be built.
+/// The first three bottom tabs are placeholders - each one's real screen is
+/// wired in later by replacing the matching entry in [_tabs] and its
+/// [NavigationDestination]. The fourth tab ("Nalog") is the [AccountScreen].
+/// Because this widget owns [_selectedIndex], switching tabs already works.
 class MasterScreen extends StatefulWidget {
   const MasterScreen({super.key});
 
@@ -21,12 +22,13 @@ class MasterScreen extends StatefulWidget {
 class _MasterScreenState extends State<MasterScreen> {
   int _selectedIndex = 0;
 
-  // Placeholder tab bodies. Replace each with the real screen as it is built.
+  // Tab bodies. The first three are placeholders; the fourth is the account
+  // screen. Replace a placeholder with its real screen as it is built.
   static const List<Widget> _tabs = [
     _PlaceholderTab(icon: Icons.folder, label: 'Stavka 1'),
     _PlaceholderTab(icon: Icons.folder, label: 'Stavka 2'),
     _PlaceholderTab(icon: Icons.folder, label: 'Stavka 3'),
-    _PlaceholderTab(icon: Icons.folder, label: 'Stavka 4'),
+    AccountScreen(),
   ];
 
   void _onTabSelected(int index) {
@@ -75,9 +77,9 @@ class _MasterScreenState extends State<MasterScreen> {
             label: 'Stavka 3',
           ),
           NavigationDestination(
-            icon: Icon(Icons.folder_outlined),
-            selectedIcon: Icon(Icons.folder),
-            label: 'Stavka 4',
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Nalog',
           ),
         ],
       ),
