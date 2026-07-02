@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
-import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/master_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const AquaFlowApp());
@@ -19,10 +20,7 @@ class AquaFlowApp extends StatelessWidget {
       create: (_) => AuthProvider()..bootstrap(),
       child: MaterialApp(
         title: 'AquaFlow',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.light,
         home: const _AuthGate(),
       ),
     );
@@ -45,7 +43,7 @@ class _AuthGate extends StatelessWidget {
           body: Center(child: CircularProgressIndicator()),
         );
       case AuthStatus.authenticated:
-        return const HomeScreen();
+        return const MasterScreen();
       case AuthStatus.unauthenticated:
         return const LoginScreen();
     }

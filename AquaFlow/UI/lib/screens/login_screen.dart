@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_theme.dart';
 
 /// Email + password login form. On success the root widget swaps to the home
 /// screen automatically (it listens to [AuthProvider]), so this screen does not
@@ -51,37 +52,75 @@ class _LoginScreenState extends State<LoginScreen> {
     final isBusy = context.select<AuthProvider, bool>((a) => a.isBusy);
 
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(Icons.water_drop, size: 64, color: Colors.blue),
-                  const SizedBox(height: 8),
-                  Text(
-                    'AquaFlow',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  // DEBUG-ONLY: shows which backend host the app targets, so
-                  // connectivity issues on a device are easy to diagnose.
-                  if (kDebugMode)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        ApiConfig.baseUrl,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: AppColors.waterGradient,
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Logo badge on the gradient, above the form card.
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: const BoxDecoration(
+                        color: Colors.white24,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.water_drop,
+                        size: 56,
+                        color: Colors.white,
                       ),
                     ),
-                  const SizedBox(height: 32),
-                  TextFormField(
+                    const SizedBox(height: 16),
+                    const Text(
+                      'AquaFlow',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    // DEBUG-ONLY: shows which backend host the app targets, so
+                    // connectivity issues on a device are easy to diagnose.
+                    if (kDebugMode)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          ApiConfig.baseUrl,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ),
+                    const SizedBox(height: 28),
+                    Card(
+                      elevation: 8,
+                      shadowColor: Colors.black26,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TextFormField(
                     controller: _emailController,
                     enabled: !isBusy,
                     keyboardType: TextInputType.emailAddress,
@@ -128,20 +167,44 @@ class _LoginScreenState extends State<LoginScreen> {
                             : null,
                   ),
                   const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: isBusy ? null : _submit,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: isBusy
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Sign in'),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isBusy
+                            ? const [Color(0xFF90A4AE), Color(0xFFB0BEC5)]
+                            : AppColors.buttonGradient,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: FilledButton(
+                      onPressed: isBusy ? null : _submit,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        disabledBackgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: isBusy
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Sign in'),
+                      ),
                     ),
                   ),
-                ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
