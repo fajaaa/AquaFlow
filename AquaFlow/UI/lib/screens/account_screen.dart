@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/customer_profile.dart';
 import '../providers/auth_provider.dart';
 import '../services/profile_service.dart';
+import 'company_settings_screen.dart';
 
 /// "Nalog" tab body: an account/about card for the signed-in user.
 ///
@@ -106,6 +107,29 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                   ),
                 ),
+                // Admins can manage the company-wide settings; regular users
+                // and collectors never see this entry.
+                if (_isAdmin(session.userRole)) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    elevation: 2,
+                    shadowColor: Colors.black26,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(Icons.business_outlined),
+                      title: const Text('Postavke firme'),
+                      subtitle: const Text('Upravljanje podacima firme'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const CompanySettingsScreen(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -130,6 +154,8 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   static bool _isRegularUser(String role) => role.toLowerCase() == 'customer';
+
+  static bool _isAdmin(String role) => role.toLowerCase() == 'admin';
 }
 
 /// Icon + color + label for a user role. Each role gets a distinct icon.
