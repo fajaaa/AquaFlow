@@ -1,30 +1,29 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Widget test for the login form. Validation fails before any network/plugin
+// call, so this runs without a backend or the secure-storage plugin.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
-import 'package:aquaflow_desktop/main.dart';
+import 'package:aquaflow_desktop/providers/auth_provider.dart';
+import 'package:aquaflow_desktop/screens/login_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('login form validates required fields', (tester) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => AuthProvider(),
+        child: const MaterialApp(home: LoginScreen()),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Sign in'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Submitting an empty form shows validation errors, not a network call.
+    await tester.tap(find.text('Sign in'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Email is required.'), findsOneWidget);
+    expect(find.text('Password is required.'), findsOneWidget);
   });
 }

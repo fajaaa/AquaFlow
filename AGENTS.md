@@ -14,6 +14,7 @@ Everything lives under the `AquaFlow/` directory at the repo root:
 - `AquaFlow/AquaFlow.Model` - shared request/response DTOs, search objects, `Access` DTOs, exceptions, and simple contracts.
 - `AquaFlow/AquaFlow.Common.Services` - cross-cutting services; currently `CryptoService` (`ICryptoService`) for password hashing.
 - `AquaFlow/AquaFlow.Services.Tests` - xUnit test project (EF Core InMemory provider). Run with `dotnet test .\AquaFlow\AquaFlow.Services.Tests\AquaFlow.Services.Tests.csproj`.
+- `AquaFlow/UI` - Flutter client (`aquaflow_desktop`), a cross-platform (desktop/mobile/web) frontend for the Web API. See the "UI (Flutter client)" section below.
 
 ## Runtime
 
@@ -84,6 +85,16 @@ Authentication is implemented with JWT bearer tokens.
 Seed login credentials (local demo DB only; safe to use for testing): emails `admin@aquaflow.ba`, `collector@aquaflow.ba`, `customer@aquaflow.ba`, all with password `AquaFlow123!`.
 
 To call a protected endpoint manually: `POST /Access/login` with `{"email":"admin@aquaflow.ba","password":"AquaFlow123!"}`, read `accessToken` from the response, then send `Authorization: Bearer <accessToken>`.
+
+## UI (Flutter client)
+
+The Flutter client lives in `AquaFlow/UI` (package `aquaflow_desktop`, Dart `^3.12`) and targets desktop, mobile and web from one codebase. Dependencies: `http`, `provider`, `flutter_secure_storage`, `jwt_decoder`. See `AquaFlow/UI/README.md` for run instructions and the local-dev network notes.
+
+- Base URL lives only in `lib/config/api_config.dart` (`ApiConfig.baseUrl`, port 5161). It picks the host per platform: `10.0.2.2` on the Android emulator, `localhost` on iOS simulator/desktop/web, and `ApiConfig.lanHostOverride` (a compile-time constant, default `null`) for a physical phone. Never hardcode the host anywhere else - always read `ApiConfig.baseUrl`.
+- Auth flow: `AuthService` (`lib/services/auth_service.dart`) calls `POST /Access/login` and `POST /Access/refresh`, mapping HTTP/transport failures to `AuthException`. `TokenStorage` (`flutter_secure_storage`) persists the access/refresh token pair. `AuthProvider` (a `ChangeNotifier`, `lib/providers/auth_provider.dart`) is the single source of truth: `bootstrap()` restores a session on startup (valid access token, else silent refresh), `login()`/`logout()` mutate state. `AuthSession` (`lib/models/auth_session.dart`) decodes the JWT via `jwt_decoder` using the backend claim names `Id`/`Email`/`UserRole`/`IsActive`/`Permission` (the `Permission` claim may decode to a string or a list; it is normalised to a list). `main.dart`'s `_AuthGate` renders splash/login/home from `AuthProvider.status`.
+- The backend serves plain HTTP in local dev, so DEV-ONLY cleartext exceptions are in place: `android/app/src/debug/AndroidManifest.xml` sets `android:usesCleartextTraffic="true"` (debug-only overlay, release stays secure) and `ios/Runner/Info.plist` adds `NSAppTransportSecurity` > `NSAllowsLocalNetworking`. These must be removed for production, where the backend must use HTTPS.
+- Verify UI changes with `flutter analyze` and `flutter test` (run from `AquaFlow/UI`). Building the Windows desktop target needs symlink support (enable Windows Developer Mode) because the app uses a native plugin.
+- Testing on a physical phone/tablet: set `ApiConfig.lanHostOverride` to the PC's LAN IP AND run the backend bound to all interfaces (`dotnet run ... --urls http://0.0.0.0:5161`) - the default `http` launch profile binds to `localhost` only, so a device gets a connection timeout. Also allow inbound TCP 5161 through Windows Firewall (Private profile), and use `http://` explicitly in a browser (mobile browsers auto-upgrade to https, which the HTTP-only backend does not serve).
 
 ## Current Foundation
 
