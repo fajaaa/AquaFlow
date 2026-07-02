@@ -24,7 +24,7 @@ The Web API targets `.NET 9`. All persistence is SQL Server through EF Core. The
 - `ConnectionStrings:DefaultConnection`
 - `JwtToken:Issuer`, `JwtToken:Audience`, `JwtToken:SecretKey` (optional `JwtToken:DurationInMinutes`, default 60)
 
-`appsettings.json` intentionally contains none of these (only logging/allowed hosts). Provide them via environment variables or user secrets. A convenient local block (PowerShell) used for run, migrations, and manual testing:
+For convenience in this test project, `appsettings.json` now ships **dev-only** defaults for both the connection string and the JWT settings, so the API runs out of the box without extra setup. These are throwaway local values (same SA/demo password as the Docker container); do not treat them as real secrets and always override them via environment variables or user secrets outside local dev. The environment variables below still take precedence over `appsettings.json`, so use them to run against a different DB or to supply a real secret:
 
 ```powershell
 $env:ConnectionStrings__DefaultConnection='Server=localhost,1435;Database=AquaFlow;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False'
@@ -182,5 +182,5 @@ Note: `dotnet ef` / `dotnet run` need the API DLLs unlocked. If a build or migra
 
 ## Security Notes
 
-- Do not commit secrets, connection strings, API keys, payment provider secrets, JWT signing keys, or machine-specific settings. (The local SA/demo password `AquaFlow123!` used for the throwaway Docker container and seed users is local-only, not a real secret.)
+- Do not commit real secrets, production connection strings, API keys, payment provider secrets, JWT signing keys, or machine-specific settings. (The local SA/demo password `AquaFlow123!` used for the throwaway Docker container and seed users is local-only, not a real secret.) Exception: because this is a test project, `appsettings.json` intentionally carries dev-only defaults for the local DB connection string and a placeholder JWT `SecretKey` so it runs out of the box. Never point those at a real database or reuse that key in production — override with environment variables or user secrets there.
 - Payment-related models must not store full card numbers, CVV values, raw provider passwords, private keys, or other sensitive payment data.
