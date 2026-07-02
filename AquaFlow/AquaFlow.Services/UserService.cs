@@ -137,6 +137,25 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         await _dbContext.SaveChangesAsync();
     }
 
+    public async Task<UserResponse> UpdateOwnAccountAsync(int id, AccountUpdateRequest request)
+    {
+        var entity = await _dbContext.Users.Include(u => u.UserRole).FirstOrDefaultAsync(u => u.Id == id)
+            ?? throw new KeyNotFoundException($"User with id {id} was not found.");
+
+        await EnsureUniqueEmailAsync(request.Email, id);
+
+        // Only contact data is self-editable; role, active state and password are
+        // left untouched so a user can never escalate their own privileges here.
+        entity.Email = request.Email;
+        entity.Phone = request.Phone;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+        await ReloadUserRoleAsync(entity);
+
+        return Mapper.Map<UserResponse>(entity);
+    }
+
     public async Task<UserSensitiveResponse?> GetByEmailAsync(string email)
     {
         var user = await _dbContext.Users.Include(u => u.UserRole)
