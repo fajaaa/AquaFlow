@@ -61,9 +61,10 @@ Apply EF Core migrations locally (needs at least `ConnectionStrings__DefaultConn
 dotnet ef database update --project .\AquaFlow\AquaFlow.Services --startup-project .\AquaFlow\AquaFlow.WebAPI
 ```
 
-Local URLs (http profile listens on `5161`, https on `7286`):
+Local URLs (http profile listens on `5161` on all interfaces for mobile LAN testing, https on `7286`):
 
 - `http://localhost:5161` - redirects to the API reference in development.
+- `http://<PC-LAN-IP>:5161` - same API from a physical phone/tablet on the same Wi-Fi.
 - `http://localhost:5161/scalar/v1` - Scalar API reference UI.
 - `http://localhost:5161/Access/login` - obtain a JWT (see Authentication).
 - `http://localhost:5161/Users`, `/UserRoles`, `/Permissions`, `/UserRolePermissions`, `/WaterMeters`, etc. - resource endpoints (require a JWT).
@@ -101,7 +102,7 @@ The Flutter client lives in `AquaFlow/UI` (package `aquaflow_desktop`, Dart `^3.
 - Admin-only account action: when `session.userRole` is `admin`, `AccountScreen` shows a "Postavke firme" card that pushes `CompanySettingsScreen` (`lib/shared/screens/company_settings_screen.dart`, kept in `shared/` so the shared account tab and the admin dashboard can both reach it), a form to view/edit the single company-settings row. It loads via `CompanySettingsService.fetch()` (`GET /CompanySettings?PageSize=1`, first item) and saves via `CompanySettingsService.update()` (`PUT /CompanySettings/{id}`, body from `CompanySettings.toUpdateJson()` which omits the id). The service follows the `ProfileService` template and maps failures to `CompanySettingsException`, preferring the backend's `{ message, errors }` body. Gating is UI-side only for now — `CompanySettingsController` still carries the `// TODO: add [RequirePermission(...)]` marker, so any authenticated user can hit the endpoint until a permission code is added there.
 - The backend serves plain HTTP in local dev, so DEV-ONLY cleartext exceptions are in place: `android/app/src/debug/AndroidManifest.xml` sets `android:usesCleartextTraffic="true"` (debug-only overlay, release stays secure) and `ios/Runner/Info.plist` adds `NSAppTransportSecurity` > `NSAllowsLocalNetworking`. These must be removed for production, where the backend must use HTTPS.
 - Verify UI changes with `flutter analyze` and `flutter test` (run from `AquaFlow/UI`). Building the Windows desktop target needs symlink support (enable Windows Developer Mode) because the app uses a native plugin.
-- Testing on a physical phone/tablet: set `ApiConfig.lanHostOverride` to the PC's LAN IP AND run the backend bound to all interfaces (`dotnet run ... --urls http://0.0.0.0:5161`) - the default `http` launch profile binds to `localhost` only, so a device gets a connection timeout. Also allow inbound TCP 5161 through Windows Firewall (Private profile), and use `http://` explicitly in a browser (mobile browsers auto-upgrade to https, which the HTTP-only backend does not serve).
+- Testing on a physical phone/tablet: set `ApiConfig.lanHostOverride` to the PC's LAN IP and run the backend with the `http` launch profile, which binds to all interfaces on port `5161`. Also allow inbound TCP 5161 through Windows Firewall (Private profile), and use `http://` explicitly in a browser (mobile browsers auto-upgrade to https, which the HTTP-only backend does not serve).
 
 ## Current Foundation
 

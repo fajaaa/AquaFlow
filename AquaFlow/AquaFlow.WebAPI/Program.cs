@@ -103,6 +103,8 @@ mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
     .Map(destination => destination.PermissionCode, source => source.Permission == null ? string.Empty : source.Permission.Code)
     .Map(destination => destination.PermissionName, source => source.Permission == null ? string.Empty : source.Permission.Name);
+mapperConfig.NewConfig<UserNotification, UserNotificationResponse>()
+    .Map(destination => destination.Notification, source => source.Notification);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
@@ -147,7 +149,8 @@ AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemIn
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
 AddCrud<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>();
 AddCrud<Notification, NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>();
-AddCrud<UserNotification, UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>();
+AddPatchMapping<UserNotificationPatchRequest, UserNotification>();
+builder.Services.AddScoped<IBaseCRUDService<UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>, UserNotificationService>();
 AddCrud<CompanySettings, CompanySettingsResponse, CompanySettingsSearchObject, CompanySettingsInsertRequest, CompanySettingsUpdateRequest, CompanySettingsPatchRequest>();
 AddCrud<PaymentSettings, PaymentSettingsResponse, PaymentSettingsSearchObject, PaymentSettingsInsertRequest, PaymentSettingsUpdateRequest, PaymentSettingsPatchRequest>();
 

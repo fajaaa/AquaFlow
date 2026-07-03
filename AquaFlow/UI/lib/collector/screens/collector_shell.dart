@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:aquaflow_desktop/shared/screens/account_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/mobile_shell.dart';
+import 'package:aquaflow_desktop/shared/screens/notifications_screen.dart';
 
 /// Mobile home for the `collector` (Sakupljač/Inkasant) role.
 ///
@@ -17,10 +18,10 @@ class CollectorShell extends StatelessWidget {
     return const MobileShell(
       tabs: [
         MobileTab(
-          icon: Icons.route_outlined,
-          selectedIcon: Icons.route,
-          label: 'Rute',
-          body: PlaceholderTab(icon: Icons.route, label: 'Rute'),
+          icon: Icons.notifications_outlined,
+          selectedIcon: Icons.notifications,
+          label: 'Obavijesti',
+          body: NotificationsScreen(),
         ),
         MobileTab(
           icon: Icons.speed_outlined,

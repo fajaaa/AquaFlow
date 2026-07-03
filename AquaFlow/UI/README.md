@@ -11,7 +11,8 @@ talk to the HTTP backend.
 - The backend running locally. See the repo `AGENTS.md`: start SQL Server
   (`docker compose up -d`), set the JWT/connection env vars, then
   `dotnet run --project ...AquaFlow.WebAPI... --launch-profile http`
-  (listens on `http://localhost:5161`).
+  (listens on `http://localhost:5161` and on the PC LAN IP for physical
+  phone/tablet testing).
 
 ## Run
 

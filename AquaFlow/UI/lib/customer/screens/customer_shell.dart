@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:aquaflow_desktop/shared/screens/account_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/mobile_shell.dart';
+import 'package:aquaflow_desktop/shared/screens/notifications_screen.dart';
 
 /// Mobile home for the `customer` (Kupac) role.
 ///
@@ -16,10 +17,10 @@ class CustomerShell extends StatelessWidget {
     return const MobileShell(
       tabs: [
         MobileTab(
-          icon: Icons.home_outlined,
-          selectedIcon: Icons.home,
-          label: 'Početna',
-          body: PlaceholderTab(icon: Icons.home, label: 'Početna'),
+          icon: Icons.notifications_outlined,
+          selectedIcon: Icons.notifications,
+          label: 'Obavijesti',
+          body: NotificationsScreen(),
         ),
         MobileTab(
           icon: Icons.receipt_long_outlined,
