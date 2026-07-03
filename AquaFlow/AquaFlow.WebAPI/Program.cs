@@ -83,6 +83,17 @@ if (string.IsNullOrWhiteSpace(jwtIssuer) ||
 
 builder.Services.AddDbContext<AquaFlowDbContext>(options => options.UseSqlServer(connectionString));
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("LocalDevelopment", policy =>
+    {
+        policy
+            .SetIsOriginAllowed(IsLocalDevelopmentOrigin)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var mapperConfig = TypeAdapterConfig.GlobalSettings;
 mapperConfig.NewConfig<User, UserResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name);
@@ -247,6 +258,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("LocalDevelopment");
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -270,4 +286,21 @@ void AddPatchMapping<TPatchRequest, TEntity>()
 {
     mapperConfig.NewConfig<TPatchRequest, TEntity>()
         .IgnoreNullValues(true);
+}
+
+static bool IsLocalDevelopmentOrigin(string origin)
+{
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+    {
+        return false;
+    }
+
+    if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+    {
+        return false;
+    }
+
+    return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+        uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+        uri.Host.StartsWith("192.168.", StringComparison.OrdinalIgnoreCase);
 }

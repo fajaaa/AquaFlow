@@ -30,7 +30,7 @@ class ApiConfig {
   /// on it in committed code for other machines.
   // Type stays String? because this is a toggle: set back to null for emulator.
   // ignore: unnecessary_nullable_for_final_variable_declarations
-  static const String? lanHostOverride = "192.168.18.5";
+  static const String? lanHostOverride = null;
 
   static String get baseUrl {
     if (lanHostOverride != null) return "http://$lanHostOverride:$port";
