@@ -48,6 +48,16 @@ public class NotificationRecipientService
             .FirstOrDefaultAsync();
 
         var normalizedRole = Normalize(roleName);
+
+        // Admins can see every notification, regardless of its target audience.
+        if (normalizedRole == "admin")
+        {
+            return await _dbContext.Notifications
+                .AsNoTracking()
+                .Select(notification => notification.Id)
+                .ToListAsync();
+        }
+
         var settlementIds = await GetUserSettlementIdsAsync(userId);
 
         return await _dbContext.Notifications

@@ -92,14 +92,26 @@ public class UserNotificationService
             .Select(userNotification => userNotification.NotificationId)
             .ToListAsync();
 
-        var now = DateTime.UtcNow;
-        var missingUserNotifications = visibleNotificationIds
-            .Except(existingNotificationIds)
-            .Select(notificationId => new UserNotification
+        var missingNotificationIds = visibleNotificationIds.Except(existingNotificationIds).ToList();
+        if (missingNotificationIds.Count == 0)
+        {
+            return;
+        }
+
+        // Mirror the source notification's own CreatedAt rather than "now" so a
+        // late-backfilled inbox row still sorts by when the notification was
+        // actually published, not when this user first became aware of it.
+        var missingNotificationDates = await DbContext.Notifications
+            .Where(notification => missingNotificationIds.Contains(notification.Id))
+            .Select(notification => new { notification.Id, notification.CreatedAt })
+            .ToListAsync();
+
+        var missingUserNotifications = missingNotificationDates
+            .Select(notification => new UserNotification
             {
                 UserId = userId,
-                NotificationId = notificationId,
-                CreatedAt = now
+                NotificationId = notification.Id,
+                CreatedAt = notification.CreatedAt
             });
 
         DbContext.UserNotifications.AddRange(missingUserNotifications);

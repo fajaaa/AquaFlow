@@ -113,6 +113,98 @@ public class NotificationServiceTests
     }
 
     [Fact]
+    public async Task GetAllAsync_ForUser_BackfilledRowSortsByNotificationDateNotBackfillTime()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+
+        var oldNotificationDate = DateTime.UtcNow.AddDays(-30);
+        context.Notifications.Add(new Notification
+        {
+            Id = 900,
+            Title = "Stara obavijest",
+            Body = "Obavijest objavljena prije mjesec dana.",
+            Type = "Info",
+            Audience = "Customers",
+            CreatedById = AdminUserId,
+            CreatedAt = oldNotificationDate
+        });
+        await context.SaveChangesAsync();
+
+        var service = CreateUserNotificationService(context);
+
+        // First load happens long after the notification was published, so its inbox
+        // row for this user only gets created now (the backfill path), not at insert time.
+        await service.GetAllAsync(new UserNotificationSearchObject
+        {
+            UserId = CustomerUserId,
+            Page = 1,
+            PageSize = 10
+        });
+
+        var inboxRow = await context.UserNotifications.SingleAsync(userNotification =>
+            userNotification.UserId == CustomerUserId &&
+            userNotification.NotificationId == 900);
+
+        Assert.Equal(oldNotificationDate, inboxRow.CreatedAt);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ForAdmin_BackfillsInboxRowsForEveryAudience()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+        context.Notifications.AddRange(
+            new Notification
+            {
+                Id = 900,
+                Title = "Racun spreman",
+                Body = "Novi racun je dostupan.",
+                Type = "Billing",
+                Audience = "Customers",
+                CreatedById = AdminUserId,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Notification
+            {
+                Id = 901,
+                Title = "Raspored obilaska",
+                Body = "Novi raspored za inkasante.",
+                Type = "Info",
+                Audience = "Collectors",
+                CreatedById = AdminUserId,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Notification
+            {
+                Id = 902,
+                Title = "Radovi u naselju",
+                Body = "Planirani radovi na mrezi.",
+                Type = "PlannedWorks",
+                Audience = "Settlement",
+                SettlementId = 10,
+                CreatedById = AdminUserId,
+                CreatedAt = DateTime.UtcNow
+            });
+        await context.SaveChangesAsync();
+
+        var service = CreateUserNotificationService(context);
+        var page = await service.GetAllAsync(new UserNotificationSearchObject
+        {
+            UserId = AdminUserId,
+            Page = 1,
+            PageSize = 10,
+            IncludeTotalCount = true
+        });
+
+        Assert.Equal(3, page.TotalCount);
+        var notificationIds = page.Items.Select(item => item.NotificationId).OrderBy(id => id);
+        Assert.Equal(new[] { 900, 901, 902 }, notificationIds);
+    }
+
+    [Fact]
     public async Task GetAllAsync_ForUser_FiltersByNotificationType()
     {
         var options = BuildOptions();
