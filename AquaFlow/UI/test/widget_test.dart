@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:aquaflow_desktop/providers/auth_provider.dart';
-import 'package:aquaflow_desktop/screens/login_screen.dart';
+import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
+import 'package:aquaflow_desktop/shared/screens/login_screen.dart';
 
 void main() {
   testWidgets('login form validates required fields', (tester) async {
