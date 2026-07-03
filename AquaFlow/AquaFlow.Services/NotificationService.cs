@@ -56,7 +56,60 @@ public class NotificationService
         DbSet.Add(entity);
         await DbContext.SaveChangesAsync();
 
-        await AddMissingUserNotificationsAsync(entity, now);
+        var recipientUserIds = await _recipientService.GetRecipientUserIdsAsync(entity);
+        await AddMissingUserNotificationsAsync(entity, recipientUserIds);
+        await DbContext.SaveChangesAsync();
+
+        await transaction.CommitAsync();
+        await LoadReferencesAsync(entity);
+
+        return Mapper.Map<NotificationResponse>(entity);
+    }
+
+    public override async Task<NotificationResponse> UpdateAsync(int id, NotificationUpdateRequest request)
+    {
+        await ValidateUpdateAsync(request);
+
+        var entity = await IncludeForUpdate(DbSet).FirstOrDefaultAsync(notification => notification.Id == id)
+            ?? throw new KeyNotFoundException($"Notification with id {id} was not found.");
+
+        await BeforeUpdateAsync(id, request, entity);
+
+        await using var transaction = await DbContext.Database.BeginTransactionAsync();
+
+        MapUpdateRequestToEntity(request, entity);
+        entity.Id = id;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await DbContext.SaveChangesAsync();
+
+        await SyncRecipientsAsync(entity);
+        await DbContext.SaveChangesAsync();
+
+        await transaction.CommitAsync();
+        await LoadReferencesAsync(entity);
+
+        return Mapper.Map<NotificationResponse>(entity);
+    }
+
+    public override async Task<NotificationResponse> PatchAsync(int id, NotificationPatchRequest request)
+    {
+        await ValidatePatchAsync(request);
+
+        var entity = await IncludeForUpdate(DbSet).FirstOrDefaultAsync(notification => notification.Id == id)
+            ?? throw new KeyNotFoundException($"Notification with id {id} was not found.");
+
+        await BeforePatchAsync(id, request, entity);
+
+        await using var transaction = await DbContext.Database.BeginTransactionAsync();
+
+        MapPatchRequestToEntity(request, entity);
+        entity.Id = id;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await DbContext.SaveChangesAsync();
+
+        await SyncRecipientsAsync(entity);
         await DbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();
@@ -82,9 +135,8 @@ public class NotificationService
         await transaction.CommitAsync();
     }
 
-    private async Task AddMissingUserNotificationsAsync(Notification notification, DateTime createdAt)
+    private async Task AddMissingUserNotificationsAsync(Notification notification, List<int> recipientUserIds)
     {
-        var recipientUserIds = await _recipientService.GetRecipientUserIdsAsync(notification);
         if (recipientUserIds.Count == 0)
         {
             return;
@@ -103,9 +155,37 @@ public class NotificationService
             {
                 UserId = userId,
                 NotificationId = notification.Id,
-                CreatedAt = createdAt
+                CreatedAt = notification.CreatedAt
             });
 
         DbContext.UserNotifications.AddRange(newUserNotifications);
+    }
+
+    // Re-syncs UserNotification inbox rows after an update/patch, since Audience (or
+    // SettlementId) may have narrowed - without this, users outside the new audience
+    // would keep reading a notification via their existing inbox row (information
+    // disclosure once the content behind that row changes).
+    private async Task SyncRecipientsAsync(Notification notification)
+    {
+        var recipientUserIds = await _recipientService.GetRecipientUserIdsAsync(notification);
+
+        await AddMissingUserNotificationsAsync(notification, recipientUserIds);
+        await RemoveStaleUserNotificationsAsync(notification, recipientUserIds);
+    }
+
+    private async Task RemoveStaleUserNotificationsAsync(Notification notification, List<int> recipientUserIds)
+    {
+        var staleUserNotifications = await DbContext.UserNotifications
+            .Where(userNotification =>
+                userNotification.NotificationId == notification.Id &&
+                !recipientUserIds.Contains(userNotification.UserId))
+            .ToListAsync();
+
+        if (staleUserNotifications.Count == 0)
+        {
+            return;
+        }
+
+        DbContext.UserNotifications.RemoveRange(staleUserNotifications);
     }
 }

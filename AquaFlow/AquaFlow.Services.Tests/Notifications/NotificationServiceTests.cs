@@ -76,6 +76,56 @@ public class NotificationServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_NarrowsAudienceToSettlement_RemovesInboxRowsForUsersOutsideNewAudience()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+
+        var service = CreateNotificationService(context);
+        var response = await service.InsertAsync(new NotificationInsertRequest
+        {
+            Title = "Nova obavijest",
+            Body = "Sadrzaj obavijesti",
+            Type = "Info",
+            Audience = "All",
+            CreatedById = AdminUserId
+        });
+
+        var initialUserIds = await context.UserNotifications
+            .Where(userNotification => userNotification.NotificationId == response.Id)
+            .Select(userNotification => userNotification.UserId)
+            .OrderBy(userId => userId)
+            .ToListAsync();
+        Assert.Equal(
+            new[] { AdminUserId, CollectorUserId, CustomerUserId, OtherCustomerUserId, OtherCollectorUserId },
+            initialUserIds);
+
+        await service.UpdateAsync(response.Id, new NotificationUpdateRequest
+        {
+            Title = "Nova obavijest",
+            Body = "Osjetljiv sadrzaj samo za naselje 20",
+            Type = "Info",
+            Audience = "Settlement",
+            SettlementId = 20,
+            CreatedById = AdminUserId
+        });
+
+        var userIdsAfterUpdate = await context.UserNotifications
+            .Where(userNotification => userNotification.NotificationId == response.Id)
+            .Select(userNotification => userNotification.UserId)
+            .OrderBy(userId => userId)
+            .ToListAsync();
+
+        // Settlement 20 covers OtherCustomerUserId (ServiceLocation SettlementId=20) and
+        // OtherCollectorUserId (CollectorProfile AssignedAreaId=20) only.
+        Assert.Equal(new[] { OtherCustomerUserId, OtherCollectorUserId }.OrderBy(id => id), userIdsAfterUpdate);
+        Assert.DoesNotContain(AdminUserId, userIdsAfterUpdate);
+        Assert.DoesNotContain(CollectorUserId, userIdsAfterUpdate);
+        Assert.DoesNotContain(CustomerUserId, userIdsAfterUpdate);
+    }
+
+    [Fact]
     public async Task GetAllAsync_ForUser_BackfillsMissingInboxRowsForVisibleNotifications()
     {
         var options = BuildOptions();
