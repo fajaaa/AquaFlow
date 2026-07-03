@@ -12,6 +12,12 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
     where TEntity : EntityBase
     where TSearch : BaseSearchObject
 {
+    // Applied when Page/PageSize is missing or out of range, and as an upper bound on
+    // PageSize, so a caller can never force GetAllAsync to skip pagination and return
+    // the whole table in one response.
+    private const int DefaultPageSize = 10;
+    private const int MaxPageSize = 100;
+
     private static readonly HashSet<string> SearchInfrastructureProperties = new(StringComparer.OrdinalIgnoreCase)
     {
         nameof(BaseSearchObject.Page),
@@ -149,12 +155,9 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
 
         query = ApplySorting(query, search);
 
-        var page = search?.Page ?? 1;
-        var pageSize = search?.PageSize ?? 10;
-        if (page > 0 && pageSize > 0)
-        {
-            query = query.Skip((page - 1) * pageSize).Take(pageSize);
-        }
+        var page = Math.Max(search?.Page ?? 1, 1);
+        var pageSize = Math.Clamp(search?.PageSize ?? DefaultPageSize, 1, MaxPageSize);
+        query = query.Skip((page - 1) * pageSize).Take(pageSize);
 
         var entities = await query.ToListAsync();
 

@@ -103,12 +103,15 @@ mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
     .Map(destination => destination.PermissionCode, source => source.Permission == null ? string.Empty : source.Permission.Code)
     .Map(destination => destination.PermissionName, source => source.Permission == null ? string.Empty : source.Permission.Name);
+mapperConfig.NewConfig<UserNotification, UserNotificationResponse>()
+    .Map(destination => destination.Notification, source => source.Notification);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IPermissionLookupService, PermissionLookupService>();
+builder.Services.AddScoped<NotificationRecipientService>();
 builder.Services.AddScoped<IAccessManager, AccessManager>();
 builder.Services.AddScoped<ICryptoService, CryptoService>();
 AddPatchMapping<UserPatchRequest, User>();
@@ -146,8 +149,10 @@ builder.Services.AddScoped<IInvoiceStateResolver, InvoiceStateResolver>();
 AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
 AddCrud<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>();
-AddCrud<Notification, NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>();
-AddCrud<UserNotification, UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>();
+AddPatchMapping<NotificationPatchRequest, Notification>();
+builder.Services.AddScoped<IBaseCRUDService<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>, NotificationService>();
+AddPatchMapping<UserNotificationPatchRequest, UserNotification>();
+builder.Services.AddScoped<IBaseCRUDService<UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>, UserNotificationService>();
 AddCrud<CompanySettings, CompanySettingsResponse, CompanySettingsSearchObject, CompanySettingsInsertRequest, CompanySettingsUpdateRequest, CompanySettingsPatchRequest>();
 AddCrud<PaymentSettings, PaymentSettingsResponse, PaymentSettingsSearchObject, PaymentSettingsInsertRequest, PaymentSettingsUpdateRequest, PaymentSettingsPatchRequest>();
 
@@ -245,6 +250,31 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1)
             }));
+
+    // Applied to every request regardless of controller/action ([RateLimitingPolicies.Standard]).
+    // A global limiter always stacks with any endpoint-specific policy (e.g. the stricter
+    // Authentication policy on /Access/login still applies on top of this), so this closes the
+    // gap for every other endpoint - including read endpoints like /UserNotifications/{id} -
+    // without weakening the login throttle. Partitioned per authenticated user where possible
+    // (falls back to client IP for anonymous calls) so one user hammering the API can't exhaust
+    // another user's quota. The limit is generous enough that normal UI usage never hits it, but
+    // low enough that scripted ID enumeration (e.g. GET /UserNotifications/1, /2, /3...) is
+    // throttled and shows up as a burst of 429s.
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        var userId = httpContext.User.FindFirst(ClaimNames.Id)?.Value;
+        var partitionKey = !string.IsNullOrEmpty(userId)
+            ? $"user:{userId}"
+            : $"ip:{httpContext.Connection.RemoteIpAddress}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 300,
+                Window = TimeSpan.FromMinutes(1)
+            });
+    });
 });
 
 var app = builder.Build();

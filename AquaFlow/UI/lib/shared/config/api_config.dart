@@ -26,11 +26,11 @@ class ApiConfig {
   /// web (auto-detected below).
   ///
   /// NOTE: this is a machine-specific local dev value (Kenan's PC on Wi-Fi).
-  /// Set it back to `null` when running on the Android emulator, and do not rely
-  /// on it in committed code for other machines.
+  /// Set it back to `null` when running on the Android emulator or update it if
+  /// the PC gets a different LAN IP.
   // Type stays String? because this is a toggle: set back to null for emulator.
   // ignore: unnecessary_nullable_for_final_variable_declarations
-  static const String? lanHostOverride = null;
+  static const String? lanHostOverride = '192.168.18.5';
 
   static String get baseUrl {
     if (lanHostOverride != null) return "http://$lanHostOverride:$port";
