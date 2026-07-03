@@ -14,6 +14,17 @@ public class NotificationsController : BaseCRUDController<NotificationResponse, 
     {
     }
 
+    // /Notifications is the raw admin table, not audience-filtered - a Customer/Collector
+    // reading it would see every notification regardless of Audience/SettlementId. The
+    // self-service equivalent is GET /UserNotifications/mine, which filters by audience.
+    [RequirePermission("Notifications.Manage")]
+    public override Task<ActionResult<PageResult<NotificationResponse>>> GetAll([FromQuery] NotificationSearchObject? search)
+        => base.GetAll(search);
+
+    [RequirePermission("Notifications.Manage")]
+    public override Task<ActionResult<NotificationResponse>> GetById(int id)
+        => base.GetById(id);
+
     [RequirePermission("Notifications.Manage")]
     public override Task<ActionResult<NotificationResponse>> Create([FromBody] NotificationInsertRequest request)
         => base.Create(request);
