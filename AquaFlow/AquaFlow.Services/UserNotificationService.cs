@@ -11,14 +11,18 @@ namespace AquaFlow.Services;
 public class UserNotificationService
     : EfCrudService<UserNotification, UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>
 {
+    private readonly NotificationRecipientService _recipientService;
+
     public UserNotificationService(
         AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<UserNotificationInsertRequest>> insertValidators,
         IEnumerable<IValidator<UserNotificationUpdateRequest>> updateValidators,
-        IEnumerable<IValidator<UserNotificationPatchRequest>> patchValidators)
+        IEnumerable<IValidator<UserNotificationPatchRequest>> patchValidators,
+        NotificationRecipientService recipientService)
         : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
+        _recipientService = recipientService;
     }
 
     protected override IQueryable<UserNotification> IncludeForRead(IQueryable<UserNotification> query)
@@ -38,6 +42,16 @@ public class UserNotificationService
         await notification.LoadAsync();
     }
 
+    public override async Task<PageResult<UserNotificationResponse>> GetAllAsync(UserNotificationSearchObject? search = null)
+    {
+        if (search?.UserId is > 0)
+        {
+            await EnsureInboxRowsAsync(search.UserId.Value);
+        }
+
+        return await base.GetAllAsync(search);
+    }
+
     protected override IQueryable<UserNotification> ApplyFilters(IQueryable<UserNotification> query, UserNotificationSearchObject? search)
     {
         query = base.ApplyFilters(query, search);
@@ -53,5 +67,34 @@ public class UserNotificationService
             (userNotification.Notification.Title.Contains(searchText) ||
                 userNotification.Notification.Body.Contains(searchText) ||
                 userNotification.Notification.Type.Contains(searchText)));
+    }
+
+    private async Task EnsureInboxRowsAsync(int userId)
+    {
+        var visibleNotificationIds = await _recipientService.GetVisibleNotificationIdsForUserAsync(userId);
+        if (visibleNotificationIds.Count == 0)
+        {
+            return;
+        }
+
+        var existingNotificationIds = await DbContext.UserNotifications
+            .Where(userNotification =>
+                userNotification.UserId == userId &&
+                visibleNotificationIds.Contains(userNotification.NotificationId))
+            .Select(userNotification => userNotification.NotificationId)
+            .ToListAsync();
+
+        var now = DateTime.UtcNow;
+        var missingUserNotifications = visibleNotificationIds
+            .Except(existingNotificationIds)
+            .Select(notificationId => new UserNotification
+            {
+                UserId = userId,
+                NotificationId = notificationId,
+                CreatedAt = now
+            });
+
+        DbContext.UserNotifications.AddRange(missingUserNotifications);
+        await DbContext.SaveChangesAsync();
     }
 }

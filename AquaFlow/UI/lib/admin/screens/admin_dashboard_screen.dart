@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_desktop/admin/screens/admin_notifications_screen.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/account_edit_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
@@ -12,8 +13,8 @@ import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 /// Classic admin layout: a fixed left [_Sidebar] (brand on top, a vertical menu
 /// below with the active item highlighted in blue and a left indicator bar) and
 /// a content area on the right that swaps with the selected menu item. The
-/// "Postavke firme" and "Moj nalog" sections embed their existing screens; the
-/// rest are placeholders until wired up.
+/// "Obavijesti", "Postavke firme", and "Moj nalog" sections embed their
+/// existing screens; the rest are placeholders until wired up.
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -41,6 +42,11 @@ const List<_AdminNavItem> _navItems = [
     icon: Icons.grid_view_outlined,
     selectedIcon: Icons.grid_view,
     label: 'Dashboard',
+  ),
+  _AdminNavItem(
+    icon: Icons.notifications_outlined,
+    selectedIcon: Icons.notifications,
+    label: 'Obavijesti',
   ),
   _AdminNavItem(
     icon: Icons.people_outline,
@@ -111,9 +117,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     switch (_selectedIndex) {
       case 0:
         return const _DashboardOverview();
-      case 7:
-        return const CompanySettingsScreen();
+      case 1:
+        return const AdminNotificationsScreen();
       case 8:
+        return const CompanySettingsScreen();
+      case 9:
         return const AccountEditScreen();
       default:
         return _SectionPlaceholder(item: _navItems[_selectedIndex]);
