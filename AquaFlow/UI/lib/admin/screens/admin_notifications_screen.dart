@@ -428,6 +428,8 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final isSmallScreen = constraints.maxWidth < 900;
+
         return Scrollbar(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(28, 8, 28, 20),
@@ -448,14 +450,14 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                   child: DataTable(
                     dataRowMinHeight: 72,
                     dataRowMaxHeight: 84,
-                    columns: const [
-                      DataColumn(label: Text('Obavijest')),
-                      DataColumn(label: Text('Tip')),
-                      DataColumn(label: Text('Publika')),
-                      DataColumn(label: Text('Naselje')),
-                      DataColumn(label: Text('Važi do')),
-                      DataColumn(label: Text('Kreirano')),
-                      DataColumn(label: Text('Akcije')),
+                    columns: [
+                      const DataColumn(label: Text('Obavijest')),
+                      const DataColumn(label: Text('Tip')),
+                      if (!isSmallScreen) const DataColumn(label: Text('Publika')),
+                      if (!isSmallScreen) const DataColumn(label: Text('Naselje')),
+                      if (!isSmallScreen) const DataColumn(label: Text('Važi do')),
+                      if (!isSmallScreen) const DataColumn(label: Text('Kreirano')),
+                      const DataColumn(label: Text('Akcije')),
                     ],
                     rows: [
                       for (final item in items)
@@ -473,12 +475,16 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                                 ),
                               ),
                             ),
-                            DataCell(Text(_audienceLabel(item.audience))),
-                            DataCell(
-                              Text(item.settlementId?.toString() ?? '-'),
-                            ),
-                            DataCell(Text(_formatDate(item.validUntil))),
-                            DataCell(Text(_formatDate(item.createdAt))),
+                            if (!isSmallScreen)
+                              DataCell(Text(_audienceLabel(item.audience))),
+                            if (!isSmallScreen)
+                              DataCell(
+                                Text(item.settlementId?.toString() ?? '-'),
+                              ),
+                            if (!isSmallScreen)
+                              DataCell(Text(_formatDate(item.validUntil))),
+                            if (!isSmallScreen)
+                              DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
                               _RowActions(
                                 disabled: _mutating,
@@ -507,7 +513,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
 
   int _totalPages(int totalCount) {
     if (totalCount <= 0) return 1;
-    return ((totalCount + _pageSize - 1) / _pageSize).ceil();
+    return (totalCount / _pageSize).ceil();
   }
 }
 
@@ -1031,51 +1037,111 @@ class _PaginationBar extends StatelessWidget {
     final canGoBack = page > 1 && !loading;
     final canGoForward = page < totalPages && !loading;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Prethodna stranica',
-              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-              icon: const Icon(Icons.chevron_left),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxWidth < 500;
+
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            border: Border(
+              top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
             ),
-            Expanded(
-              child: Text(
-                'Stranica $page od $totalPages · $totalCount ukupno',
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelLarge,
-              ),
-            ),
-            IconButton(
-              tooltip: 'Sljedeća stranica',
-              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-            const SizedBox(width: 12),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: pageSize,
-                onChanged: loading ? null : onPageSizeChanged,
-                items: const [
-                  DropdownMenuItem(value: 10, child: Text('10')),
-                  DropdownMenuItem(value: 20, child: Text('20')),
-                  DropdownMenuItem(value: 50, child: Text('50')),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+            child: isSmallScreen
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'Prethodna stranica',
+                            onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
+                            icon: const Icon(Icons.chevron_left),
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Str. $page/$totalPages',
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelMedium,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Sljedeća stranica',
+                            onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
+                            icon: const Icon(Icons.chevron_right),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '$totalCount ukupno',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            DropdownButtonHideUnderline(
+                              child: DropdownButton<int>(
+                                value: pageSize,
+                                onChanged: loading ? null : onPageSizeChanged,
+                                items: const [
+                                  DropdownMenuItem(value: 10, child: Text('10')),
+                                  DropdownMenuItem(value: 20, child: Text('20')),
+                                  DropdownMenuItem(value: 50, child: Text('50')),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'Prethodna stranica',
+                        onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
+                        icon: const Icon(Icons.chevron_left),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Stranica $page od $totalPages · $totalCount ukupno',
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelLarge,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Sljedeća stranica',
+                        onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                      const SizedBox(width: 12),
+                      DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: pageSize,
+                          onChanged: loading ? null : onPageSizeChanged,
+                          items: const [
+                            DropdownMenuItem(value: 10, child: Text('10')),
+                            DropdownMenuItem(value: 20, child: Text('20')),
+                            DropdownMenuItem(value: 50, child: Text('50')),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        );
+      },
     );
   }
 }
