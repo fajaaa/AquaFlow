@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/auth_result.dart';
 import '../models/auth_session.dart';
-import '../models/auth_tokens.dart';
+import '../services/auth_api_service.dart';
 import '../services/auth_exception.dart';
-import '../services/auth_service.dart';
 import '../services/token_storage.dart';
 
 /// Where the app is in the auth lifecycle. [unknown] is the initial state while
@@ -13,11 +13,11 @@ enum AuthStatus { unknown, authenticated, unauthenticated }
 /// Owns all authentication state and is the single source of truth the UI
 /// listens to. Handles startup restore, login, logout and silent refresh.
 class AuthProvider extends ChangeNotifier {
-  AuthProvider({AuthService? authService, TokenStorage? tokenStorage})
-      : _authService = authService ?? AuthService(),
+  AuthProvider({AuthApiService? authService, TokenStorage? tokenStorage})
+      : _authService = authService ?? AuthApiService(),
         _tokenStorage = tokenStorage ?? TokenStorage();
 
-  final AuthService _authService;
+  final AuthApiService _authService;
   final TokenStorage _tokenStorage;
 
   AuthStatus _status = AuthStatus.unknown;
@@ -60,10 +60,7 @@ class AuthProvider extends ChangeNotifier {
     _setBusy(true);
     _errorMessage = null;
     try {
-      final tokens = await _authService.login(
-        email: email.trim(),
-        password: password,
-      );
+      final tokens = await _authService.login(email.trim(), password);
       await _persistAndActivate(tokens);
       return true;
     } on AuthException catch (e) {
@@ -96,7 +93,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _persistAndActivate(AuthTokens tokens) async {
+  Future<void> _persistAndActivate(AuthResult tokens) async {
     await _tokenStorage.saveTokens(
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,

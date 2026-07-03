@@ -5,7 +5,7 @@ import 'dart:io' show SocketException;
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
-import '../models/auth_tokens.dart';
+import '../models/auth_result.dart';
 import 'auth_exception.dart';
 
 /// Talks to the backend `AccessController` (`/Access/login`, `/Access/refresh`).
@@ -14,8 +14,8 @@ import 'auth_exception.dart';
 /// message that is safe to show to the user, so callers only deal with one
 /// error type. The base URL always comes from [ApiConfig.baseUrl] - the host is
 /// never hardcoded here.
-class AuthService {
-  AuthService({http.Client? client, Duration? timeout})
+class AuthApiService {
+  AuthApiService({http.Client? client, Duration? timeout})
       : _client = client ?? http.Client(),
         _timeout = timeout ?? const Duration(seconds: 15);
 
@@ -25,10 +25,7 @@ class AuthService {
   static const _jsonHeaders = {'Content-Type': 'application/json'};
 
   /// `POST /Access/login` with `{ "email": ..., "password": ... }`.
-  Future<AuthTokens> login({
-    required String email,
-    required String password,
-  }) {
+  Future<AuthResult> login(String email, String password) {
     return _postForTokens(
       '/Access/login',
       {'email': email, 'password': password},
@@ -37,11 +34,11 @@ class AuthService {
 
   /// `POST /Access/refresh` with `{ "refreshToken": ... }`. Backend rotates the
   /// pair, so the response carries a fresh access AND refresh token.
-  Future<AuthTokens> refresh(String refreshToken) {
+  Future<AuthResult> refresh(String refreshToken) {
     return _postForTokens('/Access/refresh', {'refreshToken': refreshToken});
   }
 
-  Future<AuthTokens> _postForTokens(
+  Future<AuthResult> _postForTokens(
     String path,
     Map<String, String> body,
   ) async {
@@ -64,7 +61,7 @@ class AuthService {
     }
 
     if (response.statusCode == 200) {
-      return AuthTokens.fromJson(
+      return AuthResult.fromJson(
         jsonDecode(response.body) as Map<String, dynamic>,
       );
     }

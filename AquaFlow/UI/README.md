@@ -36,7 +36,7 @@ password `AquaFlow123!`.
 
 - `lib/config/api_config.dart` - single source of the backend base URL. **Never
   hardcode the host anywhere else**; always read `ApiConfig.baseUrl`.
-- `lib/services/auth_service.dart` - calls `POST /Access/login` and
+- `lib/services/auth_api_service.dart` - calls `POST /Access/login` and
   `POST /Access/refresh`, mapping errors to a friendly `AuthException`.
 - `lib/services/token_storage.dart` - stores the access/refresh tokens in the
   platform secure store via `flutter_secure_storage`.
