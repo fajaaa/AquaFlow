@@ -34,7 +34,7 @@ class ProfileService {
   /// Fetches the customer profile owned by [userId], or null when the user has
   /// no customer profile.
   Future<CustomerProfile?> fetchCustomerProfile(int userId) async {
-    final token = await _tokenStorage.readAccessToken();
+    final token = await _tokenStorage.getAccessToken();
     if (token == null) {
       throw const ProfileException('You are not signed in.');
     }

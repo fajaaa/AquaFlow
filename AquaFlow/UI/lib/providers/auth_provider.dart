@@ -35,14 +35,14 @@ class AuthProvider extends ChangeNotifier {
   /// access token while it is still valid, otherwise tries the refresh token,
   /// and falls back to unauthenticated if neither works.
   Future<void> bootstrap() async {
-    final accessToken = await _tokenStorage.readAccessToken();
+    final accessToken = await _tokenStorage.getAccessToken();
 
     if (accessToken != null && _trySetSession(accessToken)) {
       _setStatus(AuthStatus.authenticated);
       return;
     }
 
-    final refreshToken = await _tokenStorage.readRefreshToken();
+    final refreshToken = await _tokenStorage.getRefreshToken();
     if (refreshToken != null && await _tryRefresh(refreshToken)) {
       return;
     }
@@ -94,10 +94,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _persistAndActivate(AuthResult tokens) async {
-    await _tokenStorage.saveTokens(
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    );
+    await _tokenStorage.saveTokens(tokens.accessToken, tokens.refreshToken);
     _session = AuthSession.fromAccessToken(tokens.accessToken);
     _setStatus(AuthStatus.authenticated);
   }

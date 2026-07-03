@@ -87,7 +87,7 @@ class AccountService {
   }
 
   Future<String> _requireToken() async {
-    final token = await _tokenStorage.readAccessToken();
+    final token = await _tokenStorage.getAccessToken();
     if (token == null) {
       throw const AccountException('You are not signed in.');
     }

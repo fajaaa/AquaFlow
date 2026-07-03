@@ -4,7 +4,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// (Keychain on iOS/macOS, Keystore-backed EncryptedSharedPreferences on
 /// Android, Credential Locker on Windows, libsecret on Linux).
 ///
-/// This is the only place tokens are read from or written to disk.
+/// This is the only place tokens are read from or written to disk. Tokens are
+/// never kept in SharedPreferences or a plain file, and their values are never
+/// printed or logged.
 class TokenStorage {
   TokenStorage([FlutterSecureStorage? storage])
       : _storage = storage ?? const FlutterSecureStorage();
@@ -14,18 +16,16 @@ class TokenStorage {
   static const _accessTokenKey = 'aquaflow.accessToken';
   static const _refreshTokenKey = 'aquaflow.refreshToken';
 
-  Future<void> saveTokens({
-    required String accessToken,
-    required String refreshToken,
-  }) async {
+  Future<void> saveTokens(String accessToken, String refreshToken) async {
     await _storage.write(key: _accessTokenKey, value: accessToken);
     await _storage.write(key: _refreshTokenKey, value: refreshToken);
   }
 
-  Future<String?> readAccessToken() => _storage.read(key: _accessTokenKey);
+  Future<String?> getAccessToken() => _storage.read(key: _accessTokenKey);
 
-  Future<String?> readRefreshToken() => _storage.read(key: _refreshTokenKey);
+  Future<String?> getRefreshToken() => _storage.read(key: _refreshTokenKey);
 
+  /// Removes both tokens from the secure store (logout).
   Future<void> clear() async {
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);

@@ -93,7 +93,7 @@ class CompanySettingsService {
   }
 
   Future<String> _requireToken() async {
-    final token = await _tokenStorage.readAccessToken();
+    final token = await _tokenStorage.getAccessToken();
     if (token == null) {
       throw const CompanySettingsException('You are not signed in.');
     }
