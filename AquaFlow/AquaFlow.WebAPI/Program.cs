@@ -250,6 +250,31 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1)
             }));
+
+    // Applied to every request regardless of controller/action ([RateLimitingPolicies.Standard]).
+    // A global limiter always stacks with any endpoint-specific policy (e.g. the stricter
+    // Authentication policy on /Access/login still applies on top of this), so this closes the
+    // gap for every other endpoint - including read endpoints like /UserNotifications/{id} -
+    // without weakening the login throttle. Partitioned per authenticated user where possible
+    // (falls back to client IP for anonymous calls) so one user hammering the API can't exhaust
+    // another user's quota. The limit is generous enough that normal UI usage never hits it, but
+    // low enough that scripted ID enumeration (e.g. GET /UserNotifications/1, /2, /3...) is
+    // throttled and shows up as a burst of 429s.
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        var userId = httpContext.User.FindFirst(ClaimNames.Id)?.Value;
+        var partitionKey = !string.IsNullOrEmpty(userId)
+            ? $"user:{userId}"
+            : $"ip:{httpContext.Connection.RemoteIpAddress}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 300,
+                Window = TimeSpan.FromMinutes(1)
+            });
+    });
 });
 
 var app = builder.Build();
