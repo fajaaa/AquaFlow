@@ -21,15 +21,16 @@ public abstract class BaseReadController<TResponse, TSearch, TService> : Control
     }
 
     [HttpGet]
-    public virtual Task<PageResult<TResponse>> GetAll([FromQuery] TSearch? search)
+    public virtual async Task<ActionResult<PageResult<TResponse>>> GetAll([FromQuery] TSearch? search)
     {
-        return Service.GetAllAsync(search);
+        var result = await Service.GetAllAsync(search);
+        return Ok(result);
     }
 
     [HttpGet("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<TResponse>> GetById(int id)
+    public virtual async Task<ActionResult<TResponse>> GetById(int id)
     {
         try
         {
