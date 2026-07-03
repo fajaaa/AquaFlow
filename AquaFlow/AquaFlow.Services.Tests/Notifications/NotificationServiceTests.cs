@@ -112,6 +112,51 @@ public class NotificationServiceTests
             userNotification.NotificationId == 900));
     }
 
+    [Fact]
+    public async Task GetAllAsync_ForUser_FiltersByNotificationType()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+        context.Notifications.AddRange(
+            new Notification
+            {
+                Id = 900,
+                Title = "Opsta obavijest",
+                Body = "Sadrzaj obavijesti.",
+                Type = "Info",
+                Audience = "Customers",
+                CreatedById = AdminUserId,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Notification
+            {
+                Id = 901,
+                Title = "Racun spreman",
+                Body = "Novi racun je dostupan.",
+                Type = "Billing",
+                Audience = "Customers",
+                CreatedById = AdminUserId,
+                CreatedAt = DateTime.UtcNow
+            });
+        await context.SaveChangesAsync();
+
+        var service = CreateUserNotificationService(context);
+        var page = await service.GetAllAsync(new UserNotificationSearchObject
+        {
+            UserId = CustomerUserId,
+            Type = "Billing",
+            Page = 1,
+            PageSize = 10,
+            IncludeTotalCount = true
+        });
+
+        var item = Assert.Single(page.Items);
+        Assert.Equal(1, page.TotalCount);
+        Assert.Equal(901, item.NotificationId);
+        Assert.Equal("Billing", item.Notification?.Type);
+    }
+
     private static NotificationService CreateNotificationService(AquaFlowDbContext context)
     {
         IMapper mapper = new Mapper();

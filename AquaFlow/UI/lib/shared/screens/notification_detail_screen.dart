@@ -94,11 +94,6 @@ class NotificationDetailScreen extends StatelessWidget {
                         value: _typeLabel(type),
                       ),
                       _InfoRow(
-                        icon: Icons.group_outlined,
-                        label: 'Publika',
-                        value: _audienceLabel(notification?.audience ?? ''),
-                      ),
-                      _InfoRow(
                         icon: Icons.event_outlined,
                         label: 'Objavljeno',
                         value: _formatDate(createdAt),
@@ -118,12 +113,6 @@ class NotificationDetailScreen extends StatelessWidget {
                             ? 'Pročitano ${_formatDate(item.readAt)}'
                             : 'Novo',
                       ),
-                      if (notification?.settlementId != null)
-                        _InfoRow(
-                          icon: Icons.location_city_outlined,
-                          label: 'Naselje',
-                          value: '#${notification!.settlementId}',
-                        ),
                     ],
                   ),
                 ),
@@ -184,23 +173,6 @@ class NotificationDetailScreen extends StatelessWidget {
         return 'Prekid usluge';
       default:
         return type.isEmpty ? 'Obavijest' : type;
-    }
-  }
-
-  static String _audienceLabel(String audience) {
-    switch (audience.toLowerCase()) {
-      case 'all':
-        return 'Svi korisnici';
-      case 'settlement':
-        return 'Naselje';
-      case 'customer':
-      case 'customers':
-        return 'Korisnici';
-      case 'collector':
-      case 'collectors':
-        return 'Inkasanti';
-      default:
-        return audience.isEmpty ? 'Publika' : audience;
     }
   }
 

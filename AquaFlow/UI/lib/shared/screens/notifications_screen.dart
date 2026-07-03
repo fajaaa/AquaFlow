@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -19,12 +17,11 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final NotificationService _service = NotificationService();
-  final TextEditingController _searchCtrl = TextEditingController();
 
-  Timer? _searchDebounce;
   NotificationPage? _pageData;
   bool _loading = true;
   String? _error;
+  String? _typeFilter;
   int _page = 1;
   int _pageSize = 10;
   int _requestSerial = 0;
@@ -56,7 +53,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final pageData = await _service.fetchMine(
         page: _page,
         pageSize: _pageSize,
-        search: _searchCtrl.text,
+        type: _typeFilter,
       );
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
@@ -73,25 +70,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  void _queueSearch(String _) {
-    setState(() {});
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 450),
-      () => _load(resetPage: true),
-    );
-  }
-
-  void _submitSearch(String _) {
-    _searchDebounce?.cancel();
-    _load(resetPage: true);
-  }
-
-  void _clearSearch() {
-    if (_searchCtrl.text.isEmpty) return;
-    _searchDebounce?.cancel();
-    _searchCtrl.clear();
-    setState(() {});
+  void _setTypeFilter(String value) {
+    final selected = value.trim().isEmpty ? null : value;
+    if (selected == _typeFilter || _loading) return;
+    setState(() => _typeFilter = selected);
     _load(resetPage: true);
   }
 
@@ -120,8 +102,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
-    _searchCtrl.dispose();
     _service.dispose();
     super.dispose();
   }
@@ -136,7 +116,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: _buildSearch(),
+            child: _buildFilters(),
           ),
           if (_loading && pageData != null)
             const LinearProgressIndicator(minHeight: 2),
@@ -156,9 +136,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _buildSearch() {
-    final hasSearch = _searchCtrl.text.trim().isNotEmpty;
-
+  Widget _buildFilters() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -180,23 +158,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: _searchCtrl,
-          textInputAction: TextInputAction.search,
-          onChanged: _queueSearch,
-          onSubmitted: _submitSearch,
-          decoration: InputDecoration(
-            labelText: 'Pretraga',
-            hintText: 'Naslov, sadržaj ili tip',
-            prefixIcon: const Icon(Icons.search),
-            suffixIcon: hasSearch
-                ? IconButton(
-                    tooltip: 'Očisti pretragu',
-                    onPressed: _clearSearch,
-                    icon: const Icon(Icons.clear),
-                  )
-                : null,
+        DropdownButtonFormField<String>(
+          initialValue: _typeFilter ?? '',
+          decoration: const InputDecoration(
+            labelText: 'Tip obavijesti',
+            prefixIcon: Icon(Icons.filter_alt_outlined),
           ),
+          items: [
+            const DropdownMenuItem(value: '', child: Text('Svi tipovi')),
+            for (final option in _notificationTypeOptions)
+              DropdownMenuItem(value: option.value, child: Text(option.label)),
+          ],
+          onChanged: _loading ? null : (value) => _setTypeFilter(value ?? ''),
         ),
       ],
     );
@@ -221,7 +194,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           padding: const EdgeInsets.all(24),
           children: [
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-            _EmptyState(hasSearch: _searchCtrl.text.trim().isNotEmpty),
+            _EmptyState(hasFilter: _typeFilter != null),
           ],
         ),
       );
@@ -338,10 +311,6 @@ class _NotificationCard extends StatelessWidget {
                     icon: Icons.category_outlined,
                     label: _typeLabel(type),
                   ),
-                  _MetaChip(
-                    icon: Icons.group_outlined,
-                    label: _audienceLabel(notification?.audience ?? ''),
-                  ),
                   if (notification?.validUntil != null)
                     _MetaChip(
                       icon: Icons.event_available_outlined,
@@ -396,23 +365,6 @@ class _NotificationCard extends StatelessWidget {
         return 'Prekid usluge';
       default:
         return type.isEmpty ? 'Obavijest' : type;
-    }
-  }
-
-  static String _audienceLabel(String audience) {
-    switch (audience.toLowerCase()) {
-      case 'all':
-        return 'Svi korisnici';
-      case 'settlement':
-        return 'Naselje';
-      case 'customer':
-      case 'customers':
-        return 'Korisnici';
-      case 'collector':
-      case 'collectors':
-        return 'Inkasanti';
-      default:
-        return audience.isEmpty ? 'Publika' : audience;
     }
   }
 
@@ -568,10 +520,25 @@ class _PaginationBar extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.hasSearch});
+class _SelectOption {
+  const _SelectOption({required this.value, required this.label});
 
-  final bool hasSearch;
+  final String value;
+  final String label;
+}
+
+const List<_SelectOption> _notificationTypeOptions = [
+  _SelectOption(value: 'Info', label: 'Info'),
+  _SelectOption(value: 'PlannedWorks', label: 'Planirani radovi'),
+  _SelectOption(value: 'Billing', label: 'Računi'),
+  _SelectOption(value: 'Warning', label: 'Upozorenje'),
+  _SelectOption(value: 'Outage', label: 'Prekid usluge'),
+];
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.hasFilter});
+
+  final bool hasFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -581,13 +548,15 @@ class _EmptyState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            hasSearch ? Icons.search_off : Icons.notifications_none,
+            hasFilter
+                ? Icons.filter_alt_off_outlined
+                : Icons.notifications_none,
             size: 52,
             color: theme.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 14),
           Text(
-            hasSearch ? 'Nema rezultata pretrage.' : 'Nema obavijesti.',
+            hasFilter ? 'Nema obavijesti za odabrani tip.' : 'Nema obavijesti.',
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium,
           ),

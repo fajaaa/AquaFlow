@@ -56,17 +56,25 @@ public class UserNotificationService
     {
         query = base.ApplyFilters(query, search);
 
-        var searchText = search?.Search?.Trim();
-        if (string.IsNullOrWhiteSpace(searchText))
+        var notificationType = search?.Type?.Trim().ToLower();
+        if (!string.IsNullOrWhiteSpace(notificationType))
         {
-            return query;
+            query = query.Where(userNotification =>
+                userNotification.Notification != null &&
+                userNotification.Notification.Type.ToLower() == notificationType);
         }
 
-        return query.Where(userNotification =>
-            userNotification.Notification != null &&
-            (userNotification.Notification.Title.Contains(searchText) ||
-                userNotification.Notification.Body.Contains(searchText) ||
-                userNotification.Notification.Type.Contains(searchText)));
+        var searchText = search?.Search?.Trim();
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            query = query.Where(userNotification =>
+                userNotification.Notification != null &&
+                (userNotification.Notification.Title.Contains(searchText) ||
+                    userNotification.Notification.Body.Contains(searchText) ||
+                    userNotification.Notification.Type.Contains(searchText)));
+        }
+
+        return query;
     }
 
     private async Task EnsureInboxRowsAsync(int userId)

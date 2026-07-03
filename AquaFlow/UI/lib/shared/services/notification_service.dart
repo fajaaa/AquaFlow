@@ -26,10 +26,10 @@ class NotificationService {
   Future<NotificationPage> fetchMine({
     required int page,
     required int pageSize,
-    String? search,
+    String? type,
   }) async {
     final token = await _requireToken();
-    final searchText = search?.trim();
+    final selectedType = type?.trim();
 
     final query = <String, String>{
       'Page': '$page',
@@ -38,8 +38,8 @@ class NotificationService {
       'SortBy': 'CreatedAt',
       'SortDescending': 'true',
     };
-    if (searchText != null && searchText.isNotEmpty) {
-      query['Search'] = searchText;
+    if (selectedType != null && selectedType.isNotEmpty) {
+      query['Type'] = selectedType;
     }
 
     final uri = Uri.parse(
