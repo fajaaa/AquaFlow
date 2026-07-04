@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_desktop/admin/models/admin_customer_profile.dart';
+import 'package:aquaflow_desktop/admin/models/admin_customer_profile_draft.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_draft.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_page.dart';
@@ -11,6 +13,10 @@ import 'package:aquaflow_desktop/admin/models/admin_user_role_option.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_service.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
+
+const String _customerRoleName = 'customer';
+
+bool _isCustomerRoleName(String name) => name.trim().toLowerCase() == _customerRoleName;
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -66,7 +72,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       final pageData = await _service.fetch(
         page: _page,
         pageSize: _pageSize,
-        email: _searchCtrl.text,
+        name: _searchCtrl.text,
         userRoleId: _roleFilter,
         isActive: _activeFilter,
       );
@@ -172,6 +178,17 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       }
     }
 
+    AdminCustomerProfile? existingProfile;
+    if (_isCustomerRoleName(user.userRole)) {
+      try {
+        existingProfile = await _service.fetchCustomerProfile(user.id);
+      } on AdminUserException catch (e) {
+        if (!mounted) return;
+        _showError(e.message);
+      }
+    }
+    if (!mounted) return;
+
     final isSelf = user.id == _currentUserId;
     final draft = await showDialog<AdminUserDraft>(
       context: context,
@@ -180,12 +197,17 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         roles: _roles,
         user: user,
         disableDeactivate: isSelf,
+        existingProfile: existingProfile,
       ),
     );
     if (!mounted || draft == null) return;
 
     await _runMutation(() async {
-      await _service.update(user.id, draft);
+      await _service.update(
+        user.id,
+        draft,
+        existingProfileId: existingProfile?.id,
+      );
     }, 'Korisnik je sačuvan.');
   }
 
@@ -329,7 +351,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             onSubmitted: _submitSearch,
             decoration: InputDecoration(
               labelText: 'Pretraga',
-              hintText: 'Email',
+              hintText: 'Ime ili prezime',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: hasSearch
                   ? IconButton(
@@ -428,6 +450,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     dataRowMinHeight: 64,
                     dataRowMaxHeight: 72,
                     columns: const [
+                      DataColumn(label: Text('Ime i prezime')),
                       DataColumn(label: Text('Email')),
                       DataColumn(label: Text('Telefon')),
                       DataColumn(label: Text('Rola')),
@@ -440,6 +463,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         DataRow(
                           onSelectChanged: (_) => _openEdit(item),
                           cells: [
+                            DataCell(
+                              Text(item.fullName.isEmpty ? '-' : item.fullName),
+                            ),
                             DataCell(Text(item.email)),
                             DataCell(
                               Text(item.phone.isEmpty ? '-' : item.phone),
@@ -630,11 +656,13 @@ class _UserEditorDialog extends StatefulWidget {
     required this.roles,
     this.user,
     this.disableDeactivate = false,
+    this.existingProfile,
   });
 
   final List<AdminUserRoleOption> roles;
   final AdminUser? user;
   final bool disableDeactivate;
+  final AdminCustomerProfile? existingProfile;
 
   @override
   State<_UserEditorDialog> createState() => _UserEditorDialogState();
@@ -645,19 +673,35 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+  final _customerCodeCtrl = TextEditingController();
 
   late int _userRoleId;
   late bool _isActive;
+  late String _defaultLanguage;
+  late String _theme;
 
   bool get _isEdit => widget.user != null;
+
+  bool get _isCustomerRole {
+    final role = widget.roles.where((r) => r.id == _userRoleId);
+    return role.isNotEmpty && _isCustomerRoleName(role.first.name);
+  }
 
   @override
   void initState() {
     super.initState();
     final user = widget.user;
+    final profile = widget.existingProfile;
     _emailCtrl.text = user?.email ?? '';
     _phoneCtrl.text = user?.phone ?? '';
     _isActive = user?.isActive ?? true;
+    _firstNameCtrl.text = profile?.firstName ?? '';
+    _lastNameCtrl.text = profile?.lastName ?? '';
+    _customerCodeCtrl.text = profile?.customerCode ?? '';
+    _defaultLanguage = profile?.defaultLanguage ?? 'bs';
+    _theme = profile?.theme ?? 'light';
 
     final roleIds = widget.roles.map((r) => r.id).toSet();
     _userRoleId = (user != null && roleIds.contains(user.userRoleId))
@@ -670,6 +714,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _customerCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -686,6 +733,15 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
         userRoleId: _userRoleId,
         isActive: _isActive,
         password: password.isEmpty ? null : password,
+        profile: _isCustomerRole
+            ? AdminCustomerProfileDraft(
+                firstName: _firstNameCtrl.text.trim(),
+                lastName: _lastNameCtrl.text.trim(),
+                customerCode: _customerCodeCtrl.text.trim(),
+                defaultLanguage: _defaultLanguage,
+                theme: _theme,
+              )
+            : null,
       ),
     );
   }
@@ -738,6 +794,90 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                     setState(() => _userRoleId = value);
                   },
                 ),
+                if (_isCustomerRole) ...[
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _firstNameCtrl,
+                    textInputAction: TextInputAction.next,
+                    validator: _requiredValidator,
+                    decoration: const InputDecoration(
+                      labelText: 'Ime',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _lastNameCtrl,
+                    textInputAction: TextInputAction.next,
+                    validator: _requiredValidator,
+                    decoration: const InputDecoration(
+                      labelText: 'Prezime',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _customerCodeCtrl,
+                    textInputAction: TextInputAction.next,
+                    validator: _requiredValidator,
+                    decoration: const InputDecoration(
+                      labelText: 'Šifra korisnika',
+                      prefixIcon: Icon(Icons.badge_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _defaultLanguage,
+                          decoration: const InputDecoration(
+                            labelText: 'Jezik',
+                            prefixIcon: Icon(Icons.language_outlined),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'bs',
+                              child: Text('Bosanski'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'en',
+                              child: Text('Engleski'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() => _defaultLanguage = value);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _theme,
+                          decoration: const InputDecoration(
+                            labelText: 'Tema',
+                            prefixIcon: Icon(Icons.palette_outlined),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'light',
+                              child: Text('Svijetla'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'dark',
+                              child: Text('Tamna'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() => _theme = value);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 14),
                 _StatusSwitchField(
                   value: _isActive,
@@ -793,6 +933,11 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     if (_isEdit) return null;
     final text = value?.trim() ?? '';
     if (text.isEmpty) return 'Obavezno polje.';
+    return null;
+  }
+
+  String? _requiredValidator(String? value) {
+    if ((value?.trim() ?? '').isEmpty) return 'Obavezno polje.';
     return null;
   }
 }

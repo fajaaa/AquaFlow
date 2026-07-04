@@ -29,7 +29,7 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
     }
 
     protected override IQueryable<User> GetDataSource() =>
-        _dbContext.Users.AsNoTracking().Include(u => u.UserRole);
+        _dbContext.Users.AsNoTracking().Include(u => u.UserRole).Include(u => u.CustomerProfile);
 
     protected override IQueryable<User> ApplyFilters(IQueryable<User> query, UserSearchObject? search)
     {
@@ -56,6 +56,13 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         if (search.IsActive.HasValue)
         {
             query = query.Where(u => u.IsActive == search.IsActive.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search.Name))
+        {
+            query = query.Where(u =>
+                u.CustomerProfile != null &&
+                (u.CustomerProfile.FirstName.Contains(search.Name) || u.CustomerProfile.LastName.Contains(search.Name)));
         }
 
         return query;

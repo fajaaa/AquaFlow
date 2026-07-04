@@ -4,6 +4,8 @@ import 'dart:io' show SocketException;
 
 import 'package:http/http.dart' as http;
 
+import 'package:aquaflow_desktop/admin/models/admin_customer_profile.dart';
+import 'package:aquaflow_desktop/admin/models/admin_customer_profile_draft.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_draft.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_page.dart';
@@ -28,7 +30,7 @@ class AdminUserService {
   Future<AdminUserPage> fetch({
     required int page,
     required int pageSize,
-    String? email,
+    String? name,
     int? userRoleId,
     bool? isActive,
   }) async {
@@ -41,9 +43,9 @@ class AdminUserService {
       'SortDescending': 'true',
     };
 
-    final emailText = email?.trim();
-    if (emailText != null && emailText.isNotEmpty) {
-      query['Email'] = emailText;
+    final nameText = name?.trim();
+    if (nameText != null && nameText.isNotEmpty) {
+      query['Name'] = nameText;
     }
     if (userRoleId != null) {
       query['UserRoleId'] = '$userRoleId';
@@ -108,10 +110,22 @@ class AdminUserService {
       );
     }
 
-    return _decodeUser(response.body);
+    final user = _decodeUser(response.body);
+    final profile = draft.profile;
+    if (profile != null) {
+      await _createCustomerProfile(user.id, profile);
+    }
+    return user;
   }
 
-  Future<AdminUser> update(int id, AdminUserDraft draft) async {
+  /// [existingProfileId] must be the id of the user's current CustomerProfile
+  /// (from [fetchCustomerProfile]), or null if they don't have one yet - this
+  /// decides whether the profile is PATCHed or POSTed.
+  Future<AdminUser> update(
+    int id,
+    AdminUserDraft draft, {
+    int? existingProfileId,
+  }) async {
     final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Users/$id');
 
@@ -132,7 +146,94 @@ class AdminUserService {
       );
     }
 
-    return _decodeUser(response.body);
+    final user = _decodeUser(response.body);
+    final profile = draft.profile;
+    if (profile != null) {
+      if (existingProfileId != null) {
+        await _updateCustomerProfile(existingProfileId, user.id, profile);
+      } else {
+        await _createCustomerProfile(user.id, profile);
+      }
+    }
+    return user;
+  }
+
+  /// Fetches the CustomerProfile owned by [userId], or null if they don't
+  /// have one (not a customer, or a customer with no profile yet).
+  Future<AdminCustomerProfile?> fetchCustomerProfile(int userId) async {
+    final token = await _requireToken();
+    final uri = Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles').replace(
+      queryParameters: {'UserId': '$userId', 'PageSize': '1'},
+    );
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw AdminUserException(
+        _messageFor(response, 'Profil korisnika nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    final itemsJson = decoded is Map<String, dynamic> ? decoded['items'] : null;
+    if (itemsJson is! List || itemsJson.isEmpty) return null;
+
+    final first = itemsJson.first;
+    if (first is! Map<String, dynamic>) return null;
+    return AdminCustomerProfile.fromJson(first);
+  }
+
+  Future<void> _createCustomerProfile(
+    int userId,
+    AdminCustomerProfileDraft profile,
+  ) async {
+    final token = await _requireToken();
+    final uri = Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles');
+
+    final response = await _send(
+      () => _client.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(profile.toJson(userId)),
+      ),
+    );
+
+    if (response.statusCode != 201) {
+      throw AdminUserException(
+        _messageFor(response, 'Profil korisnika nije moguće sačuvati'),
+      );
+    }
+  }
+
+  Future<void> _updateCustomerProfile(
+    int profileId,
+    int userId,
+    AdminCustomerProfileDraft profile,
+  ) async {
+    final token = await _requireToken();
+    final uri = Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles/$profileId');
+
+    final response = await _send(
+      () => _client.patch(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(profile.toJson(userId)),
+      ),
+    );
+
+    if (response.statusCode != 200) {
+      throw AdminUserException(
+        _messageFor(response, 'Profil korisnika nije moguće sačuvati'),
+      );
+    }
   }
 
   Future<void> delete(int id) async {
