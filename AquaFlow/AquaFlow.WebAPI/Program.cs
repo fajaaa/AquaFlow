@@ -96,7 +96,9 @@ builder.Services.AddCors(options =>
 
 var mapperConfig = TypeAdapterConfig.GlobalSettings;
 mapperConfig.NewConfig<User, UserResponse>()
-    .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name);
+    .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
+    .Map(destination => destination.FirstName, source => source.CustomerProfile == null ? string.Empty : source.CustomerProfile.FirstName)
+    .Map(destination => destination.LastName, source => source.CustomerProfile == null ? string.Empty : source.CustomerProfile.LastName);
 mapperConfig.NewConfig<User, UserSensitiveResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name);
 mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
@@ -158,6 +160,7 @@ AddCrud<PaymentSettings, PaymentSettingsResponse, PaymentSettingsSearchObject, P
 
 builder.Services.AddScoped<IValidator<UserRegisterRequest>, UserRegisterValidator>();
 builder.Services.AddScoped<IValidator<AccountUpdateRequest>, AccountUpdateValidator>();
+builder.Services.AddScoped<IValidator<AccountChangePasswordRequest>, AccountChangePasswordValidator>();
 builder.Services.AddScoped<IValidator<UserInsertRequest>, UserInsertValidator>();
 builder.Services.AddScoped<IValidator<UserUpdateRequest>, UserUpdateValidator>();
 builder.Services.AddScoped<IValidator<UserPatchRequest>, UserPatchValidator>();

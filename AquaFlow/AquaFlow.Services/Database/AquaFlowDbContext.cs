@@ -70,6 +70,12 @@ public partial class AquaFlowDbContext : DbContext
             .HasIndex(token => token.Token)
             .IsUnique();
 
+        // CustomerCode is generated server-side (CustomerProfileService.GenerateCustomerCodeAsync);
+        // the unique index is the hard backstop behind that generation.
+        modelBuilder.Entity<CustomerProfile>()
+            .HasIndex(profile => profile.CustomerCode)
+            .IsUnique();
+
         // Optimistic concurrency for invoice status transitions: every UPDATE carries the
         // loaded RowVersion in its WHERE clause, so a stale transition affects 0 rows and
         // surfaces as DbUpdateConcurrencyException instead of silently overwriting.

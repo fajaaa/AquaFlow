@@ -9,6 +9,7 @@ public class UserRegisterValidator : AbstractValidator<UserRegisterRequest>
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(150);
         RuleFor(x => x.Password).NotEmpty();
-        RuleFor(x => x.Phone).MaximumLength(30);
+        RuleFor(x => x.Phone).MaximumLength(30).Matches(@"^[0-9+\-\s()]*$")
+            .WithMessage("Telefon smije sadržavati samo brojeve i simbole + - ( ).");
     }
 }

@@ -3,9 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_desktop/admin/screens/admin_account_edit_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_notifications_screen.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_users_screen.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
-import 'package:aquaflow_desktop/shared/screens/account_edit_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 
 /// Desktop home for the `admin` role - the only surface the desktop app exposes.
@@ -14,7 +15,10 @@ import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 /// below with the active item highlighted in blue and a left indicator bar) and
 /// a content area on the right that swaps with the selected menu item. The
 /// "Obavijesti", "Postavke firme", and "Moj nalog" sections embed their
-/// existing screens; the rest are placeholders until wired up.
+/// existing screens; the rest are placeholders until wired up. "Moj nalog" uses
+/// the admin-only [AdminAccountEditScreen] (not the shared `AccountEditScreen`
+/// used by the mobile customer/collector "Nalog" tab), since it edits more than
+/// contact data here.
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -119,10 +123,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return const _DashboardOverview();
       case 1:
         return const AdminNotificationsScreen();
+      case 2:
+        return const AdminUsersScreen();
       case 8:
         return const CompanySettingsScreen();
       case 9:
-        return const AccountEditScreen();
+        return const AdminAccountEditScreen();
       default:
         return _SectionPlaceholder(item: _navItems[_selectedIndex]);
     }

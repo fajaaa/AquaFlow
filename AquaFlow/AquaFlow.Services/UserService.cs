@@ -29,7 +29,7 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
     }
 
     protected override IQueryable<User> GetDataSource() =>
-        _dbContext.Users.AsNoTracking().Include(u => u.UserRole);
+        _dbContext.Users.AsNoTracking().Include(u => u.UserRole).Include(u => u.CustomerProfile);
 
     protected override IQueryable<User> ApplyFilters(IQueryable<User> query, UserSearchObject? search)
     {
@@ -56,6 +56,13 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         if (search.IsActive.HasValue)
         {
             query = query.Where(u => u.IsActive == search.IsActive.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search.Name))
+        {
+            query = query.Where(u =>
+                u.CustomerProfile != null &&
+                (u.CustomerProfile.FirstName.Contains(search.Name) || u.CustomerProfile.LastName.Contains(search.Name)));
         }
 
         return query;
@@ -133,6 +140,23 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         var entity = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id)
             ?? throw new KeyNotFoundException($"User with id {id} was not found.");
 
+        // RefreshToken.UserId is a Restrict FK, so a logged-in user's refresh tokens
+        // (login artifacts, not business data) would otherwise block deletion outright.
+        var tokens = await _dbContext.RefreshTokens.Where(t => t.UserId == id).ToListAsync();
+        _dbContext.RefreshTokens.RemoveRange(tokens);
+
+        // CustomerProfile.UserId is likewise a Restrict FK, and the admin user editor
+        // attaches a profile whenever a name is entered regardless of role, so a freshly
+        // created user with no business data yet (service locations, invoices, ...) would
+        // otherwise be undeletable. If the profile still has business data hanging off it,
+        // removing it here surfaces that as the same FK failure - which is the correct,
+        // expected block.
+        var profile = await _dbContext.CustomerProfiles.FirstOrDefaultAsync(p => p.UserId == id);
+        if (profile != null)
+        {
+            _dbContext.CustomerProfiles.Remove(profile);
+        }
+
         _dbContext.Users.Remove(entity);
         await _dbContext.SaveChangesAsync();
     }
@@ -154,6 +178,22 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         await ReloadUserRoleAsync(entity);
 
         return Mapper.Map<UserResponse>(entity);
+    }
+
+    public async Task ChangeOwnPasswordAsync(int id, AccountChangePasswordRequest request)
+    {
+        var entity = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id)
+            ?? throw new KeyNotFoundException($"User with id {id} was not found.");
+
+        if (!_cryptoService.Verify(entity.PasswordHash, entity.PasswordSalt, request.CurrentPassword))
+        {
+            throw new ClientException("Trenutna lozinka nije ispravna.");
+        }
+
+        SetPassword(entity, request.NewPassword);
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
     }
 
     public async Task<UserSensitiveResponse?> GetByEmailAsync(string email)
