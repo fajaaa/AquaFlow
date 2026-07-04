@@ -10,6 +10,6 @@ public class CustomerProfileInsertValidator : AbstractValidator<CustomerProfileI
         RuleFor(x => x.UserId).GreaterThan(0);
         RuleFor(x => x.FirstName).NotEmpty().MaximumLength(80);
         RuleFor(x => x.LastName).NotEmpty().MaximumLength(80);
-        RuleFor(x => x.CustomerCode).NotEmpty().MaximumLength(50);
+        // CustomerCode is server-generated (CustomerProfileService.GenerateCustomerCodeAsync), not client input.
     }
 }

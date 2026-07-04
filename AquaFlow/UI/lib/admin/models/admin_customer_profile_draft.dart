@@ -1,18 +1,17 @@
-/// Editable CustomerProfile fields, carried inside [AdminUserDraft] when the
-/// user's role is Customer. Sent to `/CustomerProfiles` (POST or PATCH)
-/// alongside the `/Users` request.
+/// Editable CustomerProfile fields, carried inside [AdminUserDraft] for any
+/// role (not just Customer). Sent to `/CustomerProfiles` (POST or PATCH)
+/// alongside the `/Users` request. `customerCode` is not included - the
+/// backend always assigns/keeps it (CustomerProfileService).
 class AdminCustomerProfileDraft {
   const AdminCustomerProfileDraft({
     required this.firstName,
     required this.lastName,
-    required this.customerCode,
     required this.defaultLanguage,
     required this.theme,
   });
 
   final String firstName;
   final String lastName;
-  final String customerCode;
   final String defaultLanguage;
   final String theme;
 
@@ -21,7 +20,6 @@ class AdminCustomerProfileDraft {
       'userId': userId,
       'firstName': firstName,
       'lastName': lastName,
-      'customerCode': customerCode,
       'defaultLanguage': defaultLanguage,
       'theme': theme,
     };

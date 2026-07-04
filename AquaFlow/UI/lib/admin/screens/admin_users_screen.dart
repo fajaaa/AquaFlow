@@ -14,10 +14,6 @@ import 'package:aquaflow_desktop/admin/services/admin_user_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_service.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 
-const String _customerRoleName = 'customer';
-
-bool _isCustomerRoleName(String name) => name.trim().toLowerCase() == _customerRoleName;
-
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
 
@@ -179,13 +175,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }
 
     AdminCustomerProfile? existingProfile;
-    if (_isCustomerRoleName(user.userRole)) {
-      try {
-        existingProfile = await _service.fetchCustomerProfile(user.id);
-      } on AdminUserException catch (e) {
-        if (!mounted) return;
-        _showError(e.message);
-      }
+    try {
+      existingProfile = await _service.fetchCustomerProfile(user.id);
+    } on AdminUserException catch (e) {
+      if (!mounted) return;
+      _showError(e.message);
     }
     if (!mounted) return;
 
@@ -675,7 +669,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   final _passwordCtrl = TextEditingController();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
-  final _customerCodeCtrl = TextEditingController();
 
   late int _userRoleId;
   late bool _isActive;
@@ -684,10 +677,10 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
 
   bool get _isEdit => widget.user != null;
 
-  bool get _isCustomerRole {
-    final role = widget.roles.where((r) => r.id == _userRoleId);
-    return role.isNotEmpty && _isCustomerRoleName(role.first.name);
-  }
+  // A profile is only submitted when the admin actually entered a name -
+  // available for every role, not just Customer.
+  bool get _hasProfileInput =>
+      _firstNameCtrl.text.trim().isNotEmpty || _lastNameCtrl.text.trim().isNotEmpty;
 
   @override
   void initState() {
@@ -699,7 +692,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     _isActive = user?.isActive ?? true;
     _firstNameCtrl.text = profile?.firstName ?? '';
     _lastNameCtrl.text = profile?.lastName ?? '';
-    _customerCodeCtrl.text = profile?.customerCode ?? '';
     _defaultLanguage = profile?.defaultLanguage ?? 'bs';
     _theme = profile?.theme ?? 'light';
 
@@ -716,7 +708,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     _passwordCtrl.dispose();
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
-    _customerCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -733,11 +724,10 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
         userRoleId: _userRoleId,
         isActive: _isActive,
         password: password.isEmpty ? null : password,
-        profile: _isCustomerRole
+        profile: _hasProfileInput
             ? AdminCustomerProfileDraft(
                 firstName: _firstNameCtrl.text.trim(),
                 lastName: _lastNameCtrl.text.trim(),
-                customerCode: _customerCodeCtrl.text.trim(),
                 defaultLanguage: _defaultLanguage,
                 theme: _theme,
               )
@@ -773,6 +763,7 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                   controller: _phoneCtrl,
                   textInputAction: TextInputAction.next,
                   keyboardType: TextInputType.phone,
+                  validator: _phoneValidator,
                   decoration: const InputDecoration(
                     labelText: 'Telefon',
                     prefixIcon: Icon(Icons.phone_outlined),
@@ -794,90 +785,92 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                     setState(() => _userRoleId = value);
                   },
                 ),
-                if (_isCustomerRole) ...[
-                  const SizedBox(height: 14),
+                const SizedBox(height: 14),
+                if (widget.existingProfile != null) ...[
                   TextFormField(
-                    controller: _firstNameCtrl,
-                    textInputAction: TextInputAction.next,
-                    validator: _requiredValidator,
+                    key: ValueKey(widget.existingProfile!.customerCode),
+                    initialValue: widget.existingProfile!.customerCode,
+                    enabled: false,
                     decoration: const InputDecoration(
-                      labelText: 'Ime',
-                      prefixIcon: Icon(Icons.person_outline),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _lastNameCtrl,
-                    textInputAction: TextInputAction.next,
-                    validator: _requiredValidator,
-                    decoration: const InputDecoration(
-                      labelText: 'Prezime',
-                      prefixIcon: Icon(Icons.person_outline),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _customerCodeCtrl,
-                    textInputAction: TextInputAction.next,
-                    validator: _requiredValidator,
-                    decoration: const InputDecoration(
-                      labelText: 'Šifra korisnika',
+                      labelText: 'Šifra korisnika (automatski dodijeljena)',
                       prefixIcon: Icon(Icons.badge_outlined),
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _defaultLanguage,
-                          decoration: const InputDecoration(
-                            labelText: 'Jezik',
-                            prefixIcon: Icon(Icons.language_outlined),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'bs',
-                              child: Text('Bosanski'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'en',
-                              child: Text('Engleski'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() => _defaultLanguage = value);
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _theme,
-                          decoration: const InputDecoration(
-                            labelText: 'Tema',
-                            prefixIcon: Icon(Icons.palette_outlined),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'light',
-                              child: Text('Svijetla'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'dark',
-                              child: Text('Tamna'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() => _theme = value);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
+                TextFormField(
+                  controller: _firstNameCtrl,
+                  textInputAction: TextInputAction.next,
+                  validator: _firstNameValidator,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    labelText: 'Ime',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _lastNameCtrl,
+                  textInputAction: TextInputAction.next,
+                  validator: _lastNameValidator,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    labelText: 'Prezime',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _defaultLanguage,
+                        decoration: const InputDecoration(
+                          labelText: 'Jezik',
+                          prefixIcon: Icon(Icons.language_outlined),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'bs',
+                            child: Text('Bosanski'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'en',
+                            child: Text('Engleski'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() => _defaultLanguage = value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _theme,
+                        decoration: const InputDecoration(
+                          labelText: 'Tema',
+                          prefixIcon: Icon(Icons.palette_outlined),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'light',
+                            child: Text('Svijetla'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'dark',
+                            child: Text('Tamna'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() => _theme = value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 14),
                 _StatusSwitchField(
                   value: _isActive,
@@ -929,6 +922,17 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     return null;
   }
 
+  String? _phoneValidator(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final phonePattern = RegExp(r'^[0-9+\-\s()]+$');
+    if (!phonePattern.hasMatch(text) ||
+        text.replaceAll(RegExp(r'[^0-9]'), '').length < 6) {
+      return 'Unesite ispravan broj telefona.';
+    }
+    return null;
+  }
+
   String? _passwordValidator(String? value) {
     if (_isEdit) return null;
     final text = value?.trim() ?? '';
@@ -936,8 +940,21 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     return null;
   }
 
-  String? _requiredValidator(String? value) {
-    if ((value?.trim() ?? '').isEmpty) return 'Obavezno polje.';
+  // Ime/Prezime are optional (a profile isn't required for every role), but
+  // if either is filled in, both are required - CustomerProfile needs both.
+  String? _firstNameValidator(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty && _lastNameCtrl.text.trim().isNotEmpty) {
+      return 'Obavezno ako unosite ime i prezime.';
+    }
+    return null;
+  }
+
+  String? _lastNameValidator(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty && _firstNameCtrl.text.trim().isNotEmpty) {
+      return 'Obavezno ako unosite ime i prezime.';
+    }
     return null;
   }
 }

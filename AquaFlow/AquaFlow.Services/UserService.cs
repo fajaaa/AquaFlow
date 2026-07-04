@@ -145,6 +145,18 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         var tokens = await _dbContext.RefreshTokens.Where(t => t.UserId == id).ToListAsync();
         _dbContext.RefreshTokens.RemoveRange(tokens);
 
+        // CustomerProfile.UserId is likewise a Restrict FK, and the admin user editor
+        // attaches a profile whenever a name is entered regardless of role, so a freshly
+        // created user with no business data yet (service locations, invoices, ...) would
+        // otherwise be undeletable. If the profile still has business data hanging off it,
+        // removing it here surfaces that as the same FK failure - which is the correct,
+        // expected block.
+        var profile = await _dbContext.CustomerProfiles.FirstOrDefaultAsync(p => p.UserId == id);
+        if (profile != null)
+        {
+            _dbContext.CustomerProfiles.Remove(profile);
+        }
+
         _dbContext.Users.Remove(entity);
         await _dbContext.SaveChangesAsync();
     }

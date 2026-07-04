@@ -10,6 +10,6 @@ public class CustomerProfilePatchValidator : AbstractValidator<CustomerProfilePa
         RuleFor(x => x.UserId).GreaterThan(0).When(x => x.UserId.HasValue);
         RuleFor(x => x.FirstName).NotEmpty().MaximumLength(80).When(x => x.FirstName != null);
         RuleFor(x => x.LastName).NotEmpty().MaximumLength(80).When(x => x.LastName != null);
-        RuleFor(x => x.CustomerCode).NotEmpty().MaximumLength(50).When(x => x.CustomerCode != null);
+        // CustomerCode is server-generated (CustomerProfileService.GenerateCustomerCodeAsync), not client input.
     }
 }

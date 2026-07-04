@@ -15,8 +15,9 @@ class AdminUserDraft {
   final String phone;
   final int userRoleId;
   final bool isActive;
-  // Set only when the selected role is Customer; carries the CustomerProfile
-  // fields to send to `/CustomerProfiles` alongside the `/Users` request.
+  // Set when the admin entered a first/last name (available for every role,
+  // not just Customer); carries the CustomerProfile fields to send to
+  // `/CustomerProfiles` alongside the `/Users` request.
   final AdminCustomerProfileDraft? profile;
 
   Map<String, Object?> toJson() {
