@@ -133,6 +133,11 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         var entity = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id)
             ?? throw new KeyNotFoundException($"User with id {id} was not found.");
 
+        // RefreshToken.UserId is a Restrict FK, so a logged-in user's refresh tokens
+        // (login artifacts, not business data) would otherwise block deletion outright.
+        var tokens = await _dbContext.RefreshTokens.Where(t => t.UserId == id).ToListAsync();
+        _dbContext.RefreshTokens.RemoveRange(tokens);
+
         _dbContext.Users.Remove(entity);
         await _dbContext.SaveChangesAsync();
     }
