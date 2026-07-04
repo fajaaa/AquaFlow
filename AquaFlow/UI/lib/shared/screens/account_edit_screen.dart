@@ -13,7 +13,10 @@ import '../services/account_service.dart';
 /// Scaffold/AppBar.
 ///
 /// The data is loaded on open; the form is prefilled and saved with
-/// `PUT /Account/me` through [AccountService]. Only email and phone are editable.
+/// `PUT /Account/me` through [AccountService]. Email and phone are always
+/// editable; a password change (`PUT /Account/me/password`) is sent only when
+/// the password fields are filled in, mirroring the admin "Moj nalog" screen
+/// (`AdminAccountEditScreen`) - this is the mobile customer/collector path.
 class AccountEditScreen extends StatefulWidget {
   const AccountEditScreen({super.key});
 
@@ -29,11 +32,19 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
   // data loads, so they can be disposed unconditionally.
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _currentPasswordCtrl = TextEditingController();
+  final _newPasswordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
 
   AccountDetails? _details;
   bool _loading = true;
   String? _loadError;
   bool _saving = false;
+
+  bool get _hasPasswordInput =>
+      _currentPasswordCtrl.text.isNotEmpty ||
+      _newPasswordCtrl.text.isNotEmpty ||
+      _confirmPasswordCtrl.text.isNotEmpty;
 
   @override
   void initState() {
@@ -78,6 +89,17 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
 
     try {
       _details = await _service.update(updated);
+
+      if (_hasPasswordInput) {
+        await _service.changePassword(
+          currentPassword: _currentPasswordCtrl.text,
+          newPassword: _newPasswordCtrl.text,
+        );
+        _currentPasswordCtrl.clear();
+        _newPasswordCtrl.clear();
+        _confirmPasswordCtrl.clear();
+      }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Podaci naloga su sačuvani.')),
@@ -100,6 +122,9 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
     _service.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
+    _currentPasswordCtrl.dispose();
+    _newPasswordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
     super.dispose();
   }
 
@@ -144,6 +169,46 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
                     keyboardType: TextInputType.phone,
                     maxLength: 30,
                   ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Promjena lozinke',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ostavite prazno ako ne mijenjate lozinku.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  _field(
+                    controller: _currentPasswordCtrl,
+                    label: 'Trenutna lozinka',
+                    icon: Icons.lock_outline,
+                    obscureText: true,
+                    validator: _currentPasswordValidator,
+                    onChanged: () => setState(() {}),
+                  ),
+                  _field(
+                    controller: _newPasswordCtrl,
+                    label: 'Nova lozinka',
+                    icon: Icons.lock_outline,
+                    obscureText: true,
+                    validator: _newPasswordValidator,
+                    onChanged: () => setState(() {}),
+                  ),
+                  _field(
+                    controller: _confirmPasswordCtrl,
+                    label: 'Potvrda nove lozinke',
+                    icon: Icons.lock_outline,
+                    obscureText: true,
+                    validator: _confirmPasswordValidator,
+                    onChanged: () => setState(() {}),
+                  ),
                   const SizedBox(height: 8),
                   FilledButton.icon(
                     onPressed: _saving ? null : _save,
@@ -175,6 +240,8 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     int? maxLength,
+    bool obscureText = false,
+    VoidCallback? onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -183,6 +250,8 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
         keyboardType: keyboardType,
         validator: validator,
         maxLength: maxLength,
+        obscureText: obscureText,
+        onChanged: onChanged == null ? null : (_) => onChanged(),
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon),
@@ -199,6 +268,31 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
     // something on both sides. The backend is the authority on validity.
     final at = text.indexOf('@');
     if (at <= 0 || at == text.length - 1) return 'Unesite ispravan email.';
+    return null;
+  }
+
+  // The three password fields form one optional group: touch any one of them
+  // and all three become required, so the backend always gets a current
+  // password to verify alongside the new one.
+  String? _currentPasswordValidator(String? value) {
+    if ((value ?? '').isEmpty && _hasPasswordInput) {
+      return 'Unesite trenutnu lozinku.';
+    }
+    return null;
+  }
+
+  String? _newPasswordValidator(String? value) {
+    final text = value ?? '';
+    if (text.isEmpty) {
+      return _hasPasswordInput ? 'Unesite novu lozinku.' : null;
+    }
+    if (text.length < 6) return 'Lozinka mora imati najmanje 6 znakova.';
+    return null;
+  }
+
+  String? _confirmPasswordValidator(String? value) {
+    if (_newPasswordCtrl.text.isEmpty) return null;
+    if (value != _newPasswordCtrl.text) return 'Lozinke se ne podudaraju.';
     return null;
   }
 }

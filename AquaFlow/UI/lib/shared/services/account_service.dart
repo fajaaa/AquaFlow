@@ -77,6 +77,37 @@ class AccountService {
     return _parse(response, 'Account data are malformed.');
   }
 
+  /// Changes the signed-in user's own password via `PUT /Account/me/password`.
+  /// The backend rejects the call (400) if [currentPassword] does not match.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final token = await _requireToken();
+
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Account/me/password');
+
+    final response = await _send(
+      () => _client.put(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        }),
+      ),
+    );
+
+    if (response.statusCode != 204) {
+      throw AccountException(
+        _messageFor(response, 'Could not change your password'),
+      );
+    }
+  }
+
   AccountDetails _parse(http.Response response, String malformedMessage) {
     // `/Account/me` returns a single UserResponse object (not a PageResult).
     final decoded = jsonDecode(response.body);
