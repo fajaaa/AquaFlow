@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/admin/screens/admin_notifications_screen.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_users_screen.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/account_edit_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
@@ -119,6 +120,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return const _DashboardOverview();
       case 1:
         return const AdminNotificationsScreen();
+      case 2:
+        return const AdminUsersScreen();
       case 8:
         return const CompanySettingsScreen();
       case 9:
