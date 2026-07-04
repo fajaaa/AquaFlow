@@ -21,11 +21,16 @@ public class AccountController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly IValidator<AccountUpdateRequest> _updateValidator;
+    private readonly IValidator<AccountChangePasswordRequest> _changePasswordValidator;
 
-    public AccountController(IUserService userService, IValidator<AccountUpdateRequest> updateValidator)
+    public AccountController(
+        IUserService userService,
+        IValidator<AccountUpdateRequest> updateValidator,
+        IValidator<AccountChangePasswordRequest> changePasswordValidator)
     {
         _userService = userService;
         _updateValidator = updateValidator;
+        _changePasswordValidator = changePasswordValidator;
     }
 
     [HttpGet("me")]
@@ -41,6 +46,14 @@ public class AccountController : ControllerBase
         await _updateValidator.ValidateAndThrowAsync(request);
         var updated = await _userService.UpdateOwnAccountAsync(GetCurrentUserId(), request);
         return Ok(updated);
+    }
+
+    [HttpPut("me/password")]
+    public async Task<IActionResult> ChangeMyPassword([FromBody] AccountChangePasswordRequest request)
+    {
+        await _changePasswordValidator.ValidateAndThrowAsync(request);
+        await _userService.ChangeOwnPasswordAsync(GetCurrentUserId(), request);
+        return NoContent();
     }
 
     private int GetCurrentUserId()

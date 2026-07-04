@@ -180,6 +180,22 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         return Mapper.Map<UserResponse>(entity);
     }
 
+    public async Task ChangeOwnPasswordAsync(int id, AccountChangePasswordRequest request)
+    {
+        var entity = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id)
+            ?? throw new KeyNotFoundException($"User with id {id} was not found.");
+
+        if (!_cryptoService.Verify(entity.PasswordHash, entity.PasswordSalt, request.CurrentPassword))
+        {
+            throw new ClientException("Trenutna lozinka nije ispravna.");
+        }
+
+        SetPassword(entity, request.NewPassword);
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+    }
+
     public async Task<UserSensitiveResponse?> GetByEmailAsync(string email)
     {
         var user = await _dbContext.Users.Include(u => u.UserRole)
