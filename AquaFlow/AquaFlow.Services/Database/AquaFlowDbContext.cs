@@ -49,6 +49,8 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<UserRolePermission> UserRolePermissions => Set<UserRolePermission>();
     public DbSet<WaterConsumptionAlert> WaterConsumptionAlerts => Set<WaterConsumptionAlert>();
     public DbSet<WaterMeter> WaterMeters => Set<WaterMeter>();
+    public DbSet<WaterMeterRequest> WaterMeterRequests => Set<WaterMeterRequest>();
+    public DbSet<WaterMeterRequestStatusHistory> WaterMeterRequestStatusHistories => Set<WaterMeterRequestStatusHistory>();
     public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
