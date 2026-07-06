@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import 'register_screen.dart';
 
 /// Email + password login form. On success the root widget swaps to the home
 /// screen automatically (it listens to [AuthProvider]), so this screen does not
@@ -197,6 +198,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             : const Text('Sign in'),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: isBusy
+                        ? null
+                        : () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterScreen(),
+                              ),
+                            ),
+                    child: const Text('Nemate račun? Registrujte se'),
                   ),
                             ],
                           ),

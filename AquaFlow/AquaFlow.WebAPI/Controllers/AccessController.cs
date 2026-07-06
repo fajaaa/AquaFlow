@@ -1,6 +1,7 @@
 using AquaFlow.Model.Access;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
+using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using AquaFlow.WebAPI.RateLimiting;
 using AquaFlow.WebAPI.Services.AccessManager;
@@ -21,15 +22,18 @@ public class AccessController : ControllerBase
 
     private readonly IAccessManager _accessManager;
     private readonly IUserService _userService;
+    private readonly IBaseCRUDService<CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest, CustomerProfilePatchRequest> _customerProfileService;
     private readonly IValidator<UserRegisterRequest> _registerValidator;
 
     public AccessController(
         IAccessManager accessManager,
         IUserService userService,
+        IBaseCRUDService<CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest, CustomerProfilePatchRequest> customerProfileService,
         IValidator<UserRegisterRequest> registerValidator)
     {
         _accessManager = accessManager;
         _userService = userService;
+        _customerProfileService = customerProfileService;
         _registerValidator = registerValidator;
     }
 
@@ -65,6 +69,14 @@ public class AccessController : ControllerBase
         };
 
         var result = await _userService.InsertAsync(insertRequest);
+
+        await _customerProfileService.InsertAsync(new CustomerProfileInsertRequest
+        {
+            UserId = result.Id,
+            FirstName = request.FirstName,
+            LastName = request.LastName
+        });
+
         return CreatedAtAction(nameof(Register), new { id = result.Id }, result);
     }
 }

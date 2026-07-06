@@ -38,15 +38,56 @@ class AuthApiService {
     return _postForTokens('/Access/refresh', {'refreshToken': refreshToken});
   }
 
+  /// `POST /Access/register` with `{ email, password, phone, firstName,
+  /// lastName }`. Always creates a Customer (backend ignores any role input)
+  /// plus its `CustomerProfile`. The backend returns the created user, not
+  /// tokens, so callers must follow up with [login] to establish a session.
+  Future<void> register({
+    required String email,
+    required String password,
+    required String phone,
+    required String firstName,
+    required String lastName,
+  }) async {
+    final response = await _post('/Access/register', {
+      'email': email,
+      'password': password,
+      'phone': phone,
+      'firstName': firstName,
+      'lastName': lastName,
+    });
+
+    if (response.statusCode == 201) return;
+
+    throw AuthException(
+      _messageForRegisterError(response),
+      statusCode: response.statusCode,
+    );
+  }
+
   Future<AuthResult> _postForTokens(
     String path,
     Map<String, String> body,
   ) async {
+    final response = await _post(path, body);
+
+    if (response.statusCode == 200) {
+      return AuthResult.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+
+    throw AuthException(
+      _messageForError(response),
+      statusCode: response.statusCode,
+    );
+  }
+
+  Future<http.Response> _post(String path, Map<String, dynamic> body) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}$path');
 
-    final http.Response response;
     try {
-      response = await _client
+      return await _client
           .post(uri, headers: _jsonHeaders, body: jsonEncode(body))
           .timeout(_timeout);
     } on SocketException {
@@ -59,17 +100,6 @@ class AuthApiService {
     } on http.ClientException catch (e) {
       throw AuthException('Network error: ${e.message}');
     }
-
-    if (response.statusCode == 200) {
-      return AuthResult.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>,
-      );
-    }
-
-    throw AuthException(
-      _messageForError(response),
-      statusCode: response.statusCode,
-    );
   }
 
   /// Turns a non-200 response into a friendly message. The backend
@@ -88,6 +118,19 @@ class AuthApiService {
 
     if (response.statusCode == 400) return 'Invalid email or password.';
     return 'Login failed (HTTP ${response.statusCode}).';
+  }
+
+  /// Turns a non-201 `/Access/register` response into a friendly message
+  /// (e.g. duplicate email or a validation failure surfaced via `{ message }`).
+  String _messageForRegisterError(http.Response response) {
+    if (response.statusCode == 429) {
+      return 'Too many attempts. Please wait a minute and try again.';
+    }
+
+    final parsed = _tryReadMessage(response.body);
+    if (parsed != null && parsed.isNotEmpty) return parsed;
+
+    return 'Registration failed (HTTP ${response.statusCode}).';
   }
 
   String? _tryReadMessage(String body) {
