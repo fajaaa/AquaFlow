@@ -50,12 +50,14 @@ class CustomerWaterMeterRequestService {
 
   /// The customer's own service locations, offered as the pick-list when
   /// creating a request. The backend pins `GET /ServiceLocations` to the
-  /// caller's CustomerProfile for the Customer role.
+  /// caller's CustomerProfile for the Customer role. `IsActive=true` keeps
+  /// deactivated locations out of the pick-list entirely, since a request
+  /// against one is rejected server-side anyway.
   Future<List<CustomerServiceLocation>> fetchMyLocations() async {
     final token = await _requireToken();
-    final uri = Uri.parse(
-      '${ApiConfig.baseUrl}/ServiceLocations',
-    ).replace(queryParameters: {'PageSize': '100'});
+    final uri = Uri.parse('${ApiConfig.baseUrl}/ServiceLocations').replace(
+      queryParameters: {'PageSize': '100', 'IsActive': 'true'},
+    );
 
     final response = await _send(
       () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),

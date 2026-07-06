@@ -60,11 +60,17 @@ public class WaterMeterRequestService
 
         // Ownership check that needs the DB: the target service location must belong to the same
         // customer, otherwise a caller could file requests against other customers' locations.
-        var locationBelongsToCaller = await _dbContext.ServiceLocations
-            .AnyAsync(location => location.Id == request.ServiceLocationId && location.CustomerId == customerId.Value);
-        if (!locationBelongsToCaller)
+        var locationIsActive = await _dbContext.ServiceLocations
+            .Where(location => location.Id == request.ServiceLocationId && location.CustomerId == customerId.Value)
+            .Select(location => (bool?)location.IsActive)
+            .FirstOrDefaultAsync();
+        if (locationIsActive == null)
         {
             throw new ClientException("Service location was not found among your locations.");
+        }
+        if (!locationIsActive.Value)
+        {
+            throw new ClientException("Service location is not active.");
         }
 
         var entity = MapInsertRequestToEntity(request);
