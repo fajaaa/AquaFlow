@@ -66,7 +66,8 @@ public partial class AquaFlowDbContext : DbContext
         // Without these indexes every login/refresh is a full table scan.
         modelBuilder.Entity<User>()
             .HasIndex(user => user.Email)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
 
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(token => token.Token)

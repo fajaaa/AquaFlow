@@ -286,6 +286,8 @@ public partial class AquaFlowDbContext
                 Phone = "+38733111222",
                 UserRoleId = 1,
                 IsActive = true,
+                IsDeleted = false,
+                DeletedAt = (DateTime?)null,
                 LastLoginAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
@@ -299,6 +301,8 @@ public partial class AquaFlowDbContext
                 Phone = "+38761111222",
                 UserRoleId = 2,
                 IsActive = true,
+                IsDeleted = false,
+                DeletedAt = (DateTime?)null,
                 LastLoginAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
@@ -312,6 +316,8 @@ public partial class AquaFlowDbContext
                 Phone = "+38762111222",
                 UserRoleId = 3,
                 IsActive = true,
+                IsDeleted = false,
+                DeletedAt = (DateTime?)null,
                 LastLoginAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
