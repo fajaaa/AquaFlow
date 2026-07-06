@@ -151,6 +151,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 9,
+                Code = "WaterMeterRequests.Manage",
+                Name = "Manage water meter requests",
+                Module = "WaterMeterRequests",
+                Description = "Allows assigning and rejecting water meter requests.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -250,6 +261,14 @@ public partial class AquaFlowDbContext
                 Id = 12,
                 UserRoleId = 1,
                 PermissionId = 8,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 13,
+                UserRoleId = 1,
+                PermissionId = 9,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });

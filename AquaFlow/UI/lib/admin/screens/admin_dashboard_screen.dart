@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_account_edit_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_notifications_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_users_screen.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_water_meter_requests_screen.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 
@@ -92,6 +93,11 @@ const List<_AdminNavItem> _navItems = [
     selectedIcon: Icons.manage_accounts,
     label: 'Moj nalog',
   ),
+  _AdminNavItem(
+    icon: Icons.assignment_outlined,
+    selectedIcon: Icons.assignment,
+    label: 'Zahtjevi',
+  ),
 ];
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
@@ -129,6 +135,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return const CompanySettingsScreen();
       case 9:
         return const AdminAccountEditScreen();
+      case 10:
+        return const AdminWaterMeterRequestsScreen();
       default:
         return _SectionPlaceholder(item: _navItems[_selectedIndex]);
     }

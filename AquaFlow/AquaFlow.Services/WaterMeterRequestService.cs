@@ -16,6 +16,7 @@ public class WaterMeterRequestService
 {
     private readonly AquaFlowDbContext _dbContext;
     private readonly IWaterMeterRequestStateResolver _stateResolver;
+    private readonly IValidator<WaterMeterInsertRequest>? _waterMeterInsertValidator;
 
     public WaterMeterRequestService(
         AquaFlowDbContext dbContext,
@@ -23,11 +24,13 @@ public class WaterMeterRequestService
         IEnumerable<IValidator<WaterMeterRequestInsertRequest>> insertValidators,
         IEnumerable<IValidator<WaterMeterRequestUpdateRequest>> updateValidators,
         IEnumerable<IValidator<WaterMeterRequestPatchRequest>> patchValidators,
+        IEnumerable<IValidator<WaterMeterInsertRequest>> waterMeterInsertValidators,
         IWaterMeterRequestStateResolver stateResolver)
         : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _dbContext = dbContext;
         _stateResolver = stateResolver;
+        _waterMeterInsertValidator = waterMeterInsertValidators.FirstOrDefault();
     }
 
     protected override IQueryable<WaterMeterRequest> IncludeForRead(IQueryable<WaterMeterRequest> query) =>
@@ -78,6 +81,8 @@ public class WaterMeterRequestService
 
     public async Task<WaterMeterRequestResponse> AssignAsync(int id, int collectorId, int changedById)
     {
+        await EnsureActiveCollectorProfileAsync(collectorId);
+
         var request = await LoadRequestAsync(id);
         return await _stateResolver.Resolve(request.Status).AssignAsync(request, collectorId, changedById);
     }
@@ -97,6 +102,11 @@ public class WaterMeterRequestService
     public async Task<WaterMeterRequestResponse> RegisterAsync(int id, WaterMeterInsertRequest meterData, int changedById)
     {
         var request = await LoadRequestAsync(id);
+
+        meterData.ServiceLocationId = request.ServiceLocationId;
+        meterData.LastReading = meterData.InitialReading;
+        await ValidateWaterMeterInsertAsync(meterData);
+
         return await _stateResolver.Resolve(request.Status).RegisterAsync(request, meterData, changedById);
     }
 
@@ -120,12 +130,41 @@ public class WaterMeterRequestService
     // and mutate the same entity, or throws 404 when it does not exist.
     private async Task<WaterMeterRequest> LoadRequestAsync(int id)
     {
-        var request = await _dbContext.WaterMeterRequests.FirstOrDefaultAsync(item => item.Id == id);
+        var request = await _dbContext.WaterMeterRequests
+            .Include(item => item.ServiceLocation)
+            .FirstOrDefaultAsync(item => item.Id == id);
         if (request == null)
         {
             throw new KeyNotFoundException($"WaterMeterRequest with id {id} was not found.");
         }
 
         return request;
+    }
+
+    private async Task EnsureActiveCollectorProfileAsync(int collectorId)
+    {
+        var exists = await _dbContext.CollectorProfiles.AnyAsync(profile =>
+            profile.Id == collectorId &&
+            profile.User != null &&
+            profile.User.IsActive);
+
+        if (!exists)
+        {
+            throw new ClientException($"Collector profile with id {collectorId} was not found or is not active.");
+        }
+    }
+
+    private async Task ValidateWaterMeterInsertAsync(WaterMeterInsertRequest request)
+    {
+        if (_waterMeterInsertValidator == null)
+        {
+            return;
+        }
+
+        var validationResult = await _waterMeterInsertValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            throw new ValidationException(validationResult.Errors);
+        }
     }
 }
