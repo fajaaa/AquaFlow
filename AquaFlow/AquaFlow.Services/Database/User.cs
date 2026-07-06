@@ -21,6 +21,8 @@ public class User : EntityBase
     public UserRole? UserRole { get; set; }
 
     public bool IsActive { get; set; } = true;
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
     public DateTime? LastLoginAt { get; set; }
     public CustomerProfile? CustomerProfile { get; set; }
     public CollectorProfile? CollectorProfile { get; set; }

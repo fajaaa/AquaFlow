@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/admin/screens/admin_account_edit_screen.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_collectors_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_notifications_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_users_screen.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_water_meter_requests_screen.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 
@@ -58,6 +60,11 @@ const List<_AdminNavItem> _navItems = [
     label: 'Korisnici',
   ),
   _AdminNavItem(
+    icon: Icons.assignment_ind_outlined,
+    selectedIcon: Icons.assignment_ind,
+    label: 'Inkasanti',
+  ),
+  _AdminNavItem(
     icon: Icons.water_drop_outlined,
     selectedIcon: Icons.water_drop,
     label: 'Vodomjeri',
@@ -83,6 +90,11 @@ const List<_AdminNavItem> _navItems = [
     label: 'Prijave kvarova',
   ),
   _AdminNavItem(
+    icon: Icons.admin_panel_settings_outlined,
+    selectedIcon: Icons.admin_panel_settings,
+    label: 'Administratori',
+  ),
+  _AdminNavItem(
     icon: Icons.business_outlined,
     selectedIcon: Icons.business,
     label: 'Postavke firme',
@@ -91,6 +103,11 @@ const List<_AdminNavItem> _navItems = [
     icon: Icons.manage_accounts_outlined,
     selectedIcon: Icons.manage_accounts,
     label: 'Moj nalog',
+  ),
+  _AdminNavItem(
+    icon: Icons.assignment_outlined,
+    selectedIcon: Icons.assignment,
+    label: 'Zahtjevi',
   ),
 ];
 
@@ -123,12 +140,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return const _DashboardOverview();
       case 1:
         return const AdminNotificationsScreen();
+      // "Korisnici" and "Administratori" are the same widget type in the same
+      // tree position, so they need distinct keys - otherwise switching between
+      // them reuses the State and keeps the other tab's loaded rows.
       case 2:
-        return const AdminUsersScreen();
-      case 8:
-        return const CompanySettingsScreen();
+        return const AdminUsersScreen(key: ValueKey('users-customers'));
+      case 3:
+        return const AdminCollectorsScreen();
       case 9:
+        return const AdminUsersScreen(
+          key: ValueKey('users-admins'),
+          mode: AdminUsersScreenMode.admins,
+        );
+      case 10:
+        return const CompanySettingsScreen();
+      case 11:
         return const AdminAccountEditScreen();
+      case 12:
+        return const AdminWaterMeterRequestsScreen();
       default:
         return _SectionPlaceholder(item: _navItems[_selectedIndex]);
     }

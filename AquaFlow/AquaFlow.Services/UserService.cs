@@ -29,7 +29,11 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
     }
 
     protected override IQueryable<User> GetDataSource() =>
-        _dbContext.Users.AsNoTracking().Include(u => u.UserRole).Include(u => u.CustomerProfile);
+        _dbContext.Users
+            .AsNoTracking()
+            .Where(u => !u.IsDeleted)
+            .Include(u => u.UserRole)
+            .Include(u => u.CustomerProfile);
 
     protected override IQueryable<User> ApplyFilters(IQueryable<User> query, UserSearchObject? search)
     {
@@ -94,7 +98,9 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
     {
         await ValidatePatchAsync(request);
 
-        var entity = await _dbContext.Users.Include(u => u.UserRole).FirstOrDefaultAsync(u => u.Id == id)
+        var entity = await _dbContext.Users
+            .Include(u => u.UserRole)
+            .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted)
             ?? throw new KeyNotFoundException($"User with id {id} was not found.");
 
         if (request.Email != null)
@@ -120,7 +126,9 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
     {
         await ValidateUpdateAsync(request);
 
-        var entity = await _dbContext.Users.Include(u => u.UserRole).FirstOrDefaultAsync(u => u.Id == id)
+        var entity = await _dbContext.Users
+            .Include(u => u.UserRole)
+            .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted)
             ?? throw new KeyNotFoundException($"User with id {id} was not found.");
 
         await EnsureUniqueEmailAsync(request.Email, id);
@@ -137,33 +145,27 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
 
     public override async Task DeleteAsync(int id)
     {
-        var entity = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id)
+        var entity = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted)
             ?? throw new KeyNotFoundException($"User with id {id} was not found.");
 
         // RefreshToken.UserId is a Restrict FK, so a logged-in user's refresh tokens
-        // (login artifacts, not business data) would otherwise block deletion outright.
+        // (login artifacts, not business data) should be revoked when the account is deleted.
         var tokens = await _dbContext.RefreshTokens.Where(t => t.UserId == id).ToListAsync();
         _dbContext.RefreshTokens.RemoveRange(tokens);
 
-        // CustomerProfile.UserId is likewise a Restrict FK, and the admin user editor
-        // attaches a profile whenever a name is entered regardless of role, so a freshly
-        // created user with no business data yet (service locations, invoices, ...) would
-        // otherwise be undeletable. If the profile still has business data hanging off it,
-        // removing it here surfaces that as the same FK failure - which is the correct,
-        // expected block.
-        var profile = await _dbContext.CustomerProfiles.FirstOrDefaultAsync(p => p.UserId == id);
-        if (profile != null)
-        {
-            _dbContext.CustomerProfiles.Remove(profile);
-        }
+        entity.IsDeleted = true;
+        entity.IsActive = false;
+        entity.DeletedAt = DateTime.UtcNow;
+        entity.UpdatedAt = entity.DeletedAt;
 
-        _dbContext.Users.Remove(entity);
         await _dbContext.SaveChangesAsync();
     }
 
     public async Task<UserResponse> UpdateOwnAccountAsync(int id, AccountUpdateRequest request)
     {
-        var entity = await _dbContext.Users.Include(u => u.UserRole).FirstOrDefaultAsync(u => u.Id == id)
+        var entity = await _dbContext.Users
+            .Include(u => u.UserRole)
+            .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted)
             ?? throw new KeyNotFoundException($"User with id {id} was not found.");
 
         await EnsureUniqueEmailAsync(request.Email, id);
@@ -182,7 +184,7 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
 
     public async Task ChangeOwnPasswordAsync(int id, AccountChangePasswordRequest request)
     {
-        var entity = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id)
+        var entity = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted)
             ?? throw new KeyNotFoundException($"User with id {id} was not found.");
 
         if (!_cryptoService.Verify(entity.PasswordHash, entity.PasswordSalt, request.CurrentPassword))
@@ -199,14 +201,14 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
     public async Task<UserSensitiveResponse?> GetByEmailAsync(string email)
     {
         var user = await _dbContext.Users.Include(u => u.UserRole)
-            .FirstOrDefaultAsync(u => u.Email == email);
+            .FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted);
 
         return user == null ? null : Mapper.Map<UserSensitiveResponse>(user);
     }
 
     public async Task UpdateLastLoginAtAsync(int id)
     {
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id)
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted)
             ?? throw new KeyNotFoundException($"User with id {id} was not found.");
 
         user.LastLoginAt = DateTime.UtcNow;
@@ -216,7 +218,7 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
     private async Task EnsureUniqueEmailAsync(string email, int? excludedId = null)
     {
         var alreadyExists = await _dbContext.Users.AnyAsync(u =>
-            u.Email == email && u.Id != excludedId);
+            !u.IsDeleted && u.Email == email && u.Id != excludedId);
 
         if (alreadyExists)
         {

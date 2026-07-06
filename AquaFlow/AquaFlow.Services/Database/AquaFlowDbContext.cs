@@ -49,6 +49,8 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<UserRolePermission> UserRolePermissions => Set<UserRolePermission>();
     public DbSet<WaterConsumptionAlert> WaterConsumptionAlerts => Set<WaterConsumptionAlert>();
     public DbSet<WaterMeter> WaterMeters => Set<WaterMeter>();
+    public DbSet<WaterMeterRequest> WaterMeterRequests => Set<WaterMeterRequest>();
+    public DbSet<WaterMeterRequestStatusHistory> WaterMeterRequestStatusHistories => Set<WaterMeterRequestStatusHistory>();
     public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -64,7 +66,8 @@ public partial class AquaFlowDbContext : DbContext
         // Without these indexes every login/refresh is a full table scan.
         modelBuilder.Entity<User>()
             .HasIndex(user => user.Email)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
 
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(token => token.Token)
@@ -74,6 +77,12 @@ public partial class AquaFlowDbContext : DbContext
         // the unique index is the hard backstop behind that generation.
         modelBuilder.Entity<CustomerProfile>()
             .HasIndex(profile => profile.CustomerCode)
+            .IsUnique();
+
+        // EmployeeCode is generated server-side (CollectorProfileService.GenerateEmployeeCodeAsync);
+        // the unique index is the hard backstop behind that generation.
+        modelBuilder.Entity<CollectorProfile>()
+            .HasIndex(profile => profile.EmployeeCode)
             .IsUnique();
 
         // Optimistic concurrency for invoice status transitions: every UPDATE carries the

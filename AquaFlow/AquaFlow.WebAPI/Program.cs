@@ -8,6 +8,7 @@ using AquaFlow.Services;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Validators;
+using AquaFlow.Services.WaterMeterRequestStateMachine;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.RateLimiting;
 using AquaFlow.WebAPI.Services.AccessManager;
@@ -105,8 +106,20 @@ mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
     .Map(destination => destination.PermissionCode, source => source.Permission == null ? string.Empty : source.Permission.Code)
     .Map(destination => destination.PermissionName, source => source.Permission == null ? string.Empty : source.Permission.Name);
+mapperConfig.NewConfig<CollectorProfile, CollectorProfileResponse>()
+    .Map(destination => destination.AssignedAreaName, source => source.AssignedArea == null ? string.Empty : source.AssignedArea.Name)
+    .Map(destination => destination.IsActive, source => source.User != null && source.User.IsActive)
+    .Map(destination => destination.FirstName, source => source.User == null || source.User.CustomerProfile == null ? string.Empty : source.User.CustomerProfile.FirstName)
+    .Map(destination => destination.LastName, source => source.User == null || source.User.CustomerProfile == null ? string.Empty : source.User.CustomerProfile.LastName)
+    .Map(destination => destination.Email, source => source.User == null ? string.Empty : source.User.Email)
+    .Map(destination => destination.Phone, source => source.User == null ? string.Empty : source.User.Phone);
 mapperConfig.NewConfig<UserNotification, UserNotificationResponse>()
     .Map(destination => destination.Notification, source => source.Notification);
+mapperConfig.NewConfig<WaterMeter, WaterMeterResponse>()
+    .Map(destination => destination.ServiceLocationAddress, source => source.ServiceLocation == null ? string.Empty : source.ServiceLocation.Address)
+    .Map(destination => destination.CustomerId, source => source.ServiceLocation == null ? 0 : source.ServiceLocation.CustomerId);
+mapperConfig.NewConfig<WaterMeterRequest, WaterMeterRequestResponse>()
+    .Map(destination => destination.ServiceLocationAddress, source => source.ServiceLocation == null ? string.Empty : source.ServiceLocation.Address);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
@@ -130,7 +143,8 @@ AddPatchMapping<CollectorProfilePatchRequest, CollectorProfile>();
 builder.Services.AddScoped<IBaseCRUDService<CollectorProfileResponse, CollectorProfileSearchObject, CollectorProfileInsertRequest, CollectorProfileUpdateRequest, CollectorProfilePatchRequest>, CollectorProfileService>();
 AddCrud<Settlement, SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>();
 AddCrud<ServiceLocation, ServiceLocationResponse, ServiceLocationSearchObject, ServiceLocationInsertRequest, ServiceLocationUpdateRequest, ServiceLocationPatchRequest>();
-AddCrud<WaterMeter, WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>();
+AddPatchMapping<WaterMeterPatchRequest, WaterMeter>();
+builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>, WaterMeterService>();
 AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>();
 AddCrud<Tariff, TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>();
 // Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
@@ -148,6 +162,20 @@ builder.Services.AddKeyedScoped<BaseInvoiceState, OverdueInvoiceState>(InvoiceSt
 builder.Services.AddKeyedScoped<BaseInvoiceState, PaidInvoiceState>(InvoiceStatus.Paid);
 builder.Services.AddKeyedScoped<BaseInvoiceState, CancelledInvoiceState>(InvoiceStatus.Cancelled);
 builder.Services.AddScoped<IInvoiceStateResolver, InvoiceStateResolver>();
+// WaterMeterRequest mirrors the Invoice registration above: the state machine service is
+// registered by hand, the generic IBaseCRUDService alias resolves to the same instance, and each
+// request state is a keyed scoped BaseWaterMeterRequestState (status string as key) that
+// IWaterMeterRequestStateResolver resolves through.
+AddPatchMapping<WaterMeterRequestPatchRequest, WaterMeterRequest>();
+builder.Services.AddScoped<IWaterMeterRequestService, WaterMeterRequestService>();
+builder.Services.AddScoped<IBaseCRUDService<WaterMeterRequestResponse, WaterMeterRequestSearchObject, WaterMeterRequestInsertRequest, WaterMeterRequestUpdateRequest, WaterMeterRequestPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IWaterMeterRequestService>());
+builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, PendingWaterMeterRequestState>(WaterMeterRequestStatus.Pending);
+builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, AssignedWaterMeterRequestState>(WaterMeterRequestStatus.Assigned);
+builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, RegisteredWaterMeterRequestState>(WaterMeterRequestStatus.Registered);
+builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, RejectedWaterMeterRequestState>(WaterMeterRequestStatus.Rejected);
+builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, CancelledWaterMeterRequestState>(WaterMeterRequestStatus.Cancelled);
+builder.Services.AddScoped<IWaterMeterRequestStateResolver, WaterMeterRequestStateResolver>();
 AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
 AddCrud<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>();
@@ -188,6 +216,9 @@ builder.Services.AddScoped<IValidator<ServiceLocationPatchRequest>, ServiceLocat
 builder.Services.AddScoped<IValidator<WaterMeterInsertRequest>, WaterMeterInsertValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterUpdateRequest>, WaterMeterUpdateValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterPatchRequest>, WaterMeterPatchValidator>();
+builder.Services.AddScoped<IValidator<WaterMeterRequestInsertRequest>, WaterMeterRequestInsertValidator>();
+builder.Services.AddScoped<IValidator<WaterMeterRequestUpdateRequest>, WaterMeterRequestUpdateValidator>();
+builder.Services.AddScoped<IValidator<WaterMeterRequestPatchRequest>, WaterMeterRequestPatchValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingInsertRequest>, MeterReadingInsertValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingUpdateRequest>, MeterReadingUpdateValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingPatchRequest>, MeterReadingPatchValidator>();

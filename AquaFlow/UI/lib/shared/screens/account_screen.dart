@@ -120,7 +120,9 @@ class _AccountScreenState extends State<AccountScreen> {
                   child: ListTile(
                     leading: const Icon(Icons.manage_accounts_outlined),
                     title: const Text('Uredi nalog'),
-                    subtitle: const Text('Izmjena email adrese i telefona'),
+                    subtitle: const Text(
+                      'Izmjena email adrese, telefona, imena i prezimena',
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(

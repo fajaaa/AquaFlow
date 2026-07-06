@@ -4,11 +4,13 @@
 /// first/last name is stored, so it is fetched to show a real name.
 class CustomerProfile {
   const CustomerProfile({
+    required this.id,
     required this.userId,
     required this.firstName,
     required this.lastName,
   });
 
+  final int? id;
   final int? userId;
   final String firstName;
   final String lastName;
@@ -18,6 +20,7 @@ class CustomerProfile {
 
   factory CustomerProfile.fromJson(Map<String, dynamic> json) {
     return CustomerProfile(
+      id: (json['id'] as num?)?.toInt(),
       userId: (json['userId'] as num?)?.toInt(),
       firstName: (json['firstName'] ?? '') as String,
       lastName: (json['lastName'] ?? '') as String,

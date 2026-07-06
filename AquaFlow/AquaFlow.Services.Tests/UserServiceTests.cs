@@ -82,7 +82,7 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_UserHasCustomerProfile_DeletesUserAndProfile()
+    public async Task DeleteAsync_UserHasCustomerProfile_SoftDeletesUserAndLeavesProfile()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -113,8 +113,116 @@ public class UserServiceTests
 
         await service.DeleteAsync(1);
 
-        Assert.False(await context.Users.AnyAsync(u => u.Id == 1));
-        Assert.False(await context.CustomerProfiles.AnyAsync(p => p.UserId == 1));
+        var deleted = await context.Users.SingleAsync(u => u.Id == 1);
+        Assert.True(deleted.IsDeleted);
+        Assert.False(deleted.IsActive);
+        Assert.NotNull(deleted.DeletedAt);
+        Assert.True(await context.CustomerProfiles.AnyAsync(p => p.UserId == 1));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UserHasCollectorProfile_SoftDeletesUserAndLeavesProfile()
+    {
+        var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var context = new AquaFlowDbContext(options);
+
+        context.UserRoles.Add(new UserRole { Id = 1, Name = "Collector" });
+        context.Users.Add(new User
+        {
+            Id = 1,
+            Email = "collector@aquaflow.ba",
+            PasswordHash = "hash",
+            PasswordSalt = "salt",
+            UserRoleId = 1,
+            IsActive = true
+        });
+        context.CollectorProfiles.Add(new CollectorProfile
+        {
+            Id = 1,
+            UserId = 1,
+            EmployeeCode = "COL-0001"
+        });
+        await context.SaveChangesAsync();
+
+        var service = CreateUserService(context);
+
+        await service.DeleteAsync(1);
+
+        var deleted = await context.Users.SingleAsync(u => u.Id == 1);
+        Assert.True(deleted.IsDeleted);
+        Assert.False(deleted.IsActive);
+        Assert.NotNull(deleted.DeletedAt);
+        Assert.True(await context.CollectorProfiles.AnyAsync(p => p.UserId == 1));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ExcludesSoftDeletedUsers()
+    {
+        var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var context = new AquaFlowDbContext(options);
+
+        context.UserRoles.Add(new UserRole { Id = 1, Name = "Admin" });
+        context.Users.AddRange(
+            new User
+            {
+                Id = 1,
+                Email = "active@aquaflow.ba",
+                PasswordHash = "hash",
+                PasswordSalt = "salt",
+                UserRoleId = 1,
+                IsActive = true
+            },
+            new User
+            {
+                Id = 2,
+                Email = "deleted@aquaflow.ba",
+                PasswordHash = "hash",
+                PasswordSalt = "salt",
+                UserRoleId = 1,
+                IsActive = false,
+                IsDeleted = true,
+                DeletedAt = DateTime.UtcNow
+            });
+        await context.SaveChangesAsync();
+
+        var service = CreateUserService(context);
+
+        var result = await service.GetAllAsync(new());
+
+        Assert.Collection(result.Items, user => Assert.Equal("active@aquaflow.ba", user.Email));
+    }
+
+    [Fact]
+    public async Task GetByEmailAsync_SoftDeletedUser_ReturnsNull()
+    {
+        var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var context = new AquaFlowDbContext(options);
+
+        context.UserRoles.Add(new UserRole { Id = 1, Name = "Admin" });
+        context.Users.Add(new User
+        {
+            Id = 1,
+            Email = "deleted@aquaflow.ba",
+            PasswordHash = "hash",
+            PasswordSalt = "salt",
+            UserRoleId = 1,
+            IsActive = false,
+            IsDeleted = true,
+            DeletedAt = DateTime.UtcNow
+        });
+        await context.SaveChangesAsync();
+
+        var service = CreateUserService(context);
+
+        var result = await service.GetByEmailAsync("deleted@aquaflow.ba");
+
+        Assert.Null(result);
     }
 
     private static UserService CreateUserService(AquaFlowDbContext context, ICryptoService? cryptoService = null)

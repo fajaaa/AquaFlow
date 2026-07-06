@@ -25,25 +25,37 @@ public class CollectorProfileService
         _dbContext = dbContext;
     }
 
+    private const string EmployeeCodePrefix = "COL-";
+    private const string CollectorRoleName = "Collector";
+
     protected override async Task BeforeInsertAsync(CollectorProfileInsertRequest request)
     {
-        await EnsureUserExistsAsync(request.UserId);
+        await EnsureUserExistsAndIsCollectorAsync(request.UserId);
         await EnsureAssignedAreaExistsAsync(request.AssignedAreaId);
         await EnsureUserDoesNotHaveCollectorProfileAsync(request.UserId);
+
+        // EmployeeCode is never client-supplied; always assign a fresh generated one.
+        request.EmployeeCode = await GenerateEmployeeCodeAsync();
     }
 
     protected override async Task BeforeUpdateAsync(int id, CollectorProfileUpdateRequest request, CollectorProfile entity)
     {
-        await EnsureUserExistsAsync(request.UserId);
+        await EnsureUserExistsAndIsCollectorAsync(request.UserId);
         await EnsureAssignedAreaExistsAsync(request.AssignedAreaId);
         await EnsureUserDoesNotHaveCollectorProfileAsync(request.UserId, id);
+
+        // EmployeeCode is immutable once assigned; ignore whatever the caller sent.
+        request.EmployeeCode = entity.EmployeeCode;
     }
 
     protected override async Task BeforePatchAsync(int id, CollectorProfilePatchRequest request, CollectorProfile entity)
     {
+        // EmployeeCode is immutable once assigned; ignore whatever the caller sent.
+        request.EmployeeCode = null;
+
         if (request.UserId.HasValue)
         {
-            await EnsureUserExistsAsync(request.UserId.Value);
+            await EnsureUserExistsAndIsCollectorAsync(request.UserId.Value);
             await EnsureUserDoesNotHaveCollectorProfileAsync(request.UserId.Value, id);
         }
 
@@ -53,11 +65,53 @@ public class CollectorProfileService
         }
     }
 
-    private async Task EnsureUserExistsAsync(int userId)
+    protected override IQueryable<CollectorProfile> IncludeForRead(IQueryable<CollectorProfile> query)
     {
-        if (!await _dbContext.Users.AnyAsync(user => user.Id == userId))
+        return query
+            .Include(profile => profile.AssignedArea)
+            .Include(profile => profile.User)
+            .ThenInclude(user => user!.CustomerProfile);
+    }
+
+    protected override async Task LoadReferencesAsync(CollectorProfile entity)
+    {
+        await _dbContext.Entry(entity).Reference(profile => profile.AssignedArea).LoadAsync();
+        await _dbContext.Entry(entity).Reference(profile => profile.User).LoadAsync();
+        if (entity.User != null)
+        {
+            await _dbContext.Entry(entity.User).Reference(user => user.CustomerProfile).LoadAsync();
+        }
+    }
+
+    private async Task<string> GenerateEmployeeCodeAsync()
+    {
+        var existingCodes = await _dbContext.CollectorProfiles
+            .Where(profile => profile.EmployeeCode.StartsWith(EmployeeCodePrefix))
+            .Select(profile => profile.EmployeeCode)
+            .ToListAsync();
+
+        var nextNumber = existingCodes
+            .Select(code => int.TryParse(code.AsSpan(EmployeeCodePrefix.Length), out var number) ? number : 0)
+            .DefaultIfEmpty(0)
+            .Max() + 1;
+
+        return $"{EmployeeCodePrefix}{nextNumber:D4}";
+    }
+
+    private async Task EnsureUserExistsAndIsCollectorAsync(int userId)
+    {
+        var user = await _dbContext.Users
+            .Include(user => user.UserRole)
+            .FirstOrDefaultAsync(user => user.Id == userId);
+
+        if (user == null)
         {
             throw new ClientException($"User with id {userId} was not found.");
+        }
+
+        if (!string.Equals(user.UserRole?.Name, CollectorRoleName, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ClientException($"User with id {userId} must have the Collector role.");
         }
     }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/collector/screens/collector_water_meter_requests_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/account_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/mobile_shell.dart';
 import 'package:aquaflow_desktop/shared/screens/notifications_screen.dart';
@@ -33,7 +34,7 @@ class CollectorShell extends StatelessWidget {
           icon: Icons.assignment_outlined,
           selectedIcon: Icons.assignment,
           label: 'Nalozi',
-          body: PlaceholderTab(icon: Icons.assignment, label: 'Radni nalozi'),
+          body: CollectorWaterMeterRequestsScreen(),
         ),
         MobileTab(
           icon: Icons.person_outline,

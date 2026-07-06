@@ -176,6 +176,9 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasIndex("AssignedAreaId");
 
+                    b.HasIndex("EmployeeCode")
+                        .IsUnique();
+
                     b.HasIndex("UserId")
                         .IsUnique();
 
@@ -1365,6 +1368,16 @@ namespace AquaFlow.Services.Migrations
                             IsActive = true,
                             Module = "Roles",
                             Name = "Manage roles and permissions"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Code = "WaterMeterRequests.Manage",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows assigning and rejecting water meter requests.",
+                            IsActive = true,
+                            Module = "WaterMeterRequests",
+                            Name = "Manage water meter requests"
                         });
                 });
 
@@ -1843,12 +1856,18 @@ namespace AquaFlow.Services.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastLoginAt")
@@ -1876,7 +1895,8 @@ namespace AquaFlow.Services.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.HasIndex("UserRoleId");
 
@@ -1889,6 +1909,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "admin@aquaflow.ba",
                             IsActive = true,
+                            IsDeleted = false,
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38733111222",
@@ -1900,6 +1921,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "collector@aquaflow.ba",
                             IsActive = true,
+                            IsDeleted = false,
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38761111222",
@@ -1911,6 +1933,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "customer@aquaflow.ba",
                             IsActive = true,
+                            IsDeleted = false,
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38762111222",
@@ -2170,6 +2193,13 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 8,
                             UserRoleId = 1
+                        },
+                        new
+                        {
+                            Id = 13,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 9,
+                            UserRoleId = 1
                         });
                 });
 
@@ -2277,6 +2307,99 @@ namespace AquaFlow.Services.Migrations
                             ServiceLocationId = 1,
                             Status = "Active"
                         });
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AssignedCollectorId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("ResultingWaterMeterId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ServiceLocationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedCollectorId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ResultingWaterMeterId");
+
+                    b.HasIndex("ServiceLocationId");
+
+                    b.ToTable("WaterMeterRequests");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterRequestStatusHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ChangedById")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NewStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WaterMeterRequestId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedById");
+
+                    b.HasIndex("WaterMeterRequestId");
+
+                    b.ToTable("WaterMeterRequestStatusHistories");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.WorkOrder", b =>
@@ -2846,6 +2969,58 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("ServiceLocation");
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterRequest", b =>
+                {
+                    b.HasOne("AquaFlow.Services.Database.CollectorProfile", "AssignedCollector")
+                        .WithMany()
+                        .HasForeignKey("AssignedCollectorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.WaterMeter", "ResultingWaterMeter")
+                        .WithMany()
+                        .HasForeignKey("ResultingWaterMeterId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AquaFlow.Services.Database.ServiceLocation", "ServiceLocation")
+                        .WithMany()
+                        .HasForeignKey("ServiceLocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedCollector");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("ResultingWaterMeter");
+
+                    b.Navigation("ServiceLocation");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterRequestStatusHistory", b =>
+                {
+                    b.HasOne("AquaFlow.Services.Database.User", "ChangedBy")
+                        .WithMany()
+                        .HasForeignKey("ChangedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.WaterMeterRequest", "WaterMeterRequest")
+                        .WithMany("StatusHistory")
+                        .HasForeignKey("WaterMeterRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ChangedBy");
+
+                    b.Navigation("WaterMeterRequest");
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.WorkOrder", b =>
                 {
                     b.HasOne("AquaFlow.Services.Database.User", "AssignedTo")
@@ -2989,6 +3164,11 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("MeterReadings");
 
                     b.Navigation("ReadingRouteItems");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterRequest", b =>
+                {
+                    b.Navigation("StatusHistory");
                 });
 #pragma warning restore 612, 618
         }

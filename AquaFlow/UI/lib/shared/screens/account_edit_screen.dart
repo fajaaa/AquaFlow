@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/account_details.dart';
+import '../providers/auth_provider.dart';
 import '../services/account_exception.dart';
 import '../services/account_service.dart';
+import '../services/profile_exception.dart';
+import '../services/profile_service.dart';
 
 /// Screen for viewing and editing the signed-in user's own account data.
 ///
@@ -14,9 +18,12 @@ import '../services/account_service.dart';
 ///
 /// The data is loaded on open; the form is prefilled and saved with
 /// `PUT /Account/me` through [AccountService]. Email and phone are always
-/// editable; a password change (`PUT /Account/me/password`) is sent only when
-/// the password fields are filled in, mirroring the admin "Moj nalog" screen
-/// (`AdminAccountEditScreen`) - this is the mobile customer/collector path.
+/// editable. First/last name lives on the CustomerProfile instead (not the
+/// `User` entity), so it is loaded/saved separately through [ProfileService]
+/// (`GET`/`POST`/`PATCH /CustomerProfiles`), only when a name was actually
+/// entered - mirrors the admin "Moj nalog" screen (`AdminAccountEditScreen`).
+/// A password change (`PUT /Account/me/password`) is sent only when the
+/// password fields are filled in - this is the mobile customer/collector path.
 class AccountEditScreen extends StatefulWidget {
   const AccountEditScreen({super.key});
 
@@ -26,25 +33,34 @@ class AccountEditScreen extends StatefulWidget {
 
 class _AccountEditScreenState extends State<AccountEditScreen> {
   final AccountService _service = AccountService();
+  final ProfileService _profileService = ProfileService();
   final _formKey = GlobalKey<FormState>();
 
   // One controller per editable field; created empty and prefilled once the
   // data loads, so they can be disposed unconditionally.
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
   final _currentPasswordCtrl = TextEditingController();
   final _newPasswordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
 
   AccountDetails? _details;
+  int? _existingProfileId;
   bool _loading = true;
   String? _loadError;
   bool _saving = false;
+
+  bool get _hasNameInput =>
+      _firstNameCtrl.text.trim().isNotEmpty || _lastNameCtrl.text.trim().isNotEmpty;
 
   bool get _hasPasswordInput =>
       _currentPasswordCtrl.text.isNotEmpty ||
       _newPasswordCtrl.text.isNotEmpty ||
       _confirmPasswordCtrl.text.isNotEmpty;
+
+  int? get _userId => context.read<AuthProvider>().session?.id;
 
   @override
   void initState() {
@@ -57,13 +73,30 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
       _loading = true;
       _loadError = null;
     });
+
+    final userId = _userId;
     try {
       final details = await _service.fetch();
+      final profile = userId == null
+          ? null
+          : await _profileService.fetchCustomerProfile(userId);
+      if (!mounted) return;
+
       _details = details;
       _emailCtrl.text = details.email;
       _phoneCtrl.text = details.phone;
-      if (mounted) setState(() => _loading = false);
+      _existingProfileId = profile?.id;
+      _firstNameCtrl.text = profile?.firstName ?? '';
+      _lastNameCtrl.text = profile?.lastName ?? '';
+      setState(() => _loading = false);
     } on AccountException catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadError = e.message;
+        });
+      }
+    } on ProfileException catch (e) {
       if (mounted) {
         setState(() {
           _loading = false;
@@ -76,6 +109,7 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
   Future<void> _save() async {
     final form = _formKey.currentState;
     final current = _details;
+    final userId = _userId;
     if (form == null || !form.validate() || current == null) return;
 
     setState(() => _saving = true);
@@ -89,6 +123,15 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
 
     try {
       _details = await _service.update(updated);
+
+      if (_hasNameInput && userId != null) {
+        await _profileService.saveName(
+          userId: userId,
+          firstName: _firstNameCtrl.text.trim(),
+          lastName: _lastNameCtrl.text.trim(),
+          existingProfileId: _existingProfileId,
+        );
+      }
 
       if (_hasPasswordInput) {
         await _service.changePassword(
@@ -104,7 +147,16 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Podaci naloga su sačuvani.')),
       );
+      await _load();
     } on AccountException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } on ProfileException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -120,8 +172,11 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
   @override
   void dispose() {
     _service.dispose();
+    _profileService.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
     _currentPasswordCtrl.dispose();
     _newPasswordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
@@ -170,6 +225,31 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
                     maxLength: 30,
                   ),
                   const SizedBox(height: 16),
+                  Text(
+                    'Ime i prezime',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  _field(
+                    controller: _firstNameCtrl,
+                    label: 'Ime',
+                    icon: Icons.person_outline,
+                    validator: _firstNameValidator,
+                    onChanged: () => setState(() {}),
+                    maxLength: 80,
+                  ),
+                  _field(
+                    controller: _lastNameCtrl,
+                    label: 'Prezime',
+                    icon: Icons.person_outline,
+                    validator: _lastNameValidator,
+                    onChanged: () => setState(() {}),
+                    maxLength: 80,
+                  ),
+                  const SizedBox(height: 4),
                   Text(
                     'Promjena lozinke',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -268,6 +348,24 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
     // something on both sides. The backend is the authority on validity.
     final at = text.indexOf('@');
     if (at <= 0 || at == text.length - 1) return 'Unesite ispravan email.';
+    return null;
+  }
+
+  // Ime/Prezime are optional, but if either is filled in, both are required -
+  // CustomerProfile needs both (mirrors the admin "Moj nalog" screen).
+  String? _firstNameValidator(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty && _lastNameCtrl.text.trim().isNotEmpty) {
+      return 'Obavezno ako unosite ime i prezime.';
+    }
+    return null;
+  }
+
+  String? _lastNameValidator(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty && _firstNameCtrl.text.trim().isNotEmpty) {
+      return 'Obavezno ako unosite ime i prezime.';
+    }
     return null;
   }
 

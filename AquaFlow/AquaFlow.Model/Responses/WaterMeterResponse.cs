@@ -8,4 +8,6 @@ public class WaterMeterResponse : AuditableResponse
     public string Status { get; set; } = string.Empty;
     public decimal InitialReading { get; set; }
     public decimal LastReading { get; set; }
+    public string ServiceLocationAddress { get; set; } = string.Empty;
+    public int CustomerId { get; set; }
 }

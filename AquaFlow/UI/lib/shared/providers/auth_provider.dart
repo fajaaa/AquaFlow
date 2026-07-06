@@ -76,6 +76,43 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Registers a new Customer, then immediately logs in with the same
+  /// credentials (the backend register endpoint returns the created user, not
+  /// tokens) so the caller lands in an authenticated session. Returns true on
+  /// success; on failure [errorMessage] holds a user-facing reason.
+  Future<bool> register({
+    required String email,
+    required String password,
+    required String phone,
+    required String firstName,
+    required String lastName,
+  }) async {
+    _setBusy(true);
+    _errorMessage = null;
+    try {
+      await _authService.register(
+        email: email.trim(),
+        password: password,
+        phone: phone.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      );
+      final tokens = await _authService.login(email.trim(), password);
+      await _persistAndActivate(tokens);
+      return true;
+    } on AuthException catch (e) {
+      _errorMessage = e.message;
+      _setStatus(AuthStatus.unauthenticated);
+      return false;
+    } catch (_) {
+      _errorMessage = 'Something went wrong. Please try again.';
+      _setStatus(AuthStatus.unauthenticated);
+      return false;
+    } finally {
+      _setBusy(false);
+    }
+  }
+
   Future<void> logout() async {
     await _tokenStorage.clear();
     _session = null;

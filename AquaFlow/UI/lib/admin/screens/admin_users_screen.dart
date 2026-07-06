@@ -10,12 +10,62 @@ import 'package:aquaflow_desktop/admin/models/admin_user.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_draft.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_role_option.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_user_water_meters_screen.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_service.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 
+/// Which role this screen manages. The listing is pinned server-side to that
+/// role and the editor dialog creates users with it, so "Korisnici" manages
+/// customers and "Administratori" manages admins (collectors have their own
+/// screen over /CollectorProfiles).
+enum AdminUsersScreenMode {
+  customers(
+    roleName: 'Customer',
+    title: 'Korisnici',
+    subtitle: 'Pregled, dodavanje, uređivanje i brisanje korisničkih naloga.',
+    singular: 'Korisnik',
+    singularAccusative: 'korisnika',
+    showWaterMeters: true,
+  ),
+  admins(
+    roleName: 'Admin',
+    title: 'Administratori',
+    subtitle:
+        'Pregled, dodavanje, uređivanje i brisanje administratorskih naloga.',
+    singular: 'Administrator',
+    singularAccusative: 'administratora',
+    showWaterMeters: false,
+  );
+
+  const AdminUsersScreenMode({
+    required this.roleName,
+    required this.title,
+    required this.subtitle,
+    required this.singular,
+    required this.singularAccusative,
+    required this.showWaterMeters,
+  });
+
+  /// Backend `UserRole` name, sent as the `UserRole=` filter and used to
+  /// resolve the role id for the editor dialog.
+  final String roleName;
+  final String title;
+  final String subtitle;
+  final String singular;
+  final String singularAccusative;
+
+  /// Customers have water meters; admins do not, so the row action is hidden.
+  final bool showWaterMeters;
+}
+
 class AdminUsersScreen extends StatefulWidget {
-  const AdminUsersScreen({super.key});
+  const AdminUsersScreen({
+    super.key,
+    this.mode = AdminUsersScreenMode.customers,
+  });
+
+  final AdminUsersScreenMode mode;
 
   @override
   State<AdminUsersScreen> createState() => _AdminUsersScreenState();
@@ -31,7 +81,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   bool _loading = true;
   bool _mutating = false;
   String? _error;
-  int? _roleFilter;
   bool? _activeFilter;
   int _page = 1;
   int _pageSize = 10;
@@ -69,7 +118,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         page: _page,
         pageSize: _pageSize,
         name: _searchCtrl.text,
-        userRoleId: _roleFilter,
+        userRole: widget.mode.roleName,
         isActive: _activeFilter,
       );
       if (!mounted || requestId != _requestSerial) return;
@@ -109,13 +158,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     _load(resetPage: true);
   }
 
-  void _setRoleFilter(int? value) {
-    final selected = (value == null || value == 0) ? null : value;
-    if (selected == _roleFilter) return;
-    setState(() => _roleFilter = selected);
-    _load(resetPage: true);
-  }
-
   void _setActiveFilter(String value) {
     final selected = value == 'active'
         ? true
@@ -142,37 +184,46 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   int? get _currentUserId => context.read<AuthProvider>().session?.id;
 
-  Future<void> _openCreate() async {
+  /// Resolves the id of the role this screen manages ([AdminUsersScreenMode]
+  /// pins the whole screen to one role), or null with an error snackbar when
+  /// the roles can't be loaded or the role name doesn't exist on the backend.
+  Future<int?> _resolvePinnedRoleId() async {
     if (_roles.isEmpty) {
       await _loadRoles();
-      if (!mounted) return;
+      if (!mounted) return null;
       if (_roles.isEmpty) {
         _showError('Uloge nisu učitane. Pokušajte ponovo.');
-        return;
+        return null;
       }
     }
+
+    final roleName = widget.mode.roleName.toLowerCase();
+    for (final role in _roles) {
+      if (role.name.toLowerCase() == roleName) return role.id;
+    }
+    _showError('Rola "${widget.mode.roleName}" nije pronađena.');
+    return null;
+  }
+
+  Future<void> _openCreate() async {
+    final roleId = await _resolvePinnedRoleId();
+    if (!mounted || roleId == null) return;
 
     final draft = await showDialog<AdminUserDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _UserEditorDialog(roles: _roles),
+      builder: (_) => _UserEditorDialog(mode: widget.mode, userRoleId: roleId),
     );
     if (!mounted || draft == null) return;
 
     await _runMutation(() async {
       await _service.create(draft);
-    }, 'Korisnik je dodan.');
+    }, '${widget.mode.singular} je dodan.');
   }
 
   Future<void> _openEdit(AdminUser user) async {
-    if (_roles.isEmpty) {
-      await _loadRoles();
-      if (!mounted) return;
-      if (_roles.isEmpty) {
-        _showError('Uloge nisu učitane. Pokušajte ponovo.');
-        return;
-      }
-    }
+    final roleId = await _resolvePinnedRoleId();
+    if (!mounted || roleId == null) return;
 
     AdminCustomerProfile? existingProfile;
     try {
@@ -188,7 +239,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => _UserEditorDialog(
-        roles: _roles,
+        mode: widget.mode,
+        userRoleId: roleId,
         user: user,
         disableDeactivate: isSelf,
         existingProfile: existingProfile,
@@ -202,17 +254,25 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         draft,
         existingProfileId: existingProfile?.id,
       );
-    }, 'Korisnik je sačuvan.');
+    }, '${widget.mode.singular} je sačuvan.');
+  }
+
+  void _openWaterMeters(AdminUser user) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AdminUserWaterMetersScreen(user: user),
+      ),
+    );
   }
 
   Future<void> _confirmDelete(AdminUser user) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Obriši korisnika'),
+        title: Text('Obriši ${widget.mode.singularAccusative}'),
         content: Text(
-          'Da li želite obrisati korisnika "${user.email}"? '
-          'Ova radnja se ne može poništiti.',
+          'Da li želite obrisati ${widget.mode.singularAccusative} '
+          '"${user.email}"? Ova radnja se ne može poništiti.',
         ),
         actions: [
           TextButton(
@@ -237,7 +297,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       if ((_pageData?.items.length ?? 0) == 1 && _page > 1) {
         _page -= 1;
       }
-    }, 'Korisnik je obrisan.');
+    }, '${widget.mode.singular} je obrisan.');
   }
 
   Future<void> _runMutation(
@@ -294,6 +354,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _Header(
+                  mode: widget.mode,
                   loading: _loading,
                   mutating: _mutating,
                   onRefresh: () {
@@ -358,24 +419,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           ),
         ),
         SizedBox(
-          width: 220,
-          child: DropdownButtonFormField<int>(
-            initialValue: _roleFilter ?? 0,
-            decoration: const InputDecoration(
-              labelText: 'Rola',
-              prefixIcon: Icon(Icons.badge_outlined),
-            ),
-            items: [
-              const DropdownMenuItem(value: 0, child: Text('Sve role')),
-              for (final role in _roles)
-                DropdownMenuItem(value: role.id, child: Text(role.name)),
-            ],
-            onChanged: _loading || _mutating
-                ? null
-                : (value) => _setRoleFilter(value),
-          ),
-        ),
-        SizedBox(
           width: 200,
           child: DropdownButtonFormField<String>(
             initialValue: activeValue,
@@ -416,7 +459,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
     final items = _pageData?.items ?? const <AdminUser>[];
     if (items.isEmpty) {
-      return _EmptyState(hasFilters: _hasFilters);
+      return _EmptyState(mode: widget.mode, hasFilters: _hasFilters);
     }
 
     final currentUserId = _currentUserId;
@@ -447,7 +490,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       DataColumn(label: Text('Ime i prezime')),
                       DataColumn(label: Text('Email')),
                       DataColumn(label: Text('Telefon')),
-                      DataColumn(label: Text('Rola')),
                       DataColumn(label: Text('Status')),
                       DataColumn(label: Text('Kreiran')),
                       DataColumn(label: Text('Akcije')),
@@ -464,7 +506,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                             DataCell(
                               Text(item.phone.isEmpty ? '-' : item.phone),
                             ),
-                            DataCell(Text(item.userRole)),
                             DataCell(_StatusPill(isActive: item.isActive)),
                             DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
@@ -473,6 +514,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 deleteDisabled: item.id == currentUserId,
                                 onEdit: () => _openEdit(item),
                                 onDelete: () => _confirmDelete(item),
+                                onWaterMeters: widget.mode.showWaterMeters
+                                    ? () => _openWaterMeters(item)
+                                    : null,
                               ),
                             ),
                           ],
@@ -489,9 +533,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   bool get _hasFilters =>
-      _searchCtrl.text.trim().isNotEmpty ||
-      _roleFilter != null ||
-      _activeFilter != null;
+      _searchCtrl.text.trim().isNotEmpty || _activeFilter != null;
 
   int _totalPages(int totalCount) {
     if (totalCount <= 0) return 1;
@@ -501,12 +543,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
 class _Header extends StatelessWidget {
   const _Header({
+    required this.mode,
     required this.loading,
     required this.mutating,
     required this.onRefresh,
     required this.onCreate,
   });
 
+  final AdminUsersScreenMode mode;
   final bool loading;
   final bool mutating;
   final VoidCallback onRefresh;
@@ -520,14 +564,14 @@ class _Header extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Korisnici',
+          mode.title,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Pregled, dodavanje, uređivanje i brisanje korisničkih naloga.',
+          mode.subtitle,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -547,7 +591,7 @@ class _Header extends StatelessWidget {
         FilledButton.icon(
           onPressed: loading || mutating ? null : onCreate,
           icon: const Icon(Icons.add),
-          label: const Text('Novi korisnik'),
+          label: Text('Novi ${mode.singular.toLowerCase()}'),
         ),
       ],
     );
@@ -613,12 +657,16 @@ class _RowActions extends StatelessWidget {
     required this.deleteDisabled,
     required this.onEdit,
     required this.onDelete,
+    this.onWaterMeters,
   });
 
   final bool disabled;
   final bool deleteDisabled;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+
+  /// Null hides the action entirely (admins have no water meters).
+  final VoidCallback? onWaterMeters;
 
   @override
   Widget build(BuildContext context) {
@@ -632,6 +680,12 @@ class _RowActions extends StatelessWidget {
           onPressed: disabled ? null : onEdit,
           icon: const Icon(Icons.edit_outlined),
         ),
+        if (onWaterMeters != null)
+          IconButton(
+            tooltip: 'Vodomjeri',
+            onPressed: disabled ? null : onWaterMeters,
+            icon: const Icon(Icons.water_drop_outlined),
+          ),
         IconButton(
           tooltip: deleteDisabled
               ? 'Ne možete obrisati vlastiti korisnički nalog.'
@@ -647,13 +701,18 @@ class _RowActions extends StatelessWidget {
 
 class _UserEditorDialog extends StatefulWidget {
   const _UserEditorDialog({
-    required this.roles,
+    required this.mode,
+    required this.userRoleId,
     this.user,
     this.disableDeactivate = false,
     this.existingProfile,
   });
 
-  final List<AdminUserRoleOption> roles;
+  final AdminUsersScreenMode mode;
+
+  /// Id of the role this screen manages; the dialog offers no role choice, so
+  /// every created/edited user keeps the screen's pinned role.
+  final int userRoleId;
   final AdminUser? user;
   final bool disableDeactivate;
   final AdminCustomerProfile? existingProfile;
@@ -670,7 +729,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
 
-  late int _userRoleId;
   late bool _isActive;
   late String _defaultLanguage;
   late String _theme;
@@ -694,11 +752,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     _lastNameCtrl.text = profile?.lastName ?? '';
     _defaultLanguage = profile?.defaultLanguage ?? 'bs';
     _theme = profile?.theme ?? 'light';
-
-    final roleIds = widget.roles.map((r) => r.id).toSet();
-    _userRoleId = (user != null && roleIds.contains(user.userRoleId))
-        ? user.userRoleId
-        : (widget.roles.isNotEmpty ? widget.roles.first.id : 0);
   }
 
   @override
@@ -721,7 +774,7 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
       AdminUserDraft(
         email: _emailCtrl.text.trim(),
         phone: _phoneCtrl.text.trim(),
-        userRoleId: _userRoleId,
+        userRoleId: widget.userRoleId,
         isActive: _isActive,
         password: password.isEmpty ? null : password,
         profile: _hasProfileInput
@@ -739,7 +792,11 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(_isEdit ? 'Uredi korisnika' : 'Novi korisnik'),
+      title: Text(
+        _isEdit
+            ? 'Uredi ${widget.mode.singularAccusative}'
+            : 'Novi ${widget.mode.singular.toLowerCase()}',
+      ),
       content: SizedBox(
         width: math.min(520, MediaQuery.sizeOf(context).width - 48),
         child: SingleChildScrollView(
@@ -768,22 +825,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                     labelText: 'Telefon',
                     prefixIcon: Icon(Icons.phone_outlined),
                   ),
-                ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<int>(
-                  initialValue: _userRoleId,
-                  decoration: const InputDecoration(
-                    labelText: 'Rola',
-                    prefixIcon: Icon(Icons.badge_outlined),
-                  ),
-                  items: [
-                    for (final role in widget.roles)
-                      DropdownMenuItem(value: role.id, child: Text(role.name)),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => _userRoleId = value);
-                  },
                 ),
                 const SizedBox(height: 14),
                 if (widget.existingProfile != null) ...[
@@ -1155,8 +1196,9 @@ class _PaginationBar extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.hasFilters});
+  const _EmptyState({required this.mode, required this.hasFilters});
 
+  final AdminUsersScreenMode mode;
   final bool hasFilters;
 
   @override
@@ -1174,8 +1216,8 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             hasFilters
-                ? 'Nema korisnika za zadane filtere.'
-                : 'Nema korisnika.',
+                ? 'Nema ${mode.singularAccusative} za zadane filtere.'
+                : 'Nema ${mode.singularAccusative}.',
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium,
           ),

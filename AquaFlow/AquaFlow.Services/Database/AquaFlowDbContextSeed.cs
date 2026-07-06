@@ -151,6 +151,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 9,
+                Code = "WaterMeterRequests.Manage",
+                Name = "Manage water meter requests",
+                Module = "WaterMeterRequests",
+                Description = "Allows assigning and rejecting water meter requests.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -252,6 +263,14 @@ public partial class AquaFlowDbContext
                 PermissionId = 8,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 13,
+                UserRoleId = 1,
+                PermissionId = 9,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -267,6 +286,8 @@ public partial class AquaFlowDbContext
                 Phone = "+38733111222",
                 UserRoleId = 1,
                 IsActive = true,
+                IsDeleted = false,
+                DeletedAt = (DateTime?)null,
                 LastLoginAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
@@ -280,6 +301,8 @@ public partial class AquaFlowDbContext
                 Phone = "+38761111222",
                 UserRoleId = 2,
                 IsActive = true,
+                IsDeleted = false,
+                DeletedAt = (DateTime?)null,
                 LastLoginAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
@@ -293,6 +316,8 @@ public partial class AquaFlowDbContext
                 Phone = "+38762111222",
                 UserRoleId = 3,
                 IsActive = true,
+                IsDeleted = false,
+                DeletedAt = (DateTime?)null,
                 LastLoginAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null

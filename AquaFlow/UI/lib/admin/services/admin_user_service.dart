@@ -32,6 +32,7 @@ class AdminUserService {
     required int pageSize,
     String? name,
     int? userRoleId,
+    String? userRole,
     bool? isActive,
   }) async {
     final token = await _requireToken();
@@ -49,6 +50,9 @@ class AdminUserService {
     }
     if (userRoleId != null) {
       query['UserRoleId'] = '$userRoleId';
+    }
+    if (userRole != null && userRole.isNotEmpty) {
+      query['UserRole'] = userRole;
     }
     if (isActive != null) {
       query['IsActive'] = '$isActive';

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/customer/screens/customer_water_meters_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/account_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/mobile_shell.dart';
 import 'package:aquaflow_desktop/shared/screens/notifications_screen.dart';
 
 /// Mobile home for the `customer` (Kupac) role.
 ///
-/// Configures the shared [MobileShell] with the customer-facing tabs. The first
-/// three are placeholders until their real screens are built; the last is the
-/// shared [AccountScreen] ("Nalog").
+/// Configures the shared [MobileShell] with the customer-facing tabs. "Računi"
+/// is a placeholder until its real screen is built; the last tab is the shared
+/// [AccountScreen] ("Nalog").
 class CustomerShell extends StatelessWidget {
   const CustomerShell({super.key});
 
@@ -29,13 +30,10 @@ class CustomerShell extends StatelessWidget {
           body: PlaceholderTab(icon: Icons.receipt_long, label: 'Računi'),
         ),
         MobileTab(
-          icon: Icons.report_problem_outlined,
-          selectedIcon: Icons.report_problem,
-          label: 'Prijave',
-          body: PlaceholderTab(
-            icon: Icons.report_problem,
-            label: 'Prijave kvarova',
-          ),
+          icon: Icons.water_drop_outlined,
+          selectedIcon: Icons.water_drop,
+          label: 'Vodomjeri',
+          body: CustomerWaterMetersScreen(),
         ),
         MobileTab(
           icon: Icons.person_outline,
