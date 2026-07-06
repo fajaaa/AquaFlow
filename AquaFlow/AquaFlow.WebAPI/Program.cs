@@ -144,7 +144,12 @@ AddPatchMapping<CustomerProfilePatchRequest, CustomerProfile>();
 builder.Services.AddScoped<IBaseCRUDService<CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest, CustomerProfilePatchRequest>, CustomerProfileService>();
 AddPatchMapping<CollectorProfilePatchRequest, CollectorProfile>();
 builder.Services.AddScoped<IBaseCRUDService<CollectorProfileResponse, CollectorProfileSearchObject, CollectorProfileInsertRequest, CollectorProfileUpdateRequest, CollectorProfilePatchRequest>, CollectorProfileService>();
-AddCrud<Settlement, SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>();
+// Settlement needs a case-insensitive Name+City uniqueness check and a delete guard against
+// dependent service locations/collector assigned areas/notifications, so it is registered by
+// hand like ServiceLocationService: the generic IBaseCRUDService<...> alias still resolves to
+// the same SettlementService instance.
+AddPatchMapping<SettlementPatchRequest, Settlement>();
+builder.Services.AddScoped<IBaseCRUDService<SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>, SettlementService>();
 // ServiceLocation needs FK checks (Settlement/Customer), a delete guard against dependent water
 // meters/fault reports/water meter requests, and SettlementName/CustomerName flattening, so it is
 // registered by hand like InvoiceService: the generic IBaseCRUDService<...> alias still resolves to
