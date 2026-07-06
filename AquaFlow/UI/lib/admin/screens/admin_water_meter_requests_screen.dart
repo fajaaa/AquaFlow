@@ -626,7 +626,7 @@ class _AssignDialogState extends State<_AssignDialog> {
             ),
           ),
         ),
-        DataCell(Text(_areaLabel(collector.assignedAreaId))),
+        DataCell(Text(collector.areaLabel)),
       ],
     );
   }
@@ -635,11 +635,6 @@ class _AssignDialogState extends State<_AssignDialog> {
     final code = collector.employeeCode.trim();
     if (code.isNotEmpty) return code;
     return 'Profil #${collector.id}';
-  }
-
-  String _areaLabel(int? assignedAreaId) {
-    if (assignedAreaId == null) return '-';
-    return 'Područje #$assignedAreaId';
   }
 
   String _textOrDash(String value) {

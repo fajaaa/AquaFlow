@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/admin/screens/admin_account_edit_screen.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_collectors_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_notifications_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_users_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_water_meter_requests_screen.dart';
@@ -57,6 +58,11 @@ const List<_AdminNavItem> _navItems = [
     icon: Icons.people_outline,
     selectedIcon: Icons.people,
     label: 'Korisnici',
+  ),
+  _AdminNavItem(
+    icon: Icons.assignment_ind_outlined,
+    selectedIcon: Icons.assignment_ind,
+    label: 'Inkasanti',
   ),
   _AdminNavItem(
     icon: Icons.water_drop_outlined,
@@ -131,11 +137,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return const AdminNotificationsScreen();
       case 2:
         return const AdminUsersScreen();
-      case 8:
-        return const CompanySettingsScreen();
+      case 3:
+        return const AdminCollectorsScreen();
       case 9:
-        return const AdminAccountEditScreen();
+        return const CompanySettingsScreen();
       case 10:
+        return const AdminAccountEditScreen();
+      case 11:
         return const AdminWaterMeterRequestsScreen();
       default:
         return _SectionPlaceholder(item: _navItems[_selectedIndex]);

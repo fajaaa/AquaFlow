@@ -8,6 +8,6 @@ public class CollectorProfileInsertValidator : AbstractValidator<CollectorProfil
     public CollectorProfileInsertValidator()
     {
         RuleFor(x => x.UserId).GreaterThan(0);
-        RuleFor(x => x.EmployeeCode).NotEmpty().MaximumLength(50);
+        // EmployeeCode is server-generated (CollectorProfileService.GenerateEmployeeCodeAsync), not client input.
     }
 }

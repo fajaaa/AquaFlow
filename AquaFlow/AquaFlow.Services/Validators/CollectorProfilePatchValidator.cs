@@ -8,7 +8,7 @@ public class CollectorProfilePatchValidator : AbstractValidator<CollectorProfile
     public CollectorProfilePatchValidator()
     {
         RuleFor(x => x.UserId).GreaterThan(0).When(x => x.UserId.HasValue);
-        RuleFor(x => x.EmployeeCode).NotEmpty().MaximumLength(50).When(x => x.EmployeeCode != null);
         RuleFor(x => x.AssignedAreaId).GreaterThan(0).When(x => x.AssignedAreaId.HasValue);
+        // EmployeeCode is server-generated (CollectorProfileService.GenerateEmployeeCodeAsync), not client input.
     }
 }

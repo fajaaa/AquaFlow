@@ -107,6 +107,8 @@ mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
     .Map(destination => destination.PermissionCode, source => source.Permission == null ? string.Empty : source.Permission.Code)
     .Map(destination => destination.PermissionName, source => source.Permission == null ? string.Empty : source.Permission.Name);
 mapperConfig.NewConfig<CollectorProfile, CollectorProfileResponse>()
+    .Map(destination => destination.AssignedAreaName, source => source.AssignedArea == null ? string.Empty : source.AssignedArea.Name)
+    .Map(destination => destination.IsActive, source => source.User != null && source.User.IsActive)
     .Map(destination => destination.FirstName, source => source.User == null || source.User.CustomerProfile == null ? string.Empty : source.User.CustomerProfile.FirstName)
     .Map(destination => destination.LastName, source => source.User == null || source.User.CustomerProfile == null ? string.Empty : source.User.CustomerProfile.LastName)
     .Map(destination => destination.Email, source => source.User == null ? string.Empty : source.User.Email)
