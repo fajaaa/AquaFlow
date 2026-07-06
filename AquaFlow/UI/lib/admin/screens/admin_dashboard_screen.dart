@@ -90,6 +90,11 @@ const List<_AdminNavItem> _navItems = [
     label: 'Prijave kvarova',
   ),
   _AdminNavItem(
+    icon: Icons.admin_panel_settings_outlined,
+    selectedIcon: Icons.admin_panel_settings,
+    label: 'Administratori',
+  ),
+  _AdminNavItem(
     icon: Icons.business_outlined,
     selectedIcon: Icons.business,
     label: 'Postavke firme',
@@ -135,15 +140,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return const _DashboardOverview();
       case 1:
         return const AdminNotificationsScreen();
+      // "Korisnici" and "Administratori" are the same widget type in the same
+      // tree position, so they need distinct keys - otherwise switching between
+      // them reuses the State and keeps the other tab's loaded rows.
       case 2:
-        return const AdminUsersScreen();
+        return const AdminUsersScreen(key: ValueKey('users-customers'));
       case 3:
         return const AdminCollectorsScreen();
       case 9:
-        return const CompanySettingsScreen();
+        return const AdminUsersScreen(
+          key: ValueKey('users-admins'),
+          mode: AdminUsersScreenMode.admins,
+        );
       case 10:
-        return const AdminAccountEditScreen();
+        return const CompanySettingsScreen();
       case 11:
+        return const AdminAccountEditScreen();
+      case 12:
         return const AdminWaterMeterRequestsScreen();
       default:
         return _SectionPlaceholder(item: _navItems[_selectedIndex]);
