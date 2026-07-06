@@ -10,6 +10,7 @@ import 'package:aquaflow_desktop/admin/models/admin_user.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_draft.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_role_option.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_user_water_meters_screen.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_service.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
@@ -203,6 +204,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         existingProfileId: existingProfile?.id,
       );
     }, 'Korisnik je sačuvan.');
+  }
+
+  void _openWaterMeters(AdminUser user) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AdminUserWaterMetersScreen(user: user),
+      ),
+    );
   }
 
   Future<void> _confirmDelete(AdminUser user) async {
@@ -473,6 +482,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 deleteDisabled: item.id == currentUserId,
                                 onEdit: () => _openEdit(item),
                                 onDelete: () => _confirmDelete(item),
+                                onWaterMeters: () => _openWaterMeters(item),
                               ),
                             ),
                           ],
@@ -613,12 +623,14 @@ class _RowActions extends StatelessWidget {
     required this.deleteDisabled,
     required this.onEdit,
     required this.onDelete,
+    required this.onWaterMeters,
   });
 
   final bool disabled;
   final bool deleteDisabled;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onWaterMeters;
 
   @override
   Widget build(BuildContext context) {
@@ -631,6 +643,11 @@ class _RowActions extends StatelessWidget {
           tooltip: 'Uredi',
           onPressed: disabled ? null : onEdit,
           icon: const Icon(Icons.edit_outlined),
+        ),
+        IconButton(
+          tooltip: 'Vodomjeri',
+          onPressed: disabled ? null : onWaterMeters,
+          icon: const Icon(Icons.water_drop_outlined),
         ),
         IconButton(
           tooltip: deleteDisabled

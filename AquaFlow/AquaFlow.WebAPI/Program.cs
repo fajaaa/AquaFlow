@@ -107,6 +107,8 @@ mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
     .Map(destination => destination.PermissionName, source => source.Permission == null ? string.Empty : source.Permission.Name);
 mapperConfig.NewConfig<UserNotification, UserNotificationResponse>()
     .Map(destination => destination.Notification, source => source.Notification);
+mapperConfig.NewConfig<WaterMeter, WaterMeterResponse>()
+    .Map(destination => destination.ServiceLocationAddress, source => source.ServiceLocation == null ? string.Empty : source.ServiceLocation.Address);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
@@ -130,7 +132,8 @@ AddPatchMapping<CollectorProfilePatchRequest, CollectorProfile>();
 builder.Services.AddScoped<IBaseCRUDService<CollectorProfileResponse, CollectorProfileSearchObject, CollectorProfileInsertRequest, CollectorProfileUpdateRequest, CollectorProfilePatchRequest>, CollectorProfileService>();
 AddCrud<Settlement, SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>();
 AddCrud<ServiceLocation, ServiceLocationResponse, ServiceLocationSearchObject, ServiceLocationInsertRequest, ServiceLocationUpdateRequest, ServiceLocationPatchRequest>();
-AddCrud<WaterMeter, WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>();
+AddPatchMapping<WaterMeterPatchRequest, WaterMeter>();
+builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>, WaterMeterService>();
 AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>();
 AddCrud<Tariff, TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>();
 // Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
