@@ -105,7 +105,7 @@ class _AdminWaterMeterRequestsScreenState
     if (!mounted || !loaded) return;
 
     if (_collectors.isEmpty) {
-      _showError('Nema dostupnih collector profila.');
+      _showError('Nema dostupnih inkasanata.');
       return;
     }
 
@@ -117,7 +117,7 @@ class _AdminWaterMeterRequestsScreenState
 
     await _runMutation(() async {
       await _service.assign(request.id, collectorId);
-    }, 'Zahtjev je dodijeljen collectoru.');
+    }, 'Zahtjev je dodijeljen inkasantu.');
   }
 
   Future<void> _openReject(AdminWaterMeterRequest request) async {
@@ -454,7 +454,7 @@ class _RowActions extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          tooltip: 'Dodijeli collectoru',
+          tooltip: 'Dodijeli inkasantu',
           onPressed: disabled ? null : onAssign,
           icon: const Icon(Icons.assignment_ind_outlined),
         ),
@@ -497,9 +497,9 @@ class _AssignDialogState extends State<_AssignDialog> {
     final theme = Theme.of(context);
 
     return AlertDialog(
-      title: const Text('Dodijeli collectoru'),
+      title: const Text('Dodijeli inkasantu'),
       content: SizedBox(
-        width: 680,
+        width: 820,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 360),
           child: DecoratedBox(
@@ -522,8 +522,9 @@ class _AssignDialogState extends State<_AssignDialog> {
                       dataRowMaxHeight: 66,
                       columns: const [
                         DataColumn(label: Text('Izbor')),
-                        DataColumn(label: Text('Collector')),
-                        DataColumn(label: Text('User')),
+                        DataColumn(label: Text('Ime i prezime')),
+                        DataColumn(label: Text('Email')),
+                        DataColumn(label: Text('Telefon')),
                         DataColumn(label: Text('Područje')),
                       ],
                       rows: [
@@ -579,7 +580,7 @@ class _AssignDialogState extends State<_AssignDialog> {
         ),
         DataCell(
           SizedBox(
-            width: 220,
+            width: 230,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -594,7 +595,7 @@ class _AssignDialogState extends State<_AssignDialog> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Profil #${collector.id}',
+                  _profileLabel(collector),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -605,15 +606,45 @@ class _AssignDialogState extends State<_AssignDialog> {
             ),
           ),
         ),
-        DataCell(Text('User #${collector.userId}')),
+        DataCell(
+          SizedBox(
+            width: 220,
+            child: Text(
+              _textOrDash(collector.email),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 150,
+            child: Text(
+              _textOrDash(collector.phone),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
         DataCell(Text(_areaLabel(collector.assignedAreaId))),
       ],
     );
   }
 
+  String _profileLabel(AdminCollectorProfile collector) {
+    final code = collector.employeeCode.trim();
+    if (code.isNotEmpty) return code;
+    return 'Profil #${collector.id}';
+  }
+
   String _areaLabel(int? assignedAreaId) {
     if (assignedAreaId == null) return '-';
     return 'Područje #$assignedAreaId';
+  }
+
+  String _textOrDash(String value) {
+    final text = value.trim();
+    return text.isEmpty ? '-' : text;
   }
 }
 

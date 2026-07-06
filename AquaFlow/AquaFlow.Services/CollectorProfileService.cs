@@ -53,6 +53,22 @@ public class CollectorProfileService
         }
     }
 
+    protected override IQueryable<CollectorProfile> IncludeForRead(IQueryable<CollectorProfile> query)
+    {
+        return query
+            .Include(profile => profile.User)
+            .ThenInclude(user => user!.CustomerProfile);
+    }
+
+    protected override async Task LoadReferencesAsync(CollectorProfile entity)
+    {
+        await _dbContext.Entry(entity).Reference(profile => profile.User).LoadAsync();
+        if (entity.User != null)
+        {
+            await _dbContext.Entry(entity.User).Reference(user => user.CustomerProfile).LoadAsync();
+        }
+    }
+
     private async Task EnsureUserExistsAsync(int userId)
     {
         if (!await _dbContext.Users.AnyAsync(user => user.Id == userId))
