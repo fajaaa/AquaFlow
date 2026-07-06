@@ -32,6 +32,9 @@ public class CustomerProfileService
         await EnsureUserExistsAsync(request.UserId);
         await EnsureUserDoesNotHaveCustomerProfileAsync(request.UserId);
 
+        request.FirstName = Capitalize(request.FirstName);
+        request.LastName = Capitalize(request.LastName);
+
         // CustomerCode is never client-supplied; always assign a fresh generated one.
         request.CustomerCode = await GenerateCustomerCodeAsync();
     }
@@ -40,6 +43,9 @@ public class CustomerProfileService
     {
         await EnsureUserExistsAsync(request.UserId);
         await EnsureUserDoesNotHaveCustomerProfileAsync(request.UserId, id);
+
+        request.FirstName = Capitalize(request.FirstName);
+        request.LastName = Capitalize(request.LastName);
 
         // CustomerCode is immutable once assigned; ignore whatever the caller sent.
         request.CustomerCode = entity.CustomerCode;
@@ -50,6 +56,16 @@ public class CustomerProfileService
         // CustomerCode is immutable once assigned; ignore whatever the caller sent.
         request.CustomerCode = null;
 
+        if (request.FirstName != null)
+        {
+            request.FirstName = Capitalize(request.FirstName);
+        }
+
+        if (request.LastName != null)
+        {
+            request.LastName = Capitalize(request.LastName);
+        }
+
         if (!request.UserId.HasValue)
         {
             return;
@@ -57,6 +73,14 @@ public class CustomerProfileService
 
         await EnsureUserExistsAsync(request.UserId.Value);
         await EnsureUserDoesNotHaveCustomerProfileAsync(request.UserId.Value, id);
+    }
+
+    // Names are always stored capitalized, regardless of how the caller typed them
+    // (mobile registration and the admin Users editor both funnel through here).
+    private static string Capitalize(string value)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Length == 0 ? trimmed : char.ToUpperInvariant(trimmed[0]) + trimmed[1..];
     }
 
     private async Task<string> GenerateCustomerCodeAsync()
