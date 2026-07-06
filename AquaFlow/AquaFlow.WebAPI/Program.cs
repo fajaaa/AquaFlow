@@ -115,6 +115,9 @@ mapperConfig.NewConfig<CollectorProfile, CollectorProfileResponse>()
     .Map(destination => destination.Phone, source => source.User == null ? string.Empty : source.User.Phone);
 mapperConfig.NewConfig<UserNotification, UserNotificationResponse>()
     .Map(destination => destination.Notification, source => source.Notification);
+mapperConfig.NewConfig<ServiceLocation, ServiceLocationResponse>()
+    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
+    .Map(destination => destination.CustomerName, source => source.Customer == null ? string.Empty : $"{source.Customer.FirstName} {source.Customer.LastName}".Trim());
 mapperConfig.NewConfig<WaterMeter, WaterMeterResponse>()
     .Map(destination => destination.ServiceLocationAddress, source => source.ServiceLocation == null ? string.Empty : source.ServiceLocation.Address)
     .Map(destination => destination.CustomerId, source => source.ServiceLocation == null ? 0 : source.ServiceLocation.CustomerId);
@@ -142,7 +145,12 @@ builder.Services.AddScoped<IBaseCRUDService<CustomerProfileResponse, CustomerPro
 AddPatchMapping<CollectorProfilePatchRequest, CollectorProfile>();
 builder.Services.AddScoped<IBaseCRUDService<CollectorProfileResponse, CollectorProfileSearchObject, CollectorProfileInsertRequest, CollectorProfileUpdateRequest, CollectorProfilePatchRequest>, CollectorProfileService>();
 AddCrud<Settlement, SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>();
-AddCrud<ServiceLocation, ServiceLocationResponse, ServiceLocationSearchObject, ServiceLocationInsertRequest, ServiceLocationUpdateRequest, ServiceLocationPatchRequest>();
+// ServiceLocation needs FK checks (Settlement/Customer), a delete guard against dependent water
+// meters/fault reports/water meter requests, and SettlementName/CustomerName flattening, so it is
+// registered by hand like InvoiceService: the generic IBaseCRUDService<...> alias still resolves to
+// the same ServiceLocationService instance.
+AddPatchMapping<ServiceLocationPatchRequest, ServiceLocation>();
+builder.Services.AddScoped<IBaseCRUDService<ServiceLocationResponse, ServiceLocationSearchObject, ServiceLocationInsertRequest, ServiceLocationUpdateRequest, ServiceLocationPatchRequest>, ServiceLocationService>();
 AddPatchMapping<WaterMeterPatchRequest, WaterMeter>();
 builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>, WaterMeterService>();
 AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>();
