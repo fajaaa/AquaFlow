@@ -1,6 +1,7 @@
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
+using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,7 +10,6 @@ using ServiceLocationCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.M
 
 namespace AquaFlow.WebAPI.Controllers;
 
-// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class ServiceLocationsController : BaseCRUDController<ServiceLocationResponse, ServiceLocationSearchObject, ServiceLocationInsertRequest, ServiceLocationUpdateRequest, ServiceLocationPatchRequest, ServiceLocationCrudService>
 {
     private const string CustomerRoleName = "Customer";
@@ -20,6 +20,22 @@ public class ServiceLocationsController : BaseCRUDController<ServiceLocationResp
     {
         _customerProfileService = customerProfileService;
     }
+
+    [RequirePermission("Locations.Manage")]
+    public override Task<ActionResult<ServiceLocationResponse>> Create([FromBody] ServiceLocationInsertRequest request)
+        => base.Create(request);
+
+    [RequirePermission("Locations.Manage")]
+    public override Task<ActionResult<ServiceLocationResponse>> Update(int id, [FromBody] ServiceLocationUpdateRequest request)
+        => base.Update(id, request);
+
+    [RequirePermission("Locations.Manage")]
+    public override Task<ActionResult<ServiceLocationResponse>> Patch(int id, [FromBody] ServiceLocationPatchRequest request)
+        => base.Patch(id, request);
+
+    [RequirePermission("Locations.Manage")]
+    public override Task<IActionResult> Delete(int id)
+        => base.Delete(id);
 
     // A caller in the Customer role only ever sees their own service locations: the search is
     // pinned to their CustomerProfile id (resolved from the JWT user id) regardless of what the

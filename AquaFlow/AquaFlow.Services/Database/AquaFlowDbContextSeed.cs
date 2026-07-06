@@ -162,6 +162,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 10,
+                Code = "Locations.Manage",
+                Name = "Manage locations",
+                Module = "Locations",
+                Description = "Allows creating, updating, and deleting settlements and service locations.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -269,6 +280,14 @@ public partial class AquaFlowDbContext
                 Id = 13,
                 UserRoleId = 1,
                 PermissionId = 9,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 14,
+                UserRoleId = 1,
+                PermissionId = 10,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
