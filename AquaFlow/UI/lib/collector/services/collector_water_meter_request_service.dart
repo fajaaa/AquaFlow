@@ -64,9 +64,11 @@ class CollectorWaterMeterRequestService {
         .toList();
   }
 
+  /// `CustomerId`/`SettlementId` are not sent - the backend forces both from
+  /// the request's own customer profile (`WaterMeterRequestService.RegisterAsync`),
+  /// so there is nothing left to pick on the client.
   Future<void> register({
     required int requestId,
-    required int serviceLocationId,
     required String serialNumber,
     required DateTime installedAt,
     required double initialReading,
@@ -85,7 +87,6 @@ class CollectorWaterMeterRequestService {
         },
         body: jsonEncode({
           'serialNumber': serialNumber,
-          'serviceLocationId': serviceLocationId,
           'installedAt': installedAt.toUtc().toIso8601String(),
           'status': 'Active',
           'initialReading': initialReading,

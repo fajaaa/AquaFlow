@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:aquaflow_desktop/collector/models/collector_water_meter_request.dart';
 import 'package:aquaflow_desktop/collector/services/collector_water_meter_request_exception.dart';
 import 'package:aquaflow_desktop/collector/services/collector_water_meter_request_service.dart';
+import 'package:aquaflow_desktop/shared/models/customer_profile.dart';
+import 'package:aquaflow_desktop/shared/services/profile_service.dart';
 
 class CollectorWaterMeterRequestsScreen extends StatefulWidget {
   const CollectorWaterMeterRequestsScreen({super.key});
@@ -17,11 +19,13 @@ class _CollectorWaterMeterRequestsScreenState
     extends State<CollectorWaterMeterRequestsScreen> {
   final CollectorWaterMeterRequestService _service =
       CollectorWaterMeterRequestService();
+  final ProfileService _profileService = ProfileService();
 
   bool _loading = true;
   bool _mutating = false;
   String? _error;
   List<CollectorWaterMeterRequest> _requests = const [];
+  Map<int, CustomerProfile?> _profilesByCustomerId = const {};
 
   @override
   void initState() {
@@ -37,9 +41,22 @@ class _CollectorWaterMeterRequestsScreenState
 
     try {
       final requests = await _service.fetchAssigned();
+
+      // Requests carry no location - only the requesting customer's own
+      // profile (naselje/adresa) explains where the meter should go, so it is
+      // fetched per distinct customer alongside the request list.
+      final customerIds = requests.map((r) => r.customerId).toSet();
+      final profiles = await Future.wait(
+        customerIds.map((id) => _profileService.fetchById(id)),
+      );
+      final profilesByCustomerId = <int, CustomerProfile?>{
+        for (final (index, id) in customerIds.indexed) id: profiles[index],
+      };
+
       if (!mounted) return;
       setState(() {
         _requests = requests;
+        _profilesByCustomerId = profilesByCustomerId;
         _loading = false;
       });
     } on CollectorWaterMeterRequestException catch (e) {
@@ -55,7 +72,10 @@ class _CollectorWaterMeterRequestsScreenState
     final draft = await showDialog<_WaterMeterRegistrationDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _RegisterWaterMeterDialog(request: request),
+      builder: (_) => _RegisterWaterMeterDialog(
+        request: request,
+        customerProfile: _profilesByCustomerId[request.customerId],
+      ),
     );
     if (!mounted || draft == null) return;
 
@@ -63,7 +83,6 @@ class _CollectorWaterMeterRequestsScreenState
     try {
       await _service.register(
         requestId: request.id,
-        serviceLocationId: request.serviceLocationId,
         serialNumber: draft.serialNumber,
         installedAt: draft.installedAt,
         initialReading: draft.initialReading,
@@ -89,6 +108,7 @@ class _CollectorWaterMeterRequestsScreenState
   @override
   void dispose() {
     _service.dispose();
+    _profileService.dispose();
     super.dispose();
   }
 
@@ -157,6 +177,7 @@ class _CollectorWaterMeterRequestsScreenState
         separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, index) => _RequestCard(
           request: _requests[index],
+          customerProfile: _profilesByCustomerId[_requests[index].customerId],
           disabled: _mutating,
           onRegister: () => _openRegisterDialog(_requests[index]),
         ),
@@ -168,11 +189,13 @@ class _CollectorWaterMeterRequestsScreenState
 class _RequestCard extends StatelessWidget {
   const _RequestCard({
     required this.request,
+    required this.customerProfile,
     required this.disabled,
     required this.onRegister,
   });
 
   final CollectorWaterMeterRequest request;
+  final CustomerProfile? customerProfile;
   final bool disabled;
   final VoidCallback onRegister;
 
@@ -180,6 +203,11 @@ class _RequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final note = request.note?.trim();
+    final settlementName = customerProfile?.settlementName ?? '';
+    final address = customerProfile?.address ?? '';
+    final customerLabel = customerProfile?.fullName.isNotEmpty == true
+        ? customerProfile!.fullName
+        : 'Korisnik #${request.customerId}';
 
     return Card(
       margin: EdgeInsets.zero,
@@ -213,16 +241,16 @@ class _RequestCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
+            _InfoRow(icon: Icons.person_outline, label: customerLabel),
+            const SizedBox(height: 6),
             _InfoRow(
               icon: Icons.location_on_outlined,
-              label: request.serviceLocationAddress.isEmpty
-                  ? 'Lokacija #${request.serviceLocationId}'
-                  : request.serviceLocationAddress,
+              label: settlementName.isEmpty ? '-' : settlementName,
             ),
             const SizedBox(height: 6),
             _InfoRow(
-              icon: Icons.person_outline,
-              label: 'Korisnik #${request.customerId}',
+              icon: Icons.home_outlined,
+              label: address.isEmpty ? '-' : address,
             ),
             const SizedBox(height: 6),
             _InfoRow(
@@ -250,9 +278,13 @@ class _RequestCard extends StatelessWidget {
 }
 
 class _RegisterWaterMeterDialog extends StatefulWidget {
-  const _RegisterWaterMeterDialog({required this.request});
+  const _RegisterWaterMeterDialog({
+    required this.request,
+    required this.customerProfile,
+  });
 
   final CollectorWaterMeterRequest request;
+  final CustomerProfile? customerProfile;
 
   @override
   State<_RegisterWaterMeterDialog> createState() =>
@@ -320,6 +352,13 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final settlementName = widget.customerProfile?.settlementName ?? '';
+    final address = widget.customerProfile?.address ?? '';
+    final customerAddress = [
+      settlementName,
+      address,
+    ].where((part) => part.isNotEmpty).join(', ');
+
     return AlertDialog(
       title: const Text('Registruj vodomjer'),
       content: SizedBox(
@@ -331,13 +370,11 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextFormField(
-                  key: ValueKey(widget.request.serviceLocationAddress),
-                  initialValue: widget.request.serviceLocationAddress.isEmpty
-                      ? 'Lokacija #${widget.request.serviceLocationId}'
-                      : widget.request.serviceLocationAddress,
+                  key: ValueKey(customerAddress),
+                  initialValue: customerAddress.isEmpty ? '-' : customerAddress,
                   enabled: false,
                   decoration: const InputDecoration(
-                    labelText: 'Lokacija',
+                    labelText: 'Naselje / adresa',
                     prefixIcon: Icon(Icons.location_on_outlined),
                   ),
                 ),

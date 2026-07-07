@@ -4,7 +4,6 @@ import 'dart:io' show SocketException;
 
 import 'package:http/http.dart' as http;
 
-import 'package:aquaflow_desktop/customer/models/customer_service_location.dart';
 import 'package:aquaflow_desktop/customer/models/customer_water_meter_request.dart';
 import 'package:aquaflow_desktop/customer/services/customer_water_meter_request_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
@@ -48,34 +47,10 @@ class CustomerWaterMeterRequestService {
     ).map(CustomerWaterMeterRequest.fromJson).toList();
   }
 
-  /// The customer's own service locations, offered as the pick-list when
-  /// creating a request. The backend pins `GET /ServiceLocations` to the
-  /// caller's CustomerProfile for the Customer role. `IsActive=true` keeps
-  /// deactivated locations out of the pick-list entirely, since a request
-  /// against one is rejected server-side anyway.
-  Future<List<CustomerServiceLocation>> fetchMyLocations() async {
-    final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/ServiceLocations').replace(
-      queryParameters: {'PageSize': '100', 'IsActive': 'true'},
-    );
-
-    final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
-    );
-
-    if (response.statusCode != 200) {
-      throw CustomerWaterMeterRequestException(
-        _messageFor(response, 'Lokacije nije moguće učitati'),
-      );
-    }
-
-    return _itemsOf(response).map(CustomerServiceLocation.fromJson).toList();
-  }
-
-  Future<CustomerWaterMeterRequest> create({
-    required int serviceLocationId,
-    String? note,
-  }) async {
+  /// `WaterMeterRequestInsertRequest` only ever carries `Note` - the backend
+  /// resolves the caller's CustomerProfile from the JWT and forces the
+  /// initial status to Pending, so nothing else can be sent.
+  Future<CustomerWaterMeterRequest> create({String? note}) async {
     final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeterRequests');
 
@@ -87,7 +62,6 @@ class CustomerWaterMeterRequestService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'serviceLocationId': serviceLocationId,
           if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
         }),
       ),

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import 'package:aquaflow_desktop/customer/models/customer_service_location.dart';
 import 'package:aquaflow_desktop/customer/models/customer_water_meter.dart';
 import 'package:aquaflow_desktop/customer/models/customer_water_meter_request.dart';
 import 'package:aquaflow_desktop/customer/services/customer_water_meter_exception.dart';
 import 'package:aquaflow_desktop/customer/services/customer_water_meter_request_exception.dart';
 import 'package:aquaflow_desktop/customer/services/customer_water_meter_request_service.dart';
 import 'package:aquaflow_desktop/customer/services/customer_water_meter_service.dart';
+import 'package:aquaflow_desktop/shared/models/customer_profile.dart';
+import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
+import 'package:aquaflow_desktop/shared/services/profile_exception.dart';
+import 'package:aquaflow_desktop/shared/services/profile_service.dart';
 
 /// "Vodomjeri" tab body: lists the signed-in customer's own water meters plus
 /// their open requests for a new meter, and lets them file / cancel a request.
@@ -23,11 +27,15 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
   final CustomerWaterMeterService _service = CustomerWaterMeterService();
   final CustomerWaterMeterRequestService _requestService =
       CustomerWaterMeterRequestService();
+  final ProfileService _profileService = ProfileService();
 
   bool _loading = true;
   String? _error;
   List<CustomerWaterMeter> _meters = const [];
   List<CustomerWaterMeterRequest> _requests = const [];
+  CustomerProfile? _profile;
+
+  int? get _userId => context.read<AuthProvider>().session?.id;
 
   @override
   void initState() {
@@ -41,10 +49,14 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
       _error = null;
     });
 
+    final userId = _userId;
     try {
       final results = await Future.wait([
         _service.fetchMine(),
         _requestService.fetchMine(),
+        userId == null
+            ? Future.value(null)
+            : _profileService.fetchCustomerProfile(userId),
       ]);
       if (!mounted) return;
       setState(() {
@@ -61,6 +73,7 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
                   status == 'rejected';
             })
             .toList();
+        _profile = results[2] as CustomerProfile?;
         _loading = false;
       });
     } on CustomerWaterMeterException catch (e) {
@@ -75,13 +88,22 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
         _error = e.message;
         _loading = false;
       });
+    } on ProfileException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
     }
   }
 
   Future<void> _openNewRequestDialog() async {
     final created = await showDialog<bool>(
       context: context,
-      builder: (_) => _NewRequestDialog(service: _requestService),
+      builder: (_) => _NewRequestDialog(
+        service: _requestService,
+        hasSettlement: _profile?.settlementId != null,
+      ),
     );
     if (created == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -96,10 +118,7 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Otkazati zahtjev?'),
-        content: Text(
-          'Zahtjev za novi vodomjer na adresi '
-          '"${request.serviceLocationAddress}" će biti otkazan.',
-        ),
+        content: Text('Zahtjev za novi vodomjer #${request.id} će biti otkazan.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -133,6 +152,7 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
   void dispose() {
     _service.dispose();
     _requestService.dispose();
+    _profileService.dispose();
     super.dispose();
   }
 
@@ -196,6 +216,8 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
       );
     }
 
+    final address = _profile?.address ?? '';
+
     final children = <Widget>[];
     if (_requests.isNotEmpty) {
       children.add(const _SectionHeader(label: 'Zahtjevi za novi vodomjer'));
@@ -215,7 +237,7 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
         children.add(const _SectionHeader(label: 'Moji vodomjeri'));
       }
       for (final meter in _meters) {
-        children.add(_WaterMeterCard(meter: meter));
+        children.add(_WaterMeterCard(meter: meter, address: address));
         children.add(const SizedBox(height: 10));
       }
     }
@@ -301,15 +323,8 @@ class _WaterMeterRequestCard extends StatelessWidget {
                 _RequestStatusPill(status: request.status),
               ],
             ),
-            const SizedBox(height: 10),
-            _InfoRow(
-              icon: Icons.location_on_outlined,
-              label: request.serviceLocationAddress.isEmpty
-                  ? '-'
-                  : request.serviceLocationAddress,
-            ),
             if (note != null && note.isNotEmpty) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
               _InfoRow(icon: Icons.notes_outlined, label: note),
             ],
             if (onCancel != null) ...[
@@ -386,12 +401,16 @@ class _RequestStatusPill extends StatelessWidget {
   }
 }
 
-/// Modal form for a new water meter request: pick one of the customer's own
-/// service locations (fetched on open) and optionally add a note.
+/// Modal form for a new water meter request: a note plus a confirmation.
+/// There is no location to pick anymore - `WaterMeterRequest` carries none;
+/// the backend derives the resulting meter's settlement from the customer's
+/// own profile when a collector registers it, which requires that profile to
+/// have a settlement set at all ([hasSettlement]).
 class _NewRequestDialog extends StatefulWidget {
-  const _NewRequestDialog({required this.service});
+  const _NewRequestDialog({required this.service, required this.hasSettlement});
 
   final CustomerWaterMeterRequestService service;
+  final bool hasSettlement;
 
   @override
   State<_NewRequestDialog> createState() => _NewRequestDialogState();
@@ -400,58 +419,17 @@ class _NewRequestDialog extends StatefulWidget {
 class _NewRequestDialogState extends State<_NewRequestDialog> {
   final TextEditingController _noteController = TextEditingController();
 
-  bool _loadingLocations = true;
   bool _submitting = false;
   String? _error;
-  List<CustomerServiceLocation> _locations = const [];
-  int? _selectedLocationId;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadLocations();
-  }
-
-  Future<void> _loadLocations() async {
-    setState(() {
-      _loadingLocations = true;
-      _error = null;
-    });
-
-    try {
-      final locations = await widget.service.fetchMyLocations();
-      if (!mounted) return;
-      setState(() {
-        _locations = locations;
-        _selectedLocationId = locations.length == 1 ? locations.first.id : null;
-        _loadingLocations = false;
-      });
-    } on CustomerWaterMeterRequestException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.message;
-        _loadingLocations = false;
-      });
-    }
-  }
 
   Future<void> _submit() async {
-    final locationId = _selectedLocationId;
-    if (locationId == null) {
-      setState(() => _error = 'Odaberite lokaciju.');
-      return;
-    }
-
     setState(() {
       _submitting = true;
       _error = null;
     });
 
     try {
-      await widget.service.create(
-        serviceLocationId: locationId,
-        note: _noteController.text,
-      );
+      await widget.service.create(note: _noteController.text);
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on CustomerWaterMeterRequestException catch (e) {
@@ -477,67 +455,64 @@ class _NewRequestDialogState extends State<_NewRequestDialog> {
       title: const Text('Zahtjev za novi vodomjer'),
       content: SizedBox(
         width: 420,
-        child: _loadingLocations
-            ? const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (_locations.isEmpty && _error == null)
-                    const Text(
-                      'Nemate evidentiranih lokacija, pa nije moguće '
-                      'zatražiti vodomjer.',
-                    )
-                  else ...[
-                    DropdownButtonFormField<int>(
-                      initialValue: _selectedLocationId,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Lokacija',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _locations
-                          .map(
-                            (location) => DropdownMenuItem(
-                              value: location.id,
-                              child: Text(
-                                location.address,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: _submitting
-                          ? null
-                          : (value) =>
-                                setState(() => _selectedLocationId = value),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!widget.hasSettlement)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: theme.colorScheme.error.withValues(alpha: 0.30),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 18,
+                      color: theme.colorScheme.error,
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _noteController,
-                      enabled: !_submitting,
-                      maxLines: 3,
-                      maxLength: 500,
-                      decoration: const InputDecoration(
-                        labelText: 'Napomena (opciono)',
-                        border: OutlineInputBorder(),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Vaš profil nema postavljeno naselje. Postavite ga u '
+                        '"Nalog" prije slanja zahtjeva - bez njega vodomjer ne '
+                        'može biti registrovan.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
                       ),
                     ),
                   ],
-                  if (_error != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      _error!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.error,
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
+            TextField(
+              controller: _noteController,
+              enabled: !_submitting,
+              maxLines: 3,
+              maxLength: 500,
+              decoration: const InputDecoration(
+                labelText: 'Napomena (opciono)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -545,9 +520,7 @@ class _NewRequestDialogState extends State<_NewRequestDialog> {
           child: const Text('Odustani'),
         ),
         FilledButton(
-          onPressed: _submitting || _loadingLocations || _locations.isEmpty
-              ? null
-              : _submit,
+          onPressed: _submitting || !widget.hasSettlement ? null : _submit,
           child: _submitting
               ? const SizedBox(
                   width: 18,
@@ -562,9 +535,10 @@ class _NewRequestDialogState extends State<_NewRequestDialog> {
 }
 
 class _WaterMeterCard extends StatelessWidget {
-  const _WaterMeterCard({required this.meter});
+  const _WaterMeterCard({required this.meter, required this.address});
 
   final CustomerWaterMeter meter;
+  final String address;
 
   @override
   Widget build(BuildContext context) {
@@ -598,9 +572,12 @@ class _WaterMeterCard extends StatelessWidget {
             const SizedBox(height: 10),
             _InfoRow(
               icon: Icons.location_on_outlined,
-              label: meter.serviceLocationAddress.isEmpty
-                  ? '-'
-                  : meter.serviceLocationAddress,
+              label: meter.settlementName.isEmpty ? '-' : meter.settlementName,
+            ),
+            const SizedBox(height: 6),
+            _InfoRow(
+              icon: Icons.home_outlined,
+              label: address.isEmpty ? '-' : address,
             ),
             const SizedBox(height: 6),
             _InfoRow(

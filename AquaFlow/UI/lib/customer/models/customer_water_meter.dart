@@ -2,8 +2,8 @@ class CustomerWaterMeter {
   const CustomerWaterMeter({
     required this.id,
     required this.serialNumber,
-    required this.serviceLocationId,
-    required this.serviceLocationAddress,
+    required this.settlementId,
+    required this.settlementName,
     required this.installedAt,
     required this.status,
     required this.initialReading,
@@ -12,8 +12,8 @@ class CustomerWaterMeter {
 
   final int id;
   final String serialNumber;
-  final int serviceLocationId;
-  final String serviceLocationAddress;
+  final int settlementId;
+  final String settlementName;
   final DateTime? installedAt;
   final String status;
   final double initialReading;
@@ -23,8 +23,8 @@ class CustomerWaterMeter {
     return CustomerWaterMeter(
       id: (json['id'] as num?)?.toInt() ?? 0,
       serialNumber: (json['serialNumber'] ?? '') as String,
-      serviceLocationId: (json['serviceLocationId'] as num?)?.toInt() ?? 0,
-      serviceLocationAddress: (json['serviceLocationAddress'] ?? '') as String,
+      settlementId: (json['settlementId'] as num?)?.toInt() ?? 0,
+      settlementName: (json['settlementName'] ?? '') as String,
       installedAt: _date(json['installedAt']),
       status: (json['status'] ?? '') as String,
       initialReading: (json['initialReading'] as num?)?.toDouble() ?? 0,

@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/account_details.dart';
+import '../models/city_lookup.dart';
+import '../models/customer_profile.dart';
+import '../models/municipality_lookup.dart';
+import '../models/settlement_lookup.dart';
 import '../providers/auth_provider.dart';
 import '../services/account_exception.dart';
 import '../services/account_service.dart';
+import '../services/location_lookup_exception.dart';
+import '../services/location_lookup_service.dart';
 import '../services/profile_exception.dart';
 import '../services/profile_service.dart';
 
@@ -18,8 +24,9 @@ import '../services/profile_service.dart';
 ///
 /// The data is loaded on open; the form is prefilled and saved with
 /// `PUT /Account/me` through [AccountService]. Email and phone are always
-/// editable. First/last name lives on the CustomerProfile instead (not the
-/// `User` entity), so it is loaded/saved separately through [ProfileService]
+/// editable. First/last name and address (cascading Grad -> Općina -> Naselje
+/// + Ulica/Broj) live on the CustomerProfile instead (not the `User` entity),
+/// so they are loaded/saved separately through [ProfileService]
 /// (`GET`/`POST`/`PATCH /CustomerProfiles`), only when a name was actually
 /// entered - mirrors the admin "Moj nalog" screen (`AdminAccountEditScreen`).
 /// A password change (`PUT /Account/me/password`) is sent only when the
@@ -34,6 +41,7 @@ class AccountEditScreen extends StatefulWidget {
 class _AccountEditScreenState extends State<AccountEditScreen> {
   final AccountService _service = AccountService();
   final ProfileService _profileService = ProfileService();
+  final LocationLookupService _locationService = LocationLookupService();
   final _formKey = GlobalKey<FormState>();
 
   // One controller per editable field; created empty and prefilled once the
@@ -42,6 +50,8 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
   final _phoneCtrl = TextEditingController();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
+  final _streetCtrl = TextEditingController();
+  final _houseNumberCtrl = TextEditingController();
   final _currentPasswordCtrl = TextEditingController();
   final _newPasswordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
@@ -52,6 +62,13 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
   String? _loadError;
   bool _saving = false;
 
+  List<CityLookup> _cities = const [];
+  List<MunicipalityLookup> _municipalities = const [];
+  List<SettlementLookup> _settlements = const [];
+  int? _selectedCityId;
+  int? _selectedMunicipalityId;
+  int? _selectedSettlementId;
+
   bool get _hasNameInput =>
       _firstNameCtrl.text.trim().isNotEmpty || _lastNameCtrl.text.trim().isNotEmpty;
 
@@ -61,6 +78,13 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
       _confirmPasswordCtrl.text.isNotEmpty;
 
   int? get _userId => context.read<AuthProvider>().session?.id;
+
+  List<MunicipalityLookup> get _municipalitiesForSelectedCity =>
+      _municipalities.where((m) => m.cityId == _selectedCityId).toList();
+
+  List<SettlementLookup> get _settlementsForSelectedMunicipality => _settlements
+      .where((s) => s.municipalityId == _selectedMunicipalityId)
+      .toList();
 
   @override
   void initState() {
@@ -76,11 +100,22 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
 
     final userId = _userId;
     try {
-      final details = await _service.fetch();
-      final profile = userId == null
-          ? null
-          : await _profileService.fetchCustomerProfile(userId);
+      final results = await Future.wait([
+        _service.fetch(),
+        userId == null
+            ? Future.value(null)
+            : _profileService.fetchCustomerProfile(userId),
+        _locationService.fetchCities(),
+        _locationService.fetchMunicipalities(),
+        _locationService.fetchSettlements(),
+      ]);
       if (!mounted) return;
+
+      final details = results[0] as AccountDetails;
+      final profile = results[1] as CustomerProfile?;
+      _cities = results[2] as List<CityLookup>;
+      _municipalities = results[3] as List<MunicipalityLookup>;
+      _settlements = results[4] as List<SettlementLookup>;
 
       _details = details;
       _emailCtrl.text = details.email;
@@ -88,6 +123,9 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
       _existingProfileId = profile?.id;
       _firstNameCtrl.text = profile?.firstName ?? '';
       _lastNameCtrl.text = profile?.lastName ?? '';
+      _streetCtrl.text = profile?.street ?? '';
+      _houseNumberCtrl.text = profile?.houseNumber ?? '';
+      _applySettlement(profile?.settlementId);
       setState(() => _loading = false);
     } on AccountException catch (e) {
       if (mounted) {
@@ -103,7 +141,62 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
           _loadError = e.message;
         });
       }
+    } on LocationLookupException catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadError = e.message;
+        });
+      }
     }
+  }
+
+  /// Resolves the Grad -> Općina chain for a prefilled [settlementId], so the
+  /// two parent dropdowns start selected too, not just the leaf Naselje.
+  void _applySettlement(int? settlementId) {
+    if (settlementId == null) return;
+    SettlementLookup? settlement;
+    for (final s in _settlements) {
+      if (s.id == settlementId) {
+        settlement = s;
+        break;
+      }
+    }
+    if (settlement == null) return;
+
+    _selectedSettlementId = settlement.id;
+    _selectedMunicipalityId = settlement.municipalityId;
+    for (final m in _municipalities) {
+      if (m.id == settlement.municipalityId) {
+        _selectedCityId = m.cityId;
+        break;
+      }
+    }
+  }
+
+  void _onCityChanged(int? cityId) {
+    setState(() {
+      _selectedCityId = cityId;
+      if (_selectedMunicipalityId != null &&
+          !_municipalitiesForSelectedCity.any((m) => m.id == _selectedMunicipalityId)) {
+        _selectedMunicipalityId = null;
+        _selectedSettlementId = null;
+      }
+    });
+  }
+
+  void _onMunicipalityChanged(int? municipalityId) {
+    setState(() {
+      _selectedMunicipalityId = municipalityId;
+      if (_selectedSettlementId != null &&
+          !_settlementsForSelectedMunicipality.any((s) => s.id == _selectedSettlementId)) {
+        _selectedSettlementId = null;
+      }
+    });
+  }
+
+  void _onSettlementChanged(int? settlementId) {
+    setState(() => _selectedSettlementId = settlementId);
   }
 
   Future<void> _save() async {
@@ -125,10 +218,15 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
       _details = await _service.update(updated);
 
       if (_hasNameInput && userId != null) {
-        await _profileService.saveName(
+        final street = _streetCtrl.text.trim();
+        final houseNumber = _houseNumberCtrl.text.trim();
+        await _profileService.saveProfile(
           userId: userId,
           firstName: _firstNameCtrl.text.trim(),
           lastName: _lastNameCtrl.text.trim(),
+          settlementId: _selectedSettlementId,
+          street: street.isEmpty ? null : street,
+          houseNumber: houseNumber.isEmpty ? null : houseNumber,
           existingProfileId: _existingProfileId,
         );
       }
@@ -173,10 +271,13 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
   void dispose() {
     _service.dispose();
     _profileService.dispose();
+    _locationService.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
+    _streetCtrl.dispose();
+    _houseNumberCtrl.dispose();
     _currentPasswordCtrl.dispose();
     _newPasswordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
@@ -248,6 +349,86 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
                     validator: _lastNameValidator,
                     onChanged: () => setState(() {}),
                     maxLength: 80,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Adresa',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _selectedCityId ?? 0,
+                      decoration: const InputDecoration(
+                        labelText: 'Grad',
+                        prefixIcon: Icon(Icons.location_city_outlined),
+                      ),
+                      items: [
+                        const DropdownMenuItem(value: 0, child: Text('Bez grada')),
+                        for (final city in _cities)
+                          DropdownMenuItem(value: city.id, child: Text(city.name)),
+                      ],
+                      onChanged: (value) => _onCityChanged(value == 0 ? null : value),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _selectedMunicipalityId ?? 0,
+                      decoration: const InputDecoration(
+                        labelText: 'Općina',
+                        prefixIcon: Icon(Icons.map_outlined),
+                      ),
+                      items: [
+                        const DropdownMenuItem(value: 0, child: Text('Bez općine')),
+                        for (final municipality in _municipalitiesForSelectedCity)
+                          DropdownMenuItem(
+                            value: municipality.id,
+                            child: Text(municipality.name),
+                          ),
+                      ],
+                      onChanged: _selectedCityId == null
+                          ? null
+                          : (value) => _onMunicipalityChanged(value == 0 ? null : value),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _selectedSettlementId ?? 0,
+                      decoration: const InputDecoration(
+                        labelText: 'Naselje',
+                        prefixIcon: Icon(Icons.holiday_village_outlined),
+                      ),
+                      items: [
+                        const DropdownMenuItem(value: 0, child: Text('Bez naselja')),
+                        for (final settlement in _settlementsForSelectedMunicipality)
+                          DropdownMenuItem(
+                            value: settlement.id,
+                            child: Text(settlement.name),
+                          ),
+                      ],
+                      validator: _settlementValidator,
+                      onChanged: _selectedMunicipalityId == null
+                          ? null
+                          : (value) => _onSettlementChanged(value == 0 ? null : value),
+                    ),
+                  ),
+                  _field(
+                    controller: _streetCtrl,
+                    label: 'Ulica',
+                    icon: Icons.signpost_outlined,
+                    maxLength: 120,
+                  ),
+                  _field(
+                    controller: _houseNumberCtrl,
+                    label: 'Broj',
+                    icon: Icons.pin_outlined,
+                    maxLength: 20,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -365,6 +546,19 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _firstNameCtrl.text.trim().isNotEmpty) {
       return 'Obavezno ako unosite ime i prezime.';
+    }
+    return null;
+  }
+
+  // Creating a brand new CustomerProfile requires a name (backend
+  // CustomerProfileInsertValidator), so address input alone can't be saved
+  // for a user who doesn't have a profile yet.
+  String? _settlementValidator(int? _) {
+    final hasAddressInput = _selectedSettlementId != null ||
+        _streetCtrl.text.trim().isNotEmpty ||
+        _houseNumberCtrl.text.trim().isNotEmpty;
+    if (hasAddressInput && !_hasNameInput) {
+      return 'Unesite ime i prezime da biste sačuvali adresu.';
     }
     return null;
   }

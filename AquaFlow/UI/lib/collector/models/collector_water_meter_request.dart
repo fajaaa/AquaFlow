@@ -1,9 +1,11 @@
+/// A water meter request assigned to the signed-in collector
+/// (`WaterMeterRequestResponse`). Carries no location - `WaterMeterRequest`
+/// has none anymore; the requesting customer's naselje/adresa is looked up
+/// separately by `customerId` (see `CollectorWaterMeterRequestsScreen`).
 class CollectorWaterMeterRequest {
   const CollectorWaterMeterRequest({
     required this.id,
     required this.customerId,
-    required this.serviceLocationId,
-    required this.serviceLocationAddress,
     required this.status,
     required this.note,
     required this.createdAt,
@@ -11,8 +13,6 @@ class CollectorWaterMeterRequest {
 
   final int id;
   final int customerId;
-  final int serviceLocationId;
-  final String serviceLocationAddress;
   final String status;
   final String? note;
   final DateTime? createdAt;
@@ -23,8 +23,6 @@ class CollectorWaterMeterRequest {
     return CollectorWaterMeterRequest(
       id: (json['id'] as num?)?.toInt() ?? 0,
       customerId: (json['customerId'] as num?)?.toInt() ?? 0,
-      serviceLocationId: (json['serviceLocationId'] as num?)?.toInt() ?? 0,
-      serviceLocationAddress: (json['serviceLocationAddress'] ?? '') as String,
       status: (json['status'] ?? '') as String,
       note: json['note'] as String?,
       createdAt: _date(json['createdAt']),
