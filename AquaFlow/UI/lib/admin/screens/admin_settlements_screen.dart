@@ -7,6 +7,7 @@ import 'package:aquaflow_desktop/admin/models/admin_settlement.dart';
 import 'package:aquaflow_desktop/admin/models/admin_settlement_page.dart';
 import 'package:aquaflow_desktop/admin/services/admin_settlement_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_settlement_service.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_service_locations_screen.dart';
 
 class AdminSettlementsScreen extends StatefulWidget {
   const AdminSettlementsScreen({super.key});
@@ -135,6 +136,22 @@ class _AdminSettlementsScreenState extends State<AdminSettlementsScreen> {
         postalCode: draft.postalCode,
       );
     }, 'Naselje je sačuvano.');
+  }
+
+  /// Drill-down: klik na naselje otvara ekran njegovih lokacija (child),
+  /// pinovanih na to naselje - isti obrazac kao `AdminUsersScreen`.
+  void _openLocations(AdminSettlement settlement) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text('Lokacije - ${settlement.name}')),
+          body: AdminServiceLocationsScreen(
+            settlementId: settlement.id,
+            settlementName: settlement.name,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _confirmDelete(AdminSettlement settlement) async {
@@ -326,7 +343,7 @@ class _AdminSettlementsScreenState extends State<AdminSettlementsScreen> {
                     rows: [
                       for (final item in items)
                         DataRow(
-                          onSelectChanged: (_) => _openEdit(item),
+                          onSelectChanged: (_) => _openLocations(item),
                           cells: [
                             DataCell(Text(_textOrDash(item.name))),
                             DataCell(Text(_textOrDash(item.city))),
@@ -334,6 +351,7 @@ class _AdminSettlementsScreenState extends State<AdminSettlementsScreen> {
                             DataCell(
                               _RowActions(
                                 disabled: _mutating,
+                                onLocations: () => _openLocations(item),
                                 onEdit: () => _openEdit(item),
                                 onDelete: () => _confirmDelete(item),
                               ),
@@ -387,7 +405,8 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Pregled, dodavanje, uređivanje i brisanje naselja.',
+          'Pregled, dodavanje, uređivanje i brisanje naselja. '
+          'Odaberite naselje za pregled njegovih lokacija.',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -435,11 +454,13 @@ class _Header extends StatelessWidget {
 class _RowActions extends StatelessWidget {
   const _RowActions({
     required this.disabled,
+    required this.onLocations,
     required this.onEdit,
     required this.onDelete,
   });
 
   final bool disabled;
+  final VoidCallback onLocations;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -448,6 +469,11 @@ class _RowActions extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        IconButton(
+          tooltip: 'Lokacije',
+          onPressed: disabled ? null : onLocations,
+          icon: const Icon(Icons.location_on_outlined),
+        ),
         IconButton(
           tooltip: 'Uredi',
           onPressed: disabled ? null : onEdit,

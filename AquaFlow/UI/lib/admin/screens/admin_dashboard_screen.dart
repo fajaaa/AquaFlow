@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_account_edit_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_collectors_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_notifications_screen.dart';
-import 'package:aquaflow_desktop/admin/screens/admin_service_locations_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_settlements_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_users_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_water_meter_requests_screen.dart';
@@ -60,11 +59,6 @@ const List<_AdminNavItem> _navItems = [
     icon: Icons.people_outline,
     selectedIcon: Icons.people,
     label: 'Korisnici',
-  ),
-  _AdminNavItem(
-    icon: Icons.location_on_outlined,
-    selectedIcon: Icons.location_on,
-    label: 'Lokacije',
   ),
   _AdminNavItem(
     icon: Icons.assignment_ind_outlined,
@@ -158,21 +152,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 2:
         return const AdminUsersScreen(key: ValueKey('users-customers'));
       case 3:
-        return const AdminServiceLocationsScreen();
-      case 4:
         return const AdminCollectorsScreen();
-      case 10:
+      case 9:
         return const AdminUsersScreen(
           key: ValueKey('users-admins'),
           mode: AdminUsersScreenMode.admins,
         );
-      case 11:
+      case 10:
         return const AdminSettlementsScreen();
-      case 12:
+      case 11:
         return const CompanySettingsScreen();
-      case 13:
+      case 12:
         return const AdminAccountEditScreen();
-      case 14:
+      case 13:
         return const AdminWaterMeterRequestsScreen();
       default:
         return _SectionPlaceholder(item: _navItems[_selectedIndex]);

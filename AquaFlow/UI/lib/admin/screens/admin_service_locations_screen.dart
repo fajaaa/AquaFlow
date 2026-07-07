@@ -17,10 +17,23 @@ import 'package:aquaflow_desktop/admin/services/admin_service_location_service.d
 /// is pinned to that customer's locations and the create dialog preselects
 /// them - editing an existing row still shows its own real customer, though,
 /// since a location can be reassigned to a different customer.
+///
+/// [settlementId] works the same way for a settlement (opened from the
+/// "Lokacije" row action on the settlements screen): every listing call is
+/// pinned to that settlement, the settlement filter and column are hidden, and
+/// the create dialog preselects it - editing an existing row still keeps its
+/// own real settlement.
 class AdminServiceLocationsScreen extends StatefulWidget {
-  const AdminServiceLocationsScreen({super.key, this.customerId});
+  const AdminServiceLocationsScreen({
+    super.key,
+    this.customerId,
+    this.settlementId,
+    this.settlementName,
+  });
 
   final int? customerId;
+  final int? settlementId;
+  final String? settlementName;
 
   @override
   State<AdminServiceLocationsScreen> createState() =>
@@ -68,7 +81,7 @@ class _AdminServiceLocationsScreenState
         page: _page,
         pageSize: _pageSize,
         customerId: widget.customerId,
-        settlementId: _settlementFilterId,
+        settlementId: widget.settlementId ?? _settlementFilterId,
         locationType: _typeFilter,
         isActive: _activeFilter,
         address: _searchCtrl.text,
@@ -185,6 +198,7 @@ class _AdminServiceLocationsScreenState
         customers: _customers,
         settlements: _settlements,
         pinnedCustomerId: widget.customerId,
+        pinnedSettlementId: widget.settlementId,
       ),
     );
     if (!mounted || draft == null) return;
@@ -207,6 +221,7 @@ class _AdminServiceLocationsScreenState
         customers: _customers,
         settlements: _settlements,
         pinnedCustomerId: widget.customerId,
+        pinnedSettlementId: widget.settlementId,
         location: location,
       ),
     );
@@ -309,6 +324,16 @@ class _AdminServiceLocationsScreenState
     return 'Kupac #$pinnedId';
   }
 
+  /// Label for the pinned settlement, taken from the name passed in by the
+  /// caller and falling back to a generic id label.
+  String? get _pinnedSettlementLabel {
+    final pinnedId = widget.settlementId;
+    if (pinnedId == null) return null;
+    final name = widget.settlementName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return 'Naselje #$pinnedId';
+  }
+
   @override
   Widget build(BuildContext context) {
     final pageData = _pageData;
@@ -325,6 +350,7 @@ class _AdminServiceLocationsScreenState
               children: [
                 _Header(
                   pinnedCustomerLabel: _pinnedCustomerLabel,
+                  settlementLabel: _pinnedSettlementLabel,
                   loading: _loading || _lookupsLoading,
                   mutating: _mutating,
                   onRefresh: () {
@@ -388,27 +414,30 @@ class _AdminServiceLocationsScreenState
             ),
           ),
         ),
-        SizedBox(
-          width: 220,
-          child: DropdownButtonFormField<int>(
-            initialValue: _settlementFilterId ?? 0,
-            decoration: const InputDecoration(
-              labelText: 'Naselje',
-              prefixIcon: Icon(Icons.location_city_outlined),
+        // The settlement is fixed when the screen is pinned to one, so the
+        // "Naselje" filter would be redundant - hide it in that mode.
+        if (widget.settlementId == null)
+          SizedBox(
+            width: 220,
+            child: DropdownButtonFormField<int>(
+              initialValue: _settlementFilterId ?? 0,
+              decoration: const InputDecoration(
+                labelText: 'Naselje',
+                prefixIcon: Icon(Icons.location_city_outlined),
+              ),
+              items: [
+                const DropdownMenuItem(value: 0, child: Text('Sva naselja')),
+                for (final settlement in _settlements)
+                  DropdownMenuItem(
+                    value: settlement.id,
+                    child: Text(settlement.label),
+                  ),
+              ],
+              onChanged: _loading || _mutating
+                  ? null
+                  : (value) => _setSettlementFilter(value ?? 0),
             ),
-            items: [
-              const DropdownMenuItem(value: 0, child: Text('Sva naselja')),
-              for (final settlement in _settlements)
-                DropdownMenuItem(
-                  value: settlement.id,
-                  child: Text(settlement.label),
-                ),
-            ],
-            onChanged: _loading || _mutating
-                ? null
-                : (value) => _setSettlementFilter(value ?? 0),
           ),
-        ),
         SizedBox(
           width: 180,
           child: DropdownButtonFormField<String>(
@@ -493,13 +522,15 @@ class _AdminServiceLocationsScreenState
                   child: DataTable(
                     dataRowMinHeight: 60,
                     dataRowMaxHeight: 68,
-                    columns: const [
-                      DataColumn(label: Text('Adresa')),
-                      DataColumn(label: Text('Naselje')),
-                      DataColumn(label: Text('Kupac')),
-                      DataColumn(label: Text('Tip')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Akcije')),
+                    columns: [
+                      const DataColumn(label: Text('Adresa')),
+                      // Redundant when every row is the same pinned settlement.
+                      if (widget.settlementId == null)
+                        const DataColumn(label: Text('Naselje')),
+                      const DataColumn(label: Text('Kupac')),
+                      const DataColumn(label: Text('Tip')),
+                      const DataColumn(label: Text('Status')),
+                      const DataColumn(label: Text('Akcije')),
                     ],
                     rows: [
                       for (final item in items) _buildRow(context, item),
@@ -527,7 +558,10 @@ class _AdminServiceLocationsScreenState
       onSelectChanged: (_) => _openEdit(location),
       cells: [
         DataCell(Text(_textOrDash(location.address), style: textStyle)),
-        DataCell(Text(_textOrDash(location.settlementName), style: textStyle)),
+        if (widget.settlementId == null)
+          DataCell(
+            Text(_textOrDash(location.settlementName), style: textStyle),
+          ),
         DataCell(Text(_textOrDash(location.customerName), style: textStyle)),
         DataCell(Text(_typeLabel(location.locationType), style: textStyle)),
         DataCell(_StatusPill(isActive: location.isActive)),
@@ -559,6 +593,7 @@ class _AdminServiceLocationsScreenState
 class _Header extends StatelessWidget {
   const _Header({
     required this.pinnedCustomerLabel,
+    required this.settlementLabel,
     required this.loading,
     required this.mutating,
     required this.onRefresh,
@@ -566,6 +601,7 @@ class _Header extends StatelessWidget {
   });
 
   final String? pinnedCustomerLabel;
+  final String? settlementLabel;
   final bool loading;
   final bool mutating;
   final VoidCallback onRefresh;
@@ -574,7 +610,18 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final pinned = pinnedCustomerLabel;
+    final pinnedCustomer = pinnedCustomerLabel;
+    final pinnedSettlement = settlementLabel;
+
+    final String subtitle;
+    if (pinnedCustomer != null) {
+      subtitle = 'Lokacije kupca: $pinnedCustomer';
+    } else if (pinnedSettlement != null) {
+      subtitle = 'Lokacije u naselju: $pinnedSettlement';
+    } else {
+      subtitle =
+          'Pregled, dodavanje, uređivanje i deaktivacija servisnih lokacija.';
+    }
 
     final title = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,9 +634,7 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          pinned == null
-              ? 'Pregled, dodavanje, uređivanje i deaktivacija servisnih lokacija.'
-              : 'Lokacije kupca: $pinned',
+          subtitle,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -737,6 +782,7 @@ class _LocationEditorDialog extends StatefulWidget {
     required this.customers,
     required this.settlements,
     this.pinnedCustomerId,
+    this.pinnedSettlementId,
     this.location,
   });
 
@@ -747,6 +793,11 @@ class _LocationEditorDialog extends StatefulWidget {
   /// "Lokacije" row action on a specific customer; ignored when [location] is
   /// set (editing keeps that location's own customer as the initial value).
   final int? pinnedCustomerId;
+
+  /// Preselects the settlement dropdown when creating a new location from the
+  /// "Lokacije" row action on a specific settlement; ignored when [location] is
+  /// set (editing keeps that location's own settlement as the initial value).
+  final int? pinnedSettlementId;
   final AdminServiceLocation? location;
 
   @override
@@ -776,7 +827,7 @@ class _LocationEditorDialogState extends State<_LocationEditorDialog> {
     super.initState();
     final location = widget.location;
     _customerId = location?.customerId ?? widget.pinnedCustomerId;
-    _settlementId = location?.settlementId;
+    _settlementId = location?.settlementId ?? widget.pinnedSettlementId;
     _locationType = (location?.locationType.isNotEmpty ?? false)
         ? location!.locationType
         : 'Residential';
