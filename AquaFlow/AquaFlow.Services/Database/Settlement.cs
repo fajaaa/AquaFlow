@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AquaFlow.Services.Database;
 
@@ -9,8 +8,8 @@ public class Settlement : EntityBase
     [MaxLength(100)]
     public string Name { get; set; } = string.Empty;
 
-    [MaxLength(100)]
-    public string City { get; set; } = string.Empty;
+    public int MunicipalityId { get; set; }
+    public Municipality? Municipality { get; set; }
 
     [MaxLength(20)]
     public string PostalCode { get; set; } = string.Empty;

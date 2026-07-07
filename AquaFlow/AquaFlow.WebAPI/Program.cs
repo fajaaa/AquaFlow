@@ -115,6 +115,10 @@ mapperConfig.NewConfig<CollectorProfile, CollectorProfileResponse>()
     .Map(destination => destination.Phone, source => source.User == null ? string.Empty : source.User.Phone);
 mapperConfig.NewConfig<UserNotification, UserNotificationResponse>()
     .Map(destination => destination.Notification, source => source.Notification);
+mapperConfig.NewConfig<Municipality, MunicipalityResponse>()
+    .Map(destination => destination.CityName, source => source.City == null ? string.Empty : source.City.Name);
+mapperConfig.NewConfig<Settlement, SettlementResponse>()
+    .Map(destination => destination.MunicipalityName, source => source.Municipality == null ? string.Empty : source.Municipality.Name);
 mapperConfig.NewConfig<ServiceLocation, ServiceLocationResponse>()
     .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
     .Map(destination => destination.CustomerName, source => source.Customer == null ? string.Empty : $"{source.Customer.FirstName} {source.Customer.LastName}".Trim());
@@ -144,10 +148,14 @@ AddPatchMapping<CustomerProfilePatchRequest, CustomerProfile>();
 builder.Services.AddScoped<IBaseCRUDService<CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest, CustomerProfilePatchRequest>, CustomerProfileService>();
 AddPatchMapping<CollectorProfilePatchRequest, CollectorProfile>();
 builder.Services.AddScoped<IBaseCRUDService<CollectorProfileResponse, CollectorProfileSearchObject, CollectorProfileInsertRequest, CollectorProfileUpdateRequest, CollectorProfilePatchRequest>, CollectorProfileService>();
-// Settlement needs a case-insensitive Name+City uniqueness check and a delete guard against
-// dependent service locations/collector assigned areas/notifications, so it is registered by
-// hand like ServiceLocationService: the generic IBaseCRUDService<...> alias still resolves to
-// the same SettlementService instance.
+// The administrative lookup (City -> Municipality -> Settlement) is registered by hand:
+// each service adds case-insensitive uniqueness checks, parent-FK existence checks, and a
+// delete guard naming what still references the row; the generic IBaseCRUDService<...>
+// alias still resolves to the same service instance.
+AddPatchMapping<CityPatchRequest, City>();
+builder.Services.AddScoped<IBaseCRUDService<CityResponse, CitySearchObject, CityInsertRequest, CityUpdateRequest, CityPatchRequest>, CityService>();
+AddPatchMapping<MunicipalityPatchRequest, Municipality>();
+builder.Services.AddScoped<IBaseCRUDService<MunicipalityResponse, MunicipalitySearchObject, MunicipalityInsertRequest, MunicipalityUpdateRequest, MunicipalityPatchRequest>, MunicipalityService>();
 AddPatchMapping<SettlementPatchRequest, Settlement>();
 builder.Services.AddScoped<IBaseCRUDService<SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>, SettlementService>();
 // ServiceLocation needs FK checks (Settlement/Customer), a delete guard against dependent water
@@ -220,6 +228,12 @@ builder.Services.AddScoped<IValidator<CustomerProfilePatchRequest>, CustomerProf
 builder.Services.AddScoped<IValidator<CollectorProfileInsertRequest>, CollectorProfileInsertValidator>();
 builder.Services.AddScoped<IValidator<CollectorProfileUpdateRequest>, CollectorProfileUpdateValidator>();
 builder.Services.AddScoped<IValidator<CollectorProfilePatchRequest>, CollectorProfilePatchValidator>();
+builder.Services.AddScoped<IValidator<CityInsertRequest>, CityInsertValidator>();
+builder.Services.AddScoped<IValidator<CityUpdateRequest>, CityUpdateValidator>();
+builder.Services.AddScoped<IValidator<CityPatchRequest>, CityPatchValidator>();
+builder.Services.AddScoped<IValidator<MunicipalityInsertRequest>, MunicipalityInsertValidator>();
+builder.Services.AddScoped<IValidator<MunicipalityUpdateRequest>, MunicipalityUpdateValidator>();
+builder.Services.AddScoped<IValidator<MunicipalityPatchRequest>, MunicipalityPatchValidator>();
 builder.Services.AddScoped<IValidator<SettlementInsertRequest>, SettlementInsertValidator>();
 builder.Services.AddScoped<IValidator<SettlementUpdateRequest>, SettlementUpdateValidator>();
 builder.Services.AddScoped<IValidator<SettlementPatchRequest>, SettlementPatchValidator>();

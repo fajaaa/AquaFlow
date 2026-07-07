@@ -13,86 +13,173 @@ namespace AquaFlow.Services.Tests;
 public class SettlementServiceTests
 {
     [Fact]
-    public async Task InsertAsync_DuplicateNameAndCity_ThrowsClientException()
+    public async Task InsertAsync_UnknownMunicipality_ThrowsClientException()
     {
         await using var context = CreateContext();
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Centar", City = "Sarajevo", PostalCode = "71000" });
+        SeedMunicipalities(context);
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
         await Assert.ThrowsAsync<ClientException>(() => service.InsertAsync(new SettlementInsertRequest
         {
-            Name = "centar",
-            City = "SARAJEVO",
+            Name = "Bjelave",
+            MunicipalityId = 999,
             PostalCode = "71000"
         }));
     }
 
     [Fact]
-    public async Task InsertAsync_SameNameDifferentCity_Succeeds()
+    public async Task InsertAsync_DuplicateNameInSameMunicipality_ThrowsClientException()
     {
         await using var context = CreateContext();
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Centar", City = "Sarajevo", PostalCode = "71000" });
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(() => service.InsertAsync(new SettlementInsertRequest
+        {
+            Name = "BJELAVE",
+            MunicipalityId = 1,
+            PostalCode = "71000"
+        }));
+    }
+
+    [Fact]
+    public async Task InsertAsync_SameNameDifferentMunicipality_Succeeds()
+    {
+        await using var context = CreateContext();
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
         var response = await service.InsertAsync(new SettlementInsertRequest
         {
-            Name = "Centar",
-            City = "Zenica",
-            PostalCode = "72000"
+            Name = "Bjelave",
+            MunicipalityId = 2,
+            PostalCode = "71000"
         });
 
         Assert.NotEqual(0, response.Id);
     }
 
     [Fact]
-    public async Task UpdateAsync_ToAnotherSettlementsNameAndCity_ThrowsClientException()
+    public async Task InsertAsync_FlattensMunicipalityName()
     {
         await using var context = CreateContext();
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Centar", City = "Sarajevo", PostalCode = "71000" });
-        context.Settlements.Add(new Settlement { Id = 2, Name = "Ilidza", City = "Sarajevo", PostalCode = "71210" });
+        SeedMunicipalities(context);
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var response = await service.InsertAsync(new SettlementInsertRequest
+        {
+            Name = "Bjelave",
+            MunicipalityId = 1,
+            PostalCode = "71000"
+        });
+
+        Assert.Equal("Centar", response.MunicipalityName);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UnknownMunicipality_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(() => service.UpdateAsync(1, new SettlementUpdateRequest
+        {
+            Name = "Bjelave",
+            MunicipalityId = 999,
+            PostalCode = "71000"
+        }));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ToAnotherSettlementsNameInSameMunicipality_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
+        context.Settlements.Add(new Settlement { Id = 2, Name = "Mejtas", MunicipalityId = 1, PostalCode = "71000" });
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
         await Assert.ThrowsAsync<ClientException>(() => service.UpdateAsync(2, new SettlementUpdateRequest
         {
-            Name = "centar",
-            City = "sarajevo",
-            PostalCode = "71210"
+            Name = "bjelave",
+            MunicipalityId = 1,
+            PostalCode = "71000"
         }));
     }
 
     [Fact]
-    public async Task UpdateAsync_KeepingOwnNameAndCity_Succeeds()
+    public async Task UpdateAsync_KeepingOwnNameAndMunicipality_Succeeds()
     {
         await using var context = CreateContext();
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Centar", City = "Sarajevo", PostalCode = "71000" });
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
         var response = await service.UpdateAsync(1, new SettlementUpdateRequest
         {
-            Name = "Centar",
-            City = "Sarajevo",
+            Name = "Bjelave",
+            MunicipalityId = 1,
             PostalCode = "71000"
         });
 
-        Assert.Equal("Centar", response.Name);
+        Assert.Equal("Bjelave", response.Name);
     }
 
     [Fact]
-    public async Task PatchAsync_ToAnotherSettlementsNameAndCity_ThrowsClientException()
+    public async Task PatchAsync_ToAnotherSettlementsNameInSameMunicipality_ThrowsClientException()
     {
         await using var context = CreateContext();
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Centar", City = "Sarajevo", PostalCode = "71000" });
-        context.Settlements.Add(new Settlement { Id = 2, Name = "Ilidza", City = "Sarajevo", PostalCode = "71210" });
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
+        context.Settlements.Add(new Settlement { Id = 2, Name = "Mejtas", MunicipalityId = 1, PostalCode = "71000" });
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
         await Assert.ThrowsAsync<ClientException>(() => service.PatchAsync(2, new SettlementPatchRequest
         {
-            Name = "centar"
+            Name = "bjelave"
+        }));
+    }
+
+    [Fact]
+    public async Task PatchAsync_MovingToMunicipalityWithSameNamedSettlement_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
+        context.Settlements.Add(new Settlement { Id = 2, Name = "Bjelave", MunicipalityId = 2, PostalCode = "71000" });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(() => service.PatchAsync(2, new SettlementPatchRequest
+        {
+            MunicipalityId = 1
+        }));
+    }
+
+    [Fact]
+    public async Task PatchAsync_UnknownMunicipality_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(() => service.PatchAsync(1, new SettlementPatchRequest
+        {
+            MunicipalityId = 999
         }));
     }
 
@@ -100,7 +187,8 @@ public class SettlementServiceTests
     public async Task DeleteAsync_SettlementWithServiceLocation_ThrowsClientExceptionListingBlocker()
     {
         await using var context = CreateContext();
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Centar", City = "Sarajevo", PostalCode = "71000" });
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
         SeedCustomer(context);
         context.ServiceLocations.Add(new ServiceLocation { Id = 1, CustomerId = 1, SettlementId = 1, Address = "Street 1", LocationType = "Residential" });
         await context.SaveChangesAsync();
@@ -116,7 +204,8 @@ public class SettlementServiceTests
     public async Task DeleteAsync_SettlementWithCollectorProfile_ThrowsClientExceptionListingBlocker()
     {
         await using var context = CreateContext();
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Centar", City = "Sarajevo", PostalCode = "71000" });
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
         context.UserRoles.Add(new UserRole { Id = 1, Name = "Collector" });
         context.Users.Add(new User
         {
@@ -140,7 +229,8 @@ public class SettlementServiceTests
     public async Task DeleteAsync_SettlementWithNotification_ThrowsClientExceptionListingBlocker()
     {
         await using var context = CreateContext();
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Centar", City = "Sarajevo", PostalCode = "71000" });
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
         context.UserRoles.Add(new UserRole { Id = 1, Name = "Admin" });
         context.Users.Add(new User
         {
@@ -164,7 +254,8 @@ public class SettlementServiceTests
     public async Task DeleteAsync_UnusedSettlement_DeletesSuccessfully()
     {
         await using var context = CreateContext();
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Centar", City = "Sarajevo", PostalCode = "71000" });
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
@@ -180,6 +271,13 @@ public class SettlementServiceTests
             .Options;
 
         return new AquaFlowDbContext(options);
+    }
+
+    private static void SeedMunicipalities(AquaFlowDbContext context)
+    {
+        context.Cities.Add(new City { Id = 1, Name = "Sarajevo", Code = "SA" });
+        context.Municipalities.Add(new Municipality { Id = 1, Name = "Centar", Code = "SA-01", CityId = 1 });
+        context.Municipalities.Add(new Municipality { Id = 2, Name = "Novi Grad", Code = "SA-02", CityId = 1 });
     }
 
     private static void SeedCustomer(AquaFlowDbContext context)
@@ -209,6 +307,8 @@ public class SettlementServiceTests
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<SettlementPatchRequest, Settlement>()
             .IgnoreNullValues(true);
+        mapperConfig.NewConfig<Settlement, Model.Responses.SettlementResponse>()
+            .Map(destination => destination.MunicipalityName, source => source.Municipality == null ? string.Empty : source.Municipality.Name);
 
         IMapper mapper = new Mapper(mapperConfig);
 

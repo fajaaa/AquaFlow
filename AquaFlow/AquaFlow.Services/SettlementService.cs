@@ -25,26 +25,39 @@ public class SettlementService
         _dbContext = dbContext;
     }
 
-    protected override Task BeforeInsertAsync(SettlementInsertRequest request)
+    protected override IQueryable<Settlement> IncludeForRead(IQueryable<Settlement> query) =>
+        query.Include(settlement => settlement.Municipality);
+
+    protected override async Task LoadReferencesAsync(Settlement entity)
     {
-        return EnsureUniqueNameAsync(request.Name, request.City);
+        await _dbContext.Entry(entity).Reference(settlement => settlement.Municipality).LoadAsync();
     }
 
-    protected override Task BeforeUpdateAsync(int id, SettlementUpdateRequest request, Settlement entity)
+    protected override async Task BeforeInsertAsync(SettlementInsertRequest request)
     {
-        return EnsureUniqueNameAsync(request.Name, request.City, id);
+        await EnsureMunicipalityExistsAsync(request.MunicipalityId);
+        await EnsureUniqueNameAsync(request.Name, request.MunicipalityId);
     }
 
-    protected override Task BeforePatchAsync(int id, SettlementPatchRequest request, Settlement entity)
+    protected override async Task BeforeUpdateAsync(int id, SettlementUpdateRequest request, Settlement entity)
     {
-        if (request.Name == null && request.City == null)
+        await EnsureMunicipalityExistsAsync(request.MunicipalityId);
+        await EnsureUniqueNameAsync(request.Name, request.MunicipalityId, id);
+    }
+
+    protected override async Task BeforePatchAsync(int id, SettlementPatchRequest request, Settlement entity)
+    {
+        if (request.MunicipalityId.HasValue)
         {
-            return Task.CompletedTask;
+            await EnsureMunicipalityExistsAsync(request.MunicipalityId.Value);
         }
 
-        var name = request.Name ?? entity.Name;
-        var city = request.City ?? entity.City;
-        return EnsureUniqueNameAsync(name, city, id);
+        if (request.Name != null || request.MunicipalityId.HasValue)
+        {
+            var name = request.Name ?? entity.Name;
+            var municipalityId = request.MunicipalityId ?? entity.MunicipalityId;
+            await EnsureUniqueNameAsync(name, municipalityId, id);
+        }
     }
 
     // A settlement still referenced by service locations, collector assigned areas, or
@@ -82,19 +95,26 @@ public class SettlementService
         await _dbContext.SaveChangesAsync();
     }
 
-    private async Task EnsureUniqueNameAsync(string name, string city, int? excludedId = null)
+    private async Task EnsureUniqueNameAsync(string name, int municipalityId, int? excludedId = null)
     {
         var normalizedName = name.Trim().ToLowerInvariant();
-        var normalizedCity = city.Trim().ToLowerInvariant();
 
         var alreadyExists = await _dbContext.Settlements.AnyAsync(settlement =>
             settlement.Id != excludedId &&
-            settlement.Name.ToLower() == normalizedName &&
-            settlement.City.ToLower() == normalizedCity);
+            settlement.MunicipalityId == municipalityId &&
+            settlement.Name.ToLower() == normalizedName);
 
         if (alreadyExists)
         {
-            throw new ClientException($"Settlement '{name}' in '{city}' already exists.");
+            throw new ClientException($"Settlement '{name}' already exists in this municipality.");
+        }
+    }
+
+    private async Task EnsureMunicipalityExistsAsync(int municipalityId)
+    {
+        if (!await _dbContext.Municipalities.AnyAsync(municipality => municipality.Id == municipalityId))
+        {
+            throw new ClientException($"Municipality with id {municipalityId} was not found.");
         }
     }
 }

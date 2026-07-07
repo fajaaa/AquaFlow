@@ -56,7 +56,7 @@ public class WaterMeterRequestServiceTests
 
     private static void SeedCustomerAndLocation(AquaFlowDbContext context, bool locationIsActive)
     {
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Sarajevo", City = "Sarajevo", PostalCode = "71000" });
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Sarajevo", MunicipalityId = 1, PostalCode = "71000" });
 
         context.UserRoles.Add(new UserRole { Id = 1, Name = "Customer" });
         context.Users.Add(new User
