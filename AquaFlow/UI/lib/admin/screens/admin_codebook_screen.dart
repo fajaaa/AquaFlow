@@ -221,28 +221,41 @@ class _Breadcrumb extends StatelessWidget {
 
       if (item.onTap == null) {
         children.add(
-          Text(
-            item.label,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: isLast ? FontWeight.w700 : FontWeight.w500,
-              color: isLast
-                  ? theme.colorScheme.onSurface
-                  : theme.colorScheme.onSurfaceVariant,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 220),
+            child: Text(
+              item.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: isLast ? FontWeight.w700 : FontWeight.w500,
+                color: isLast
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         );
       } else {
         children.add(
-          InkWell(
-            onTap: item.onTap,
-            borderRadius: BorderRadius.circular(4),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-              child: Text(
-                item.label,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
+          Tooltip(
+            message: 'Otvori',
+            child: InkWell(
+              onTap: item.onTap,
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 220),
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -289,6 +302,8 @@ class _LevelHeader extends StatelessWidget {
       children: [
         Text(
           title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 4),
@@ -414,6 +429,8 @@ class _CodebookEmptyState extends StatelessWidget {
     required this.hasFilters,
     required this.emptyMessage,
     required this.filteredMessage,
+    this.actionLabel,
+    this.onAction,
   });
 
   final IconData icon;
@@ -421,9 +438,16 @@ class _CodebookEmptyState extends StatelessWidget {
   final String emptyMessage;
   final String filteredMessage;
 
+  /// Shown only for the true-empty state (never while a search is active,
+  /// since "Očisti pretragu" already covers that case).
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final showAction = !hasFilters && actionLabel != null && onAction != null;
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -439,6 +463,14 @@ class _CodebookEmptyState extends StatelessWidget {
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium,
           ),
+          if (showAction) ...[
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: onAction,
+              icon: const Icon(Icons.add),
+              label: Text(actionLabel!),
+            ),
+          ],
         ],
       ),
     );
@@ -512,6 +544,13 @@ String _textOrDash(String value) {
 
 String? _requiredValidator(String? value) {
   return value == null || value.trim().isEmpty ? 'Obavezno polje.' : null;
+}
+
+/// True when the just-deleted row was the only one left on a page other than
+/// the first, so the view should step back a page instead of showing an
+/// empty page. Shared by all three levels so the behaviour stays consistent.
+bool shouldStepBackAfterDelete({required int itemsOnPage, required int page}) {
+  return itemsOnPage == 1 && page > 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -651,7 +690,10 @@ class _CitiesViewState extends State<_CitiesView> {
 
     await _runMutation(() async {
       await _service.delete(city.id);
-      if ((_pageData?.items.length ?? 0) == 1 && _page > 1) {
+      if (shouldStepBackAfterDelete(
+        itemsOnPage: _pageData?.items.length ?? 0,
+        page: _page,
+      )) {
         _page -= 1;
       }
     }, 'Grad je obrisan.');
@@ -1119,7 +1161,10 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
 
     await _runMutation(() async {
       await _service.delete(municipality.id);
-      if ((_pageData?.items.length ?? 0) == 1 && _page > 1) {
+      if (shouldStepBackAfterDelete(
+        itemsOnPage: _pageData?.items.length ?? 0,
+        page: _page,
+      )) {
         _page -= 1;
       }
     }, 'Općina je obrisana.');
@@ -1176,8 +1221,8 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _LevelHeader(
-                title: 'Općine',
-                subtitle: 'Općine grada "${widget.city.name}".',
+                title: 'Općine · ${widget.city.name}',
+                subtitle: 'Pregled, dodavanje, uređivanje i brisanje općina.',
                 createLabel: 'Nova općina',
                 loading: _loading,
                 mutating: _mutating,
@@ -1246,8 +1291,10 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
       return _CodebookEmptyState(
         icon: Icons.map_outlined,
         hasFilters: _hasFilters,
-        emptyMessage: 'Nema općina za ovaj grad.',
+        emptyMessage: "Grad '${widget.city.name}' još nema općina.",
         filteredMessage: 'Nema općina za zadanu pretragu.',
+        actionLabel: 'Nova općina',
+        onAction: _openCreate,
       );
     }
 
@@ -1593,7 +1640,10 @@ class _SettlementsViewState extends State<_SettlementsView> {
 
     await _runMutation(() async {
       await _service.delete(settlement.id);
-      if ((_pageData?.items.length ?? 0) == 1 && _page > 1) {
+      if (shouldStepBackAfterDelete(
+        itemsOnPage: _pageData?.items.length ?? 0,
+        page: _page,
+      )) {
         _page -= 1;
       }
     }, 'Naselje je obrisano.');
@@ -1650,8 +1700,8 @@ class _SettlementsViewState extends State<_SettlementsView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _LevelHeader(
-                title: 'Naselja',
-                subtitle: 'Naselja općine "${widget.municipality.name}".',
+                title: 'Naselja · ${widget.municipality.name}',
+                subtitle: 'Pregled, dodavanje, uređivanje i brisanje naselja.',
                 createLabel: 'Novo naselje',
                 loading: _loading,
                 mutating: _mutating,
@@ -1720,8 +1770,10 @@ class _SettlementsViewState extends State<_SettlementsView> {
       return _CodebookEmptyState(
         icon: Icons.holiday_village_outlined,
         hasFilters: _hasFilters,
-        emptyMessage: 'Nema naselja za ovu općinu.',
+        emptyMessage: "Općina '${widget.municipality.name}' još nema naselja.",
         filteredMessage: 'Nema naselja za zadanu pretragu.',
+        actionLabel: 'Novo naselje',
+        onAction: _openCreate,
       );
     }
 
