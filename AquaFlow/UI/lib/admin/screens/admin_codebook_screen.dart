@@ -984,15 +984,12 @@ class _MunicipalitiesView extends StatefulWidget {
 
 class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
   final AdminMunicipalityService _service = AdminMunicipalityService();
-  final AdminCityService _cityService = AdminCityService();
   final TextEditingController _searchCtrl = TextEditingController();
 
   Timer? _searchDebounce;
   AdminMunicipalityPage? _pageData;
-  List<AdminCity> _cities = const [];
   bool _loading = true;
   bool _mutating = false;
-  bool _citiesLoading = false;
   String? _error;
   int _page = 1;
   int _pageSize = 10;
@@ -1035,24 +1032,6 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
     }
   }
 
-  Future<bool> _loadCities({bool showErrors = true}) async {
-    if (_citiesLoading) return false;
-
-    setState(() => _citiesLoading = true);
-    try {
-      final cities = await _cityService.fetchAll();
-      if (!mounted) return false;
-      setState(() => _cities = cities);
-      return true;
-    } on AdminCityException catch (e) {
-      if (!mounted) return false;
-      if (showErrors) _showError(e.message);
-      return false;
-    } finally {
-      if (mounted) setState(() => _citiesLoading = false);
-    }
-  }
-
   void _queueSearch(String _) {
     setState(() {});
     _searchDebounce?.cancel();
@@ -1091,20 +1070,10 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
   }
 
   Future<void> _openCreate() async {
-    final loaded = _cities.isNotEmpty || await _loadCities();
-    if (!mounted || !loaded) return;
-    if (_cities.isEmpty) {
-      _showError('Prvo dodajte barem jedan grad.');
-      return;
-    }
-
     final draft = await showDialog<_MunicipalityDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _MunicipalityEditorDialog(
-        cities: _cities,
-        initialCityId: widget.city.id,
-      ),
+      builder: (_) => _MunicipalityEditorDialog(city: widget.city),
     );
     if (!mounted || draft == null) return;
 
@@ -1112,20 +1081,19 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
       await _service.create(
         name: draft.name,
         code: draft.code,
-        cityId: draft.cityId,
+        cityId: widget.city.id,
       );
     }, 'Općina je dodana.');
   }
 
   Future<void> _openEdit(AdminMunicipality municipality) async {
-    final loaded = _cities.isNotEmpty || await _loadCities();
-    if (!mounted || !loaded) return;
-
     final draft = await showDialog<_MunicipalityDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (_) =>
-          _MunicipalityEditorDialog(cities: _cities, municipality: municipality),
+      builder: (_) => _MunicipalityEditorDialog(
+        city: widget.city,
+        municipality: municipality,
+      ),
     );
     if (!mounted || draft == null) return;
 
@@ -1134,7 +1102,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
         municipality.id,
         name: draft.name,
         code: draft.code,
-        cityId: draft.cityId,
+        cityId: widget.city.id,
       );
     }, 'Općina je sačuvana.');
   }
@@ -1191,7 +1159,6 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
     _searchDebounce?.cancel();
     _searchCtrl.dispose();
     _service.dispose();
-    _cityService.dispose();
     super.dispose();
   }
 
@@ -1368,27 +1335,17 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
 }
 
 class _MunicipalityDraft {
-  const _MunicipalityDraft({
-    required this.name,
-    required this.code,
-    required this.cityId,
-  });
+  const _MunicipalityDraft({required this.name, required this.code});
 
   final String name;
   final String code;
-  final int cityId;
 }
 
 class _MunicipalityEditorDialog extends StatefulWidget {
-  const _MunicipalityEditorDialog({
-    required this.cities,
-    this.municipality,
-    this.initialCityId,
-  });
+  const _MunicipalityEditorDialog({required this.city, this.municipality});
 
-  final List<AdminCity> cities;
+  final AdminCity city;
   final AdminMunicipality? municipality;
-  final int? initialCityId;
 
   @override
   State<_MunicipalityEditorDialog> createState() =>
@@ -1400,28 +1357,13 @@ class _MunicipalityEditorDialogState extends State<_MunicipalityEditorDialog> {
   final _nameCtrl = TextEditingController();
   final _codeCtrl = TextEditingController();
 
-  int? _cityId;
-
   bool get _isEdit => widget.municipality != null;
 
   @override
   void initState() {
     super.initState();
-    final municipality = widget.municipality;
-    _nameCtrl.text = municipality?.name ?? '';
-    _codeCtrl.text = municipality?.code ?? '';
-
-    final cityIds = widget.cities.map((city) => city.id).toSet();
-    if (municipality != null && cityIds.contains(municipality.cityId)) {
-      _cityId = municipality.cityId;
-    } else if (widget.initialCityId != null &&
-        cityIds.contains(widget.initialCityId)) {
-      _cityId = widget.initialCityId;
-    } else if (widget.cities.length == 1) {
-      _cityId = widget.cities.first.id;
-    } else {
-      _cityId = null;
-    }
+    _nameCtrl.text = widget.municipality?.name ?? '';
+    _codeCtrl.text = widget.municipality?.code ?? '';
   }
 
   @override
@@ -1436,11 +1378,7 @@ class _MunicipalityEditorDialogState extends State<_MunicipalityEditorDialog> {
     if (form == null || !form.validate()) return;
 
     Navigator.of(context).pop(
-      _MunicipalityDraft(
-        name: _nameCtrl.text.trim(),
-        code: _codeCtrl.text.trim(),
-        cityId: _cityId ?? 0,
-      ),
+      _MunicipalityDraft(name: _nameCtrl.text.trim(), code: _codeCtrl.text.trim()),
     );
   }
 
@@ -1456,25 +1394,13 @@ class _MunicipalityEditorDialogState extends State<_MunicipalityEditorDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DropdownButtonFormField<int>(
-                  initialValue: _cityId ?? 0,
+                TextFormField(
+                  initialValue: widget.city.name,
+                  enabled: false,
                   decoration: const InputDecoration(
                     labelText: 'Grad',
                     prefixIcon: Icon(Icons.location_city_outlined),
                   ),
-                  items: [
-                    const DropdownMenuItem(
-                      value: 0,
-                      child: Text('Odaberite grad'),
-                    ),
-                    for (final city in widget.cities)
-                      DropdownMenuItem(value: city.id, child: Text(city.name)),
-                  ],
-                  validator: (value) =>
-                      value == null || value == 0 ? 'Obavezno polje.' : null,
-                  onChanged: (value) {
-                    setState(() => _cityId = value == 0 ? null : value);
-                  },
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
@@ -1532,16 +1458,12 @@ class _SettlementsView extends StatefulWidget {
 
 class _SettlementsViewState extends State<_SettlementsView> {
   final AdminSettlementService _service = AdminSettlementService();
-  final AdminMunicipalityService _municipalityService =
-      AdminMunicipalityService();
   final TextEditingController _searchCtrl = TextEditingController();
 
   Timer? _searchDebounce;
   AdminSettlementPage? _pageData;
-  List<AdminMunicipality> _municipalities = const [];
   bool _loading = true;
   bool _mutating = false;
-  bool _municipalitiesLoading = false;
   String? _error;
   int _page = 1;
   int _pageSize = 10;
@@ -1584,24 +1506,6 @@ class _SettlementsViewState extends State<_SettlementsView> {
     }
   }
 
-  Future<bool> _loadMunicipalities({bool showErrors = true}) async {
-    if (_municipalitiesLoading) return false;
-
-    setState(() => _municipalitiesLoading = true);
-    try {
-      final municipalities = await _municipalityService.fetchAll();
-      if (!mounted) return false;
-      setState(() => _municipalities = municipalities);
-      return true;
-    } on AdminMunicipalityException catch (e) {
-      if (!mounted) return false;
-      if (showErrors) _showError(e.message);
-      return false;
-    } finally {
-      if (mounted) setState(() => _municipalitiesLoading = false);
-    }
-  }
-
   void _queueSearch(String _) {
     setState(() {});
     _searchDebounce?.cancel();
@@ -1640,41 +1544,28 @@ class _SettlementsViewState extends State<_SettlementsView> {
   }
 
   Future<void> _openCreate() async {
-    final loaded = _municipalities.isNotEmpty || await _loadMunicipalities();
-    if (!mounted || !loaded) return;
-    if (_municipalities.isEmpty) {
-      _showError('Prvo dodajte barem jednu općinu.');
-      return;
-    }
-
     final draft = await showDialog<_SettlementDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _SettlementEditorDialog(
-        municipalities: _municipalities,
-        initialMunicipalityId: widget.municipality.id,
-      ),
+      builder: (_) => _SettlementEditorDialog(municipality: widget.municipality),
     );
     if (!mounted || draft == null) return;
 
     await _runMutation(() async {
       await _service.create(
         name: draft.name,
-        municipalityId: draft.municipalityId,
+        municipalityId: widget.municipality.id,
         postalCode: draft.postalCode,
       );
     }, 'Naselje je dodano.');
   }
 
   Future<void> _openEdit(AdminSettlement settlement) async {
-    final loaded = _municipalities.isNotEmpty || await _loadMunicipalities();
-    if (!mounted || !loaded) return;
-
     final draft = await showDialog<_SettlementDraft>(
       context: context,
       barrierDismissible: false,
       builder: (_) => _SettlementEditorDialog(
-        municipalities: _municipalities,
+        municipality: widget.municipality,
         settlement: settlement,
       ),
     );
@@ -1684,7 +1575,7 @@ class _SettlementsViewState extends State<_SettlementsView> {
       await _service.update(
         settlement.id,
         name: draft.name,
-        municipalityId: draft.municipalityId,
+        municipalityId: widget.municipality.id,
         postalCode: draft.postalCode,
       );
     }, 'Naselje je sačuvano.');
@@ -1742,7 +1633,6 @@ class _SettlementsViewState extends State<_SettlementsView> {
     _searchDebounce?.cancel();
     _searchCtrl.dispose();
     _service.dispose();
-    _municipalityService.dispose();
     super.dispose();
   }
 
@@ -1913,27 +1803,17 @@ class _SettlementsViewState extends State<_SettlementsView> {
 }
 
 class _SettlementDraft {
-  const _SettlementDraft({
-    required this.name,
-    required this.municipalityId,
-    required this.postalCode,
-  });
+  const _SettlementDraft({required this.name, required this.postalCode});
 
   final String name;
-  final int municipalityId;
   final String postalCode;
 }
 
 class _SettlementEditorDialog extends StatefulWidget {
-  const _SettlementEditorDialog({
-    required this.municipalities,
-    this.settlement,
-    this.initialMunicipalityId,
-  });
+  const _SettlementEditorDialog({required this.municipality, this.settlement});
 
-  final List<AdminMunicipality> municipalities;
+  final AdminMunicipality municipality;
   final AdminSettlement? settlement;
-  final int? initialMunicipalityId;
 
   @override
   State<_SettlementEditorDialog> createState() =>
@@ -1945,8 +1825,6 @@ class _SettlementEditorDialogState extends State<_SettlementEditorDialog> {
   final _nameCtrl = TextEditingController();
   final _postalCodeCtrl = TextEditingController();
 
-  int? _municipalityId;
-
   bool get _isEdit => widget.settlement != null;
 
   @override
@@ -1955,19 +1833,6 @@ class _SettlementEditorDialogState extends State<_SettlementEditorDialog> {
     final settlement = widget.settlement;
     _nameCtrl.text = settlement?.name ?? '';
     _postalCodeCtrl.text = settlement?.postalCode ?? '';
-
-    final municipalityIds = widget.municipalities.map((m) => m.id).toSet();
-    if (settlement != null &&
-        municipalityIds.contains(settlement.municipalityId)) {
-      _municipalityId = settlement.municipalityId;
-    } else if (widget.initialMunicipalityId != null &&
-        municipalityIds.contains(widget.initialMunicipalityId)) {
-      _municipalityId = widget.initialMunicipalityId;
-    } else if (widget.municipalities.length == 1) {
-      _municipalityId = widget.municipalities.first.id;
-    } else {
-      _municipalityId = null;
-    }
   }
 
   @override
@@ -1984,7 +1849,6 @@ class _SettlementEditorDialogState extends State<_SettlementEditorDialog> {
     Navigator.of(context).pop(
       _SettlementDraft(
         name: _nameCtrl.text.trim(),
-        municipalityId: _municipalityId ?? 0,
         postalCode: _postalCodeCtrl.text.trim(),
       ),
     );
@@ -2002,28 +1866,13 @@ class _SettlementEditorDialogState extends State<_SettlementEditorDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DropdownButtonFormField<int>(
-                  initialValue: _municipalityId ?? 0,
+                TextFormField(
+                  initialValue: widget.municipality.name,
+                  enabled: false,
                   decoration: const InputDecoration(
                     labelText: 'Općina',
                     prefixIcon: Icon(Icons.map_outlined),
                   ),
-                  items: [
-                    const DropdownMenuItem(
-                      value: 0,
-                      child: Text('Odaberite općinu'),
-                    ),
-                    for (final municipality in widget.municipalities)
-                      DropdownMenuItem(
-                        value: municipality.id,
-                        child: Text(municipality.name),
-                      ),
-                  ],
-                  validator: (value) =>
-                      value == null || value == 0 ? 'Obavezno polje.' : null,
-                  onChanged: (value) {
-                    setState(() => _municipalityId = value == 0 ? null : value);
-                  },
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
