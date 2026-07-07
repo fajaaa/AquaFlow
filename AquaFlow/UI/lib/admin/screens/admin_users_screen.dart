@@ -10,6 +10,7 @@ import 'package:aquaflow_desktop/admin/models/admin_user.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_draft.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_role_option.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_service_locations_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_user_water_meters_screen.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_service.dart';
@@ -27,6 +28,7 @@ enum AdminUsersScreenMode {
     singular: 'Korisnik',
     singularAccusative: 'korisnika',
     showWaterMeters: true,
+    showServiceLocations: true,
   ),
   admins(
     roleName: 'Admin',
@@ -36,6 +38,7 @@ enum AdminUsersScreenMode {
     singular: 'Administrator',
     singularAccusative: 'administratora',
     showWaterMeters: false,
+    showServiceLocations: false,
   );
 
   const AdminUsersScreenMode({
@@ -45,6 +48,7 @@ enum AdminUsersScreenMode {
     required this.singular,
     required this.singularAccusative,
     required this.showWaterMeters,
+    required this.showServiceLocations,
   });
 
   /// Backend `UserRole` name, sent as the `UserRole=` filter and used to
@@ -55,8 +59,10 @@ enum AdminUsersScreenMode {
   final String singular;
   final String singularAccusative;
 
-  /// Customers have water meters; admins do not, so the row action is hidden.
+  /// Customers have water meters and service locations; admins do not, so
+  /// these row actions are hidden.
   final bool showWaterMeters;
+  final bool showServiceLocations;
 }
 
 class AdminUsersScreen extends StatefulWidget {
@@ -261,6 +267,39 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AdminUserWaterMetersScreen(user: user),
+      ),
+    );
+  }
+
+  /// Resolves the user's CustomerProfile (locations are keyed by profile id,
+  /// not user id) and pushes the locations screen pinned to it - mirrors
+  /// [_openWaterMeters]'s profile lookup but as a full desktop table instead
+  /// of a read-only list, since locations are manageable from here too.
+  Future<void> _openServiceLocations(AdminUser user) async {
+    AdminCustomerProfile? profile;
+    try {
+      profile = await _service.fetchCustomerProfile(user.id);
+    } on AdminUserException catch (e) {
+      if (!mounted) return;
+      _showError(e.message);
+      return;
+    }
+    if (!mounted) return;
+
+    if (profile == null) {
+      _showError('Korisnik nema kreiran profil pa ni lokacije.');
+      return;
+    }
+
+    final title = user.fullName.isEmpty ? user.email : user.fullName;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text('Lokacije - $title')),
+          body: SafeArea(
+            child: AdminServiceLocationsScreen(customerId: profile!.id),
+          ),
+        ),
       ),
     );
   }
@@ -517,6 +556,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 onWaterMeters: widget.mode.showWaterMeters
                                     ? () => _openWaterMeters(item)
                                     : null,
+                                onServiceLocations:
+                                    widget.mode.showServiceLocations
+                                    ? () => _openServiceLocations(item)
+                                    : null,
                               ),
                             ),
                           ],
@@ -658,6 +701,7 @@ class _RowActions extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     this.onWaterMeters,
+    this.onServiceLocations,
   });
 
   final bool disabled;
@@ -667,6 +711,9 @@ class _RowActions extends StatelessWidget {
 
   /// Null hides the action entirely (admins have no water meters).
   final VoidCallback? onWaterMeters;
+
+  /// Null hides the action entirely (admins have no service locations).
+  final VoidCallback? onServiceLocations;
 
   @override
   Widget build(BuildContext context) {
@@ -685,6 +732,12 @@ class _RowActions extends StatelessWidget {
             tooltip: 'Vodomjeri',
             onPressed: disabled ? null : onWaterMeters,
             icon: const Icon(Icons.water_drop_outlined),
+          ),
+        if (onServiceLocations != null)
+          IconButton(
+            tooltip: 'Lokacije',
+            onPressed: disabled ? null : onServiceLocations,
+            icon: const Icon(Icons.location_on_outlined),
           ),
         IconButton(
           tooltip: deleteDisabled

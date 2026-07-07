@@ -1,6 +1,7 @@
-/// A customer's profile as returned by `GET /CustomerProfiles?UserId=`.
-/// Fetched by the admin Users editor so it can pre-fill and PATCH the
-/// existing profile instead of creating a duplicate one.
+/// A customer's profile as returned by `GET /CustomerProfiles`. Fetched by
+/// the admin Users editor (by `UserId`) so it can pre-fill and PATCH the
+/// existing profile instead of creating a duplicate one, and by the admin
+/// Service Locations screen (unfiltered, for the customer picker dropdown).
 class AdminCustomerProfile {
   const AdminCustomerProfile({
     required this.id,
@@ -19,6 +20,15 @@ class AdminCustomerProfile {
   final String customerCode;
   final String defaultLanguage;
   final String theme;
+
+  /// "First Last (CUS-0001)" for dropdown display; falls back to the code or
+  /// profile id when the name is blank.
+  String get label {
+    final name = '$firstName $lastName'.trim();
+    final code = customerCode.trim();
+    if (name.isEmpty) return code.isEmpty ? 'Kupac #$id' : code;
+    return code.isEmpty ? name : '$name ($code)';
+  }
 
   factory AdminCustomerProfile.fromJson(Map<String, dynamic> json) {
     return AdminCustomerProfile(
