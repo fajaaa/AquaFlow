@@ -396,9 +396,6 @@ class _RequestCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final address = request.serviceLocationAddress.trim().isEmpty
-        ? 'Lokacija #${request.serviceLocationId}'
-        : request.serviceLocationAddress.trim();
     final note = request.note?.trim();
 
     return SizedBox(
@@ -408,7 +405,7 @@ class _RequestCell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            address,
+            'Zahtjev #${request.id}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.titleSmall?.copyWith(
@@ -417,7 +414,7 @@ class _RequestCell extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            note == null || note.isEmpty ? 'Zahtjev #${request.id}' : note,
+            note == null || note.isEmpty ? 'Bez napomene' : note,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(

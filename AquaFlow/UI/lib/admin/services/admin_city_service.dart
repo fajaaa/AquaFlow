@@ -4,14 +4,14 @@ import 'dart:io' show SocketException;
 
 import 'package:http/http.dart' as http;
 
-import 'package:aquaflow_desktop/admin/models/admin_settlement.dart';
-import 'package:aquaflow_desktop/admin/models/admin_settlement_page.dart';
-import 'package:aquaflow_desktop/admin/services/admin_settlement_exception.dart';
+import 'package:aquaflow_desktop/admin/models/admin_city.dart';
+import 'package:aquaflow_desktop/admin/models/admin_city_page.dart';
+import 'package:aquaflow_desktop/admin/services/admin_city_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
 import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 
-class AdminSettlementService {
-  AdminSettlementService({
+class AdminCityService {
+  AdminCityService({
     http.Client? client,
     TokenStorage? tokenStorage,
     Duration? timeout,
@@ -23,11 +23,10 @@ class AdminSettlementService {
   final TokenStorage _tokenStorage;
   final Duration _timeout;
 
-  Future<AdminSettlementPage> fetch({
+  Future<AdminCityPage> fetch({
     required int page,
     required int pageSize,
     String? name,
-    int? municipalityId,
   }) async {
     final token = await _requireToken();
     final query = <String, String>{
@@ -41,12 +40,9 @@ class AdminSettlementService {
     if (nameText != null && nameText.isNotEmpty) {
       query['Name'] = nameText;
     }
-    if (municipalityId != null) {
-      query['MunicipalityId'] = '$municipalityId';
-    }
 
     final uri = Uri.parse(
-      '${ApiConfig.baseUrl}/Settlements',
+      '${ApiConfig.baseUrl}/Cities',
     ).replace(queryParameters: query);
 
     final response = await _send(
@@ -54,38 +50,37 @@ class AdminSettlementService {
     );
 
     if (response.statusCode != 200) {
-      throw AdminSettlementException(
-        _messageFor(response, 'Naselja nije moguće učitati'),
+      throw AdminCityException(
+        _messageFor(response, 'Gradove nije moguće učitati'),
       );
     }
 
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic>) {
-      throw const AdminSettlementException('Naselja su u neispravnom formatu.');
+      throw const AdminCityException('Gradovi su u neispravnom formatu.');
     }
 
     final itemsJson = decoded['items'];
     if (itemsJson is! List) {
-      throw const AdminSettlementException('Lista naselja je neispravna.');
+      throw const AdminCityException('Lista gradova je neispravna.');
     }
 
     final items = itemsJson
         .whereType<Map<String, dynamic>>()
-        .map(AdminSettlement.fromJson)
+        .map(AdminCity.fromJson)
         .toList();
 
-    return AdminSettlementPage(
+    return AdminCityPage(
       items: items,
       totalCount: (decoded['totalCount'] as num?)?.toInt() ?? items.length,
     );
   }
 
   /// Full unfiltered list (bounded to 200) for dropdown/lookup use, e.g. the
-  /// Users editor's cascading Naselje step (filtered client-side by
-  /// [AdminSettlement.municipalityId]).
-  Future<List<AdminSettlement>> fetchAll() async {
+  /// Municipality tab's parent filter/dialog and the Users editor's Grad step.
+  Future<List<AdminCity>> fetchAll() async {
     final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/Settlements').replace(
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Cities').replace(
       queryParameters: {'PageSize': '200', 'SortBy': 'Name'},
     );
 
@@ -94,30 +89,26 @@ class AdminSettlementService {
     );
 
     if (response.statusCode != 200) {
-      throw AdminSettlementException(
-        _messageFor(response, 'Naselja nije moguće učitati'),
+      throw AdminCityException(
+        _messageFor(response, 'Gradove nije moguće učitati'),
       );
     }
 
     final decoded = jsonDecode(response.body);
     final itemsJson = decoded is Map<String, dynamic> ? decoded['items'] : null;
     if (itemsJson is! List) {
-      throw const AdminSettlementException('Lista naselja je neispravna.');
+      throw const AdminCityException('Lista gradova je neispravna.');
     }
 
     return itemsJson
         .whereType<Map<String, dynamic>>()
-        .map(AdminSettlement.fromJson)
+        .map(AdminCity.fromJson)
         .toList();
   }
 
-  Future<AdminSettlement> create({
-    required String name,
-    required int municipalityId,
-    required String postalCode,
-  }) async {
+  Future<AdminCity> create({required String name, required String code}) async {
     final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/Settlements');
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Cities');
 
     final response = await _send(
       () => _client.post(
@@ -126,31 +117,26 @@ class AdminSettlementService {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'name': name,
-          'municipalityId': municipalityId,
-          'postalCode': postalCode,
-        }),
+        body: jsonEncode({'name': name, 'code': code}),
       ),
     );
 
     if (response.statusCode != 201) {
-      throw AdminSettlementException(
-        _messageFor(response, 'Naselje nije moguće dodati'),
+      throw AdminCityException(
+        _messageFor(response, 'Grad nije moguće dodati'),
       );
     }
 
-    return _decodeSettlement(response.body);
+    return _decodeCity(response.body);
   }
 
-  Future<AdminSettlement> update(
+  Future<AdminCity> update(
     int id, {
     required String name,
-    required int municipalityId,
-    required String postalCode,
+    required String code,
   }) async {
     final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/Settlements/$id');
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Cities/$id');
 
     final response = await _send(
       () => _client.put(
@@ -159,50 +145,46 @@ class AdminSettlementService {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'name': name,
-          'municipalityId': municipalityId,
-          'postalCode': postalCode,
-        }),
+        body: jsonEncode({'name': name, 'code': code}),
       ),
     );
 
     if (response.statusCode != 200) {
-      throw AdminSettlementException(
-        _messageFor(response, 'Naselje nije moguće sačuvati'),
+      throw AdminCityException(
+        _messageFor(response, 'Grad nije moguće sačuvati'),
       );
     }
 
-    return _decodeSettlement(response.body);
+    return _decodeCity(response.body);
   }
 
   Future<void> delete(int id) async {
     final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/Settlements/$id');
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Cities/$id');
 
     final response = await _send(
       () => _client.delete(uri, headers: {'Authorization': 'Bearer $token'}),
     );
 
     if (response.statusCode != 204) {
-      throw AdminSettlementException(
-        _messageFor(response, 'Naselje nije moguće obrisati'),
+      throw AdminCityException(
+        _messageFor(response, 'Grad nije moguće obrisati'),
       );
     }
   }
 
-  AdminSettlement _decodeSettlement(String body) {
+  AdminCity _decodeCity(String body) {
     final decoded = jsonDecode(body);
     if (decoded is! Map<String, dynamic>) {
-      throw const AdminSettlementException('Naselje je u neispravnom formatu.');
+      throw const AdminCityException('Grad je u neispravnom formatu.');
     }
-    return AdminSettlement.fromJson(decoded);
+    return AdminCity.fromJson(decoded);
   }
 
   Future<String> _requireToken() async {
     final token = await _tokenStorage.getAccessToken();
     if (token == null) {
-      throw const AdminSettlementException('Niste prijavljeni.');
+      throw const AdminCityException('Niste prijavljeni.');
     }
     return token;
   }
@@ -211,13 +193,11 @@ class AdminSettlementService {
     try {
       return await call().timeout(_timeout);
     } on SocketException {
-      throw AdminSettlementException(
-        'Server nije dostupan na ${ApiConfig.baseUrl}.',
-      );
+      throw AdminCityException('Server nije dostupan na ${ApiConfig.baseUrl}.');
     } on TimeoutException {
-      throw const AdminSettlementException('Server nije odgovorio na vrijeme.');
+      throw const AdminCityException('Server nije odgovorio na vrijeme.');
     } on http.ClientException catch (e) {
-      throw AdminSettlementException('Greška mreže: ${e.message}');
+      throw AdminCityException('Greška mreže: ${e.message}');
     }
   }
 

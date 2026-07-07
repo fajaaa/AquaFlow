@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/admin/screens/admin_account_edit_screen.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_codebook_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_collectors_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_notifications_screen.dart';
-import 'package:aquaflow_desktop/admin/screens/admin_settlements_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_users_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_water_meter_requests_screen.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
@@ -17,7 +17,7 @@ import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 /// Classic admin layout: a fixed left [_Sidebar] (brand on top, a vertical menu
 /// below with the active item highlighted in blue and a left indicator bar) and
 /// a content area on the right that swaps with the selected menu item. The
-/// "Obavijesti", "Naselja", "Postavke firme", and "Moj nalog" sections embed
+/// "Obavijesti", "Šifarnik", "Postavke firme", and "Moj nalog" sections embed
 /// their existing screens; the rest are placeholders until wired up. "Moj nalog" uses
 /// the admin-only [AdminAccountEditScreen] (not the shared `AccountEditScreen`
 /// used by the mobile customer/collector "Nalog" tab), since it edits more than
@@ -98,7 +98,7 @@ const List<_AdminNavItem> _navItems = [
   _AdminNavItem(
     icon: Icons.location_city_outlined,
     selectedIcon: Icons.location_city,
-    label: 'Naselja',
+    label: 'Šifarnik',
   ),
   _AdminNavItem(
     icon: Icons.business_outlined,
@@ -159,7 +159,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           mode: AdminUsersScreenMode.admins,
         );
       case 10:
-        return const AdminSettlementsScreen();
+        return const AdminCodebookScreen();
       case 11:
         return const CompanySettingsScreen();
       case 12:

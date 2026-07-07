@@ -1,28 +1,32 @@
+/// Read-only naselje lookup entry for area/address pickers (e.g. the admin
+/// Collectors screen's area dropdown, and the cascading location picker in
+/// the Users editor dialog). Carries the flattened `municipalityName` for
+/// display only - it has no `municipalityId`, so it cannot be used to filter
+/// a cascading dropdown; use [AdminSettlement] for that instead.
 class AdminSettlementOption {
   const AdminSettlementOption({
     required this.id,
     required this.name,
-    required this.city,
-    required this.postalCode,
+    required this.municipalityName,
   });
 
   final int id;
   final String name;
-  final String city;
-  final String postalCode;
+  final String municipalityName;
 
+  /// "Naselje (Općina)" for dropdown display.
   String get label {
-    final parts = [name.trim(), city.trim()].where((part) => part.isNotEmpty);
-    final text = parts.join(', ');
-    return text.isEmpty ? 'Područje #$id' : text;
+    final name = this.name.trim();
+    final municipality = municipalityName.trim();
+    if (name.isEmpty) return 'Naselje #$id';
+    return municipality.isEmpty ? name : '$name ($municipality)';
   }
 
   factory AdminSettlementOption.fromJson(Map<String, dynamic> json) {
     return AdminSettlementOption(
       id: (json['id'] as num?)?.toInt() ?? 0,
       name: (json['name'] ?? '') as String,
-      city: (json['city'] ?? '') as String,
-      postalCode: (json['postalCode'] ?? '') as String,
+      municipalityName: (json['municipalityName'] ?? '') as String,
     );
   }
 }

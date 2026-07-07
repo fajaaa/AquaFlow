@@ -1,7 +1,6 @@
 /// A customer's profile as returned by `GET /CustomerProfiles`. Fetched by
 /// the admin Users editor (by `UserId`) so it can pre-fill and PATCH the
-/// existing profile instead of creating a duplicate one, and by the admin
-/// Service Locations screen (unfiltered, for the customer picker dropdown).
+/// existing profile instead of creating a duplicate one.
 class AdminCustomerProfile {
   const AdminCustomerProfile({
     required this.id,
@@ -11,6 +10,10 @@ class AdminCustomerProfile {
     required this.customerCode,
     required this.defaultLanguage,
     required this.theme,
+    required this.settlementId,
+    required this.settlementName,
+    required this.street,
+    required this.houseNumber,
   });
 
   final int id;
@@ -20,6 +23,10 @@ class AdminCustomerProfile {
   final String customerCode;
   final String defaultLanguage;
   final String theme;
+  final int? settlementId;
+  final String settlementName;
+  final String? street;
+  final String? houseNumber;
 
   /// "First Last (CUS-0001)" for dropdown display; falls back to the code or
   /// profile id when the name is blank.
@@ -39,6 +46,10 @@ class AdminCustomerProfile {
       customerCode: (json['customerCode'] ?? '') as String,
       defaultLanguage: (json['defaultLanguage'] ?? 'bs') as String,
       theme: (json['theme'] ?? 'light') as String,
+      settlementId: (json['settlementId'] as num?)?.toInt(),
+      settlementName: (json['settlementName'] ?? '') as String,
+      street: json['street'] as String?,
+      houseNumber: json['houseNumber'] as String?,
     );
   }
 }
