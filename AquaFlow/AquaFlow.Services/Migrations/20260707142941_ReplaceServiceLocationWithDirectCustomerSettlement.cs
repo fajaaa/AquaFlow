@@ -11,6 +11,36 @@ namespace AquaFlow.Services.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Backfill CustomerId on every WaterMeter/FaultReport row via its
+            // ServiceLocation, not just a single hardcoded seed row - must run
+            // before ServiceLocationId is renamed/dropped and before
+            // ServiceLocations is dropped below.
+            migrationBuilder.AddColumn<int>(
+                name: "CustomerId",
+                table: "WaterMeters",
+                type: "int",
+                nullable: false,
+                defaultValue: 0);
+
+            migrationBuilder.AddColumn<int>(
+                name: "CustomerId",
+                table: "FaultReports",
+                type: "int",
+                nullable: false,
+                defaultValue: 0);
+
+            migrationBuilder.Sql(@"
+                UPDATE wm
+                SET wm.CustomerId = sl.CustomerId
+                FROM WaterMeters wm
+                INNER JOIN ServiceLocations sl ON wm.ServiceLocationId = sl.Id;");
+
+            migrationBuilder.Sql(@"
+                UPDATE fr
+                SET fr.CustomerId = sl.CustomerId
+                FROM FaultReports fr
+                INNER JOIN ServiceLocations sl ON fr.ServiceLocationId = sl.Id;");
+
             migrationBuilder.DropForeignKey(
                 name: "FK_FaultReports_ServiceLocations_ServiceLocationId",
                 table: "FaultReports");
@@ -54,20 +84,6 @@ namespace AquaFlow.Services.Migrations
                 table: "FaultReports",
                 newName: "IX_FaultReports_SettlementId");
 
-            migrationBuilder.AddColumn<int>(
-                name: "CustomerId",
-                table: "WaterMeters",
-                type: "int",
-                nullable: false,
-                defaultValue: 0);
-
-            migrationBuilder.AddColumn<int>(
-                name: "CustomerId",
-                table: "FaultReports",
-                type: "int",
-                nullable: false,
-                defaultValue: 0);
-
             migrationBuilder.AddColumn<string>(
                 name: "HouseNumber",
                 table: "CustomerProfiles",
@@ -94,20 +110,6 @@ namespace AquaFlow.Services.Migrations
                 keyValue: 1,
                 columns: new[] { "HouseNumber", "SettlementId", "Street" },
                 values: new object[] { "12", 1, "Zmaja od Bosne" });
-
-            migrationBuilder.UpdateData(
-                table: "FaultReports",
-                keyColumn: "Id",
-                keyValue: 1,
-                column: "CustomerId",
-                value: 1);
-
-            migrationBuilder.UpdateData(
-                table: "WaterMeters",
-                keyColumn: "Id",
-                keyValue: 1,
-                column: "CustomerId",
-                value: 1);
 
             migrationBuilder.CreateIndex(
                 name: "IX_WaterMeters_CustomerId",
