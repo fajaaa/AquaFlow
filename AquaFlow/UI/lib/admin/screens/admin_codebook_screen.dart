@@ -16,12 +16,12 @@ import 'package:aquaflow_desktop/admin/services/admin_municipality_service.dart'
 import 'package:aquaflow_desktop/admin/services/admin_settlement_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_settlement_service.dart';
 
-/// Administrative location codebook: Grad -> Općina -> Naselje. Replaces the
-/// old single-level "Naselja" sidebar item with three CRUD tabs, each built on
-/// the same template as the former `AdminSettlementsScreen` (search, paging,
-/// create/edit dialog, delete confirm with backend-message-passthrough
-/// exceptions). There is no drill-in between tabs anymore - naselje CRUD is
-/// reached directly from the "Naselja" tab, filtered by an Općina dropdown.
+/// Administrative location codebook: Grad -> Općina -> Naselje. A single
+/// drill-in shell - Gradovi, then the municipalities of a selected city, then
+/// the settlements of a selected municipality - with a breadcrumb + back
+/// button for navigating back up. Each level is a self-contained CRUD view
+/// built on the same shared chrome (search, paging, create/edit dialog,
+/// delete confirm with backend-message-passthrough exceptions).
 class AdminCodebookScreen extends StatefulWidget {
   const AdminCodebookScreen({super.key});
 
@@ -29,20 +29,54 @@ class AdminCodebookScreen extends StatefulWidget {
   State<AdminCodebookScreen> createState() => _AdminCodebookScreenState();
 }
 
-class _AdminCodebookScreenState extends State<AdminCodebookScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+enum _CodebookLevel { cities, municipalities, settlements }
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+class _AdminCodebookScreenState extends State<AdminCodebookScreen> {
+  _CodebookLevel _level = _CodebookLevel.cities;
+  AdminCity? _selectedCity;
+  AdminMunicipality? _selectedMunicipality;
+
+  void _openCity(AdminCity city) {
+    setState(() {
+      _selectedCity = city;
+      _selectedMunicipality = null;
+      _level = _CodebookLevel.municipalities;
+    });
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  void _openMunicipality(AdminMunicipality municipality) {
+    setState(() {
+      _selectedMunicipality = municipality;
+      _level = _CodebookLevel.settlements;
+    });
+  }
+
+  void _goToCities() {
+    setState(() {
+      _level = _CodebookLevel.cities;
+      _selectedCity = null;
+      _selectedMunicipality = null;
+    });
+  }
+
+  void _goToMunicipalities() {
+    setState(() {
+      _level = _CodebookLevel.municipalities;
+      _selectedMunicipality = null;
+    });
+  }
+
+  void _goBack() {
+    switch (_level) {
+      case _CodebookLevel.cities:
+        break;
+      case _CodebookLevel.municipalities:
+        _goToCities();
+        break;
+      case _CodebookLevel.settlements:
+        _goToMunicipalities();
+        break;
+    }
   }
 
   @override
@@ -74,37 +108,161 @@ class _AdminCodebookScreenState extends State<AdminCodebookScreen>
               ],
             ),
           ),
-          TabBar(
-            controller: _tabController,
-            labelColor: theme.colorScheme.primary,
-            unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-            indicatorColor: theme.colorScheme.primary,
-            tabs: const [
-              Tab(text: 'Gradovi'),
-              Tab(text: 'Općine'),
-              Tab(text: 'Naselja'),
-            ],
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: const [_CitiesTab(), _MunicipalitiesTab(), _SettlementsTab()],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 28, 8),
+            child: Row(
+              children: [
+                if (_level != _CodebookLevel.cities)
+                  IconButton(
+                    tooltip: 'Nazad',
+                    onPressed: _goBack,
+                    icon: const Icon(Icons.arrow_back),
+                  )
+                else
+                  const SizedBox(width: 8),
+                Expanded(child: _buildBreadcrumb(theme)),
+              ],
             ),
           ),
+          const Divider(height: 1),
+          Expanded(child: _buildBody()),
         ],
       ),
     );
+  }
+
+  Widget _buildBreadcrumb(ThemeData theme) {
+    final items = <_BreadcrumbItem>[
+      _BreadcrumbItem(
+        'Gradovi',
+        _level == _CodebookLevel.cities ? null : _goToCities,
+      ),
+    ];
+
+    final city = _selectedCity;
+    if (city != null) {
+      items.add(
+        _BreadcrumbItem(
+          city.name,
+          _level == _CodebookLevel.settlements ? _goToMunicipalities : null,
+        ),
+      );
+    }
+
+    final municipality = _selectedMunicipality;
+    if (_level == _CodebookLevel.settlements && municipality != null) {
+      items.add(_BreadcrumbItem(municipality.name, null));
+    }
+
+    return _Breadcrumb(items: items);
+  }
+
+  Widget _buildBody() {
+    switch (_level) {
+      case _CodebookLevel.cities:
+        return _CitiesView(
+          key: const ValueKey('codebook-cities'),
+          onOpenCity: _openCity,
+        );
+      case _CodebookLevel.municipalities:
+        final city = _selectedCity!;
+        return _MunicipalitiesView(
+          key: ValueKey('codebook-municipalities-${city.id}'),
+          city: city,
+          onOpenMunicipality: _openMunicipality,
+        );
+      case _CodebookLevel.settlements:
+        final municipality = _selectedMunicipality!;
+        return _SettlementsView(
+          key: ValueKey('codebook-settlements-${municipality.id}'),
+          municipality: municipality,
+        );
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Breadcrumb
+// ---------------------------------------------------------------------------
+
+class _BreadcrumbItem {
+  const _BreadcrumbItem(this.label, this.onTap);
+
+  final String label;
+  final VoidCallback? onTap;
+}
+
+class _Breadcrumb extends StatelessWidget {
+  const _Breadcrumb({required this.items});
+
+  final List<_BreadcrumbItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final children = <Widget>[];
+
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+      final isLast = i == items.length - 1;
+
+      if (i > 0) {
+        children.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        );
+      }
+
+      if (item.onTap == null) {
+        children.add(
+          Text(
+            item.label,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: isLast ? FontWeight.w700 : FontWeight.w500,
+              color: isLast
+                  ? theme.colorScheme.onSurface
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        );
+      } else {
+        children.add(
+          InkWell(
+            onTap: item.onTap,
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+              child: Text(
+                item.label,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    return Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: children);
   }
 }
 
 // ---------------------------------------------------------------------------
 // Shared chrome (header, pagination, empty/error states, delete confirm) -
-// identical across all three tabs, so it is defined once for the whole file.
+// identical across all three levels, so it is defined once for the whole
+// file.
 // ---------------------------------------------------------------------------
 
-class _TabHeader extends StatelessWidget {
-  const _TabHeader({
+class _LevelHeader extends StatelessWidget {
+  const _LevelHeader({
     required this.title,
     required this.subtitle,
     required this.createLabel,
@@ -360,14 +518,16 @@ String? _requiredValidator(String? value) {
 // Gradovi
 // ---------------------------------------------------------------------------
 
-class _CitiesTab extends StatefulWidget {
-  const _CitiesTab();
+class _CitiesView extends StatefulWidget {
+  const _CitiesView({super.key, required this.onOpenCity});
+
+  final ValueChanged<AdminCity> onOpenCity;
 
   @override
-  State<_CitiesTab> createState() => _CitiesTabState();
+  State<_CitiesView> createState() => _CitiesViewState();
 }
 
-class _CitiesTabState extends State<_CitiesTab> {
+class _CitiesViewState extends State<_CitiesView> {
   final AdminCityService _service = AdminCityService();
   final TextEditingController _searchCtrl = TextEditingController();
 
@@ -547,7 +707,7 @@ class _CitiesTabState extends State<_CitiesTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TabHeader(
+              _LevelHeader(
                 title: 'Gradovi',
                 subtitle: 'Pregled, dodavanje, uređivanje i brisanje gradova.',
                 createLabel: 'Novi grad',
@@ -653,7 +813,7 @@ class _CitiesTabState extends State<_CitiesTab> {
                     rows: [
                       for (final item in items)
                         DataRow(
-                          onSelectChanged: (_) => _openEdit(item),
+                          onSelectChanged: (_) => widget.onOpenCity(item),
                           cells: [
                             DataCell(Text(_textOrDash(item.name))),
                             DataCell(Text(_textOrDash(item.code))),
@@ -675,6 +835,12 @@ class _CitiesTabState extends State<_CitiesTab> {
                                         : () => _confirmAndDelete(item),
                                     icon: const Icon(Icons.delete_outline),
                                     color: Theme.of(context).colorScheme.error,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.chevron_right,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurfaceVariant,
                                   ),
                                 ],
                               ),
@@ -802,14 +968,21 @@ class _CityEditorDialogState extends State<_CityEditorDialog> {
 // Općine
 // ---------------------------------------------------------------------------
 
-class _MunicipalitiesTab extends StatefulWidget {
-  const _MunicipalitiesTab();
+class _MunicipalitiesView extends StatefulWidget {
+  const _MunicipalitiesView({
+    super.key,
+    required this.city,
+    required this.onOpenMunicipality,
+  });
+
+  final AdminCity city;
+  final ValueChanged<AdminMunicipality> onOpenMunicipality;
 
   @override
-  State<_MunicipalitiesTab> createState() => _MunicipalitiesTabState();
+  State<_MunicipalitiesView> createState() => _MunicipalitiesViewState();
 }
 
-class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
+class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
   final AdminMunicipalityService _service = AdminMunicipalityService();
   final AdminCityService _cityService = AdminCityService();
   final TextEditingController _searchCtrl = TextEditingController();
@@ -821,7 +994,6 @@ class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
   bool _mutating = false;
   bool _citiesLoading = false;
   String? _error;
-  int? _cityFilterId;
   int _page = 1;
   int _pageSize = 10;
   int _requestSerial = 0;
@@ -830,7 +1002,6 @@ class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
   void initState() {
     super.initState();
     _load();
-    _loadCities(showErrors: false);
   }
 
   Future<void> _load({bool resetPage = false}) async {
@@ -847,7 +1018,7 @@ class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
         page: _page,
         pageSize: _pageSize,
         name: _searchCtrl.text,
-        cityId: _cityFilterId,
+        cityId: widget.city.id,
       );
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
@@ -904,12 +1075,6 @@ class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
     _load(resetPage: true);
   }
 
-  void _setCityFilter(int? cityId) {
-    if (cityId == _cityFilterId) return;
-    setState(() => _cityFilterId = cityId);
-    _load(resetPage: true);
-  }
-
   void _setPageSize(int? value) {
     if (value == null || value == _pageSize || _loading) return;
     setState(() {
@@ -936,7 +1101,10 @@ class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
     final draft = await showDialog<_MunicipalityDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _MunicipalityEditorDialog(cities: _cities),
+      builder: (_) => _MunicipalityEditorDialog(
+        cities: _cities,
+        initialCityId: widget.city.id,
+      ),
     );
     if (!mounted || draft == null) return;
 
@@ -1040,16 +1208,13 @@ class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TabHeader(
+              _LevelHeader(
                 title: 'Općine',
-                subtitle: 'Pregled, dodavanje, uređivanje i brisanje općina.',
+                subtitle: 'Općine grada "${widget.city.name}".',
                 createLabel: 'Nova općina',
                 loading: _loading,
                 mutating: _mutating,
-                onRefresh: () {
-                  _load();
-                  _loadCities(showErrors: false);
-                },
+                onRefresh: () => _load(),
                 onCreate: _openCreate,
               ),
               const SizedBox(height: 18),
@@ -1076,52 +1241,26 @@ class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
 
   Widget _buildFilters() {
     final hasSearch = _searchCtrl.text.trim().isNotEmpty;
-
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        SizedBox(
-          width: 300,
-          child: TextField(
-            controller: _searchCtrl,
-            textInputAction: TextInputAction.search,
-            onChanged: _queueSearch,
-            onSubmitted: _submitSearch,
-            decoration: InputDecoration(
-              labelText: 'Pretraga',
-              hintText: 'Naziv općine',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: hasSearch
-                  ? IconButton(
-                      tooltip: 'Očisti pretragu',
-                      onPressed: _clearSearch,
-                      icon: const Icon(Icons.clear),
-                    )
-                  : null,
-            ),
-          ),
+    return SizedBox(
+      width: 320,
+      child: TextField(
+        controller: _searchCtrl,
+        textInputAction: TextInputAction.search,
+        onChanged: _queueSearch,
+        onSubmitted: _submitSearch,
+        decoration: InputDecoration(
+          labelText: 'Pretraga',
+          hintText: 'Naziv općine',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: hasSearch
+              ? IconButton(
+                  tooltip: 'Očisti pretragu',
+                  onPressed: _clearSearch,
+                  icon: const Icon(Icons.clear),
+                )
+              : null,
         ),
-        SizedBox(
-          width: 240,
-          child: DropdownButtonFormField<int>(
-            initialValue: _cityFilterId ?? 0,
-            decoration: const InputDecoration(
-              labelText: 'Grad',
-              prefixIcon: Icon(Icons.location_city_outlined),
-            ),
-            items: [
-              const DropdownMenuItem(value: 0, child: Text('Svi gradovi')),
-              for (final city in _cities)
-                DropdownMenuItem(value: city.id, child: Text(city.name)),
-            ],
-            onChanged: _loading || _mutating
-                ? null
-                : (value) => _setCityFilter(value == 0 ? null : value),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -1140,8 +1279,8 @@ class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
       return _CodebookEmptyState(
         icon: Icons.map_outlined,
         hasFilters: _hasFilters,
-        emptyMessage: 'Nema općina.',
-        filteredMessage: 'Nema općina za zadane filtere.',
+        emptyMessage: 'Nema općina za ovaj grad.',
+        filteredMessage: 'Nema općina za zadanu pretragu.',
       );
     }
 
@@ -1170,17 +1309,15 @@ class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
                     columns: const [
                       DataColumn(label: Text('Naziv')),
                       DataColumn(label: Text('Kod')),
-                      DataColumn(label: Text('Grad')),
                       DataColumn(label: Text('Akcije')),
                     ],
                     rows: [
                       for (final item in items)
                         DataRow(
-                          onSelectChanged: (_) => _openEdit(item),
+                          onSelectChanged: (_) => widget.onOpenMunicipality(item),
                           cells: [
                             DataCell(Text(_textOrDash(item.name))),
                             DataCell(Text(_textOrDash(item.code))),
-                            DataCell(Text(_textOrDash(item.cityName))),
                             DataCell(
                               Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1200,6 +1337,12 @@ class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
                                     icon: const Icon(Icons.delete_outline),
                                     color: Theme.of(context).colorScheme.error,
                                   ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.chevron_right,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
                                 ],
                               ),
                             ),
@@ -1216,8 +1359,7 @@ class _MunicipalitiesTabState extends State<_MunicipalitiesTab> {
     );
   }
 
-  bool get _hasFilters =>
-      _searchCtrl.text.trim().isNotEmpty || _cityFilterId != null;
+  bool get _hasFilters => _searchCtrl.text.trim().isNotEmpty;
 
   int _totalPages(int totalCount) {
     if (totalCount <= 0) return 1;
@@ -1238,10 +1380,15 @@ class _MunicipalityDraft {
 }
 
 class _MunicipalityEditorDialog extends StatefulWidget {
-  const _MunicipalityEditorDialog({required this.cities, this.municipality});
+  const _MunicipalityEditorDialog({
+    required this.cities,
+    this.municipality,
+    this.initialCityId,
+  });
 
   final List<AdminCity> cities;
   final AdminMunicipality? municipality;
+  final int? initialCityId;
 
   @override
   State<_MunicipalityEditorDialog> createState() =>
@@ -1265,9 +1412,16 @@ class _MunicipalityEditorDialogState extends State<_MunicipalityEditorDialog> {
     _codeCtrl.text = municipality?.code ?? '';
 
     final cityIds = widget.cities.map((city) => city.id).toSet();
-    _cityId = municipality != null && cityIds.contains(municipality.cityId)
-        ? municipality.cityId
-        : (widget.cities.length == 1 ? widget.cities.first.id : null);
+    if (municipality != null && cityIds.contains(municipality.cityId)) {
+      _cityId = municipality.cityId;
+    } else if (widget.initialCityId != null &&
+        cityIds.contains(widget.initialCityId)) {
+      _cityId = widget.initialCityId;
+    } else if (widget.cities.length == 1) {
+      _cityId = widget.cities.first.id;
+    } else {
+      _cityId = null;
+    }
   }
 
   @override
@@ -1367,14 +1521,16 @@ class _MunicipalityEditorDialogState extends State<_MunicipalityEditorDialog> {
 // Naselja
 // ---------------------------------------------------------------------------
 
-class _SettlementsTab extends StatefulWidget {
-  const _SettlementsTab();
+class _SettlementsView extends StatefulWidget {
+  const _SettlementsView({super.key, required this.municipality});
+
+  final AdminMunicipality municipality;
 
   @override
-  State<_SettlementsTab> createState() => _SettlementsTabState();
+  State<_SettlementsView> createState() => _SettlementsViewState();
 }
 
-class _SettlementsTabState extends State<_SettlementsTab> {
+class _SettlementsViewState extends State<_SettlementsView> {
   final AdminSettlementService _service = AdminSettlementService();
   final AdminMunicipalityService _municipalityService =
       AdminMunicipalityService();
@@ -1387,7 +1543,6 @@ class _SettlementsTabState extends State<_SettlementsTab> {
   bool _mutating = false;
   bool _municipalitiesLoading = false;
   String? _error;
-  int? _municipalityFilterId;
   int _page = 1;
   int _pageSize = 10;
   int _requestSerial = 0;
@@ -1396,7 +1551,6 @@ class _SettlementsTabState extends State<_SettlementsTab> {
   void initState() {
     super.initState();
     _load();
-    _loadMunicipalities(showErrors: false);
   }
 
   Future<void> _load({bool resetPage = false}) async {
@@ -1413,7 +1567,7 @@ class _SettlementsTabState extends State<_SettlementsTab> {
         page: _page,
         pageSize: _pageSize,
         name: _searchCtrl.text,
-        municipalityId: _municipalityFilterId,
+        municipalityId: widget.municipality.id,
       );
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
@@ -1470,12 +1624,6 @@ class _SettlementsTabState extends State<_SettlementsTab> {
     _load(resetPage: true);
   }
 
-  void _setMunicipalityFilter(int? municipalityId) {
-    if (municipalityId == _municipalityFilterId) return;
-    setState(() => _municipalityFilterId = municipalityId);
-    _load(resetPage: true);
-  }
-
   void _setPageSize(int? value) {
     if (value == null || value == _pageSize || _loading) return;
     setState(() {
@@ -1502,7 +1650,10 @@ class _SettlementsTabState extends State<_SettlementsTab> {
     final draft = await showDialog<_SettlementDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _SettlementEditorDialog(municipalities: _municipalities),
+      builder: (_) => _SettlementEditorDialog(
+        municipalities: _municipalities,
+        initialMunicipalityId: widget.municipality.id,
+      ),
     );
     if (!mounted || draft == null) return;
 
@@ -1608,16 +1759,13 @@ class _SettlementsTabState extends State<_SettlementsTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TabHeader(
+              _LevelHeader(
                 title: 'Naselja',
-                subtitle: 'Pregled, dodavanje, uređivanje i brisanje naselja.',
+                subtitle: 'Naselja općine "${widget.municipality.name}".',
                 createLabel: 'Novo naselje',
                 loading: _loading,
                 mutating: _mutating,
-                onRefresh: () {
-                  _load();
-                  _loadMunicipalities(showErrors: false);
-                },
+                onRefresh: () => _load(),
                 onCreate: _openCreate,
               ),
               const SizedBox(height: 18),
@@ -1644,55 +1792,26 @@ class _SettlementsTabState extends State<_SettlementsTab> {
 
   Widget _buildFilters() {
     final hasSearch = _searchCtrl.text.trim().isNotEmpty;
-
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        SizedBox(
-          width: 300,
-          child: TextField(
-            controller: _searchCtrl,
-            textInputAction: TextInputAction.search,
-            onChanged: _queueSearch,
-            onSubmitted: _submitSearch,
-            decoration: InputDecoration(
-              labelText: 'Pretraga',
-              hintText: 'Naziv naselja',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: hasSearch
-                  ? IconButton(
-                      tooltip: 'Očisti pretragu',
-                      onPressed: _clearSearch,
-                      icon: const Icon(Icons.clear),
-                    )
-                  : null,
-            ),
-          ),
+    return SizedBox(
+      width: 320,
+      child: TextField(
+        controller: _searchCtrl,
+        textInputAction: TextInputAction.search,
+        onChanged: _queueSearch,
+        onSubmitted: _submitSearch,
+        decoration: InputDecoration(
+          labelText: 'Pretraga',
+          hintText: 'Naziv naselja',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: hasSearch
+              ? IconButton(
+                  tooltip: 'Očisti pretragu',
+                  onPressed: _clearSearch,
+                  icon: const Icon(Icons.clear),
+                )
+              : null,
         ),
-        SizedBox(
-          width: 240,
-          child: DropdownButtonFormField<int>(
-            initialValue: _municipalityFilterId ?? 0,
-            decoration: const InputDecoration(
-              labelText: 'Općina',
-              prefixIcon: Icon(Icons.map_outlined),
-            ),
-            items: [
-              const DropdownMenuItem(value: 0, child: Text('Sve općine')),
-              for (final municipality in _municipalities)
-                DropdownMenuItem(
-                  value: municipality.id,
-                  child: Text(municipality.name),
-                ),
-            ],
-            onChanged: _loading || _mutating
-                ? null
-                : (value) => _setMunicipalityFilter(value == 0 ? null : value),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -1711,8 +1830,8 @@ class _SettlementsTabState extends State<_SettlementsTab> {
       return _CodebookEmptyState(
         icon: Icons.holiday_village_outlined,
         hasFilters: _hasFilters,
-        emptyMessage: 'Nema naselja.',
-        filteredMessage: 'Nema naselja za zadane filtere.',
+        emptyMessage: 'Nema naselja za ovu općinu.',
+        filteredMessage: 'Nema naselja za zadanu pretragu.',
       );
     }
 
@@ -1740,7 +1859,6 @@ class _SettlementsTabState extends State<_SettlementsTab> {
                     dataRowMaxHeight: 64,
                     columns: const [
                       DataColumn(label: Text('Naziv')),
-                      DataColumn(label: Text('Općina')),
                       DataColumn(label: Text('Poštanski broj')),
                       DataColumn(label: Text('Akcije')),
                     ],
@@ -1750,7 +1868,6 @@ class _SettlementsTabState extends State<_SettlementsTab> {
                           onSelectChanged: (_) => _openEdit(item),
                           cells: [
                             DataCell(Text(_textOrDash(item.name))),
-                            DataCell(Text(_textOrDash(item.municipalityName))),
                             DataCell(Text(_textOrDash(item.postalCode))),
                             DataCell(
                               Row(
@@ -1787,8 +1904,7 @@ class _SettlementsTabState extends State<_SettlementsTab> {
     );
   }
 
-  bool get _hasFilters =>
-      _searchCtrl.text.trim().isNotEmpty || _municipalityFilterId != null;
+  bool get _hasFilters => _searchCtrl.text.trim().isNotEmpty;
 
   int _totalPages(int totalCount) {
     if (totalCount <= 0) return 1;
@@ -1809,10 +1925,15 @@ class _SettlementDraft {
 }
 
 class _SettlementEditorDialog extends StatefulWidget {
-  const _SettlementEditorDialog({required this.municipalities, this.settlement});
+  const _SettlementEditorDialog({
+    required this.municipalities,
+    this.settlement,
+    this.initialMunicipalityId,
+  });
 
   final List<AdminMunicipality> municipalities;
   final AdminSettlement? settlement;
+  final int? initialMunicipalityId;
 
   @override
   State<_SettlementEditorDialog> createState() =>
@@ -1836,12 +1957,17 @@ class _SettlementEditorDialogState extends State<_SettlementEditorDialog> {
     _postalCodeCtrl.text = settlement?.postalCode ?? '';
 
     final municipalityIds = widget.municipalities.map((m) => m.id).toSet();
-    _municipalityId =
-        settlement != null && municipalityIds.contains(settlement.municipalityId)
-        ? settlement.municipalityId
-        : (widget.municipalities.length == 1
-              ? widget.municipalities.first.id
-              : null);
+    if (settlement != null &&
+        municipalityIds.contains(settlement.municipalityId)) {
+      _municipalityId = settlement.municipalityId;
+    } else if (widget.initialMunicipalityId != null &&
+        municipalityIds.contains(widget.initialMunicipalityId)) {
+      _municipalityId = widget.initialMunicipalityId;
+    } else if (widget.municipalities.length == 1) {
+      _municipalityId = widget.municipalities.first.id;
+    } else {
+      _municipalityId = null;
+    }
   }
 
   @override
