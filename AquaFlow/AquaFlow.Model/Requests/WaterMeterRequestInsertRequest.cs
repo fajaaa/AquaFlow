@@ -4,6 +4,5 @@ namespace AquaFlow.Model.Requests;
 // caller's JWT and forces the initial status to Pending, so neither can be spoofed by a client.
 public class WaterMeterRequestInsertRequest
 {
-    public int ServiceLocationId { get; set; }
     public string? Note { get; set; }
 }

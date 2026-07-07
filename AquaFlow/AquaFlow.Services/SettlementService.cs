@@ -70,9 +70,19 @@ public class SettlementService
 
         var blockers = new List<string>();
 
-        if (await _dbContext.ServiceLocations.AnyAsync(location => location.SettlementId == id))
+        if (await _dbContext.CustomerProfiles.AnyAsync(profile => profile.SettlementId == id))
         {
-            blockers.Add("service locations");
+            blockers.Add("customer profiles");
+        }
+
+        if (await _dbContext.WaterMeters.AnyAsync(meter => meter.SettlementId == id))
+        {
+            blockers.Add("water meters");
+        }
+
+        if (await _dbContext.FaultReports.AnyAsync(report => report.SettlementId == id))
+        {
+            blockers.Add("fault reports");
         }
 
         if (await _dbContext.CollectorProfiles.AnyAsync(profile => profile.AssignedAreaId == id))

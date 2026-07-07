@@ -9,8 +9,10 @@ public class FaultReport : EntityBase
     public User? ReportedBy { get; set; }
     public int? WaterMeterId { get; set; }
     public WaterMeter? WaterMeter { get; set; }
-    public int ServiceLocationId { get; set; }
-    public ServiceLocation? ServiceLocation { get; set; }
+    public int CustomerId { get; set; }
+    public CustomerProfile? Customer { get; set; }
+    public int SettlementId { get; set; }
+    public Settlement? Settlement { get; set; }
     [MaxLength(150)]
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

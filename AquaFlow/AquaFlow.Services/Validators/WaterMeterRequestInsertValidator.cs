@@ -7,7 +7,6 @@ public class WaterMeterRequestInsertValidator : AbstractValidator<WaterMeterRequ
 {
     public WaterMeterRequestInsertValidator()
     {
-        RuleFor(x => x.ServiceLocationId).GreaterThan(0);
         RuleFor(x => x.Note).MaximumLength(500);
     }
 }

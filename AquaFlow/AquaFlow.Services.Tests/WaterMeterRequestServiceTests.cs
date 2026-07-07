@@ -7,6 +7,7 @@ using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace AquaFlow.Services.Tests;
@@ -14,35 +15,89 @@ namespace AquaFlow.Services.Tests;
 public class WaterMeterRequestServiceTests
 {
     [Fact]
-    public async Task CreateForUserAsync_InactiveServiceLocation_ThrowsClientException()
+    public async Task CreateForUserAsync_NoCustomerProfile_ThrowsClientException()
     {
         await using var context = CreateContext();
-        SeedCustomerAndLocation(context, locationIsActive: false);
-        await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        var exception = await Assert.ThrowsAsync<ClientException>(() => service.CreateForUserAsync(1, new WaterMeterRequestInsertRequest
-        {
-            ServiceLocationId = 1
-        }));
+        var exception = await Assert.ThrowsAsync<ClientException>(
+            () => service.CreateForUserAsync(1, new WaterMeterRequestInsertRequest()));
 
-        Assert.Contains("not active", exception.Message);
+        Assert.Contains("no customer profile", exception.Message);
     }
 
     [Fact]
-    public async Task CreateForUserAsync_ActiveServiceLocation_CreatesRequest()
+    public async Task CreateForUserAsync_ValidCustomer_CreatesPendingRequest()
     {
         await using var context = CreateContext();
-        SeedCustomerAndLocation(context, locationIsActive: true);
+        SeedCustomer(context, settlementId: 1);
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
         var response = await service.CreateForUserAsync(1, new WaterMeterRequestInsertRequest
         {
-            ServiceLocationId = 1
+            Note = "Molim novi vodomjer."
         });
 
         Assert.Equal(WaterMeterRequestStatus.Pending, response.Status);
+        Assert.Equal(1, response.CustomerId);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_CustomerHasSettlement_SetsCustomerAndSettlementFromProfile()
+    {
+        await using var context = CreateContext();
+        SeedCustomer(context, settlementId: 1);
+        SeedCollector(context);
+        context.WaterMeterRequests.Add(new WaterMeterRequest
+        {
+            Id = 1,
+            CustomerId = 1,
+            Status = WaterMeterRequestStatus.Assigned,
+            AssignedCollectorId = 1
+        });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var response = await service.RegisterAsync(1, new WaterMeterInsertRequest
+        {
+            SerialNumber = "WM-2026-0002",
+            Status = "Active",
+            InitialReading = 0
+        }, changedById: 2);
+
+        Assert.Equal(WaterMeterRequestStatus.Registered, response.Status);
+        Assert.NotNull(response.ResultingWaterMeterId);
+
+        var meter = await context.WaterMeters.SingleAsync(m => m.Id == response.ResultingWaterMeterId!.Value);
+        Assert.Equal(1, meter.CustomerId);
+        Assert.Equal(1, meter.SettlementId);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_CustomerHasNoSettlement_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedCustomer(context, settlementId: null);
+        SeedCollector(context);
+        context.WaterMeterRequests.Add(new WaterMeterRequest
+        {
+            Id = 1,
+            CustomerId = 1,
+            Status = WaterMeterRequestStatus.Assigned,
+            AssignedCollectorId = 1
+        });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.RegisterAsync(1, new WaterMeterInsertRequest
+        {
+            SerialNumber = "WM-2026-0002",
+            Status = "Active",
+            InitialReading = 0
+        }, changedById: 2));
+
+        Assert.Equal("Kupac nema postavljeno naselje.", exception.Message);
     }
 
     private static AquaFlowDbContext CreateContext()
@@ -54,7 +109,7 @@ public class WaterMeterRequestServiceTests
         return new AquaFlowDbContext(options);
     }
 
-    private static void SeedCustomerAndLocation(AquaFlowDbContext context, bool locationIsActive)
+    private static void SeedCustomer(AquaFlowDbContext context, int? settlementId)
     {
         context.Settlements.Add(new Settlement { Id = 1, Name = "Sarajevo", MunicipalityId = 1, PostalCode = "71000" });
 
@@ -74,26 +129,42 @@ public class WaterMeterRequestServiceTests
             UserId = 1,
             FirstName = "Amina",
             LastName = "Amidzic",
-            CustomerCode = "CUS-0001"
-        });
-        context.ServiceLocations.Add(new ServiceLocation
-        {
-            Id = 1,
-            CustomerId = 1,
-            SettlementId = 1,
-            Address = "Street 1",
-            LocationType = "Residential",
-            IsActive = locationIsActive
+            CustomerCode = "CUS-0001",
+            SettlementId = settlementId
         });
     }
 
+    private static void SeedCollector(AquaFlowDbContext context)
+    {
+        context.UserRoles.Add(new UserRole { Id = 2, Name = "Collector" });
+        context.Users.Add(new User
+        {
+            Id = 2,
+            Email = "collector@aquaflow.ba",
+            PasswordHash = "hash",
+            PasswordSalt = "salt",
+            UserRoleId = 2,
+            IsActive = true
+        });
+        context.CollectorProfiles.Add(new CollectorProfile { Id = 1, UserId = 2, EmployeeCode = "COL-0001" });
+    }
+
+    // Builds a real IServiceProvider with the same keyed BaseWaterMeterRequestState registrations
+    // as Program.cs, so RegisterAsync/AssignAsync exercise the actual state machine instead of a
+    // stub - needed for the RegisterAsync tests above to observe what AssignedWaterMeterRequestState
+    // actually writes onto the new WaterMeter.
     private static WaterMeterRequestService CreateService(AquaFlowDbContext context)
     {
         var mapperConfig = new TypeAdapterConfig();
-        mapperConfig.NewConfig<WaterMeterRequest, Model.Responses.WaterMeterRequestResponse>()
-            .Map(destination => destination.ServiceLocationAddress, source => source.ServiceLocation == null ? string.Empty : source.ServiceLocation.Address);
-
         IMapper mapper = new Mapper(mapperConfig);
+
+        var stateServices = new ServiceCollection();
+        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Pending, (_, _) => new PendingWaterMeterRequestState(context, mapper));
+        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Assigned, (_, _) => new AssignedWaterMeterRequestState(context, mapper));
+        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Registered, (_, _) => new RegisteredWaterMeterRequestState(context, mapper));
+        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Rejected, (_, _) => new RejectedWaterMeterRequestState(context, mapper));
+        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Cancelled, (_, _) => new CancelledWaterMeterRequestState(context, mapper));
+        var stateResolver = new WaterMeterRequestStateResolver(stateServices.BuildServiceProvider());
 
         return new WaterMeterRequestService(
             context,
@@ -102,6 +173,6 @@ public class WaterMeterRequestServiceTests
             new IValidator<WaterMeterRequestUpdateRequest>[] { new WaterMeterRequestUpdateValidator() },
             new IValidator<WaterMeterRequestPatchRequest>[] { new WaterMeterRequestPatchValidator() },
             new IValidator<WaterMeterInsertRequest>[] { new WaterMeterInsertValidator() },
-            new WaterMeterRequestStateResolver(null!));
+            stateResolver);
     }
 }

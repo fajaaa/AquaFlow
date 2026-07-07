@@ -8,7 +8,8 @@ public class FaultReportPatchValidator : AbstractValidator<FaultReportPatchReque
     public FaultReportPatchValidator()
     {
         RuleFor(x => x.ReportedById).GreaterThan(0).When(x => x.ReportedById.HasValue);
-        RuleFor(x => x.ServiceLocationId).GreaterThan(0).When(x => x.ServiceLocationId.HasValue);
+        RuleFor(x => x.CustomerId).GreaterThan(0).When(x => x.CustomerId.HasValue);
+        RuleFor(x => x.SettlementId).GreaterThan(0).When(x => x.SettlementId.HasValue);
         RuleFor(x => x.WaterMeterId).GreaterThan(0).When(x => x.WaterMeterId.HasValue);
         RuleFor(x => x.Title).NotEmpty().MaximumLength(150).When(x => x.Title != null);
         RuleFor(x => x.Description).NotEmpty().When(x => x.Description != null);

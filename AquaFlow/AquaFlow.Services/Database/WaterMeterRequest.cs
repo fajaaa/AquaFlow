@@ -6,8 +6,6 @@ public class WaterMeterRequest : EntityBase
 {
     public int CustomerId { get; set; }
     public CustomerProfile? Customer { get; set; }
-    public int ServiceLocationId { get; set; }
-    public ServiceLocation? ServiceLocation { get; set; }
     [MaxLength(30)]
     public string Status { get; set; } = WaterMeterRequestStatus.Pending;
     public int? AssignedCollectorId { get; set; }

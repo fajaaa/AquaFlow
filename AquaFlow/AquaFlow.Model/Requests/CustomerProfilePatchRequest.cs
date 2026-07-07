@@ -8,4 +8,7 @@ public class CustomerProfilePatchRequest
     public string? CustomerCode { get; set; }
     public string? DefaultLanguage { get; set; }
     public string? Theme { get; set; }
+    public int? SettlementId { get; set; }
+    public string? Street { get; set; }
+    public string? HouseNumber { get; set; }
 }

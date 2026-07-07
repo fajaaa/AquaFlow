@@ -27,10 +27,22 @@ public class CustomerProfileService
 
     private const string CustomerCodePrefix = "CUS-";
 
+    protected override IQueryable<CustomerProfile> IncludeForRead(IQueryable<CustomerProfile> query) =>
+        query.Include(profile => profile.Settlement);
+
+    protected override async Task LoadReferencesAsync(CustomerProfile entity)
+    {
+        await _dbContext.Entry(entity).Reference(profile => profile.Settlement).LoadAsync();
+    }
+
     protected override async Task BeforeInsertAsync(CustomerProfileInsertRequest request)
     {
         await EnsureUserExistsAsync(request.UserId);
         await EnsureUserDoesNotHaveCustomerProfileAsync(request.UserId);
+        if (request.SettlementId.HasValue)
+        {
+            await EnsureSettlementExistsAsync(request.SettlementId.Value);
+        }
 
         request.FirstName = Capitalize(request.FirstName);
         request.LastName = Capitalize(request.LastName);
@@ -43,6 +55,10 @@ public class CustomerProfileService
     {
         await EnsureUserExistsAsync(request.UserId);
         await EnsureUserDoesNotHaveCustomerProfileAsync(request.UserId, id);
+        if (request.SettlementId.HasValue)
+        {
+            await EnsureSettlementExistsAsync(request.SettlementId.Value);
+        }
 
         request.FirstName = Capitalize(request.FirstName);
         request.LastName = Capitalize(request.LastName);
@@ -64,6 +80,11 @@ public class CustomerProfileService
         if (request.LastName != null)
         {
             request.LastName = Capitalize(request.LastName);
+        }
+
+        if (request.SettlementId.HasValue)
+        {
+            await EnsureSettlementExistsAsync(request.SettlementId.Value);
         }
 
         if (!request.UserId.HasValue)
@@ -115,6 +136,14 @@ public class CustomerProfileService
         if (alreadyExists)
         {
             throw new ClientException($"User with id {userId} already has a customer profile.");
+        }
+    }
+
+    private async Task EnsureSettlementExistsAsync(int settlementId)
+    {
+        if (!await _dbContext.Settlements.AnyAsync(settlement => settlement.Id == settlementId))
+        {
+            throw new ClientException($"Settlement with id {settlementId} was not found.");
         }
     }
 }

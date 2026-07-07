@@ -101,17 +101,12 @@ public class NotificationRecipientService
 
         var activeUsers = _dbContext.Users.AsNoTracking().Where(user => user.IsActive);
 
-        var customerUserIds = _dbContext.ServiceLocations
+        var customerUserIds = _dbContext.CustomerProfiles
             .AsNoTracking()
-            .Where(location => location.IsActive && location.SettlementId == settlementId.Value)
-            .Join(
-                _dbContext.CustomerProfiles.AsNoTracking(),
-                location => location.CustomerId,
-                profile => profile.Id,
-                (_, profile) => profile.UserId)
+            .Where(profile => profile.SettlementId == settlementId.Value)
             .Join(
                 activeUsers,
-                userId => userId,
+                profile => profile.UserId,
                 user => user.Id,
                 (_, user) => user.Id);
 
@@ -133,12 +128,8 @@ public class NotificationRecipientService
     {
         var customerSettlementIds = _dbContext.CustomerProfiles
             .AsNoTracking()
-            .Where(profile => profile.UserId == userId)
-            .Join(
-                _dbContext.ServiceLocations.AsNoTracking().Where(location => location.IsActive),
-                profile => profile.Id,
-                location => location.CustomerId,
-                (_, location) => location.SettlementId);
+            .Where(profile => profile.UserId == userId && profile.SettlementId.HasValue)
+            .Select(profile => profile.SettlementId!.Value);
 
         var collectorSettlementIds = _dbContext.CollectorProfiles
             .AsNoTracking()

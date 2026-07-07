@@ -18,7 +18,6 @@ public partial class AquaFlowDbContext
         SeedCompanySettings(modelBuilder);
         SeedCustomerProfiles(modelBuilder);
         SeedCollectorProfiles(modelBuilder);
-        SeedServiceLocations(modelBuilder);
         SeedWaterMeters(modelBuilder);
         SeedMeterReadings(modelBuilder);
         SeedTariffs(modelBuilder);
@@ -464,6 +463,9 @@ public partial class AquaFlowDbContext
                 CustomerCode = "CUS-0001",
                 DefaultLanguage = "bs",
                 Theme = "light",
+                SettlementId = (int?)1,
+                Street = (string?)"Zmaja od Bosne",
+                HouseNumber = (string?)"12",
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
@@ -483,24 +485,6 @@ public partial class AquaFlowDbContext
             });
     }
 
-    private static void SeedServiceLocations(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<ServiceLocation>().HasData(
-            new
-            {
-                Id = 1,
-                CustomerId = 1,
-                SettlementId = 1,
-                Address = "Zmaja od Bosne 12",
-                LocationType = "Apartment",
-                Latitude = (decimal?)43.855m,
-                Longitude = (decimal?)18.398m,
-                IsActive = true,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            });
-    }
-
     private static void SeedWaterMeters(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<WaterMeter>().HasData(
@@ -508,7 +492,8 @@ public partial class AquaFlowDbContext
             {
                 Id = 1,
                 SerialNumber = "WM-2026-0001",
-                ServiceLocationId = 1,
+                CustomerId = 1,
+                SettlementId = 1,
                 InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, DateTimeKind.Utc),
                 Status = "Active",
                 InitialReading = 120.50m,
@@ -642,7 +627,8 @@ public partial class AquaFlowDbContext
                 Id = 1,
                 ReportedById = 3,
                 WaterMeterId = (int?)1,
-                ServiceLocationId = 1,
+                CustomerId = 1,
+                SettlementId = 1,
                 Title = "Slab pritisak vode",
                 Description = "Pritisak vode je nizak u jutarnjim satima.",
                 PhotoUrl = (string?)null,

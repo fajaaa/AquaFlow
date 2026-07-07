@@ -184,20 +184,51 @@ public class SettlementServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_SettlementWithServiceLocation_ThrowsClientExceptionListingBlocker()
+    public async Task DeleteAsync_SettlementWithCustomerProfile_ThrowsClientExceptionListingBlocker()
     {
         await using var context = CreateContext();
         SeedMunicipalities(context);
         context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
-        SeedCustomer(context);
-        context.ServiceLocations.Add(new ServiceLocation { Id = 1, CustomerId = 1, SettlementId = 1, Address = "Street 1", LocationType = "Residential" });
+        SeedCustomer(context, settlementId: 1);
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
         var exception = await Assert.ThrowsAsync<ClientException>(() => service.DeleteAsync(1));
 
-        Assert.Contains("service locations", exception.Message);
+        Assert.Contains("customer profiles", exception.Message);
         Assert.Equal(1, await context.Settlements.CountAsync(settlement => settlement.Id == 1));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_SettlementWithWaterMeter_ThrowsClientExceptionListingBlocker()
+    {
+        await using var context = CreateContext();
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
+        SeedCustomer(context, settlementId: null);
+        context.WaterMeters.Add(new WaterMeter { Id = 1, CustomerId = 1, SettlementId = 1, SerialNumber = "SN-1" });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.DeleteAsync(1));
+
+        Assert.Contains("water meters", exception.Message);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_SettlementWithFaultReport_ThrowsClientExceptionListingBlocker()
+    {
+        await using var context = CreateContext();
+        SeedMunicipalities(context);
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
+        SeedCustomer(context, settlementId: null);
+        context.FaultReports.Add(new FaultReport { Id = 1, CustomerId = 1, SettlementId = 1, ReportedById = 1, Title = "Leak" });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.DeleteAsync(1));
+
+        Assert.Contains("fault reports", exception.Message);
     }
 
     [Fact]
@@ -280,7 +311,7 @@ public class SettlementServiceTests
         context.Municipalities.Add(new Municipality { Id = 2, Name = "Novi Grad", Code = "SA-02", CityId = 1 });
     }
 
-    private static void SeedCustomer(AquaFlowDbContext context)
+    private static void SeedCustomer(AquaFlowDbContext context, int? settlementId)
     {
         context.UserRoles.Add(new UserRole { Id = 1, Name = "Customer" });
         context.Users.Add(new User
@@ -298,7 +329,8 @@ public class SettlementServiceTests
             UserId = 1,
             FirstName = "Amina",
             LastName = "Amidzic",
-            CustomerCode = "CUS-0001"
+            CustomerCode = "CUS-0001",
+            SettlementId = settlementId
         });
     }
 

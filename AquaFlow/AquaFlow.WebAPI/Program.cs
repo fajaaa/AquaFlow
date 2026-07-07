@@ -119,14 +119,10 @@ mapperConfig.NewConfig<Municipality, MunicipalityResponse>()
     .Map(destination => destination.CityName, source => source.City == null ? string.Empty : source.City.Name);
 mapperConfig.NewConfig<Settlement, SettlementResponse>()
     .Map(destination => destination.MunicipalityName, source => source.Municipality == null ? string.Empty : source.Municipality.Name);
-mapperConfig.NewConfig<ServiceLocation, ServiceLocationResponse>()
-    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
-    .Map(destination => destination.CustomerName, source => source.Customer == null ? string.Empty : $"{source.Customer.FirstName} {source.Customer.LastName}".Trim());
+mapperConfig.NewConfig<CustomerProfile, CustomerProfileResponse>()
+    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name);
 mapperConfig.NewConfig<WaterMeter, WaterMeterResponse>()
-    .Map(destination => destination.ServiceLocationAddress, source => source.ServiceLocation == null ? string.Empty : source.ServiceLocation.Address)
-    .Map(destination => destination.CustomerId, source => source.ServiceLocation == null ? 0 : source.ServiceLocation.CustomerId);
-mapperConfig.NewConfig<WaterMeterRequest, WaterMeterRequestResponse>()
-    .Map(destination => destination.ServiceLocationAddress, source => source.ServiceLocation == null ? string.Empty : source.ServiceLocation.Address);
+    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
@@ -158,12 +154,6 @@ AddPatchMapping<MunicipalityPatchRequest, Municipality>();
 builder.Services.AddScoped<IBaseCRUDService<MunicipalityResponse, MunicipalitySearchObject, MunicipalityInsertRequest, MunicipalityUpdateRequest, MunicipalityPatchRequest>, MunicipalityService>();
 AddPatchMapping<SettlementPatchRequest, Settlement>();
 builder.Services.AddScoped<IBaseCRUDService<SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>, SettlementService>();
-// ServiceLocation needs FK checks (Settlement/Customer), a delete guard against dependent water
-// meters/fault reports/water meter requests, and SettlementName/CustomerName flattening, so it is
-// registered by hand like InvoiceService: the generic IBaseCRUDService<...> alias still resolves to
-// the same ServiceLocationService instance.
-AddPatchMapping<ServiceLocationPatchRequest, ServiceLocation>();
-builder.Services.AddScoped<IBaseCRUDService<ServiceLocationResponse, ServiceLocationSearchObject, ServiceLocationInsertRequest, ServiceLocationUpdateRequest, ServiceLocationPatchRequest>, ServiceLocationService>();
 AddPatchMapping<WaterMeterPatchRequest, WaterMeter>();
 builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>, WaterMeterService>();
 AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>();
@@ -237,9 +227,6 @@ builder.Services.AddScoped<IValidator<MunicipalityPatchRequest>, MunicipalityPat
 builder.Services.AddScoped<IValidator<SettlementInsertRequest>, SettlementInsertValidator>();
 builder.Services.AddScoped<IValidator<SettlementUpdateRequest>, SettlementUpdateValidator>();
 builder.Services.AddScoped<IValidator<SettlementPatchRequest>, SettlementPatchValidator>();
-builder.Services.AddScoped<IValidator<ServiceLocationInsertRequest>, ServiceLocationInsertValidator>();
-builder.Services.AddScoped<IValidator<ServiceLocationUpdateRequest>, ServiceLocationUpdateValidator>();
-builder.Services.AddScoped<IValidator<ServiceLocationPatchRequest>, ServiceLocationPatchValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterInsertRequest>, WaterMeterInsertValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterUpdateRequest>, WaterMeterUpdateValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterPatchRequest>, WaterMeterPatchValidator>();

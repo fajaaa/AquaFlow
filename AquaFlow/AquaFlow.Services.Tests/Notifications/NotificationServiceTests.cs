@@ -117,7 +117,7 @@ public class NotificationServiceTests
             .OrderBy(userId => userId)
             .ToListAsync();
 
-        // Settlement 20 covers OtherCustomerUserId (ServiceLocation SettlementId=20) and
+        // Settlement 20 covers OtherCustomerUserId (CustomerProfile SettlementId=20) and
         // OtherCollectorUserId (CollectorProfile AssignedAreaId=20) only.
         Assert.Equal(new[] { OtherCustomerUserId, OtherCollectorUserId }.OrderBy(id => id), userIdsAfterUpdate);
         Assert.DoesNotContain(AdminUserId, userIdsAfterUpdate);
@@ -343,18 +343,13 @@ public class NotificationServiceTests
             CreateUser(InactiveCustomerUserId, 3, isActive: false));
 
         context.CustomerProfiles.AddRange(
-            new CustomerProfile { Id = 1, UserId = CustomerUserId, CustomerCode = "C-1" },
-            new CustomerProfile { Id = 2, UserId = OtherCustomerUserId, CustomerCode = "C-2" },
-            new CustomerProfile { Id = 3, UserId = InactiveCustomerUserId, CustomerCode = "C-3" });
+            new CustomerProfile { Id = 1, UserId = CustomerUserId, CustomerCode = "C-1", SettlementId = 10 },
+            new CustomerProfile { Id = 2, UserId = OtherCustomerUserId, CustomerCode = "C-2", SettlementId = 20 },
+            new CustomerProfile { Id = 3, UserId = InactiveCustomerUserId, CustomerCode = "C-3", SettlementId = 10 });
 
         context.CollectorProfiles.AddRange(
             new CollectorProfile { Id = 1, UserId = CollectorUserId, EmployeeCode = "COL-1", AssignedAreaId = 10 },
             new CollectorProfile { Id = 2, UserId = OtherCollectorUserId, EmployeeCode = "COL-2", AssignedAreaId = 20 });
-
-        context.ServiceLocations.AddRange(
-            new ServiceLocation { Id = 1, CustomerId = 1, SettlementId = 10, Address = "A", LocationType = "Home", IsActive = true },
-            new ServiceLocation { Id = 2, CustomerId = 2, SettlementId = 20, Address = "B", LocationType = "Home", IsActive = true },
-            new ServiceLocation { Id = 3, CustomerId = 3, SettlementId = 10, Address = "C", LocationType = "Home", IsActive = true });
 
         context.SaveChanges();
     }

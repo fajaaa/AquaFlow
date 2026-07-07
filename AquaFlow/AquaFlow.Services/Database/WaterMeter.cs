@@ -8,8 +8,10 @@ public class WaterMeter : EntityBase
     [Required]
     [MaxLength(80)]
     public string SerialNumber { get; set; } = string.Empty;
-    public int ServiceLocationId { get; set; }
-    public ServiceLocation? ServiceLocation { get; set; }
+    public int CustomerId { get; set; }
+    public CustomerProfile? Customer { get; set; }
+    public int SettlementId { get; set; }
+    public Settlement? Settlement { get; set; }
     public DateTime InstalledAt { get; set; } = DateTime.UtcNow;
     [MaxLength(30)]
     public string Status { get; set; } = "Active";

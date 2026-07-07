@@ -8,4 +8,8 @@ public class CustomerProfileResponse : AuditableResponse
     public string CustomerCode { get; set; } = string.Empty;
     public string DefaultLanguage { get; set; } = string.Empty;
     public string Theme { get; set; } = string.Empty;
+    public int? SettlementId { get; set; }
+    public string SettlementName { get; set; } = string.Empty;
+    public string? Street { get; set; }
+    public string? HouseNumber { get; set; }
 }
