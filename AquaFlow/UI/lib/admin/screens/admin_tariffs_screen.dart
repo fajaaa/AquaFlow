@@ -20,7 +20,6 @@ class AdminTariffsScreen extends StatefulWidget {
 class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
   final AdminTariffService _service = AdminTariffService();
   final TextEditingController _searchCtrl = TextEditingController();
-  final TextEditingController _customerTypeCtrl = TextEditingController();
 
   Timer? _searchDebounce;
   AdminTariffPage? _pageData;
@@ -28,7 +27,6 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
   bool _mutating = false;
   String? _error;
   bool? _isActiveFilter;
-  DateTime? _effectiveOnFilter;
   int _page = 1;
   int _pageSize = 10;
   int _requestSerial = 0;
@@ -53,9 +51,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
         page: _page,
         pageSize: _pageSize,
         name: _searchCtrl.text,
-        customerType: _customerTypeCtrl.text,
         isActive: _isActiveFilter,
-        effectiveOn: _effectiveOnFilter,
       );
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
@@ -94,17 +90,6 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
     _load(resetPage: true);
   }
 
-  void _applyCustomerTypeFilter(String _) {
-    _load(resetPage: true);
-  }
-
-  void _clearCustomerTypeFilter() {
-    if (_customerTypeCtrl.text.isEmpty) return;
-    _customerTypeCtrl.clear();
-    setState(() {});
-    _load(resetPage: true);
-  }
-
   void _setStatusFilter(String value) {
     bool? selected;
     if (value == 'active') selected = true;
@@ -117,25 +102,6 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
   String get _statusFilterValue {
     if (_isActiveFilter == null) return '';
     return _isActiveFilter! ? 'active' : 'inactive';
-  }
-
-  Future<void> _pickEffectiveOnFilter() async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _effectiveOnFilter ?? now,
-      firstDate: DateTime(now.year - 10),
-      lastDate: DateTime(now.year + 10),
-    );
-    if (!mounted || date == null) return;
-    setState(() => _effectiveOnFilter = DateTime(date.year, date.month, date.day));
-    _load(resetPage: true);
-  }
-
-  void _clearEffectiveOnFilter() {
-    if (_effectiveOnFilter == null) return;
-    setState(() => _effectiveOnFilter = null);
-    _load(resetPage: true);
   }
 
   void _setPageSize(int? value) {
@@ -247,7 +213,6 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
   void dispose() {
     _searchDebounce?.cancel();
     _searchCtrl.dispose();
-    _customerTypeCtrl.dispose();
     _service.dispose();
     super.dispose();
   }
@@ -297,7 +262,6 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
 
   Widget _buildFilters() {
     final hasSearch = _searchCtrl.text.trim().isNotEmpty;
-    final hasCustomerType = _customerTypeCtrl.text.trim().isNotEmpty;
 
     return Wrap(
       spacing: 12,
@@ -325,26 +289,6 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
           ),
         ),
         SizedBox(
-          width: 220,
-          child: TextField(
-            controller: _customerTypeCtrl,
-            enabled: !_loading && !_mutating,
-            textInputAction: TextInputAction.search,
-            onSubmitted: _applyCustomerTypeFilter,
-            decoration: InputDecoration(
-              labelText: 'Tip korisnika',
-              prefixIcon: const Icon(Icons.badge_outlined),
-              suffixIcon: hasCustomerType
-                  ? IconButton(
-                      tooltip: 'Očisti filter',
-                      onPressed: _clearCustomerTypeFilter,
-                      icon: const Icon(Icons.clear),
-                    )
-                  : null,
-            ),
-          ),
-        ),
-        SizedBox(
           width: 190,
           child: DropdownButtonFormField<String>(
             initialValue: _statusFilterValue,
@@ -360,30 +304,6 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
             onChanged: _loading || _mutating
                 ? null
                 : (value) => _setStatusFilter(value ?? ''),
-          ),
-        ),
-        SizedBox(
-          width: 220,
-          child: InkWell(
-            onTap: _loading || _mutating ? null : _pickEffectiveOnFilter,
-            child: InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Važi na dan',
-                prefixIcon: const Icon(Icons.event_outlined),
-                suffixIcon: _effectiveOnFilter == null
-                    ? null
-                    : IconButton(
-                        tooltip: 'Ukloni filter',
-                        onPressed: _clearEffectiveOnFilter,
-                        icon: const Icon(Icons.clear),
-                      ),
-              ),
-              child: Text(
-                _effectiveOnFilter == null
-                    ? 'Bilo koji datum'
-                    : _formatDateOnly(_effectiveOnFilter!),
-              ),
-            ),
           ),
         ),
         IconButton.filledTonal(
@@ -436,10 +356,8 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
                     dataRowMaxHeight: 68,
                     columns: const [
                       DataColumn(label: Text('Naziv')),
-                      DataColumn(label: Text('Tip korisnika')),
+                      DataColumn(label: Text('Opis')),
                       DataColumn(label: Text('Cijena po m³')),
-                      DataColumn(label: Text('Fiksna naknada')),
-                      DataColumn(label: Text('Važenje')),
                       DataColumn(label: Text('Status')),
                       DataColumn(label: Text('Akcije')),
                     ],
@@ -449,10 +367,20 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
                           onSelectChanged: (_) => _openEdit(item),
                           cells: [
                             DataCell(Text(item.name)),
-                            DataCell(Text(item.customerType)),
+                            DataCell(
+                              Tooltip(
+                                message: item.description,
+                                child: SizedBox(
+                                  width: 240,
+                                  child: Text(
+                                    item.description,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ),
                             DataCell(Text('${_formatMoney(item.pricePerM3)} KM/m³')),
-                            DataCell(Text('${_formatMoney(item.fixedFee)} KM')),
-                            DataCell(Text(_formatValidity(item))),
                             DataCell(_TariffStatusPill(tariff: item)),
                             DataCell(
                               _RowActions(
@@ -475,10 +403,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
   }
 
   bool get _hasFilters =>
-      _searchCtrl.text.trim().isNotEmpty ||
-      _customerTypeCtrl.text.trim().isNotEmpty ||
-      _isActiveFilter != null ||
-      _effectiveOnFilter != null;
+      _searchCtrl.text.trim().isNotEmpty || _isActiveFilter != null;
 
   int _totalPages(int totalCount) {
     if (totalCount <= 0) return 1;
@@ -598,19 +523,9 @@ class _TariffStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, color, icon) = switch (tariff) {
-      _ when !tariff.isActive => (
-        'Neaktivna',
-        const Color(0xFF64748B),
-        Icons.block_outlined,
-      ),
-      _ when tariff.isExpired => (
-        'Istekla',
-        const Color(0xFFB45309),
-        Icons.event_busy_outlined,
-      ),
-      _ => ('Aktivna', const Color(0xFF2E7D32), Icons.check_circle_outline),
-    };
+    final (label, color, icon) = !tariff.isActive
+        ? ('Neaktivna', const Color(0xFF64748B), Icons.block_outlined)
+        : ('Aktivna', const Color(0xFF2E7D32), Icons.check_circle_outline);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
@@ -648,14 +563,9 @@ class _TariffEditorDialog extends StatefulWidget {
 class _TariffEditorDialogState extends State<_TariffEditorDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
-  final _customerTypeCtrl = TextEditingController();
+  final _descriptionCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
-  final _feeCtrl = TextEditingController();
 
-  DateTime? _effectiveFrom;
-  DateTime? _effectiveTo;
-  String? _effectiveFromError;
-  String? _effectiveToError;
   late bool _isActive;
 
   bool get _isEdit => widget.tariff != null;
@@ -665,92 +575,29 @@ class _TariffEditorDialogState extends State<_TariffEditorDialog> {
     super.initState();
     final tariff = widget.tariff;
     _nameCtrl.text = tariff?.name ?? '';
-    _customerTypeCtrl.text = tariff?.customerType ?? '';
+    _descriptionCtrl.text = tariff?.description ?? '';
     _priceCtrl.text = tariff != null ? _formatMoney(tariff.pricePerM3) : '';
-    _feeCtrl.text = tariff != null ? _formatMoney(tariff.fixedFee) : '';
-    _effectiveFrom = tariff?.effectiveFrom;
-    _effectiveTo = tariff?.effectiveTo;
     _isActive = tariff?.isActive ?? true;
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _customerTypeCtrl.dispose();
+    _descriptionCtrl.dispose();
     _priceCtrl.dispose();
-    _feeCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickEffectiveFrom() async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _effectiveFrom ?? now,
-      firstDate: DateTime(now.year - 10),
-      lastDate: DateTime(now.year + 10),
-    );
-    if (!mounted || date == null) return;
-    setState(() {
-      _effectiveFrom = DateTime(date.year, date.month, date.day);
-      _effectiveFromError = null;
-      if (_effectiveTo != null && _effectiveTo!.isBefore(_effectiveFrom!)) {
-        _effectiveToError = 'Datum "do" ne smije biti prije datuma "od".';
-      }
-    });
-  }
-
-  Future<void> _pickEffectiveTo() async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _effectiveTo ?? _effectiveFrom ?? now,
-      firstDate: DateTime(now.year - 10),
-      lastDate: DateTime(now.year + 10),
-    );
-    if (!mounted || date == null) return;
-    setState(() {
-      _effectiveTo = DateTime(date.year, date.month, date.day);
-      _effectiveToError = null;
-    });
-  }
-
-  void _clearEffectiveTo() {
-    setState(() {
-      _effectiveTo = null;
-      _effectiveToError = null;
-    });
   }
 
   void _save() {
     final form = _formKey.currentState;
     final formValid = form != null && form.validate();
-
-    String? fromError;
-    String? toError;
-    final from = _effectiveFrom;
-    final to = _effectiveTo;
-    if (from == null) {
-      fromError = 'Obavezno polje.';
-    } else if (to != null && to.isBefore(from)) {
-      toError = 'Datum "do" ne smije biti prije datuma "od".';
-    }
-
-    setState(() {
-      _effectiveFromError = fromError;
-      _effectiveToError = toError;
-    });
-
-    if (!formValid || fromError != null || toError != null) return;
+    if (!formValid) return;
 
     Navigator.of(context).pop(
       AdminTariffDraft(
         name: _nameCtrl.text.trim(),
-        customerType: _customerTypeCtrl.text.trim(),
+        description: _descriptionCtrl.text.trim(),
         pricePerM3: _parseDecimal(_priceCtrl.text) ?? 0,
-        fixedFee: _parseDecimal(_feeCtrl.text) ?? 0,
-        effectiveFrom: from!,
-        effectiveTo: to,
         isActive: _isActive,
       ),
     );
@@ -781,74 +628,31 @@ class _TariffEditorDialogState extends State<_TariffEditorDialog> {
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
-                  controller: _customerTypeCtrl,
+                  controller: _descriptionCtrl,
                   textInputAction: TextInputAction.next,
-                  maxLength: 50,
+                  maxLines: 3,
+                  maxLength: 200,
                   validator: _requiredValidator,
                   decoration: const InputDecoration(
-                    labelText: 'Tip korisnika',
-                    prefixIcon: Icon(Icons.badge_outlined),
-                    counterText: '',
+                    labelText: 'Opis',
+                    prefixIcon: Icon(Icons.description_outlined),
                   ),
                 ),
                 const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _priceCtrl,
-                        textInputAction: TextInputAction.next,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'[0-9.,]'),
-                          ),
-                        ],
-                        validator: _decimalValidator,
-                        decoration: const InputDecoration(
-                          labelText: 'Cijena po m³',
-                          prefixIcon: Icon(Icons.water_drop_outlined),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _feeCtrl,
-                        textInputAction: TextInputAction.done,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'[0-9.,]'),
-                          ),
-                        ],
-                        validator: _decimalValidator,
-                        decoration: const InputDecoration(
-                          labelText: 'Fiksna naknada',
-                          prefixIcon: Icon(Icons.request_quote_outlined),
-                        ),
-                      ),
-                    ),
+                TextFormField(
+                  controller: _priceCtrl,
+                  textInputAction: TextInputAction.done,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                   ],
-                ),
-                const SizedBox(height: 14),
-                _DateField(
-                  label: 'Važi od',
-                  value: _effectiveFrom,
-                  errorText: _effectiveFromError,
-                  onPick: _pickEffectiveFrom,
-                ),
-                const SizedBox(height: 14),
-                _DateField(
-                  label: 'Važi do',
-                  value: _effectiveTo,
-                  errorText: _effectiveToError,
-                  onPick: _pickEffectiveTo,
-                  onClear: _effectiveTo == null ? null : _clearEffectiveTo,
+                  validator: _decimalValidator,
+                  decoration: const InputDecoration(
+                    labelText: 'Cijena po m³',
+                    prefixIcon: Icon(Icons.water_drop_outlined),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 SwitchListTile(
@@ -885,94 +689,6 @@ class _TariffEditorDialogState extends State<_TariffEditorDialog> {
     if (parsed == null) return 'Unesite ispravan broj.';
     if (parsed < 0) return 'Vrijednost ne smije biti negativna.';
     return null;
-  }
-}
-
-class _DateField extends StatelessWidget {
-  const _DateField({
-    required this.label,
-    required this.value,
-    required this.onPick,
-    this.onClear,
-    this.errorText,
-  });
-
-  final String label;
-  final DateTime? value;
-  final VoidCallback onPick;
-  final VoidCallback? onClear;
-  final String? errorText;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final hasError = errorText != null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: theme.inputDecorationTheme.fillColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: hasError
-                  ? theme.colorScheme.error
-                  : const Color(0xFFDCE6ED),
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.event_outlined,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      value == null ? 'Nije postavljeno' : _formatDateOnly(value!),
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: 'Odaberi datum',
-                onPressed: onPick,
-                icon: const Icon(Icons.calendar_month_outlined),
-              ),
-              if (onClear != null)
-                IconButton(
-                  tooltip: 'Ukloni datum',
-                  onPressed: onClear,
-                  icon: const Icon(Icons.clear),
-                ),
-            ],
-          ),
-        ),
-        if (hasError)
-          Padding(
-            padding: const EdgeInsets.only(left: 12, top: 6),
-            child: Text(
-              errorText!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-          ),
-      ],
-    );
   }
 }
 
@@ -1186,16 +902,3 @@ String _formatMoney(double value) {
   return text.substring(0, end);
 }
 
-String _formatDateOnly(DateTime date) {
-  String two(int value) => value.toString().padLeft(2, '0');
-  return '${two(date.day)}.${two(date.month)}.${date.year}.';
-}
-
-String _formatValidity(AdminTariff tariff) {
-  final from = tariff.effectiveFrom;
-  if (from == null) return '-';
-  final to = tariff.effectiveTo;
-  final fromText = 'od ${_formatDateOnly(from)}';
-  if (to == null) return fromText;
-  return '$fromText do ${_formatDateOnly(to)}';
-}

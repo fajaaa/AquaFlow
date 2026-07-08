@@ -28,16 +28,14 @@ class AdminTariffService {
     required int page,
     required int pageSize,
     String? name,
-    String? customerType,
     bool? isActive,
-    DateTime? effectiveOn,
   }) async {
     final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
       'IncludeTotalCount': 'true',
-      'SortBy': 'EffectiveFrom',
+      'SortBy': 'CreatedAt',
       'SortDescending': 'true',
     };
 
@@ -45,15 +43,8 @@ class AdminTariffService {
     if (nameText != null && nameText.isNotEmpty) {
       query['Name'] = nameText;
     }
-    final customerTypeText = customerType?.trim();
-    if (customerTypeText != null && customerTypeText.isNotEmpty) {
-      query['CustomerType'] = customerTypeText;
-    }
     if (isActive != null) {
       query['IsActive'] = '$isActive';
-    }
-    if (effectiveOn != null) {
-      query['EffectiveOn'] = effectiveOn.toIso8601String();
     }
 
     final uri = Uri.parse(

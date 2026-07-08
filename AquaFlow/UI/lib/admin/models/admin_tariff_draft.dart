@@ -1,30 +1,21 @@
 class AdminTariffDraft {
   const AdminTariffDraft({
     required this.name,
-    required this.customerType,
+    required this.description,
     required this.pricePerM3,
-    required this.fixedFee,
-    required this.effectiveFrom,
     required this.isActive,
-    this.effectiveTo,
   });
 
   final String name;
-  final String customerType;
+  final String description;
   final double pricePerM3;
-  final double fixedFee;
-  final DateTime effectiveFrom;
-  final DateTime? effectiveTo;
   final bool isActive;
 
   Map<String, Object?> toJson() {
     return {
       'name': name,
-      'customerType': customerType,
+      'description': description,
       'pricePerM3': pricePerM3,
-      'fixedFee': fixedFee,
-      'effectiveFrom': effectiveFrom.toIso8601String(),
-      'effectiveTo': effectiveTo?.toIso8601String(),
       'isActive': isActive,
     };
   }
