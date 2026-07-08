@@ -113,6 +113,12 @@ public partial class AquaFlowDbContext : DbContext
             .HasIndex(settlement => new { settlement.MunicipalityId, settlement.Name })
             .IsUnique();
 
+        // Tariff.Name uniqueness is checked case-insensitively in TariffService.EnsureUniqueNameAsync;
+        // this index is the hard backstop behind that check (case-sensitive at the DB level).
+        modelBuilder.Entity<Tariff>()
+            .HasIndex(tariff => tariff.Name)
+            .IsUnique();
+
         // Optimistic concurrency for invoice status transitions: every UPDATE carries the
         // loaded RowVersion in its WHERE clause, so a stale transition affects 0 rows and
         // surfaces as DbUpdateConcurrencyException instead of silently overwriting.

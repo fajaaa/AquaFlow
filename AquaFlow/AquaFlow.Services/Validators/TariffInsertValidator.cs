@@ -11,5 +11,6 @@ public class TariffInsertValidator : AbstractValidator<TariffInsertRequest>
         RuleFor(x => x.CustomerType).NotEmpty().MaximumLength(50);
         RuleFor(x => x.PricePerM3).GreaterThanOrEqualTo(0);
         RuleFor(x => x.FixedFee).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.EffectiveTo).GreaterThanOrEqualTo(x => x.EffectiveFrom).When(x => x.EffectiveTo.HasValue);
     }
 }
