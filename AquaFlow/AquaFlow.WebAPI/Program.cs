@@ -163,7 +163,14 @@ AddPatchMapping<SettlementPatchRequest, Settlement>();
 builder.Services.AddScoped<IBaseCRUDService<SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>, SettlementService>();
 AddPatchMapping<WaterMeterPatchRequest, WaterMeter>();
 builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>, WaterMeterService>();
-AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>();
+// MeterReading is registered by hand (not AddCrud<>) because the collector data-entry flow
+// (CreateForCollectorAsync) needs billing-cycle resolution/validation and WaterMeter.LastReading
+// updates beyond the generic EfCrudService; the generic IBaseCRUDService alias still resolves to
+// the same MeterReadingService instance, same pattern as WaterMeterRequest/Invoice below.
+AddPatchMapping<MeterReadingPatchRequest, MeterReading>();
+builder.Services.AddScoped<IMeterReadingService, MeterReadingService>();
+builder.Services.AddScoped<IBaseCRUDService<MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IMeterReadingService>());
 AddPatchMapping<TariffPatchRequest, Tariff>();
 builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>, TariffService>();
 // Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
@@ -244,6 +251,7 @@ builder.Services.AddScoped<IValidator<WaterMeterRequestPatchRequest>, WaterMeter
 builder.Services.AddScoped<IValidator<MeterReadingInsertRequest>, MeterReadingInsertValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingUpdateRequest>, MeterReadingUpdateValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingPatchRequest>, MeterReadingPatchValidator>();
+builder.Services.AddScoped<IValidator<MeterReadingCollectorEntryRequest>, MeterReadingCollectorEntryValidator>();
 builder.Services.AddScoped<IValidator<TariffInsertRequest>, TariffInsertValidator>();
 builder.Services.AddScoped<IValidator<TariffUpdateRequest>, TariffUpdateValidator>();
 builder.Services.AddScoped<IValidator<TariffPatchRequest>, TariffPatchValidator>();

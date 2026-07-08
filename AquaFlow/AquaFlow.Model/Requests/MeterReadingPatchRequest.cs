@@ -4,6 +4,7 @@ public class MeterReadingPatchRequest
 {
     public int? WaterMeterId { get; set; }
     public int? CollectorId { get; set; }
+    public int? BillingCycleId { get; set; }
     public decimal? ReadingValue { get; set; }
     public decimal? PreviousReadingValue { get; set; }
     public decimal? ConsumptionM3 { get; set; }
