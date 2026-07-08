@@ -58,6 +58,58 @@ class AdminWaterMeterService {
         .toList();
   }
 
+  /// Search-as-you-type lookup for the reading-route "add water meter"
+  /// dialog: filters by serial number (Contains, case-sensitive collation on
+  /// the backend) and/or settlement, bounded to [pageSize] results.
+  Future<List<AdminWaterMeter>> search({
+    String? serialNumber,
+    int? settlementId,
+    int pageSize = 20,
+  }) async {
+    final token = await _requireToken();
+    final query = <String, String>{
+      'PageSize': '$pageSize',
+      'IncludeTotalCount': 'true',
+    };
+
+    final serialText = serialNumber?.trim();
+    if (serialText != null && serialText.isNotEmpty) {
+      query['SerialNumber'] = serialText;
+    }
+    if (settlementId != null) {
+      query['SettlementId'] = '$settlementId';
+    }
+
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/WaterMeters',
+    ).replace(queryParameters: query);
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw AdminWaterMeterException(
+        _messageFor(response, 'Vodomjere nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const AdminWaterMeterException('Vodomjeri su u neispravnom formatu.');
+    }
+
+    final itemsJson = decoded['items'];
+    if (itemsJson is! List) {
+      throw const AdminWaterMeterException('Lista vodomjera je neispravna.');
+    }
+
+    return itemsJson
+        .whereType<Map<String, dynamic>>()
+        .map(AdminWaterMeter.fromJson)
+        .toList();
+  }
+
   Future<String> _requireToken() async {
     final token = await _tokenStorage.getAccessToken();
     if (token == null) {
