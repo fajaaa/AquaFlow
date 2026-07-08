@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/collector/screens/collector_reading_routes_screen.dart';
 import 'package:aquaflow_desktop/collector/screens/collector_water_meter_requests_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/account_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/mobile_shell.dart';
@@ -9,8 +10,9 @@ import 'package:aquaflow_desktop/shared/screens/notifications_screen.dart';
 ///
 /// Also used by an `admin` signed in on a phone (product decision - see
 /// [MobileRoleRouter]). Configures the shared [MobileShell] with the
-/// collector-facing tabs; the first three are placeholders until their real
-/// screens are built, and the last is the shared [AccountScreen] ("Nalog").
+/// collector-facing tabs; "Obavijesti" and "Nalog" are the shared screens,
+/// "Očitanja" is [CollectorReadingRoutesScreen], and "Nalozi" is
+/// [CollectorWaterMeterRequestsScreen].
 class CollectorShell extends StatelessWidget {
   const CollectorShell({super.key});
 
@@ -28,7 +30,7 @@ class CollectorShell extends StatelessWidget {
           icon: Icons.speed_outlined,
           selectedIcon: Icons.speed,
           label: 'Očitanja',
-          body: PlaceholderTab(icon: Icons.speed, label: 'Očitanja vodomjera'),
+          body: CollectorReadingRoutesScreen(),
         ),
         MobileTab(
           icon: Icons.assignment_outlined,
