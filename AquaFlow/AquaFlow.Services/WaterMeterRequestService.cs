@@ -33,6 +33,24 @@ public class WaterMeterRequestService
         _waterMeterInsertValidator = waterMeterInsertValidators.FirstOrDefault();
     }
 
+    // Load the settlement and the requesting customer (with its user) so the flattened response
+    // fields (SettlementName, CustomerFirstName/LastName, CustomerPhone) populate.
+    protected override IQueryable<WaterMeterRequest> IncludeForRead(IQueryable<WaterMeterRequest> query) =>
+        query
+            .Include(request => request.Settlement)
+            .Include(request => request.Customer)
+                .ThenInclude(customer => customer!.User);
+
+    protected override async Task LoadReferencesAsync(WaterMeterRequest entity)
+    {
+        await _dbContext.Entry(entity).Reference(request => request.Settlement).LoadAsync();
+        await _dbContext.Entry(entity).Reference(request => request.Customer).LoadAsync();
+        if (entity.Customer != null)
+        {
+            await _dbContext.Entry(entity.Customer).Reference(customer => customer.User).LoadAsync();
+        }
+    }
+
     // The plain CRUD insert has no caller identity to resolve the CustomerId from, so it is closed
     // off; creation always goes through CreateForUserAsync with the id the controller read from the
     // JWT. This guarantees a request can never be created under someone else's customer profile.
@@ -42,6 +60,7 @@ public class WaterMeterRequestService
     public async Task<WaterMeterRequestResponse> CreateForUserAsync(int callerUserId, WaterMeterRequestInsertRequest request)
     {
         await ValidateInsertAsync(request);
+        await EnsureSettlementExistsAsync(request.SettlementId);
 
         var customerId = await _dbContext.CustomerProfiles
             .Where(profile => profile.UserId == callerUserId)
@@ -88,21 +107,22 @@ public class WaterMeterRequestService
     {
         var request = await LoadRequestAsync(id);
 
-        // The new meter always belongs to the requester and their profile's settlement - never to
-        // whatever CustomerId/SettlementId the collector's request body happened to carry.
-        var settlementId = await _dbContext.CustomerProfiles
-            .Where(profile => profile.Id == request.CustomerId)
-            .Select(profile => profile.SettlementId)
-            .FirstOrDefaultAsync();
-        if (settlementId == null)
-        {
-            throw new ClientException("Kupac nema postavljeno naselje.");
-        }
-
+        // Security: the new meter always belongs to the requester, never to whatever CustomerId the
+        // collector's request body happened to carry.
         meterData.CustomerId = request.CustomerId;
-        meterData.SettlementId = settlementId.Value;
+
+        // The collector registers the meter at the address stored on the request, but may correct it
+        // on site (the FE prefills these from the request's saved address). Validate the supplied
+        // settlement exists rather than deriving it from the customer's profile.
+        await EnsureSettlementExistsAsync(meterData.SettlementId);
+
         meterData.LastReading = meterData.InitialReading;
         await ValidateWaterMeterInsertAsync(meterData);
+
+        // Keep the stored request in sync with the address the meter was actually registered at.
+        request.SettlementId = meterData.SettlementId;
+        request.Street = meterData.Street ?? request.Street;
+        request.HouseNumber = meterData.HouseNumber ?? request.HouseNumber;
 
         return await _stateResolver.Resolve(request.Status).RegisterAsync(request, meterData, changedById);
     }
@@ -135,6 +155,14 @@ public class WaterMeterRequestService
         }
 
         return request;
+    }
+
+    private async Task EnsureSettlementExistsAsync(int settlementId)
+    {
+        if (!await _dbContext.Settlements.AnyAsync(settlement => settlement.Id == settlementId))
+        {
+            throw new ClientException($"Settlement with id {settlementId} was not found.");
+        }
     }
 
     private async Task EnsureActiveCollectorProfileAsync(int collectorId)

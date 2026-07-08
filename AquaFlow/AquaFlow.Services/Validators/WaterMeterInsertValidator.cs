@@ -10,6 +10,9 @@ public class WaterMeterInsertValidator : AbstractValidator<WaterMeterInsertReque
         RuleFor(x => x.SerialNumber).NotEmpty().MaximumLength(80);
         RuleFor(x => x.CustomerId).GreaterThan(0);
         RuleFor(x => x.SettlementId).GreaterThan(0);
+        // Optional (the WaterMeter columns are nullable); only length-bounded when supplied.
+        RuleFor(x => x.Street).MaximumLength(200);
+        RuleFor(x => x.HouseNumber).MaximumLength(30);
         RuleFor(x => x.Status).NotEmpty().MaximumLength(30);
         RuleFor(x => x.InitialReading).GreaterThanOrEqualTo(0);
         RuleFor(x => x.LastReading).GreaterThanOrEqualTo(x => x.InitialReading);

@@ -12,6 +12,14 @@ public class WaterMeter : EntityBase
     public CustomerProfile? Customer { get; set; }
     public int SettlementId { get; set; }
     public Settlement? Settlement { get; set; }
+    // Nullable so existing meters seeded with only a settlement stay valid; set when a meter is
+    // registered from a request that carried a full street address. A customer can now have meters
+    // at different street addresses.
+    [MaxLength(200)]
+    public string? Street { get; set; }
+    // String, not int: house numbers like "12A" or "bb" are common in this address format.
+    [MaxLength(30)]
+    public string? HouseNumber { get; set; }
     public DateTime InstalledAt { get; set; } = DateTime.UtcNow;
     [MaxLength(30)]
     public string Status { get; set; } = "Active";

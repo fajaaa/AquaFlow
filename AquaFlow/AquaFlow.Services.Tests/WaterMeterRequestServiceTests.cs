@@ -18,16 +18,24 @@ public class WaterMeterRequestServiceTests
     public async Task CreateForUserAsync_NoCustomerProfile_ThrowsClientException()
     {
         await using var context = CreateContext();
+        // Seed only the settlement so the address is valid and the flow reaches the profile check.
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Sarajevo", MunicipalityId = 1, PostalCode = "71000" });
+        await context.SaveChangesAsync();
         var service = CreateService(context);
 
         var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.CreateForUserAsync(1, new WaterMeterRequestInsertRequest()));
+            () => service.CreateForUserAsync(1, new WaterMeterRequestInsertRequest
+            {
+                SettlementId = 1,
+                Street = "Zmaja od Bosne",
+                HouseNumber = "12A"
+            }));
 
         Assert.Contains("no customer profile", exception.Message);
     }
 
     [Fact]
-    public async Task CreateForUserAsync_ValidCustomer_CreatesPendingRequest()
+    public async Task CreateForUserAsync_ValidCustomer_CreatesPendingRequestWithAddress()
     {
         await using var context = CreateContext();
         SeedCustomer(context, settlementId: 1);
@@ -36,25 +44,59 @@ public class WaterMeterRequestServiceTests
 
         var response = await service.CreateForUserAsync(1, new WaterMeterRequestInsertRequest
         {
+            SettlementId = 1,
+            Street = "Zmaja od Bosne",
+            HouseNumber = "12A",
             Note = "Molim novi vodomjer."
         });
 
         Assert.Equal(WaterMeterRequestStatus.Pending, response.Status);
         Assert.Equal(1, response.CustomerId);
+        Assert.Equal(1, response.SettlementId);
+        Assert.Equal("Zmaja od Bosne", response.Street);
+        Assert.Equal("12A", response.HouseNumber);
+        // Flattened contact + settlement fields populate from the loaded navigations.
+        Assert.Equal("Sarajevo", response.SettlementName);
+        Assert.Equal("Amina", response.CustomerFirstName);
+        Assert.Equal("Amidzic", response.CustomerLastName);
     }
 
     [Fact]
-    public async Task RegisterAsync_CustomerHasSettlement_SetsCustomerAndSettlementFromProfile()
+    public async Task CreateForUserAsync_NonExistentSettlement_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedCustomer(context, settlementId: 1);
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(
+            () => service.CreateForUserAsync(1, new WaterMeterRequestInsertRequest
+            {
+                SettlementId = 999,
+                Street = "Zmaja od Bosne",
+                HouseNumber = "12A"
+            }));
+
+        Assert.Contains("Settlement with id 999", exception.Message);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_UsesCollectorSuppliedAddress_AndForcesCustomerFromRequest()
     {
         await using var context = CreateContext();
         SeedCustomer(context, settlementId: 1);
         SeedCollector(context);
+        // A second settlement the collector corrects the address to on site.
+        context.Settlements.Add(new Settlement { Id = 2, Name = "Ilidza", MunicipalityId = 1, PostalCode = "71210" });
         context.WaterMeterRequests.Add(new WaterMeterRequest
         {
             Id = 1,
             CustomerId = 1,
             Status = WaterMeterRequestStatus.Assigned,
-            AssignedCollectorId = 1
+            AssignedCollectorId = 1,
+            SettlementId = 1,
+            Street = "Zmaja od Bosne",
+            HouseNumber = "12A"
         });
         await context.SaveChangesAsync();
         var service = CreateService(context);
@@ -62,6 +104,12 @@ public class WaterMeterRequestServiceTests
         var response = await service.RegisterAsync(1, new WaterMeterInsertRequest
         {
             SerialNumber = "WM-2026-0002",
+            // Collector redirects to a different customer/settlement/address; only the corrected
+            // address is honoured, the CustomerId is forced back to the requester.
+            CustomerId = 999,
+            SettlementId = 2,
+            Street = "Novi Grad",
+            HouseNumber = "7",
             Status = "Active",
             InitialReading = 0
         }, changedById: 2);
@@ -71,21 +119,36 @@ public class WaterMeterRequestServiceTests
 
         var meter = await context.WaterMeters.SingleAsync(m => m.Id == response.ResultingWaterMeterId!.Value);
         Assert.Equal(1, meter.CustomerId);
-        Assert.Equal(1, meter.SettlementId);
+        Assert.Equal(2, meter.SettlementId);
+        Assert.Equal("Novi Grad", meter.Street);
+        Assert.Equal("7", meter.HouseNumber);
+
+        // The stored request reflects the corrected address the meter was registered at.
+        var storedRequest = await context.WaterMeterRequests.SingleAsync(r => r.Id == 1);
+        Assert.Equal(2, storedRequest.SettlementId);
+        Assert.Equal("Novi Grad", storedRequest.Street);
+        Assert.Equal("7", storedRequest.HouseNumber);
+
+        // The customer's profile settlement is untouched.
+        var profile = await context.CustomerProfiles.SingleAsync(p => p.Id == 1);
+        Assert.Equal(1, profile.SettlementId);
     }
 
     [Fact]
-    public async Task RegisterAsync_CustomerHasNoSettlement_ThrowsClientException()
+    public async Task RegisterAsync_NonExistentSettlement_ThrowsClientException()
     {
         await using var context = CreateContext();
-        SeedCustomer(context, settlementId: null);
+        SeedCustomer(context, settlementId: 1);
         SeedCollector(context);
         context.WaterMeterRequests.Add(new WaterMeterRequest
         {
             Id = 1,
             CustomerId = 1,
             Status = WaterMeterRequestStatus.Assigned,
-            AssignedCollectorId = 1
+            AssignedCollectorId = 1,
+            SettlementId = 1,
+            Street = "Zmaja od Bosne",
+            HouseNumber = "12A"
         });
         await context.SaveChangesAsync();
         var service = CreateService(context);
@@ -93,11 +156,14 @@ public class WaterMeterRequestServiceTests
         var exception = await Assert.ThrowsAsync<ClientException>(() => service.RegisterAsync(1, new WaterMeterInsertRequest
         {
             SerialNumber = "WM-2026-0002",
+            SettlementId = 999,
+            Street = "Novi Grad",
+            HouseNumber = "7",
             Status = "Active",
             InitialReading = 0
         }, changedById: 2));
 
-        Assert.Equal("Kupac nema postavljeno naselje.", exception.Message);
+        Assert.Contains("Settlement with id 999", exception.Message);
     }
 
     private static AquaFlowDbContext CreateContext()
@@ -156,6 +222,13 @@ public class WaterMeterRequestServiceTests
     private static WaterMeterRequestService CreateService(AquaFlowDbContext context)
     {
         var mapperConfig = new TypeAdapterConfig();
+        // Mirror the flatten config from Program.cs so the response's SettlementName and customer
+        // contact fields populate from the loaded navigations.
+        mapperConfig.NewConfig<WaterMeterRequest, Model.Responses.WaterMeterRequestResponse>()
+            .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
+            .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
+            .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
+            .Map(destination => destination.CustomerPhone, source => source.Customer == null || source.Customer.User == null ? null : source.Customer.User.Phone);
         IMapper mapper = new Mapper(mapperConfig);
 
         var stateServices = new ServiceCollection();

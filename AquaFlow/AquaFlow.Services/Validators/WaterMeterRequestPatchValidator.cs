@@ -7,6 +7,10 @@ public class WaterMeterRequestPatchValidator : AbstractValidator<WaterMeterReque
 {
     public WaterMeterRequestPatchValidator()
     {
+        // Patch validates each field only when the caller actually supplied it.
+        RuleFor(x => x.SettlementId).GreaterThan(0).When(x => x.SettlementId.HasValue);
+        RuleFor(x => x.Street).NotEmpty().MaximumLength(200).When(x => x.Street != null);
+        RuleFor(x => x.HouseNumber).NotEmpty().MaximumLength(30).When(x => x.HouseNumber != null);
         RuleFor(x => x.Note).MaximumLength(500);
     }
 }
