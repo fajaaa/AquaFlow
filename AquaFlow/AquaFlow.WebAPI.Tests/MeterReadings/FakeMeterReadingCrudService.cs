@@ -21,22 +21,26 @@ public class FakeMeterReadingCrudService : IMeterReadingService
         _rows = rows.ToList();
     }
 
-    public Task<MeterReadingResponse> CreateForCollectorAsync(int callerUserId, MeterReadingCollectorEntryRequest request)
+    public Task<MeterReadingCollectorEntryResponse> CreateForCollectorAsync(int callerUserId, MeterReadingCollectorEntryRequest request)
     {
         LastCallerUserId = callerUserId;
         LastRequest = request;
 
-        var row = new MeterReadingResponse
+        var row = new MeterReadingCollectorEntryResponse
         {
             Id = _rows.Count == 0 ? 1 : _rows.Max(row => row.Id) + 1,
             WaterMeterId = request.WaterMeterId,
             CollectorId = callerUserId,
             BillingCycleId = request.BillingCycleId,
+            TariffId = request.TariffId,
             ReadingValue = request.ReadingValue,
             Note = request.Note,
             PhotoUrl = request.PhotoUrl,
             ClientUuid = request.ClientUuid,
-            Source = "Collector"
+            Source = "Collector",
+            InvoiceId = 1,
+            InvoiceNumber = "INV-2026-0001",
+            InvoiceTotalAmount = 0m
         };
         _rows.Add(row);
         return Task.FromResult(row);

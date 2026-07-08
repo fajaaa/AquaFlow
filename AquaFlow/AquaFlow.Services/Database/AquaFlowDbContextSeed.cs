@@ -186,6 +186,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 12,
+                Code = "BillingCycles.Manage",
+                Name = "Manage billing cycles",
+                Module = "BillingCycles",
+                Description = "Allows opening, closing, and editing billing cycles.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -309,6 +320,14 @@ public partial class AquaFlowDbContext
                 Id = 15,
                 UserRoleId = 1,
                 PermissionId = 11,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 16,
+                UserRoleId = 1,
+                PermissionId = 12,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
@@ -525,7 +544,7 @@ public partial class AquaFlowDbContext
 
     // A single Open cycle so the collector-entry endpoint (CreateForCollectorAsync's single-Open-cycle
     // resolution) and GET /BillingCycles?Status=Open (current-period lookup) both have data to work
-    // with out of the box; there is no admin flow yet to open/close cycles.
+    // with out of the box; an Admin can open/close subsequent cycles through BillingCyclesController.
     private static void SeedBillingCycles(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<BillingCycle>().HasData(
@@ -550,6 +569,7 @@ public partial class AquaFlowDbContext
                 Id = 1,
                 WaterMeterId = 1,
                 CollectorId = 1,
+                TariffId = (int?)1,
                 ReadingValue = 168.40m,
                 PreviousReadingValue = 154.20m,
                 ConsumptionM3 = 14.20m,

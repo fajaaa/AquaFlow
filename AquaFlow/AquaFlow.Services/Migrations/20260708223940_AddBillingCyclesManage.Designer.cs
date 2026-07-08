@@ -4,6 +4,7 @@ using AquaFlow.Services.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AquaFlow.Services.Migrations
 {
     [DbContext(typeof(AquaFlowDbContext))]
-    partial class AquaFlowDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708223940_AddBillingCyclesManage")]
+    partial class AddBillingCyclesManage
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -645,7 +648,7 @@ namespace AquaFlow.Services.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("DueDate")
+                    b.Property<DateTime>("DueDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("InvoiceNumber")
@@ -923,9 +926,6 @@ namespace AquaFlow.Services.Migrations
                     b.Property<DateTime?>("SyncedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("TariffId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -937,8 +937,6 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("BillingCycleId");
 
                     b.HasIndex("CollectorId");
-
-                    b.HasIndex("TariffId");
 
                     b.HasIndex("WaterMeterId", "BillingCycleId")
                         .IsUnique()
@@ -961,7 +959,6 @@ namespace AquaFlow.Services.Migrations
                             Source = "Collector",
                             SyncStatus = "Synced",
                             SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
-                            TariffId = 1,
                             WaterMeterId = 1
                         });
                 });
@@ -2998,11 +2995,6 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AquaFlow.Services.Database.Tariff", "Tariff")
-                        .WithMany()
-                        .HasForeignKey("TariffId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("AquaFlow.Services.Database.WaterMeter", "WaterMeter")
                         .WithMany("MeterReadings")
                         .HasForeignKey("WaterMeterId")
@@ -3012,8 +3004,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("BillingCycle");
 
                     b.Navigation("Collector");
-
-                    b.Navigation("Tariff");
 
                     b.Navigation("WaterMeter");
                 });

@@ -29,7 +29,9 @@ public class Invoice : EntityBase
     public decimal TotalAmount { get; set; }
     [MaxLength(30)]
     public string Status { get; set; } = InvoiceStatus.Draft;
-    public DateTime DueDate { get; set; }
+    // Nullable: an invoice is not required to carry a payment deadline (e.g. invoices
+    // auto-generated from the collector reading-entry flow leave the customer unconstrained).
+    public DateTime? DueDate { get; set; }
     public int CreatedById { get; set; }
     public User? CreatedBy { get; set; }
     public ICollection<InvoiceItem> InvoiceItems { get; set; } = new List<InvoiceItem>();

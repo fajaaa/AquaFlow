@@ -26,13 +26,14 @@ public class MeterReadingsControllerTests
         var request = new MeterReadingCollectorEntryRequest
         {
             WaterMeterId = 1,
-            ReadingValue = 120m
+            ReadingValue = 120m,
+            TariffId = 1
         };
 
         var result = await controller.CreateForCollector(request);
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
-        var response = Assert.IsType<MeterReadingResponse>(created.Value);
+        var response = Assert.IsType<MeterReadingCollectorEntryResponse>(created.Value);
         Assert.Equal(42, service.LastCallerUserId);
         Assert.Same(request, service.LastRequest);
         Assert.Equal(1, response.WaterMeterId);
@@ -47,7 +48,8 @@ public class MeterReadingsControllerTests
         var result = await controller.CreateForCollector(new MeterReadingCollectorEntryRequest
         {
             WaterMeterId = 1,
-            ReadingValue = 120m
+            ReadingValue = 120m,
+            TariffId = 1
         });
 
         Assert.IsType<UnauthorizedResult>(result.Result);

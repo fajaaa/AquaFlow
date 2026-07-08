@@ -36,6 +36,7 @@ class CollectorMeterReadingService {
   Future<CollectorMeterReadingResult> submit({
     required int waterMeterId,
     required double readingValue,
+    required int tariffId,
     String? note,
     String? photoUrl,
   }) async {
@@ -52,6 +53,7 @@ class CollectorMeterReadingService {
         body: jsonEncode({
           'waterMeterId': waterMeterId,
           'readingValue': readingValue,
+          'tariffId': tariffId,
           if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
           if (photoUrl != null && photoUrl.trim().isNotEmpty)
             'photoUrl': photoUrl.trim(),

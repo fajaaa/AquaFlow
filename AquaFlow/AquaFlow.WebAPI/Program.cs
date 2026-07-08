@@ -173,7 +173,7 @@ builder.Services.AddScoped<IBaseCRUDService<MeterReadingResponse, MeterReadingSe
     serviceProvider => serviceProvider.GetRequiredService<IMeterReadingService>());
 AddPatchMapping<TariffPatchRequest, Tariff>();
 builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>, TariffService>();
-// BillingCycle is read-only (see BillingCycleService) - no CRUD/validators to register.
+AddPatchMapping<BillingCyclePatchRequest, BillingCycle>();
 builder.Services.AddScoped<IBillingCycleService, BillingCycleService>();
 // Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
 // it by hand: the patch mapping, IInvoiceService, and the generic IBaseCRUDService alias resolving
@@ -257,6 +257,9 @@ builder.Services.AddScoped<IValidator<MeterReadingCollectorEntryRequest>, MeterR
 builder.Services.AddScoped<IValidator<TariffInsertRequest>, TariffInsertValidator>();
 builder.Services.AddScoped<IValidator<TariffUpdateRequest>, TariffUpdateValidator>();
 builder.Services.AddScoped<IValidator<TariffPatchRequest>, TariffPatchValidator>();
+builder.Services.AddScoped<IValidator<BillingCycleInsertRequest>, BillingCycleInsertValidator>();
+builder.Services.AddScoped<IValidator<BillingCycleUpdateRequest>, BillingCycleUpdateValidator>();
+builder.Services.AddScoped<IValidator<BillingCyclePatchRequest>, BillingCyclePatchValidator>();
 builder.Services.AddScoped<IValidator<InvoiceInsertRequest>, InvoiceInsertValidator>();
 builder.Services.AddScoped<IValidator<InvoiceUpdateRequest>, InvoiceUpdateValidator>();
 builder.Services.AddScoped<IValidator<InvoicePatchRequest>, InvoicePatchValidator>();

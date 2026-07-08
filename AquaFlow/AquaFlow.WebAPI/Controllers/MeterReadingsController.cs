@@ -27,7 +27,7 @@ public class MeterReadingsController : BaseCRUDController<MeterReadingResponse, 
     [RequirePermission(ManagePermission)]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<MeterReadingResponse>> CreateForCollector([FromBody] MeterReadingCollectorEntryRequest request)
+    public async Task<ActionResult<MeterReadingCollectorEntryResponse>> CreateForCollector([FromBody] MeterReadingCollectorEntryRequest request)
     {
         if (!TryGetCurrentUserId(out var userId))
         {

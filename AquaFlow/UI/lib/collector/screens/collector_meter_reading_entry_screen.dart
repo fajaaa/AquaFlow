@@ -5,15 +5,21 @@ import 'package:aquaflow_desktop/collector/models/collector_billing_cycle.dart';
 import 'package:aquaflow_desktop/collector/models/collector_water_meter.dart';
 import 'package:aquaflow_desktop/collector/services/collector_meter_reading_exception.dart';
 import 'package:aquaflow_desktop/collector/services/collector_meter_reading_service.dart';
+import 'package:aquaflow_desktop/shared/models/tariff_lookup.dart';
+import 'package:aquaflow_desktop/shared/services/tariff_lookup_exception.dart';
+import 'package:aquaflow_desktop/shared/services/tariff_lookup_service.dart';
 
 /// Meter detail + reading entry, pushed when a collector taps a result on
 /// [CollectorWaterMetersScreen]. Submits via
 /// `POST /MeterReadings/collector-entry`
 /// (`CollectorMeterReadingService.submit`) - the server resolves the
 /// collector, the billing cycle, and the previous reading itself, so this
-/// form only collects the new reading value, an optional note (required when
-/// the value is lower than the meter's last reading, e.g. a meter
-/// replacement/reset) and an optional photo URL. On open it looks up the
+/// form only collects the new reading value, the tariff to bill it under
+/// (required - picked from the active tariff list), an optional note
+/// (required when the value is lower than the meter's last reading, e.g. a
+/// meter replacement/reset) and an optional photo URL. The server
+/// auto-generates a Draft invoice from the reading and the chosen tariff, so
+/// the success message shows its number/total. On open it looks up the
 /// current Open billing period and whether this meter already has a reading
 /// in it, so a duplicate is flagged before the collector fills anything in -
 /// the server still rejects a duplicate/missing-period submit independently,
@@ -31,6 +37,7 @@ class CollectorMeterReadingEntryScreen extends StatefulWidget {
 class _CollectorMeterReadingEntryScreenState
     extends State<CollectorMeterReadingEntryScreen> {
   final CollectorMeterReadingService _service = CollectorMeterReadingService();
+  final TariffLookupService _tariffService = TariffLookupService();
   final _formKey = GlobalKey<FormState>();
   final _readingCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
@@ -44,10 +51,16 @@ class _CollectorMeterReadingEntryScreenState
   bool _alreadyRead = false;
   String? _periodError;
 
+  bool _loadingTariffs = true;
+  List<TariffLookup> _tariffs = [];
+  int? _selectedTariffId;
+  String? _tariffError;
+
   @override
   void initState() {
     super.initState();
     _loadPeriodStatus();
+    _loadTariffs();
   }
 
   @override
@@ -56,6 +69,7 @@ class _CollectorMeterReadingEntryScreenState
     _noteCtrl.dispose();
     _photoUrlCtrl.dispose();
     _service.dispose();
+    _tariffService.dispose();
     super.dispose();
   }
 
@@ -88,6 +102,28 @@ class _CollectorMeterReadingEntryScreenState
     }
   }
 
+  Future<void> _loadTariffs() async {
+    setState(() {
+      _loadingTariffs = true;
+      _tariffError = null;
+    });
+
+    try {
+      final tariffs = await _tariffService.fetchActiveTariffs();
+      if (!mounted) return;
+      setState(() {
+        _tariffs = tariffs;
+        _loadingTariffs = false;
+      });
+    } on TariffLookupException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadingTariffs = false;
+        _tariffError = e.message;
+      });
+    }
+  }
+
   Future<void> _submit() async {
     final form = _formKey.currentState;
     if (form == null || !form.validate()) return;
@@ -101,6 +137,7 @@ class _CollectorMeterReadingEntryScreenState
       final result = await _service.submit(
         waterMeterId: widget.meter.id,
         readingValue: double.parse(_readingCtrl.text.trim().replaceAll(',', '.')),
+        tariffId: _selectedTariffId!,
         note: _noteCtrl.text,
         photoUrl: _photoUrlCtrl.text,
       );
@@ -110,7 +147,9 @@ class _CollectorMeterReadingEntryScreenState
         SnackBar(
           content: Text(
             'Očitanje je snimljeno. Potrošnja: '
-            '${_formatReading(result.consumptionM3)} m³.',
+            '${_formatReading(result.consumptionM3)} m³. '
+            'Račun ${result.invoiceNumber}: '
+            '${_formatReading(result.invoiceTotalAmount)} BAM.',
           ),
         ),
       );
@@ -256,6 +295,34 @@ class _CollectorMeterReadingEntryScreenState
                     ),
                   ),
                   const SizedBox(height: 14),
+                  DropdownButtonFormField<int>(
+                    initialValue: _selectedTariffId,
+                    decoration: InputDecoration(
+                      labelText: 'Tarifa',
+                      prefixIcon: const Icon(Icons.sell_outlined),
+                      errorText: _tariffError,
+                    ),
+                    hint: Text(
+                      _loadingTariffs
+                          ? 'Učitavanje tarifa...'
+                          : _tariffs.isEmpty
+                          ? 'Nema aktivnih tarifa'
+                          : 'Odaberite tarifu',
+                    ),
+                    items: [
+                      for (final tariff in _tariffs)
+                        DropdownMenuItem(
+                          value: tariff.id,
+                          child: Text(tariff.name),
+                        ),
+                    ],
+                    validator: (value) =>
+                        value == null ? 'Obavezno polje.' : null,
+                    onChanged: (!_alreadyRead && _tariffs.isNotEmpty)
+                        ? (value) => setState(() => _selectedTariffId = value)
+                        : null,
+                  ),
+                  const SizedBox(height: 14),
                   TextFormField(
                     controller: _noteCtrl,
                     enabled: !_alreadyRead,
@@ -285,7 +352,8 @@ class _CollectorMeterReadingEntryScreenState
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: (_submitting || _alreadyRead)
+                      onPressed:
+                          (_submitting || _alreadyRead || _tariffs.isEmpty)
                           ? null
                           : _submit,
                       icon: _submitting
