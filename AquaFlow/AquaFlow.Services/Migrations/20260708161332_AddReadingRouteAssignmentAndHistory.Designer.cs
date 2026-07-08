@@ -4,6 +4,7 @@ using AquaFlow.Services.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AquaFlow.Services.Migrations
 {
     [DbContext(typeof(AquaFlowDbContext))]
-    partial class AquaFlowDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708161332_AddReadingRouteAssignmentAndHistory")]
+    partial class AddReadingRouteAssignmentAndHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

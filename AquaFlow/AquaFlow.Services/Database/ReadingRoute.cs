@@ -5,7 +5,7 @@ namespace AquaFlow.Services.Database;
 
 public class ReadingRoute : EntityBase
 {
-    public int CollectorId { get; set; }
+    public int? CollectorId { get; set; }
     public CollectorProfile? Collector { get; set; }
     [MaxLength(120)]
     public string Name { get; set; } = string.Empty;
