@@ -23,8 +23,8 @@ class AdminTariffDraft {
       'customerType': customerType,
       'pricePerM3': pricePerM3,
       'fixedFee': fixedFee,
-      'effectiveFrom': effectiveFrom.toUtc().toIso8601String(),
-      'effectiveTo': effectiveTo?.toUtc().toIso8601String(),
+      'effectiveFrom': effectiveFrom.toIso8601String(),
+      'effectiveTo': effectiveTo?.toIso8601String(),
       'isActive': isActive,
     };
   }
