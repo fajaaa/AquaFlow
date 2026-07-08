@@ -185,17 +185,6 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
-            },
-            new
-            {
-                Id = 12,
-                Code = "ReadingRoutes.Manage",
-                Name = "Manage reading routes",
-                Module = "ReadingRoutes",
-                Description = "Allows creating, updating, and deleting reading routes and assigning collectors.",
-                IsActive = true,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -319,14 +308,6 @@ public partial class AquaFlowDbContext
                 Id = 15,
                 UserRoleId = 1,
                 PermissionId = 11,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
-            new
-            {
-                Id = 16,
-                UserRoleId = 1,
-                PermissionId = 12,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });

@@ -12,5 +12,4 @@ public class CollectorProfile : EntityBase
     public int? AssignedAreaId { get; set; }
     public Settlement? AssignedArea { get; set; }
     public ICollection<MeterAssignment> MeterAssignments { get; set; } = new List<MeterAssignment>();
-    public ICollection<ReadingRoute> ReadingRoutes { get; set; } = new List<ReadingRoute>();
 }

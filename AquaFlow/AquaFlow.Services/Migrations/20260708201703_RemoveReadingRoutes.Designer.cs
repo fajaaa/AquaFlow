@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AquaFlow.Services.Migrations
 {
     [DbContext(typeof(AquaFlowDbContext))]
-    [Migration("20260708161332_AddReadingRouteAssignmentAndHistory")]
-    partial class AddReadingRouteAssignmentAndHistory
+    [Migration("20260708201703_RemoveReadingRoutes")]
+    partial class RemoveReadingRoutes
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1579,139 +1579,7 @@ namespace AquaFlow.Services.Migrations
                             IsActive = true,
                             Module = "Tariffs",
                             Name = "Manage tariffs"
-                        },
-                        new
-                        {
-                            Id = 12,
-                            Code = "ReadingRoutes.Manage",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Allows creating, updating, and deleting reading routes and assigning collectors.",
-                            IsActive = true,
-                            Module = "ReadingRoutes",
-                            Name = "Manage reading routes"
                         });
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.ReadingRoute", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CollectorId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<DateTime>("ScheduledDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CollectorId");
-
-                    b.ToTable("ReadingRoutes");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.ReadingRouteItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ReadingRouteId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("WaterMeterId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReadingRouteId");
-
-                    b.HasIndex("WaterMeterId");
-
-                    b.ToTable("ReadingRouteItems");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.ReadingRouteStatusHistory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("ChangedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ChangedById")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("NewStatus")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OldStatus")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<int>("ReadingRouteId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChangedById");
-
-                    b.HasIndex("ReadingRouteId");
-
-                    b.ToTable("ReadingRouteStatusHistories");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Recommendation", b =>
@@ -2577,13 +2445,6 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 11,
                             UserRoleId = 1
-                        },
-                        new
-                        {
-                            Id = 16,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            PermissionId = 12,
-                            UserRoleId = 1
                         });
                 });
 
@@ -3213,54 +3074,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Payment");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.ReadingRoute", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.CollectorProfile", "Collector")
-                        .WithMany("ReadingRoutes")
-                        .HasForeignKey("CollectorId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Collector");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.ReadingRouteItem", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.ReadingRoute", "ReadingRoute")
-                        .WithMany("Items")
-                        .HasForeignKey("ReadingRouteId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AquaFlow.Services.Database.WaterMeter", "WaterMeter")
-                        .WithMany("ReadingRouteItems")
-                        .HasForeignKey("WaterMeterId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ReadingRoute");
-
-                    b.Navigation("WaterMeter");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.ReadingRouteStatusHistory", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.User", "ChangedBy")
-                        .WithMany()
-                        .HasForeignKey("ChangedById")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AquaFlow.Services.Database.ReadingRoute", "ReadingRoute")
-                        .WithMany()
-                        .HasForeignKey("ReadingRouteId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ChangedBy");
-
-                    b.Navigation("ReadingRoute");
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.Recommendation", b =>
                 {
                     b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
@@ -3505,8 +3318,6 @@ namespace AquaFlow.Services.Migrations
             modelBuilder.Entity("AquaFlow.Services.Database.CollectorProfile", b =>
                 {
                     b.Navigation("MeterAssignments");
-
-                    b.Navigation("ReadingRoutes");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.CustomerProfile", b =>
@@ -3558,11 +3369,6 @@ namespace AquaFlow.Services.Migrations
             modelBuilder.Entity("AquaFlow.Services.Database.Permission", b =>
                 {
                     b.Navigation("UserRolePermissions");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.ReadingRoute", b =>
-                {
-                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Settlement", b =>
@@ -3619,8 +3425,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("MeterAssignments");
 
                     b.Navigation("MeterReadings");
-
-                    b.Navigation("ReadingRouteItems");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterRequest", b =>

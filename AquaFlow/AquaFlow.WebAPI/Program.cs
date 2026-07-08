@@ -7,7 +7,6 @@ using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.InvoiceStateMachine;
-using AquaFlow.Services.ReadingRouteStateMachine;
 using AquaFlow.Services.Validators;
 using AquaFlow.Services.WaterMeterRequestStateMachine;
 using AquaFlow.WebAPI.Filters;
@@ -129,14 +128,6 @@ mapperConfig.NewConfig<WaterMeterRequest, WaterMeterRequestResponse>()
     .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
     .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
     .Map(destination => destination.CustomerPhone, source => source.Customer == null || source.Customer.User == null ? null : source.Customer.User.Phone);
-mapperConfig.NewConfig<ReadingRoute, ReadingRouteResponse>()
-    .Map(destination => destination.CollectorFirstName, source => source.Collector == null || source.Collector.User == null || source.Collector.User.CustomerProfile == null ? string.Empty : source.Collector.User.CustomerProfile.FirstName)
-    .Map(destination => destination.CollectorLastName, source => source.Collector == null || source.Collector.User == null || source.Collector.User.CustomerProfile == null ? string.Empty : source.Collector.User.CustomerProfile.LastName);
-mapperConfig.NewConfig<ReadingRouteItem, ReadingRouteItemResponse>()
-    .Map(destination => destination.WaterMeterSerialNumber, source => source.WaterMeter == null ? string.Empty : source.WaterMeter.SerialNumber)
-    .Map(destination => destination.SettlementName, source => source.WaterMeter == null || source.WaterMeter.Settlement == null ? string.Empty : source.WaterMeter.Settlement.Name)
-    .Map(destination => destination.CustomerFirstName, source => source.WaterMeter == null || source.WaterMeter.Customer == null ? string.Empty : source.WaterMeter.Customer.FirstName)
-    .Map(destination => destination.CustomerLastName, source => source.WaterMeter == null || source.WaterMeter.Customer == null ? string.Empty : source.WaterMeter.Customer.LastName);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
@@ -202,21 +193,6 @@ builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, RegisteredWaterMeter
 builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, RejectedWaterMeterRequestState>(WaterMeterRequestStatus.Rejected);
 builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, CancelledWaterMeterRequestState>(WaterMeterRequestStatus.Cancelled);
 builder.Services.AddScoped<IWaterMeterRequestStateResolver, WaterMeterRequestStateResolver>();
-// ReadingRoute mirrors the Invoice/WaterMeterRequest registration above: the state machine
-// service is registered by hand, the generic IBaseCRUDService alias resolves to the same
-// instance, and each route state is a keyed scoped BaseReadingRouteState (status string as key)
-// that IReadingRouteStateResolver resolves through. ReadingRouteItem is plain generic CRUD
-// (ReadingRouteItemService) with its own IBaseCRUDService alias.
-AddPatchMapping<ReadingRoutePatchRequest, ReadingRoute>();
-builder.Services.AddScoped<IReadingRouteService, ReadingRouteService>();
-builder.Services.AddScoped<IBaseCRUDService<ReadingRouteResponse, ReadingRouteSearchObject, ReadingRouteInsertRequest, ReadingRouteUpdateRequest, ReadingRoutePatchRequest>>(
-    serviceProvider => serviceProvider.GetRequiredService<IReadingRouteService>());
-builder.Services.AddKeyedScoped<BaseReadingRouteState, PlannedReadingRouteState>(ReadingRouteStatus.Planned);
-builder.Services.AddKeyedScoped<BaseReadingRouteState, AssignedReadingRouteState>(ReadingRouteStatus.Assigned);
-builder.Services.AddKeyedScoped<BaseReadingRouteState, CancelledReadingRouteState>(ReadingRouteStatus.Cancelled);
-builder.Services.AddScoped<IReadingRouteStateResolver, ReadingRouteStateResolver>();
-AddPatchMapping<ReadingRouteItemPatchRequest, ReadingRouteItem>();
-builder.Services.AddScoped<IBaseCRUDService<ReadingRouteItemResponse, ReadingRouteItemSearchObject, ReadingRouteItemInsertRequest, ReadingRouteItemUpdateRequest, ReadingRouteItemPatchRequest>, ReadingRouteItemService>();
 AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
 AddCrud<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>();
@@ -263,12 +239,6 @@ builder.Services.AddScoped<IValidator<WaterMeterPatchRequest>, WaterMeterPatchVa
 builder.Services.AddScoped<IValidator<WaterMeterRequestInsertRequest>, WaterMeterRequestInsertValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestUpdateRequest>, WaterMeterRequestUpdateValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestPatchRequest>, WaterMeterRequestPatchValidator>();
-builder.Services.AddScoped<IValidator<ReadingRouteInsertRequest>, ReadingRouteInsertValidator>();
-builder.Services.AddScoped<IValidator<ReadingRouteUpdateRequest>, ReadingRouteUpdateValidator>();
-builder.Services.AddScoped<IValidator<ReadingRoutePatchRequest>, ReadingRoutePatchValidator>();
-builder.Services.AddScoped<IValidator<ReadingRouteItemInsertRequest>, ReadingRouteItemInsertValidator>();
-builder.Services.AddScoped<IValidator<ReadingRouteItemUpdateRequest>, ReadingRouteItemUpdateValidator>();
-builder.Services.AddScoped<IValidator<ReadingRouteItemPatchRequest>, ReadingRouteItemPatchValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingInsertRequest>, MeterReadingInsertValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingUpdateRequest>, MeterReadingUpdateValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingPatchRequest>, MeterReadingPatchValidator>();
