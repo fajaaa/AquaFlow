@@ -221,6 +221,7 @@ Note: `dotnet ef` / `dotnet run` need the API DLLs unlocked. If a build or migra
 ## Git Notes
 
 - Commit this file with the repository. Do not add `AGENTS.md` to `.gitignore`.
+- Line endings are governed by the root `.gitattributes`: all text files are stored with LF (`* text=auto`), and the flutter-generated files (`generated_plugin_registrant.*`, `generated_plugins.cmake`, `GeneratedPluginRegistrant.*`, `pubspec.lock`) are additionally pinned to LF in the working tree, so they don't show as phantom-modified on Windows (`core.autocrlf=true`). If a phantom `modified:` entry with an empty `git diff` ever reappears for a generated file, extend `.gitattributes` instead of committing the noise.
 - Preserve user changes in the working tree; do not reset or revert unrelated edits.
 - If private local instructions are ever needed, use a separate local-only file such as `AGENTS.local.md` and ignore that file instead.
 

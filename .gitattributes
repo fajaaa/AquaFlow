@@ -1,0 +1,11 @@
+# Store all text files with LF in the repository; auto-detect binaries.
+# Working-tree endings on Windows still follow core.autocrlf (CRLF).
+* text=auto
+
+# Files the flutter tool (re)generates are always written to disk with LF.
+# Keep LF in the working tree too, so they never show up as phantom
+# "modified" entries on Windows (where core.autocrlf expects CRLF).
+**/generated_plugin_registrant.* text eol=lf
+**/generated_plugins.cmake text eol=lf
+**/GeneratedPluginRegistrant.* text eol=lf
+AquaFlow/UI/pubspec.lock text eol=lf
