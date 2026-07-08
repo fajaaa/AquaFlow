@@ -5,6 +5,7 @@ import 'dart:io' show SocketException;
 import 'package:http/http.dart' as http;
 
 import 'package:aquaflow_desktop/customer/models/customer_water_meter_request.dart';
+import 'package:aquaflow_desktop/customer/models/customer_water_meter_request_page.dart';
 import 'package:aquaflow_desktop/customer/services/customer_water_meter_request_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
 import 'package:aquaflow_desktop/shared/services/token_storage.dart';
@@ -26,11 +27,23 @@ class CustomerWaterMeterRequestService {
   final TokenStorage _tokenStorage;
   final Duration _timeout;
 
-  Future<List<CustomerWaterMeterRequest>> fetchMine() async {
+  /// One page of the caller's requests, newest first. The backend pins
+  /// `CustomerId` to the caller from the JWT, so this only ever returns the
+  /// signed-in customer's own requests (every status).
+  Future<CustomerWaterMeterRequestPage> fetchPage({
+    required int page,
+    int pageSize = 20,
+  }) async {
     final token = await _requireToken();
-    final uri = Uri.parse(
-      '${ApiConfig.baseUrl}/WaterMeterRequests',
-    ).replace(queryParameters: {'PageSize': '100'});
+    final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeterRequests').replace(
+      queryParameters: {
+        'Page': '$page',
+        'PageSize': '$pageSize',
+        'IncludeTotalCount': 'true',
+        'SortBy': 'CreatedAt',
+        'SortDescending': 'true',
+      },
+    );
 
     final response = await _send(
       () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
@@ -42,15 +55,41 @@ class CustomerWaterMeterRequestService {
       );
     }
 
-    return _itemsOf(
-      response,
-    ).map(CustomerWaterMeterRequest.fromJson).toList();
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const CustomerWaterMeterRequestException(
+        'Odgovor servera je u neispravnom formatu.',
+      );
+    }
+
+    final itemsJson = decoded['items'];
+    if (itemsJson is! List) {
+      throw const CustomerWaterMeterRequestException(
+        'Lista je u neispravnom formatu.',
+      );
+    }
+
+    final items = itemsJson
+        .whereType<Map<String, dynamic>>()
+        .map(CustomerWaterMeterRequest.fromJson)
+        .toList();
+
+    return CustomerWaterMeterRequestPage(
+      items: items,
+      totalCount: (decoded['totalCount'] as num?)?.toInt() ?? items.length,
+    );
   }
 
-  /// `WaterMeterRequestInsertRequest` only ever carries `Note` - the backend
-  /// resolves the caller's CustomerProfile from the JWT and forces the
-  /// initial status to Pending, so nothing else can be sent.
-  Future<CustomerWaterMeterRequest> create({String? note}) async {
+  /// `WaterMeterRequestInsertRequest` carries the requested address
+  /// (`SettlementId`/`Street`/`HouseNumber`) plus an optional `Note`; the
+  /// backend resolves the caller's CustomerProfile from the JWT and forces the
+  /// initial status to Pending, so no CustomerId/Status is ever sent.
+  Future<CustomerWaterMeterRequest> create({
+    required int settlementId,
+    required String street,
+    required String houseNumber,
+    String? note,
+  }) async {
     final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeterRequests');
 
@@ -62,6 +101,9 @@ class CustomerWaterMeterRequestService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
+          'settlementId': settlementId,
+          'street': street.trim(),
+          'houseNumber': houseNumber.trim(),
           if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
         }),
       ),
@@ -96,24 +138,6 @@ class CustomerWaterMeterRequestService {
         _messageFor(response, 'Zahtjev nije moguće otkazati'),
       );
     }
-  }
-
-  List<Map<String, dynamic>> _itemsOf(http.Response response) {
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw const CustomerWaterMeterRequestException(
-        'Odgovor servera je u neispravnom formatu.',
-      );
-    }
-
-    final itemsJson = decoded['items'];
-    if (itemsJson is! List) {
-      throw const CustomerWaterMeterRequestException(
-        'Lista je u neispravnom formatu.',
-      );
-    }
-
-    return itemsJson.whereType<Map<String, dynamic>>().toList();
   }
 
   Future<String> _requireToken() async {
