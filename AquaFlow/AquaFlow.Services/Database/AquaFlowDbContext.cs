@@ -124,6 +124,13 @@ public partial class AquaFlowDbContext : DbContext
             .Property(invoice => invoice.RowVersion)
             .IsRowVersion();
 
+        // At most one reading per water meter per billing cycle; filtered so historical rows
+        // with no BillingCycleId (BillingCycleId IS NULL) are excluded from the uniqueness check.
+        modelBuilder.Entity<MeterReading>()
+            .HasIndex(reading => new { reading.WaterMeterId, reading.BillingCycleId })
+            .IsUnique()
+            .HasFilter("[BillingCycleId] IS NOT NULL");
+
         CreateSeed(modelBuilder);
     }
 }
