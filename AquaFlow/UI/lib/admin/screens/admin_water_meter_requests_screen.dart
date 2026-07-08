@@ -288,7 +288,7 @@ class _AdminWaterMeterRequestsScreenState
                     dataRowMinHeight: 72,
                     dataRowMaxHeight: 88,
                     columns: const [
-                      DataColumn(label: Text('Zahtjev')),
+                      DataColumn(label: Text('Adresa')),
                       DataColumn(label: Text('Korisnik')),
                       DataColumn(label: Text('Status')),
                       DataColumn(label: Text('Collector')),
@@ -300,7 +300,7 @@ class _AdminWaterMeterRequestsScreenState
                         DataRow(
                           cells: [
                             DataCell(_RequestCell(request: item)),
-                            DataCell(Text('#${item.customerId}')),
+                            DataCell(_CustomerCell(request: item)),
                             DataCell(_RequestStatusPill(status: item.status)),
                             DataCell(
                               Text(_collectorLabel(item.assignedCollectorId)),
@@ -396,6 +396,8 @@ class _RequestCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final settlement = request.settlementName.trim();
+    final address = request.address;
     final note = request.note?.trim();
 
     return SizedBox(
@@ -405,17 +407,69 @@ class _RequestCell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Zahtjev #${request.id}',
+            settlement.isEmpty ? 'Naselje nepoznato' : settlement,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
-            note == null || note.isEmpty ? 'Bez napomene' : note,
-            maxLines: 2,
+            address.isEmpty ? 'Bez ulice i broja' : address,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          if (note != null && note.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              note,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomerCell extends StatelessWidget {
+  const _CustomerCell({required this.request});
+
+  final AdminWaterMeterRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final name = request.customerFullName;
+    final phone = request.customerPhone?.trim();
+
+    return SizedBox(
+      width: 200,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            name.isEmpty ? 'Korisnik #${request.customerId}' : name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            phone == null || phone.isEmpty ? 'Bez telefona' : phone,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
