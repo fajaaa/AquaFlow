@@ -174,6 +174,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 11,
+                Code = "Tariffs.Manage",
+                Name = "Manage tariffs",
+                Module = "Tariffs",
+                Description = "Allows creating, updating, and deleting tariffs.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -289,6 +300,14 @@ public partial class AquaFlowDbContext
                 Id = 14,
                 UserRoleId = 1,
                 PermissionId = 10,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 15,
+                UserRoleId = 1,
+                PermissionId = 11,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
