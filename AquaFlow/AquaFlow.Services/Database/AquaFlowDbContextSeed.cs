@@ -174,6 +174,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 11,
+                Code = "Tariffs.Manage",
+                Name = "Manage tariffs",
+                Module = "Tariffs",
+                Description = "Allows creating, updating, and deleting tariffs.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -289,6 +300,14 @@ public partial class AquaFlowDbContext
                 Id = 14,
                 UserRoleId = 1,
                 PermissionId = 10,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 15,
+                UserRoleId = 1,
+                PermissionId = 11,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
@@ -533,11 +552,8 @@ public partial class AquaFlowDbContext
             {
                 Id = 1,
                 Name = "Domacinstvo 2026",
-                CustomerType = "Customer",
+                Description = "Standardna tarifa za domaćinstva",
                 PricePerM3 = 1.35m,
-                FixedFee = 3.50m,
-                EffectiveFrom = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                EffectiveTo = (DateTime?)null,
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null

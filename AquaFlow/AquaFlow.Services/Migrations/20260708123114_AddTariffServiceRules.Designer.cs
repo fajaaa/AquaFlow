@@ -4,6 +4,7 @@ using AquaFlow.Services.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AquaFlow.Services.Migrations
 {
     [DbContext(typeof(AquaFlowDbContext))]
-    partial class AquaFlowDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708123114_AddTariffServiceRules")]
+    partial class AddTariffServiceRules
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1566,16 +1569,6 @@ namespace AquaFlow.Services.Migrations
                             IsActive = true,
                             Module = "Locations",
                             Name = "Manage locations"
-                        },
-                        new
-                        {
-                            Id = 11,
-                            Code = "Tariffs.Manage",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Allows creating, updating, and deleting tariffs.",
-                            IsActive = true,
-                            Module = "Tariffs",
-                            Name = "Manage tariffs"
                         });
                 });
 
@@ -2076,10 +2069,19 @@ namespace AquaFlow.Services.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Description")
+                    b.Property<string>("CustomerType")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("EffectiveTo")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("FixedFee")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -2107,7 +2109,9 @@ namespace AquaFlow.Services.Migrations
                         {
                             Id = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Standardna tarifa za domaćinstva",
+                            CustomerType = "Customer",
+                            EffectiveFrom = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FixedFee = 3.50m,
                             IsActive = true,
                             Name = "Domacinstvo 2026",
                             PricePerM3 = 1.35m
@@ -2511,13 +2515,6 @@ namespace AquaFlow.Services.Migrations
                             Id = 14,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 10,
-                            UserRoleId = 1
-                        },
-                        new
-                        {
-                            Id = 15,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            PermissionId = 11,
                             UserRoleId = 1
                         });
                 });

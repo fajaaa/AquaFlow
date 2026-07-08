@@ -162,7 +162,8 @@ builder.Services.AddScoped<IBaseCRUDService<SettlementResponse, SettlementSearch
 AddPatchMapping<WaterMeterPatchRequest, WaterMeter>();
 builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>, WaterMeterService>();
 AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>();
-AddCrud<Tariff, TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>();
+AddPatchMapping<TariffPatchRequest, Tariff>();
+builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>, TariffService>();
 // Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
 // it by hand: the patch mapping, IInvoiceService, and the generic IBaseCRUDService alias resolving
 // to the same InvoiceService. Each invoice state is a keyed scoped BaseInvoiceState (status string as
