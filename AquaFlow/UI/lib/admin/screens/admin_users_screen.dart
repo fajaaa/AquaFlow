@@ -4,13 +4,22 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_desktop/admin/models/admin_city.dart';
 import 'package:aquaflow_desktop/admin/models/admin_customer_profile.dart';
 import 'package:aquaflow_desktop/admin/models/admin_customer_profile_draft.dart';
+import 'package:aquaflow_desktop/admin/models/admin_municipality.dart';
+import 'package:aquaflow_desktop/admin/models/admin_settlement.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_draft.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_role_option.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_user_water_meters_screen.dart';
+import 'package:aquaflow_desktop/admin/services/admin_city_exception.dart';
+import 'package:aquaflow_desktop/admin/services/admin_city_service.dart';
+import 'package:aquaflow_desktop/admin/services/admin_municipality_exception.dart';
+import 'package:aquaflow_desktop/admin/services/admin_municipality_service.dart';
+import 'package:aquaflow_desktop/admin/services/admin_settlement_exception.dart';
+import 'package:aquaflow_desktop/admin/services/admin_settlement_service.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_service.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
@@ -55,7 +64,7 @@ enum AdminUsersScreenMode {
   final String singular;
   final String singularAccusative;
 
-  /// Customers have water meters; admins do not, so the row action is hidden.
+  /// Customers have water meters; admins do not, so the action is hidden.
   final bool showWaterMeters;
 }
 
@@ -73,13 +82,25 @@ class AdminUsersScreen extends StatefulWidget {
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
   final AdminUserService _service = AdminUserService();
+  final AdminCityService _cityService = AdminCityService();
+  final AdminMunicipalityService _municipalityService =
+      AdminMunicipalityService();
+  final AdminSettlementService _settlementService = AdminSettlementService();
   final TextEditingController _searchCtrl = TextEditingController();
 
   Timer? _searchDebounce;
   AdminUserPage? _pageData;
   List<AdminUserRoleOption> _roles = [];
+  List<AdminCity> _cities = [];
+  List<AdminMunicipality> _municipalities = [];
+  List<AdminSettlement> _settlements = [];
+  // Naselje per row (customers mode only) - CustomerProfile.SettlementName
+  // isn't flattened onto UserResponse, so it's fetched per row after each
+  // page load and cached here rather than requiring a backend change.
+  Map<int, String> _settlementNameByUserId = {};
   bool _loading = true;
   bool _mutating = false;
+  bool _locationLookupsLoading = false;
   String? _error;
   bool? _activeFilter;
   int _page = 1;
@@ -101,6 +122,37 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     } on AdminUserException catch (e) {
       if (!mounted) return;
       _showError(e.message);
+    }
+  }
+
+  /// Best-effort load of the Grad/Općina/Naselje lookups used by the editor
+  /// dialog's cascading address picker - address is optional, so a failure
+  /// here should not block create/edit, just leave the dropdowns empty.
+  Future<void> _ensureLocationLookupsLoaded() async {
+    if (_cities.isNotEmpty && _municipalities.isNotEmpty) return;
+    if (_locationLookupsLoading) return;
+
+    setState(() => _locationLookupsLoading = true);
+    try {
+      final results = await Future.wait<dynamic>([
+        _cityService.fetchAll(),
+        _municipalityService.fetchAll(),
+        _settlementService.fetchAll(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _cities = results[0] as List<AdminCity>;
+        _municipalities = results[1] as List<AdminMunicipality>;
+        _settlements = results[2] as List<AdminSettlement>;
+      });
+    } on AdminCityException catch (e) {
+      if (mounted) _showError(e.message);
+    } on AdminMunicipalityException catch (e) {
+      if (mounted) _showError(e.message);
+    } on AdminSettlementException catch (e) {
+      if (mounted) _showError(e.message);
+    } finally {
+      if (mounted) setState(() => _locationLookupsLoading = false);
     }
   }
 
@@ -126,6 +178,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         _pageData = pageData;
         _loading = false;
       });
+      if (widget.mode == AdminUsersScreenMode.customers) {
+        unawaited(_loadSettlementNames(requestId, pageData.items));
+      }
     } on AdminUserException catch (e) {
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
@@ -134,6 +189,28 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         _error = e.message;
       });
     }
+  }
+
+  /// Fetches each row's CustomerProfile to populate the "Naselje" column.
+  /// Runs in the background after the page renders, so a slow lookup doesn't
+  /// delay the table itself; [requestId] guards against a stale response
+  /// overwriting a newer page's data.
+  Future<void> _loadSettlementNames(
+    int requestId,
+    List<AdminUser> items,
+  ) async {
+    final entries = await Future.wait(
+      items.map((user) async {
+        try {
+          final profile = await _service.fetchCustomerProfile(user.id);
+          return MapEntry(user.id, profile?.settlementName ?? '');
+        } on AdminUserException {
+          return MapEntry(user.id, '');
+        }
+      }),
+    );
+    if (!mounted || requestId != _requestSerial) return;
+    setState(() => _settlementNameByUserId = Map.fromEntries(entries));
   }
 
   void _queueSearch(String _) {
@@ -208,11 +285,19 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   Future<void> _openCreate() async {
     final roleId = await _resolvePinnedRoleId();
     if (!mounted || roleId == null) return;
+    await _ensureLocationLookupsLoaded();
+    if (!mounted) return;
 
     final draft = await showDialog<AdminUserDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _UserEditorDialog(mode: widget.mode, userRoleId: roleId),
+      builder: (_) => _UserEditorDialog(
+        mode: widget.mode,
+        userRoleId: roleId,
+        cities: _cities,
+        municipalities: _municipalities,
+        settlements: _settlements,
+      ),
     );
     if (!mounted || draft == null) return;
 
@@ -224,6 +309,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   Future<void> _openEdit(AdminUser user) async {
     final roleId = await _resolvePinnedRoleId();
     if (!mounted || roleId == null) return;
+    await _ensureLocationLookupsLoaded();
+    if (!mounted) return;
 
     AdminCustomerProfile? existingProfile;
     try {
@@ -241,6 +328,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       builder: (_) => _UserEditorDialog(
         mode: widget.mode,
         userRoleId: roleId,
+        cities: _cities,
+        municipalities: _municipalities,
+        settlements: _settlements,
         user: user,
         disableDeactivate: isSelf,
         existingProfile: existingProfile,
@@ -336,6 +426,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     _searchDebounce?.cancel();
     _searchCtrl.dispose();
     _service.dispose();
+    _cityService.dispose();
+    _municipalityService.dispose();
+    _settlementService.dispose();
     super.dispose();
   }
 
@@ -486,13 +579,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   child: DataTable(
                     dataRowMinHeight: 64,
                     dataRowMaxHeight: 72,
-                    columns: const [
-                      DataColumn(label: Text('Ime i prezime')),
-                      DataColumn(label: Text('Email')),
-                      DataColumn(label: Text('Telefon')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Kreiran')),
-                      DataColumn(label: Text('Akcije')),
+                    columns: [
+                      const DataColumn(label: Text('Ime i prezime')),
+                      const DataColumn(label: Text('Email')),
+                      const DataColumn(label: Text('Telefon')),
+                      if (widget.mode == AdminUsersScreenMode.customers)
+                        const DataColumn(label: Text('Naselje')),
+                      const DataColumn(label: Text('Status')),
+                      const DataColumn(label: Text('Kreiran')),
+                      const DataColumn(label: Text('Akcije')),
                     ],
                     rows: [
                       for (final item in items)
@@ -506,6 +601,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                             DataCell(
                               Text(item.phone.isEmpty ? '-' : item.phone),
                             ),
+                            if (widget.mode == AdminUsersScreenMode.customers)
+                              DataCell(
+                                Text(
+                                  _textOrDash(
+                                    _settlementNameByUserId[item.id] ?? '',
+                                  ),
+                                ),
+                              ),
                             DataCell(_StatusPill(isActive: item.isActive)),
                             DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
@@ -703,6 +806,9 @@ class _UserEditorDialog extends StatefulWidget {
   const _UserEditorDialog({
     required this.mode,
     required this.userRoleId,
+    required this.cities,
+    required this.municipalities,
+    required this.settlements,
     this.user,
     this.disableDeactivate = false,
     this.existingProfile,
@@ -717,6 +823,11 @@ class _UserEditorDialog extends StatefulWidget {
   final bool disableDeactivate;
   final AdminCustomerProfile? existingProfile;
 
+  /// Lookups for the cascading Grad -> Općina -> Naselje address picker.
+  final List<AdminCity> cities;
+  final List<AdminMunicipality> municipalities;
+  final List<AdminSettlement> settlements;
+
   @override
   State<_UserEditorDialog> createState() => _UserEditorDialogState();
 }
@@ -728,17 +839,35 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   final _passwordCtrl = TextEditingController();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
+  final _streetCtrl = TextEditingController();
+  final _houseNumberCtrl = TextEditingController();
 
   late bool _isActive;
   late String _defaultLanguage;
   late String _theme;
+  int? _selectedCityId;
+  int? _selectedMunicipalityId;
+  int? _selectedSettlementId;
 
   bool get _isEdit => widget.user != null;
 
   // A profile is only submitted when the admin actually entered a name -
-  // available for every role, not just Customer.
+  // available for every role, not just Customer. For an edit of a user who
+  // already has a profile, the name controllers are pre-filled from it (a
+  // persisted profile always has a non-empty name), so this is already true
+  // whenever an address-only change is made to an existing profile.
   bool get _hasProfileInput =>
       _firstNameCtrl.text.trim().isNotEmpty || _lastNameCtrl.text.trim().isNotEmpty;
+
+  List<AdminMunicipality> get _municipalitiesForSelectedCity => widget
+      .municipalities
+      .where((municipality) => municipality.cityId == _selectedCityId)
+      .toList();
+
+  List<AdminSettlement> get _settlementsForSelectedMunicipality => widget
+      .settlements
+      .where((settlement) => settlement.municipalityId == _selectedMunicipalityId)
+      .toList();
 
   @override
   void initState() {
@@ -752,6 +881,29 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     _lastNameCtrl.text = profile?.lastName ?? '';
     _defaultLanguage = profile?.defaultLanguage ?? 'bs';
     _theme = profile?.theme ?? 'light';
+    _streetCtrl.text = profile?.street ?? '';
+    _houseNumberCtrl.text = profile?.houseNumber ?? '';
+
+    final settlementId = profile?.settlementId;
+    if (settlementId != null) {
+      final settlement = _findById(
+        widget.settlements,
+        settlementId,
+        idOf: (s) => s.id,
+      );
+      if (settlement != null) {
+        _selectedSettlementId = settlement.id;
+        _selectedMunicipalityId = settlement.municipalityId;
+        final municipality = _findById(
+          widget.municipalities,
+          settlement.municipalityId,
+          idOf: (m) => m.id,
+        );
+        if (municipality != null) {
+          _selectedCityId = municipality.cityId;
+        }
+      }
+    }
   }
 
   @override
@@ -761,7 +913,38 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     _passwordCtrl.dispose();
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
+    _streetCtrl.dispose();
+    _houseNumberCtrl.dispose();
     super.dispose();
+  }
+
+  void _onCityChanged(int? cityId) {
+    setState(() {
+      _selectedCityId = cityId;
+      if (_selectedMunicipalityId != null &&
+          !_municipalitiesForSelectedCity.any(
+            (m) => m.id == _selectedMunicipalityId,
+          )) {
+        _selectedMunicipalityId = null;
+        _selectedSettlementId = null;
+      }
+    });
+  }
+
+  void _onMunicipalityChanged(int? municipalityId) {
+    setState(() {
+      _selectedMunicipalityId = municipalityId;
+      if (_selectedSettlementId != null &&
+          !_settlementsForSelectedMunicipality.any(
+            (s) => s.id == _selectedSettlementId,
+          )) {
+        _selectedSettlementId = null;
+      }
+    });
+  }
+
+  void _onSettlementChanged(int? settlementId) {
+    setState(() => _selectedSettlementId = settlementId);
   }
 
   void _save() {
@@ -769,6 +952,8 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     if (form == null || !form.validate()) return;
 
     final password = _passwordCtrl.text.trim();
+    final street = _streetCtrl.text.trim();
+    final houseNumber = _houseNumberCtrl.text.trim();
 
     Navigator.of(context).pop(
       AdminUserDraft(
@@ -783,6 +968,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                 lastName: _lastNameCtrl.text.trim(),
                 defaultLanguage: _defaultLanguage,
                 theme: _theme,
+                settlementId: _selectedSettlementId,
+                street: street.isEmpty ? null : street,
+                houseNumber: houseNumber.isEmpty ? null : houseNumber,
               )
             : null,
       ),
@@ -913,6 +1101,86 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                   ],
                 ),
                 const SizedBox(height: 14),
+                DropdownButtonFormField<int>(
+                  initialValue: _selectedCityId ?? 0,
+                  decoration: const InputDecoration(
+                    labelText: 'Grad',
+                    prefixIcon: Icon(Icons.location_city_outlined),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: 0, child: Text('Bez grada')),
+                    for (final city in widget.cities)
+                      DropdownMenuItem(value: city.id, child: Text(city.name)),
+                  ],
+                  onChanged: (value) =>
+                      _onCityChanged(value == 0 ? null : value),
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<int>(
+                  initialValue: _selectedMunicipalityId ?? 0,
+                  decoration: const InputDecoration(
+                    labelText: 'Općina',
+                    prefixIcon: Icon(Icons.map_outlined),
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                      value: 0,
+                      child: Text('Bez općine'),
+                    ),
+                    for (final municipality in _municipalitiesForSelectedCity)
+                      DropdownMenuItem(
+                        value: municipality.id,
+                        child: Text(municipality.name),
+                      ),
+                  ],
+                  onChanged: _selectedCityId == null
+                      ? null
+                      : (value) =>
+                            _onMunicipalityChanged(value == 0 ? null : value),
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<int>(
+                  initialValue: _selectedSettlementId ?? 0,
+                  decoration: const InputDecoration(
+                    labelText: 'Naselje',
+                    prefixIcon: Icon(Icons.holiday_village_outlined),
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                      value: 0,
+                      child: Text('Bez naselja'),
+                    ),
+                    for (final settlement in _settlementsForSelectedMunicipality)
+                      DropdownMenuItem(
+                        value: settlement.id,
+                        child: Text(settlement.name),
+                      ),
+                  ],
+                  validator: _settlementValidator,
+                  onChanged: _selectedMunicipalityId == null
+                      ? null
+                      : (value) =>
+                            _onSettlementChanged(value == 0 ? null : value),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _streetCtrl,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Ulica',
+                    prefixIcon: Icon(Icons.signpost_outlined),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _houseNumberCtrl,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Broj',
+                    prefixIcon: Icon(Icons.pin_outlined),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 _StatusSwitchField(
                   value: _isActive,
                   onChanged: widget.disableDeactivate
@@ -995,6 +1263,20 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _firstNameCtrl.text.trim().isNotEmpty) {
       return 'Obavezno ako unosite ime i prezime.';
+    }
+    return null;
+  }
+
+  // Creating a brand new CustomerProfile requires a name (backend
+  // CustomerProfileInsertValidator), so address input alone can't be saved
+  // for a user who doesn't have a profile yet - guard against silently
+  // dropping it instead of just leaving it unsent.
+  String? _settlementValidator(int? _) {
+    final hasAddressInput = _selectedSettlementId != null ||
+        _streetCtrl.text.trim().isNotEmpty ||
+        _houseNumberCtrl.text.trim().isNotEmpty;
+    if (hasAddressInput && !_hasProfileInput) {
+      return 'Unesite ime i prezime da biste sačuvali adresu.';
     }
     return null;
   }
@@ -1263,4 +1545,16 @@ String _formatDate(DateTime? date) {
   String two(int value) => value.toString().padLeft(2, '0');
   return '${two(date.day)}.${two(date.month)}.${date.year}. '
       '${two(date.hour)}:${two(date.minute)}';
+}
+
+String _textOrDash(String value) {
+  final text = value.trim();
+  return text.isEmpty ? '-' : text;
+}
+
+T? _findById<T>(List<T> items, int id, {required int Function(T) idOf}) {
+  for (final item in items) {
+    if (idOf(item) == id) return item;
+  }
+  return null;
 }

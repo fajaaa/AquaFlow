@@ -8,7 +8,7 @@ public class SettlementInsertValidator : AbstractValidator<SettlementInsertReque
     public SettlementInsertValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.City).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.MunicipalityId).GreaterThan(0);
         RuleFor(x => x.PostalCode).MaximumLength(20);
     }
 }

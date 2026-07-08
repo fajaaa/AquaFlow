@@ -64,12 +64,20 @@ class CollectorWaterMeterRequestService {
         .toList();
   }
 
+  /// The backend forces only `CustomerId` from the request entity; the meter's
+  /// `settlementId`/`street`/`houseNumber` come straight from this body - the
+  /// collector's on-site (possibly corrected) address, which the register form
+  /// prefills from the request's stored address
+  /// (`WaterMeterRequestService.RegisterAsync`). It no longer derives the
+  /// location from the customer's profile.
   Future<void> register({
     required int requestId,
-    required int serviceLocationId,
     required String serialNumber,
     required DateTime installedAt,
     required double initialReading,
+    required int settlementId,
+    required String street,
+    required String houseNumber,
   }) async {
     final token = await _requireToken();
     final uri = Uri.parse(
@@ -85,11 +93,13 @@ class CollectorWaterMeterRequestService {
         },
         body: jsonEncode({
           'serialNumber': serialNumber,
-          'serviceLocationId': serviceLocationId,
           'installedAt': installedAt.toUtc().toIso8601String(),
           'status': 'Active',
           'initialReading': initialReading,
           'lastReading': initialReading,
+          'settlementId': settlementId,
+          'street': street,
+          'houseNumber': houseNumber,
         }),
       ),
     );

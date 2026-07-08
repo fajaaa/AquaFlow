@@ -33,11 +33,23 @@ public class WaterMeterRequestService
         _waterMeterInsertValidator = waterMeterInsertValidators.FirstOrDefault();
     }
 
+    // Load the settlement and the requesting customer (with its user) so the flattened response
+    // fields (SettlementName, CustomerFirstName/LastName, CustomerPhone) populate.
     protected override IQueryable<WaterMeterRequest> IncludeForRead(IQueryable<WaterMeterRequest> query) =>
-        query.Include(request => request.ServiceLocation);
+        query
+            .Include(request => request.Settlement)
+            .Include(request => request.Customer)
+                .ThenInclude(customer => customer!.User);
 
-    protected override Task LoadReferencesAsync(WaterMeterRequest entity) =>
-        _dbContext.Entry(entity).Reference(request => request.ServiceLocation).LoadAsync();
+    protected override async Task LoadReferencesAsync(WaterMeterRequest entity)
+    {
+        await _dbContext.Entry(entity).Reference(request => request.Settlement).LoadAsync();
+        await _dbContext.Entry(entity).Reference(request => request.Customer).LoadAsync();
+        if (entity.Customer != null)
+        {
+            await _dbContext.Entry(entity.Customer).Reference(customer => customer.User).LoadAsync();
+        }
+    }
 
     // The plain CRUD insert has no caller identity to resolve the CustomerId from, so it is closed
     // off; creation always goes through CreateForUserAsync with the id the controller read from the
@@ -48,6 +60,7 @@ public class WaterMeterRequestService
     public async Task<WaterMeterRequestResponse> CreateForUserAsync(int callerUserId, WaterMeterRequestInsertRequest request)
     {
         await ValidateInsertAsync(request);
+        await EnsureSettlementExistsAsync(request.SettlementId);
 
         var customerId = await _dbContext.CustomerProfiles
             .Where(profile => profile.UserId == callerUserId)
@@ -56,15 +69,6 @@ public class WaterMeterRequestService
         if (customerId == null)
         {
             throw new ClientException("The signed-in user has no customer profile, so a water meter cannot be requested.");
-        }
-
-        // Ownership check that needs the DB: the target service location must belong to the same
-        // customer, otherwise a caller could file requests against other customers' locations.
-        var locationBelongsToCaller = await _dbContext.ServiceLocations
-            .AnyAsync(location => location.Id == request.ServiceLocationId && location.CustomerId == customerId.Value);
-        if (!locationBelongsToCaller)
-        {
-            throw new ClientException("Service location was not found among your locations.");
         }
 
         var entity = MapInsertRequestToEntity(request);
@@ -103,9 +107,22 @@ public class WaterMeterRequestService
     {
         var request = await LoadRequestAsync(id);
 
-        meterData.ServiceLocationId = request.ServiceLocationId;
+        // Security: the new meter always belongs to the requester, never to whatever CustomerId the
+        // collector's request body happened to carry.
+        meterData.CustomerId = request.CustomerId;
+
+        // The collector registers the meter at the address stored on the request, but may correct it
+        // on site (the FE prefills these from the request's saved address). Validate the supplied
+        // settlement exists rather than deriving it from the customer's profile.
+        await EnsureSettlementExistsAsync(meterData.SettlementId);
+
         meterData.LastReading = meterData.InitialReading;
         await ValidateWaterMeterInsertAsync(meterData);
+
+        // Keep the stored request in sync with the address the meter was actually registered at.
+        request.SettlementId = meterData.SettlementId;
+        request.Street = meterData.Street ?? request.Street;
+        request.HouseNumber = meterData.HouseNumber ?? request.HouseNumber;
 
         return await _stateResolver.Resolve(request.Status).RegisterAsync(request, meterData, changedById);
     }
@@ -131,7 +148,6 @@ public class WaterMeterRequestService
     private async Task<WaterMeterRequest> LoadRequestAsync(int id)
     {
         var request = await _dbContext.WaterMeterRequests
-            .Include(item => item.ServiceLocation)
             .FirstOrDefaultAsync(item => item.Id == id);
         if (request == null)
         {
@@ -139,6 +155,14 @@ public class WaterMeterRequestService
         }
 
         return request;
+    }
+
+    private async Task EnsureSettlementExistsAsync(int settlementId)
+    {
+        if (!await _dbContext.Settlements.AnyAsync(settlement => settlement.Id == settlementId))
+        {
+            throw new ClientException($"Settlement with id {settlementId} was not found.");
+        }
     }
 
     private async Task EnsureActiveCollectorProfileAsync(int collectorId)

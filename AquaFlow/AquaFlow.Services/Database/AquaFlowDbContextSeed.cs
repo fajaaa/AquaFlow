@@ -12,11 +12,12 @@ public partial class AquaFlowDbContext
         SeedPermissions(modelBuilder);
         SeedUserRolePermissions(modelBuilder);
         SeedUsers(modelBuilder);
+        SeedCities(modelBuilder);
+        SeedMunicipalities(modelBuilder);
         SeedSettlements(modelBuilder);
         SeedCompanySettings(modelBuilder);
         SeedCustomerProfiles(modelBuilder);
         SeedCollectorProfiles(modelBuilder);
-        SeedServiceLocations(modelBuilder);
         SeedWaterMeters(modelBuilder);
         SeedMeterReadings(modelBuilder);
         SeedTariffs(modelBuilder);
@@ -162,6 +163,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 10,
+                Code = "Locations.Manage",
+                Name = "Manage locations",
+                Module = "Locations",
+                Description = "Allows creating, updating, and deleting settlements and service locations.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -271,6 +283,14 @@ public partial class AquaFlowDbContext
                 PermissionId = 9,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 14,
+                UserRoleId = 1,
+                PermissionId = 10,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -324,27 +344,92 @@ public partial class AquaFlowDbContext
             });
     }
 
-    private static void SeedSettlements(ModelBuilder modelBuilder)
+    // Real Canton Sarajevo data for the demo: the city "Sarajevo" pragmatically covers ALL
+    // KS municipalities (including Vogosca/Hadzici/Ilijas/Trnovo, which are formally in the
+    // canton rather than the city proper) so the lookup has one city with nine municipalities.
+    private static void SeedCities(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Settlement>().HasData(
+        modelBuilder.Entity<City>().HasData(
             new
             {
                 Id = 1,
-                Name = "Centar",
-                City = "Sarajevo",
-                PostalCode = "71000",
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
-            new
-            {
-                Id = 2,
-                Name = "Ilidza",
-                City = "Sarajevo",
-                PostalCode = "71210",
+                Name = "Sarajevo",
+                Code = "SA",
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
+    }
+
+    private static void SeedMunicipalities(ModelBuilder modelBuilder)
+    {
+        var municipalities = new (int Id, string Name, string Code)[]
+        {
+            (1, "Centar", "SA-01"),
+            (2, "Novi Grad", "SA-02"),
+            (3, "Novo Sarajevo", "SA-03"),
+            (4, "Stari Grad", "SA-04"),
+            (5, "Ilidza", "SA-05"),
+            (6, "Vogosca", "SA-06"),
+            (7, "Hadzici", "SA-07"),
+            (8, "Ilijas", "SA-08"),
+            (9, "Trnovo", "SA-09")
+        };
+
+        modelBuilder.Entity<Municipality>().HasData(
+            municipalities.Select(municipality => new
+            {
+                municipality.Id,
+                municipality.Name,
+                municipality.Code,
+                CityId = 1,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            }));
+    }
+
+    private static void SeedSettlements(ModelBuilder modelBuilder)
+    {
+        // Ids 1 and 2 are referenced elsewhere in the seed (service location 1, collector
+        // assigned area 1, notification 1), so they keep their ids and become real
+        // settlements in the Centar and Ilidza municipalities.
+        var settlements = new (int Id, string Name, int MunicipalityId, string PostalCode)[]
+        {
+            (1, "Bjelave", 1, "71000"),
+            (2, "Hrasnica", 5, "71212"),
+            (3, "Mejtas", 1, "71000"),
+            (4, "Kosevo", 1, "71000"),
+            (5, "Alipasino Polje", 2, "71000"),
+            (6, "Dobrinja", 2, "71000"),
+            (7, "Otoka", 2, "71000"),
+            (8, "Grbavica", 3, "71000"),
+            (9, "Hrasno", 3, "71000"),
+            (10, "Pofalici", 3, "71000"),
+            (11, "Bascarsija", 4, "71000"),
+            (12, "Vratnik", 4, "71000"),
+            (13, "Sokolovic Kolonija", 5, "71210"),
+            (14, "Otes", 5, "71210"),
+            (15, "Semizovac", 6, "71320"),
+            (16, "Kobilja Glava", 6, "71320"),
+            (17, "Blagovac", 6, "71320"),
+            (18, "Pazaric", 7, "71240"),
+            (19, "Tarcin", 7, "71240"),
+            (20, "Binjezevo", 7, "71240"),
+            (21, "Podlugovi", 8, "71380"),
+            (22, "Mrakovo", 8, "71380"),
+            (23, "Sabici", 9, "71223"),
+            (24, "Dejcici", 9, "71223")
+        };
+
+        modelBuilder.Entity<Settlement>().HasData(
+            settlements.Select(settlement => new
+            {
+                settlement.Id,
+                settlement.Name,
+                settlement.MunicipalityId,
+                settlement.PostalCode,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            }));
     }
 
     private static void SeedCompanySettings(ModelBuilder modelBuilder)
@@ -378,6 +463,9 @@ public partial class AquaFlowDbContext
                 CustomerCode = "CUS-0001",
                 DefaultLanguage = "bs",
                 Theme = "light",
+                SettlementId = (int?)1,
+                Street = (string?)"Zmaja od Bosne",
+                HouseNumber = (string?)"12",
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
@@ -397,24 +485,6 @@ public partial class AquaFlowDbContext
             });
     }
 
-    private static void SeedServiceLocations(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<ServiceLocation>().HasData(
-            new
-            {
-                Id = 1,
-                CustomerId = 1,
-                SettlementId = 1,
-                Address = "Zmaja od Bosne 12",
-                LocationType = "Apartment",
-                Latitude = (decimal?)43.855m,
-                Longitude = (decimal?)18.398m,
-                IsActive = true,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            });
-    }
-
     private static void SeedWaterMeters(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<WaterMeter>().HasData(
@@ -422,7 +492,8 @@ public partial class AquaFlowDbContext
             {
                 Id = 1,
                 SerialNumber = "WM-2026-0001",
-                ServiceLocationId = 1,
+                CustomerId = 1,
+                SettlementId = 1,
                 InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, DateTimeKind.Utc),
                 Status = "Active",
                 InitialReading = 120.50m,
@@ -556,7 +627,8 @@ public partial class AquaFlowDbContext
                 Id = 1,
                 ReportedById = 3,
                 WaterMeterId = (int?)1,
-                ServiceLocationId = 1,
+                CustomerId = 1,
+                SettlementId = 1,
                 Title = "Slab pritisak vode",
                 Description = "Pritisak vode je nizak u jutarnjim satima.",
                 PhotoUrl = (string?)null,

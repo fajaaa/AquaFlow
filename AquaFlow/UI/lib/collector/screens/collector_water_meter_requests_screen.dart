@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:aquaflow_desktop/collector/models/collector_water_meter_request.dart';
 import 'package:aquaflow_desktop/collector/services/collector_water_meter_request_exception.dart';
 import 'package:aquaflow_desktop/collector/services/collector_water_meter_request_service.dart';
+import 'package:aquaflow_desktop/shared/models/city_lookup.dart';
+import 'package:aquaflow_desktop/shared/models/municipality_lookup.dart';
+import 'package:aquaflow_desktop/shared/models/settlement_lookup.dart';
+import 'package:aquaflow_desktop/shared/services/location_lookup_exception.dart';
+import 'package:aquaflow_desktop/shared/services/location_lookup_service.dart';
 
 class CollectorWaterMeterRequestsScreen extends StatefulWidget {
   const CollectorWaterMeterRequestsScreen({super.key});
@@ -36,6 +42,8 @@ class _CollectorWaterMeterRequestsScreenState
     });
 
     try {
+      // The request now carries the customer's contact and its own address, so
+      // no per-customer profile lookup is needed anymore.
       final requests = await _service.fetchAssigned();
       if (!mounted) return;
       setState(() {
@@ -63,10 +71,12 @@ class _CollectorWaterMeterRequestsScreenState
     try {
       await _service.register(
         requestId: request.id,
-        serviceLocationId: request.serviceLocationId,
         serialNumber: draft.serialNumber,
         installedAt: draft.installedAt,
         initialReading: draft.initialReading,
+        settlementId: draft.settlementId,
+        street: draft.street,
+        houseNumber: draft.houseNumber,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -180,6 +190,13 @@ class _RequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final note = request.note?.trim();
+    final settlementName = request.settlementName;
+    final address = request.address;
+    final phone = request.customerPhone?.trim() ?? '';
+    final hasPhone = phone.isNotEmpty;
+    final customerLabel = request.customerFullName.isNotEmpty
+        ? request.customerFullName
+        : 'Korisnik #${request.customerId}';
 
     return Card(
       margin: EdgeInsets.zero,
@@ -213,16 +230,21 @@ class _RequestCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
+            _InfoRow(icon: Icons.person_outline, label: customerLabel),
+            const SizedBox(height: 6),
             _InfoRow(
-              icon: Icons.location_on_outlined,
-              label: request.serviceLocationAddress.isEmpty
-                  ? 'Lokacija #${request.serviceLocationId}'
-                  : request.serviceLocationAddress,
+              icon: Icons.phone_outlined,
+              label: hasPhone ? phone : 'Broj telefona nije dostupan',
             ),
             const SizedBox(height: 6),
             _InfoRow(
-              icon: Icons.person_outline,
-              label: 'Korisnik #${request.customerId}',
+              icon: Icons.location_on_outlined,
+              label: settlementName.isEmpty ? '-' : settlementName,
+            ),
+            const SizedBox(height: 6),
+            _InfoRow(
+              icon: Icons.home_outlined,
+              label: address.isEmpty ? '-' : address,
             ),
             const SizedBox(height: 6),
             _InfoRow(
@@ -234,6 +256,30 @@ class _RequestCard extends StatelessWidget {
               _InfoRow(icon: Icons.notes_outlined, label: note),
             ],
             const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: hasPhone && !disabled
+                        ? () => _launchPhone(context, 'tel', phone)
+                        : null,
+                    icon: const Icon(Icons.call_outlined),
+                    label: const Text('Pozovi'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: hasPhone && !disabled
+                        ? () => _launchPhone(context, 'sms', phone)
+                        : null,
+                    icon: const Icon(Icons.sms_outlined),
+                    label: const Text('SMS'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
@@ -247,8 +293,34 @@ class _RequestCard extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _launchPhone(
+    BuildContext context,
+    String scheme,
+    String phone,
+  ) async {
+    final uri = Uri(scheme: scheme, path: phone.replaceAll(' ', ''));
+    try {
+      final launched = await launchUrl(uri);
+      if (!launched && context.mounted) _showLaunchError(context);
+    } catch (_) {
+      if (context.mounted) _showLaunchError(context);
+    }
+  }
+
+  void _showLaunchError(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Akcija nije podržana na ovom uređaju.')),
+    );
+  }
 }
 
+/// Registration form. Besides the meter details (serial, initial reading,
+/// install date) it now carries an EDITABLE address block - a cascading
+/// Grad -> Općina -> Naselje picker plus Ulica/Broj, prefilled from the
+/// request's stored address - so the collector can correct the location on
+/// site. The corrected `settlementId`/`street`/`houseNumber` are sent on
+/// register and become the new meter's address.
 class _RegisterWaterMeterDialog extends StatefulWidget {
   const _RegisterWaterMeterDialog({required this.request});
 
@@ -260,22 +332,128 @@ class _RegisterWaterMeterDialog extends StatefulWidget {
 }
 
 class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
+  final LocationLookupService _locationService = LocationLookupService();
   final _formKey = GlobalKey<FormState>();
   final _serialCtrl = TextEditingController();
   final _readingCtrl = TextEditingController(text: '0');
+  final _streetCtrl = TextEditingController();
+  final _houseNumberCtrl = TextEditingController();
 
   late DateTime _installedAt;
+
+  bool _loading = true;
+  String? _loadError;
+
+  List<CityLookup> _cities = const [];
+  List<MunicipalityLookup> _municipalities = const [];
+  List<SettlementLookup> _settlements = const [];
+  int? _selectedCityId;
+  int? _selectedMunicipalityId;
+  int? _selectedSettlementId;
+
+  List<MunicipalityLookup> get _municipalitiesForSelectedCity =>
+      _municipalities.where((m) => m.cityId == _selectedCityId).toList();
+
+  List<SettlementLookup> get _settlementsForSelectedMunicipality => _settlements
+      .where((s) => s.municipalityId == _selectedMunicipalityId)
+      .toList();
 
   @override
   void initState() {
     super.initState();
     _installedAt = DateTime.now();
+    _streetCtrl.text = widget.request.street ?? '';
+    _houseNumberCtrl.text = widget.request.houseNumber ?? '';
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+
+    try {
+      final results = await Future.wait([
+        _locationService.fetchCities(),
+        _locationService.fetchMunicipalities(),
+        _locationService.fetchSettlements(),
+      ]);
+      if (!mounted) return;
+
+      _cities = results[0] as List<CityLookup>;
+      _municipalities = results[1] as List<MunicipalityLookup>;
+      _settlements = results[2] as List<SettlementLookup>;
+      _applySettlement(widget.request.settlementId);
+      setState(() => _loading = false);
+    } on LocationLookupException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadError = e.message;
+      });
+    }
+  }
+
+  /// Resolves the Grad -> Općina chain for the prefilled [settlementId], so the
+  /// two parent dropdowns start selected too, not just the leaf Naselje.
+  void _applySettlement(int? settlementId) {
+    if (settlementId == null) return;
+    SettlementLookup? settlement;
+    for (final s in _settlements) {
+      if (s.id == settlementId) {
+        settlement = s;
+        break;
+      }
+    }
+    if (settlement == null) return;
+
+    _selectedSettlementId = settlement.id;
+    _selectedMunicipalityId = settlement.municipalityId;
+    for (final m in _municipalities) {
+      if (m.id == settlement.municipalityId) {
+        _selectedCityId = m.cityId;
+        break;
+      }
+    }
+  }
+
+  void _onCityChanged(int? cityId) {
+    setState(() {
+      _selectedCityId = cityId;
+      if (_selectedMunicipalityId != null &&
+          !_municipalitiesForSelectedCity.any(
+            (m) => m.id == _selectedMunicipalityId,
+          )) {
+        _selectedMunicipalityId = null;
+        _selectedSettlementId = null;
+      }
+    });
+  }
+
+  void _onMunicipalityChanged(int? municipalityId) {
+    setState(() {
+      _selectedMunicipalityId = municipalityId;
+      if (_selectedSettlementId != null &&
+          !_settlementsForSelectedMunicipality.any(
+            (s) => s.id == _selectedSettlementId,
+          )) {
+        _selectedSettlementId = null;
+      }
+    });
+  }
+
+  void _onSettlementChanged(int? settlementId) {
+    setState(() => _selectedSettlementId = settlementId);
   }
 
   @override
   void dispose() {
+    _locationService.dispose();
     _serialCtrl.dispose();
     _readingCtrl.dispose();
+    _streetCtrl.dispose();
+    _houseNumberCtrl.dispose();
     super.dispose();
   }
 
@@ -307,13 +485,17 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
 
   void _submit() {
     final form = _formKey.currentState;
-    if (form == null || !form.validate()) return;
+    final settlementId = _selectedSettlementId;
+    if (form == null || !form.validate() || settlementId == null) return;
 
     Navigator.of(context).pop(
       _WaterMeterRegistrationDraft(
         serialNumber: _serialCtrl.text.trim(),
         initialReading: double.parse(_readingCtrl.text.trim()),
         installedAt: _installedAt,
+        settlementId: settlementId,
+        street: _streetCtrl.text.trim(),
+        houseNumber: _houseNumberCtrl.text.trim(),
       ),
     );
   }
@@ -322,72 +504,158 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Registruj vodomjer'),
-      content: SizedBox(
-        width: 420,
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  key: ValueKey(widget.request.serviceLocationAddress),
-                  initialValue: widget.request.serviceLocationAddress.isEmpty
-                      ? 'Lokacija #${widget.request.serviceLocationId}'
-                      : widget.request.serviceLocationAddress,
-                  enabled: false,
-                  decoration: const InputDecoration(
-                    labelText: 'Lokacija',
-                    prefixIcon: Icon(Icons.location_on_outlined),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _serialCtrl,
-                  textInputAction: TextInputAction.next,
-                  validator: _required,
-                  decoration: const InputDecoration(
-                    labelText: 'Serijski broj',
-                    prefixIcon: Icon(Icons.confirmation_number_outlined),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _readingCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                  ],
-                  validator: _readingValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Početno očitanje',
-                    prefixIcon: Icon(Icons.speed_outlined),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _InstalledAtField(
-                  value: _installedAt,
-                  onPick: _pickInstalledAt,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      content: SizedBox(width: 420, child: _buildContent()),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Odustani'),
         ),
         FilledButton.icon(
-          onPressed: _submit,
+          onPressed: _loading || _loadError != null ? null : _submit,
           icon: const Icon(Icons.save_outlined),
           label: const Text('Registruj'),
         ),
       ],
     );
+  }
+
+  Widget _buildContent() {
+    final theme = Theme.of(context);
+
+    if (_loading) {
+      return const SizedBox(
+        height: 140,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final loadError = _loadError;
+    if (loadError != null) {
+      return SizedBox(
+        height: 180,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 40,
+                color: theme.colorScheme.error,
+              ),
+              const SizedBox(height: 12),
+              Text(loadError, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: _load,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Pokušaj ponovo'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _CascadingDropdown(
+              label: 'Grad',
+              icon: Icons.location_city_outlined,
+              emptyLabel: 'Bez grada',
+              value: _selectedCityId,
+              items: [for (final city in _cities) (city.id, city.name)],
+              onChanged: _onCityChanged,
+            ),
+            const SizedBox(height: 14),
+            _CascadingDropdown(
+              label: 'Općina',
+              icon: Icons.map_outlined,
+              emptyLabel: 'Bez općine',
+              value: _selectedMunicipalityId,
+              items: [
+                for (final m in _municipalitiesForSelectedCity) (m.id, m.name),
+              ],
+              onChanged: _selectedCityId == null ? null : _onMunicipalityChanged,
+            ),
+            const SizedBox(height: 14),
+            _CascadingDropdown(
+              label: 'Naselje',
+              icon: Icons.holiday_village_outlined,
+              emptyLabel: 'Bez naselja',
+              value: _selectedSettlementId,
+              items: [
+                for (final s in _settlementsForSelectedMunicipality)
+                  (s.id, s.name),
+              ],
+              validator: _settlementValidator,
+              onChanged: _selectedMunicipalityId == null
+                  ? null
+                  : _onSettlementChanged,
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _streetCtrl,
+              textInputAction: TextInputAction.next,
+              maxLength: 200,
+              validator: _required,
+              decoration: const InputDecoration(
+                labelText: 'Ulica',
+                prefixIcon: Icon(Icons.signpost_outlined),
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _houseNumberCtrl,
+              textInputAction: TextInputAction.next,
+              maxLength: 30,
+              validator: _required,
+              decoration: const InputDecoration(
+                labelText: 'Broj',
+                prefixIcon: Icon(Icons.pin_outlined),
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _serialCtrl,
+              textInputAction: TextInputAction.next,
+              validator: _required,
+              decoration: const InputDecoration(
+                labelText: 'Serijski broj',
+                prefixIcon: Icon(Icons.confirmation_number_outlined),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _readingCtrl,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
+              validator: _readingValidator,
+              decoration: const InputDecoration(
+                labelText: 'Početno očitanje',
+                prefixIcon: Icon(Icons.speed_outlined),
+              ),
+            ),
+            const SizedBox(height: 14),
+            _InstalledAtField(value: _installedAt, onPick: _pickInstalledAt),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? _settlementValidator(int? value) {
+    if (value == null || value == 0) return 'Odaberite naselje.';
+    return null;
   }
 
   String? _required(String? value) {
@@ -408,11 +676,58 @@ class _WaterMeterRegistrationDraft {
     required this.serialNumber,
     required this.initialReading,
     required this.installedAt,
+    required this.settlementId,
+    required this.street,
+    required this.houseNumber,
   });
 
   final String serialNumber;
   final double initialReading;
   final DateTime installedAt;
+  final int settlementId;
+  final String street;
+  final String houseNumber;
+}
+
+/// A single dropdown in the cascading Grad -> Općina -> Naselje picker. Uses a
+/// `0` sentinel for "none selected" so the field can render an empty option and
+/// still validate; a `null` [onChanged] disables the field until its parent is
+/// picked.
+class _CascadingDropdown extends StatelessWidget {
+  const _CascadingDropdown({
+    required this.label,
+    required this.icon,
+    required this.emptyLabel,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    this.validator,
+  });
+
+  final String label;
+  final IconData icon;
+  final String emptyLabel;
+  final int? value;
+  final List<(int, String)> items;
+  final ValueChanged<int?>? onChanged;
+  final String? Function(int?)? validator;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<int>(
+      initialValue: value ?? 0,
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+      items: [
+        DropdownMenuItem(value: 0, child: Text(emptyLabel)),
+        for (final (id, name) in items)
+          DropdownMenuItem(value: id, child: Text(name)),
+      ],
+      validator: validator,
+      onChanged: onChanged == null
+          ? null
+          : (value) => onChanged!(value == 0 ? null : value),
+    );
+  }
 }
 
 class _InstalledAtField extends StatelessWidget {

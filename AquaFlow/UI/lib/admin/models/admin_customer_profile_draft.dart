@@ -8,12 +8,18 @@ class AdminCustomerProfileDraft {
     required this.lastName,
     required this.defaultLanguage,
     required this.theme,
+    this.settlementId,
+    this.street,
+    this.houseNumber,
   });
 
   final String firstName;
   final String lastName;
   final String defaultLanguage;
   final String theme;
+  final int? settlementId;
+  final String? street;
+  final String? houseNumber;
 
   Map<String, Object?> toJson(int userId) {
     return {
@@ -22,6 +28,9 @@ class AdminCustomerProfileDraft {
       'lastName': lastName,
       'defaultLanguage': defaultLanguage,
       'theme': theme,
+      'settlementId': settlementId,
+      'street': street,
+      'houseNumber': houseNumber,
     };
   }
 }

@@ -6,8 +6,15 @@ public class WaterMeterRequest : EntityBase
 {
     public int CustomerId { get; set; }
     public CustomerProfile? Customer { get; set; }
-    public int ServiceLocationId { get; set; }
-    public ServiceLocation? ServiceLocation { get; set; }
+    // The full address the customer supplies at request time. The assigned collector can correct it
+    // when registering the meter on site, and the resulting WaterMeter is created at that address.
+    public int SettlementId { get; set; }
+    public Settlement? Settlement { get; set; }
+    [MaxLength(200)]
+    public string Street { get; set; } = string.Empty;
+    // String, not int: house numbers like "12A" or "bb" are common in this address format.
+    [MaxLength(30)]
+    public string HouseNumber { get; set; } = string.Empty;
     [MaxLength(30)]
     public string Status { get; set; } = WaterMeterRequestStatus.Pending;
     public int? AssignedCollectorId { get; set; }

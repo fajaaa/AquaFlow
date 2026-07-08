@@ -17,7 +17,15 @@ public class CustomerProfile : EntityBase
     public string DefaultLanguage { get; set; } = "bs";
     [MaxLength(20)]
     public string Theme { get; set; } = "light";
-    public ICollection<ServiceLocation> ServiceLocations { get; set; } = new List<ServiceLocation>();
+    // Nullable: a profile is also created for admins/collectors (who only need a name), not just
+    // customers with a service address.
+    public int? SettlementId { get; set; }
+    public Settlement? Settlement { get; set; }
+    [MaxLength(200)]
+    public string? Street { get; set; }
+    // String, not int: house numbers like "12A" or "bb" are common in this address format.
+    [MaxLength(20)]
+    public string? HouseNumber { get; set; }
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     public ICollection<Recommendation> Recommendations { get; set; } = new List<Recommendation>();

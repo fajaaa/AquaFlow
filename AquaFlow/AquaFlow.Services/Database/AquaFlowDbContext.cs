@@ -12,6 +12,7 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<BillingCycle> BillingCycles => Set<BillingCycle>();
+    public DbSet<City> Cities => Set<City>();
     public DbSet<CollectorProfile> CollectorProfiles => Set<CollectorProfile>();
     public DbSet<CompanySettings> CompanySettings => Set<CompanySettings>();
     public DbSet<CustomerProfile> CustomerProfiles => Set<CustomerProfile>();
@@ -25,6 +26,7 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<MeterAssignment> MeterAssignments => Set<MeterAssignment>();
     public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
     public DbSet<MeterReplacement> MeterReplacements => Set<MeterReplacement>();
+    public DbSet<Municipality> Municipalities => Set<Municipality>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
     public DbSet<Payment> Payments => Set<Payment>();
@@ -36,7 +38,6 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<ReadingRouteItem> ReadingRouteItems => Set<ReadingRouteItem>();
     public DbSet<Recommendation> Recommendations => Set<Recommendation>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-    public DbSet<ServiceLocation> ServiceLocations => Set<ServiceLocation>();
     public DbSet<Settlement> Settlements => Set<Settlement>();
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
     public DbSet<SyncOperation> SyncOperations => Set<SyncOperation>();
@@ -83,6 +84,33 @@ public partial class AquaFlowDbContext : DbContext
         // the unique index is the hard backstop behind that generation.
         modelBuilder.Entity<CollectorProfile>()
             .HasIndex(profile => profile.EmployeeCode)
+            .IsUnique();
+
+        // Administrative lookup uniqueness is checked case-insensitively in the
+        // EnsureUnique<X>Async methods of CityService/MunicipalityService/SettlementService;
+        // these indexes are the hard backstop behind those checks (case-sensitive at the DB
+        // level, but the app-level check is what actually prevents a case-only duplicate).
+        // City: Name and Code globally unique.
+        modelBuilder.Entity<City>()
+            .HasIndex(city => city.Name)
+            .IsUnique();
+
+        modelBuilder.Entity<City>()
+            .HasIndex(city => city.Code)
+            .IsUnique();
+
+        // Municipality: Name unique within its city, Code globally unique.
+        modelBuilder.Entity<Municipality>()
+            .HasIndex(municipality => new { municipality.CityId, municipality.Name })
+            .IsUnique();
+
+        modelBuilder.Entity<Municipality>()
+            .HasIndex(municipality => municipality.Code)
+            .IsUnique();
+
+        // Settlement: Name unique within its municipality.
+        modelBuilder.Entity<Settlement>()
+            .HasIndex(settlement => new { settlement.MunicipalityId, settlement.Name })
             .IsUnique();
 
         // Optimistic concurrency for invoice status transitions: every UPDATE carries the

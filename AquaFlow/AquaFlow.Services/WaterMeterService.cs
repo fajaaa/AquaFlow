@@ -22,7 +22,12 @@ public class WaterMeterService
     }
 
     protected override IQueryable<WaterMeter> IncludeForRead(IQueryable<WaterMeter> query) =>
-        query.Include(w => w.ServiceLocation);
+        query.Include(w => w.Settlement);
+
+    protected override async Task LoadReferencesAsync(WaterMeter entity)
+    {
+        await DbContext.Entry(entity).Reference(w => w.Settlement).LoadAsync();
+    }
 
     protected override IQueryable<WaterMeter> ApplyFilters(IQueryable<WaterMeter> query, WaterMeterSearchObject? search)
     {
@@ -36,9 +41,9 @@ public class WaterMeterService
             query = query.Where(w => w.SerialNumber.Contains(search.SerialNumber));
         }
 
-        if (search.ServiceLocationId.HasValue)
+        if (search.SettlementId.HasValue)
         {
-            query = query.Where(w => w.ServiceLocationId == search.ServiceLocationId.Value);
+            query = query.Where(w => w.SettlementId == search.SettlementId.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(search.Status))
@@ -48,7 +53,7 @@ public class WaterMeterService
 
         if (search.CustomerId.HasValue)
         {
-            query = query.Where(w => w.ServiceLocation != null && w.ServiceLocation.CustomerId == search.CustomerId.Value);
+            query = query.Where(w => w.CustomerId == search.CustomerId.Value);
         }
 
         return query;

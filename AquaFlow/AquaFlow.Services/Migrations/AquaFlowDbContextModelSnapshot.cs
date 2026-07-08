@@ -147,6 +147,50 @@ namespace AquaFlow.Services.Migrations
                     b.ToTable("BillingCycles");
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.City", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Cities");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "SA",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Name = "Sarajevo"
+                        });
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.CollectorProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -298,10 +342,21 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
 
+                    b.Property<string>("HouseNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
+
+                    b.Property<int?>("SettlementId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Street")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Theme")
                         .IsRequired()
@@ -319,6 +374,8 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("CustomerCode")
                         .IsUnique();
 
+                    b.HasIndex("SettlementId");
+
                     b.HasIndex("UserId")
                         .IsUnique();
 
@@ -332,7 +389,10 @@ namespace AquaFlow.Services.Migrations
                             CustomerCode = "CUS-0001",
                             DefaultLanguage = "bs",
                             FirstName = "Amina",
+                            HouseNumber = "12",
                             LastName = "Hadziabdic",
+                            SettlementId = 1,
+                            Street = "Zmaja od Bosne",
                             Theme = "light",
                             UserId = 3
                         });
@@ -429,6 +489,9 @@ namespace AquaFlow.Services.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -447,7 +510,7 @@ namespace AquaFlow.Services.Migrations
                     b.Property<DateTime?>("ResolvedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("ServiceLocationId")
+                    b.Property<int>("SettlementId")
                         .HasColumnType("int");
 
                     b.Property<string>("Status")
@@ -468,9 +531,11 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CustomerId");
+
                     b.HasIndex("ReportedById");
 
-                    b.HasIndex("ServiceLocationId");
+                    b.HasIndex("SettlementId");
 
                     b.HasIndex("WaterMeterId");
 
@@ -481,10 +546,11 @@ namespace AquaFlow.Services.Migrations
                         {
                             Id = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
                             Description = "Pritisak vode je nizak u jutarnjim satima.",
                             Priority = "Medium",
                             ReportedById = 3,
-                            ServiceLocationId = 1,
+                            SettlementId = 1,
                             Status = "New",
                             Title = "Slab pritisak vode",
                             WaterMeterId = 1
@@ -921,6 +987,118 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("ReplacedById");
 
                     b.ToTable("MeterReplacements");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.Municipality", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CityId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("Municipalities");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CityId = 1,
+                            Code = "SA-01",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Name = "Centar"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CityId = 1,
+                            Code = "SA-02",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Name = "Novi Grad"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CityId = 1,
+                            Code = "SA-03",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Name = "Novo Sarajevo"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CityId = 1,
+                            Code = "SA-04",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Name = "Stari Grad"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CityId = 1,
+                            Code = "SA-05",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Name = "Ilidza"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CityId = 1,
+                            Code = "SA-06",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Name = "Vogosca"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CityId = 1,
+                            Code = "SA-07",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Name = "Hadzici"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            CityId = 1,
+                            Code = "SA-08",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Name = "Ilijas"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            CityId = 1,
+                            Code = "SA-09",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Name = "Trnovo"
+                        });
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Notification", b =>
@@ -1378,6 +1556,16 @@ namespace AquaFlow.Services.Migrations
                             IsActive = true,
                             Module = "WaterMeterRequests",
                             Name = "Manage water meter requests"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Code = "Locations.Manage",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows creating, updating, and deleting settlements and service locations.",
+                            IsActive = true,
+                            Module = "Locations",
+                            Name = "Manage locations"
                         });
                 });
 
@@ -1538,68 +1726,6 @@ namespace AquaFlow.Services.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.ServiceLocation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal?>("Latitude")
-                        .HasColumnType("decimal(9,6)");
-
-                    b.Property<string>("LocationType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<decimal?>("Longitude")
-                        .HasColumnType("decimal(9,6)");
-
-                    b.Property<int>("SettlementId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("SettlementId");
-
-                    b.ToTable("ServiceLocations");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Address = "Zmaja od Bosne 12",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CustomerId = 1,
-                            IsActive = true,
-                            Latitude = 43.855m,
-                            LocationType = "Apartment",
-                            Longitude = 18.398m,
-                            SettlementId = 1
-                        });
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.Settlement", b =>
                 {
                     b.Property<int>("Id")
@@ -1608,13 +1734,11 @@ namespace AquaFlow.Services.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("MunicipalityId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1631,24 +1755,203 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("MunicipalityId", "Name")
+                        .IsUnique();
+
                     b.ToTable("Settlements");
 
                     b.HasData(
                         new
                         {
                             Id = 1,
-                            City = "Sarajevo",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Name = "Centar",
+                            MunicipalityId = 1,
+                            Name = "Bjelave",
                             PostalCode = "71000"
                         },
                         new
                         {
                             Id = 2,
-                            City = "Sarajevo",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Name = "Ilidza",
+                            MunicipalityId = 5,
+                            Name = "Hrasnica",
+                            PostalCode = "71212"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 1,
+                            Name = "Mejtas",
+                            PostalCode = "71000"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 1,
+                            Name = "Kosevo",
+                            PostalCode = "71000"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 2,
+                            Name = "Alipasino Polje",
+                            PostalCode = "71000"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 2,
+                            Name = "Dobrinja",
+                            PostalCode = "71000"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 2,
+                            Name = "Otoka",
+                            PostalCode = "71000"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 3,
+                            Name = "Grbavica",
+                            PostalCode = "71000"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 3,
+                            Name = "Hrasno",
+                            PostalCode = "71000"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 3,
+                            Name = "Pofalici",
+                            PostalCode = "71000"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 4,
+                            Name = "Bascarsija",
+                            PostalCode = "71000"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 4,
+                            Name = "Vratnik",
+                            PostalCode = "71000"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 5,
+                            Name = "Sokolovic Kolonija",
                             PostalCode = "71210"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 5,
+                            Name = "Otes",
+                            PostalCode = "71210"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 6,
+                            Name = "Semizovac",
+                            PostalCode = "71320"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 6,
+                            Name = "Kobilja Glava",
+                            PostalCode = "71320"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 6,
+                            Name = "Blagovac",
+                            PostalCode = "71320"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 7,
+                            Name = "Pazaric",
+                            PostalCode = "71240"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 7,
+                            Name = "Tarcin",
+                            PostalCode = "71240"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 7,
+                            Name = "Binjezevo",
+                            PostalCode = "71240"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 8,
+                            Name = "Podlugovi",
+                            PostalCode = "71380"
+                        },
+                        new
+                        {
+                            Id = 22,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 8,
+                            Name = "Mrakovo",
+                            PostalCode = "71380"
+                        },
+                        new
+                        {
+                            Id = 23,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 9,
+                            Name = "Sabici",
+                            PostalCode = "71223"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            MunicipalityId = 9,
+                            Name = "Dejcici",
+                            PostalCode = "71223"
                         });
                 });
 
@@ -2200,6 +2503,13 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 9,
                             UserRoleId = 1
+                        },
+                        new
+                        {
+                            Id = 14,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 10,
+                            UserRoleId = 1
                         });
                 });
 
@@ -2264,6 +2574,13 @@ namespace AquaFlow.Services.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HouseNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<decimal>("InitialReading")
                         .HasColumnType("decimal(18,2)");
 
@@ -2278,7 +2595,7 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
 
-                    b.Property<int>("ServiceLocationId")
+                    b.Property<int>("SettlementId")
                         .HasColumnType("int");
 
                     b.Property<string>("Status")
@@ -2286,12 +2603,18 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<string>("Street")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ServiceLocationId");
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("SettlementId");
 
                     b.ToTable("WaterMeters");
 
@@ -2300,11 +2623,12 @@ namespace AquaFlow.Services.Migrations
                         {
                             Id = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
                             InitialReading = 120.50m,
                             InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             LastReading = 168.40m,
                             SerialNumber = "WM-2026-0001",
-                            ServiceLocationId = 1,
+                            SettlementId = 1,
                             Status = "Active"
                         });
                 });
@@ -2326,6 +2650,11 @@ namespace AquaFlow.Services.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
+                    b.Property<string>("HouseNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -2333,13 +2662,18 @@ namespace AquaFlow.Services.Migrations
                     b.Property<int?>("ResultingWaterMeterId")
                         .HasColumnType("int");
 
-                    b.Property<int>("ServiceLocationId")
+                    b.Property<int>("SettlementId")
                         .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Street")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -2352,7 +2686,7 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasIndex("ResultingWaterMeterId");
 
-                    b.HasIndex("ServiceLocationId");
+                    b.HasIndex("SettlementId");
 
                     b.ToTable("WaterMeterRequests");
                 });
@@ -2489,11 +2823,18 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.CustomerProfile", b =>
                 {
+                    b.HasOne("AquaFlow.Services.Database.Settlement", "Settlement")
+                        .WithMany("CustomerProfiles")
+                        .HasForeignKey("SettlementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("AquaFlow.Services.Database.User", "User")
                         .WithOne("CustomerProfile")
                         .HasForeignKey("AquaFlow.Services.Database.CustomerProfile", "UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Settlement");
 
                     b.Navigation("User");
                 });
@@ -2522,15 +2863,21 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.FaultReport", b =>
                 {
+                    b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AquaFlow.Services.Database.User", "ReportedBy")
                         .WithMany()
                         .HasForeignKey("ReportedById")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AquaFlow.Services.Database.ServiceLocation", "ServiceLocation")
+                    b.HasOne("AquaFlow.Services.Database.Settlement", "Settlement")
                         .WithMany("FaultReports")
-                        .HasForeignKey("ServiceLocationId")
+                        .HasForeignKey("SettlementId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2539,9 +2886,11 @@ namespace AquaFlow.Services.Migrations
                         .HasForeignKey("WaterMeterId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.Navigation("Customer");
+
                     b.Navigation("ReportedBy");
 
-                    b.Navigation("ServiceLocation");
+                    b.Navigation("Settlement");
 
                     b.Navigation("WaterMeter");
                 });
@@ -2709,6 +3058,17 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("ReplacedBy");
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.Municipality", b =>
+                {
+                    b.HasOne("AquaFlow.Services.Database.City", "City")
+                        .WithMany("Municipalities")
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("City");
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.Notification", b =>
                 {
                     b.HasOne("AquaFlow.Services.Database.User", "CreatedBy")
@@ -2838,23 +3198,15 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.ServiceLocation", b =>
+            modelBuilder.Entity("AquaFlow.Services.Database.Settlement", b =>
                 {
-                    b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
-                        .WithMany("ServiceLocations")
-                        .HasForeignKey("CustomerId")
+                    b.HasOne("AquaFlow.Services.Database.Municipality", "Municipality")
+                        .WithMany("Settlements")
+                        .HasForeignKey("MunicipalityId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AquaFlow.Services.Database.Settlement", "Settlement")
-                        .WithMany("ServiceLocations")
-                        .HasForeignKey("SettlementId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("Settlement");
+                    b.Navigation("Municipality");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.SupportTicket", b =>
@@ -2960,13 +3312,21 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.WaterMeter", b =>
                 {
-                    b.HasOne("AquaFlow.Services.Database.ServiceLocation", "ServiceLocation")
-                        .WithMany("WaterMeters")
-                        .HasForeignKey("ServiceLocationId")
+                    b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("ServiceLocation");
+                    b.HasOne("AquaFlow.Services.Database.Settlement", "Settlement")
+                        .WithMany("WaterMeters")
+                        .HasForeignKey("SettlementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Settlement");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterRequest", b =>
@@ -2987,9 +3347,9 @@ namespace AquaFlow.Services.Migrations
                         .HasForeignKey("ResultingWaterMeterId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("AquaFlow.Services.Database.ServiceLocation", "ServiceLocation")
+                    b.HasOne("AquaFlow.Services.Database.Settlement", "Settlement")
                         .WithMany()
-                        .HasForeignKey("ServiceLocationId")
+                        .HasForeignKey("SettlementId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2999,7 +3359,7 @@ namespace AquaFlow.Services.Migrations
 
                     b.Navigation("ResultingWaterMeter");
 
-                    b.Navigation("ServiceLocation");
+                    b.Navigation("Settlement");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterRequestStatusHistory", b =>
@@ -3045,6 +3405,11 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Invoices");
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.City", b =>
+                {
+                    b.Navigation("Municipalities");
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.CollectorProfile", b =>
                 {
                     b.Navigation("MeterAssignments");
@@ -3061,8 +3426,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Payments");
 
                     b.Navigation("Recommendations");
-
-                    b.Navigation("ServiceLocations");
 
                     b.Navigation("SupportTickets");
 
@@ -3085,6 +3448,11 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("StatusHistory");
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.Municipality", b =>
+                {
+                    b.Navigation("Settlements");
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.Notification", b =>
                 {
                     b.Navigation("UserNotifications");
@@ -3105,20 +3473,17 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.ServiceLocation", b =>
-                {
-                    b.Navigation("FaultReports");
-
-                    b.Navigation("WaterMeters");
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.Settlement", b =>
                 {
                     b.Navigation("CollectorProfiles");
 
+                    b.Navigation("CustomerProfiles");
+
+                    b.Navigation("FaultReports");
+
                     b.Navigation("Notifications");
 
-                    b.Navigation("ServiceLocations");
+                    b.Navigation("WaterMeters");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Tariff", b =>

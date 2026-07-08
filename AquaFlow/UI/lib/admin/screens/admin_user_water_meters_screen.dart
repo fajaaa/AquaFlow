@@ -160,9 +160,7 @@ class _WaterMeterCard extends StatelessWidget {
             const SizedBox(height: 10),
             _InfoRow(
               icon: Icons.location_on_outlined,
-              label: meter.serviceLocationAddress.isEmpty
-                  ? '-'
-                  : meter.serviceLocationAddress,
+              label: meter.settlementName.isEmpty ? '-' : meter.settlementName,
             ),
             const SizedBox(height: 6),
             _InfoRow(

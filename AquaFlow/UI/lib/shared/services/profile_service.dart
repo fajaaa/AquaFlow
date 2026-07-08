@@ -74,15 +74,62 @@ class ProfileService {
     return CustomerProfile.fromJson(first);
   }
 
+  /// Fetches the CustomerProfile with primary key [customerProfileId]
+  /// directly (`GET /CustomerProfiles/{id}`), or null when there is none.
+  /// Used by the collector's request cards to show the requesting customer's
+  /// naselje/adresa: `WaterMeterRequestResponse.CustomerId` is the
+  /// CustomerProfile's own id, not a `User` id, so this looks up by primary
+  /// key instead of by `UserId` like [fetchCustomerProfile].
+  Future<CustomerProfile?> fetchById(int customerProfileId) async {
+    final token = await _tokenStorage.getAccessToken();
+    if (token == null) {
+      throw const ProfileException('You are not signed in.');
+    }
+
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/CustomerProfiles/$customerProfileId',
+    );
+
+    final http.Response response;
+    try {
+      response = await _client
+          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .timeout(_timeout);
+    } on SocketException {
+      throw ProfileException(
+        'Cannot reach the server at ${ApiConfig.baseUrl}.',
+      );
+    } on TimeoutException {
+      throw const ProfileException('The server took too long to respond.');
+    } on http.ClientException catch (e) {
+      throw ProfileException('Network error: ${e.message}');
+    }
+
+    if (response.statusCode == 404) return null;
+    if (response.statusCode != 200) {
+      throw ProfileException(
+        'Could not load the customer profile (HTTP ${response.statusCode}).',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) return null;
+    return CustomerProfile.fromJson(decoded);
+  }
+
   /// Creates or updates the caller's own CustomerProfile with a new
-  /// first/last name. Pass [existingProfileId] (from [fetchCustomerProfile])
-  /// to PATCH the existing row, or null to create a new one - the latter only
-  /// applies to a user (e.g. an admin/collector on mobile) who has no
-  /// customer profile yet, since a self-registered customer always has one.
-  Future<void> saveName({
+  /// first/last name and address (Settlement/Street/HouseNumber). Pass
+  /// [existingProfileId] (from [fetchCustomerProfile]) to PATCH the existing
+  /// row, or null to create a new one - the latter only applies to a user
+  /// (e.g. an admin/collector on mobile) who has no customer profile yet,
+  /// since a self-registered customer always has one.
+  Future<void> saveProfile({
     required int userId,
     required String firstName,
     required String lastName,
+    int? settlementId,
+    String? street,
+    String? houseNumber,
     int? existingProfileId,
   }) async {
     final token = await _tokenStorage.getAccessToken();
@@ -102,6 +149,9 @@ class ProfileService {
       if (isCreate) 'userId': userId,
       'firstName': firstName,
       'lastName': lastName,
+      'settlementId': settlementId,
+      'street': street,
+      'houseNumber': houseNumber,
     });
 
     final http.Response response;
@@ -123,7 +173,7 @@ class ProfileService {
     final expectedStatus = isCreate ? 201 : 200;
     if (response.statusCode != expectedStatus) {
       throw ProfileException(
-        _messageFor(response, 'Could not save your name'),
+        _messageFor(response, 'Could not save your profile'),
       );
     }
   }
