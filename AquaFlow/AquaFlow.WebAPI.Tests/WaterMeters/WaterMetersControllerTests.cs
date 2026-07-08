@@ -13,6 +13,7 @@ public class WaterMetersControllerTests
 {
     private const string CustomerRole = "Customer";
     private const string AdminRole = "Admin";
+    private const string CollectorRole = "Collector";
 
     [Fact]
     public async Task GetAll_CustomerRole_ForcesOwnCustomerIdFilter()
@@ -56,6 +57,28 @@ public class WaterMetersControllerTests
     {
         var controller = CreateController(
             BuildUser(userId: 99, role: AdminRole),
+            profiles: [],
+            meters:
+            [
+                new WaterMeterResponse { Id = 1, CustomerId = 10, SerialNumber = "WM-1" },
+                new WaterMeterResponse { Id = 2, CustomerId = 20, SerialNumber = "WM-2" }
+            ]);
+
+        var result = await controller.GetAll(new WaterMeterSearchObject { CustomerId = 20 });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var page = Assert.IsType<PageResult<WaterMeterResponse>>(ok.Value);
+        var item = Assert.Single(page.Items);
+        Assert.Equal(20, item.CustomerId);
+    }
+
+    [Fact]
+    public async Task GetAll_CollectorRole_PassesSearchThroughWithoutPinning()
+    {
+        // A collector may read any water meter (unlike Customer), so the search is not pinned to
+        // any profile - it passes through to the service unmodified, same as Admin.
+        var controller = CreateController(
+            BuildUser(userId: 5, role: CollectorRole),
             profiles: [],
             meters:
             [

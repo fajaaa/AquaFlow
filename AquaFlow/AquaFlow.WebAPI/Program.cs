@@ -122,7 +122,9 @@ mapperConfig.NewConfig<Settlement, SettlementResponse>()
 mapperConfig.NewConfig<CustomerProfile, CustomerProfileResponse>()
     .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name);
 mapperConfig.NewConfig<WaterMeter, WaterMeterResponse>()
-    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name);
+    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
+    .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
+    .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName);
 mapperConfig.NewConfig<WaterMeterRequest, WaterMeterRequestResponse>()
     .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
     .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
