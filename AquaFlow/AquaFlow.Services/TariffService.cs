@@ -41,16 +41,6 @@ public class TariffService
         {
             await EnsureUniqueNameAsync(request.Name, id);
         }
-
-        if (request.EffectiveFrom.HasValue || request.EffectiveTo.HasValue)
-        {
-            var from = request.EffectiveFrom ?? entity.EffectiveFrom;
-            var to = request.EffectiveTo ?? entity.EffectiveTo;
-            if (to.HasValue && to.Value < from)
-            {
-                throw new ClientException("EffectiveTo cannot be earlier than EffectiveFrom.");
-            }
-        }
     }
 
     // A tariff still referenced by invoice items cannot be hard-deleted (the FK is Restrict,
@@ -69,18 +59,6 @@ public class TariffService
         await _dbContext.SaveChangesAsync();
     }
 
-    protected override IQueryable<Tariff> ApplyFilters(IQueryable<Tariff> query, TariffSearchObject? search)
-    {
-        query = base.ApplyFilters(query, search);
-
-        if (search?.EffectiveOn.HasValue == true)
-        {
-            var date = search.EffectiveOn.Value;
-            query = query.Where(tariff => tariff.EffectiveFrom <= date && (tariff.EffectiveTo == null || tariff.EffectiveTo >= date));
-        }
-
-        return query;
-    }
 
     private async Task EnsureUniqueNameAsync(string name, int? excludedId = null)
     {

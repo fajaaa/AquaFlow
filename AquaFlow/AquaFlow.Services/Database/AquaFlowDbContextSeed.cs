@@ -552,11 +552,8 @@ public partial class AquaFlowDbContext
             {
                 Id = 1,
                 Name = "Domacinstvo 2026",
-                CustomerType = "Customer",
+                Description = "Standardna tarifa za domaćinstva",
                 PricePerM3 = 1.35m,
-                FixedFee = 3.50m,
-                EffectiveFrom = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                EffectiveTo = (DateTime?)null,
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
