@@ -19,6 +19,7 @@ public partial class AquaFlowDbContext
         SeedCustomerProfiles(modelBuilder);
         SeedCollectorProfiles(modelBuilder);
         SeedWaterMeters(modelBuilder);
+        SeedBillingCycles(modelBuilder);
         SeedMeterReadings(modelBuilder);
         SeedTariffs(modelBuilder);
         SeedInvoices(modelBuilder);
@@ -517,6 +518,25 @@ public partial class AquaFlowDbContext
                 Status = "Active",
                 InitialReading = 120.50m,
                 LastReading = 168.40m,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            });
+    }
+
+    // A single Open cycle so the collector-entry endpoint (CreateForCollectorAsync's single-Open-cycle
+    // resolution) and GET /BillingCycles?Status=Open (current-period lookup) both have data to work
+    // with out of the box; there is no admin flow yet to open/close cycles.
+    private static void SeedBillingCycles(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<BillingCycle>().HasData(
+            new
+            {
+                Id = 1,
+                Name = "Juli 2026",
+                PeriodFrom = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+                PeriodTo = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc),
+                Status = "Open",
+                ClosedAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
