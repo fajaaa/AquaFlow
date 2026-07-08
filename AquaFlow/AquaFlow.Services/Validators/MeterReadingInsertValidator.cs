@@ -9,6 +9,7 @@ public class MeterReadingInsertValidator : AbstractValidator<MeterReadingInsertR
     {
         RuleFor(x => x.WaterMeterId).GreaterThan(0);
         RuleFor(x => x.CollectorId).GreaterThan(0);
+        RuleFor(x => x.BillingCycleId).GreaterThan(0).When(x => x.BillingCycleId.HasValue);
         RuleFor(x => x.ReadingValue).GreaterThanOrEqualTo(0);
         RuleFor(x => x.PreviousReadingValue).GreaterThanOrEqualTo(0);
         RuleFor(x => x.ConsumptionM3).GreaterThanOrEqualTo(0);

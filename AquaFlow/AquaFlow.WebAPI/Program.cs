@@ -122,7 +122,9 @@ mapperConfig.NewConfig<Settlement, SettlementResponse>()
 mapperConfig.NewConfig<CustomerProfile, CustomerProfileResponse>()
     .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name);
 mapperConfig.NewConfig<WaterMeter, WaterMeterResponse>()
-    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name);
+    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
+    .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
+    .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName);
 mapperConfig.NewConfig<WaterMeterRequest, WaterMeterRequestResponse>()
     .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
     .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
@@ -161,9 +163,18 @@ AddPatchMapping<SettlementPatchRequest, Settlement>();
 builder.Services.AddScoped<IBaseCRUDService<SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>, SettlementService>();
 AddPatchMapping<WaterMeterPatchRequest, WaterMeter>();
 builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>, WaterMeterService>();
-AddCrud<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>();
+// MeterReading is registered by hand (not AddCrud<>) because the collector data-entry flow
+// (CreateForCollectorAsync) needs billing-cycle resolution/validation and WaterMeter.LastReading
+// updates beyond the generic EfCrudService; the generic IBaseCRUDService alias still resolves to
+// the same MeterReadingService instance, same pattern as WaterMeterRequest/Invoice below.
+AddPatchMapping<MeterReadingPatchRequest, MeterReading>();
+builder.Services.AddScoped<IMeterReadingService, MeterReadingService>();
+builder.Services.AddScoped<IBaseCRUDService<MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IMeterReadingService>());
 AddPatchMapping<TariffPatchRequest, Tariff>();
 builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>, TariffService>();
+AddPatchMapping<BillingCyclePatchRequest, BillingCycle>();
+builder.Services.AddScoped<IBillingCycleService, BillingCycleService>();
 // Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
 // it by hand: the patch mapping, IInvoiceService, and the generic IBaseCRUDService alias resolving
 // to the same InvoiceService. Each invoice state is a keyed scoped BaseInvoiceState (status string as
@@ -242,9 +253,13 @@ builder.Services.AddScoped<IValidator<WaterMeterRequestPatchRequest>, WaterMeter
 builder.Services.AddScoped<IValidator<MeterReadingInsertRequest>, MeterReadingInsertValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingUpdateRequest>, MeterReadingUpdateValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingPatchRequest>, MeterReadingPatchValidator>();
+builder.Services.AddScoped<IValidator<MeterReadingCollectorEntryRequest>, MeterReadingCollectorEntryValidator>();
 builder.Services.AddScoped<IValidator<TariffInsertRequest>, TariffInsertValidator>();
 builder.Services.AddScoped<IValidator<TariffUpdateRequest>, TariffUpdateValidator>();
 builder.Services.AddScoped<IValidator<TariffPatchRequest>, TariffPatchValidator>();
+builder.Services.AddScoped<IValidator<BillingCycleInsertRequest>, BillingCycleInsertValidator>();
+builder.Services.AddScoped<IValidator<BillingCycleUpdateRequest>, BillingCycleUpdateValidator>();
+builder.Services.AddScoped<IValidator<BillingCyclePatchRequest>, BillingCyclePatchValidator>();
 builder.Services.AddScoped<IValidator<InvoiceInsertRequest>, InvoiceInsertValidator>();
 builder.Services.AddScoped<IValidator<InvoiceUpdateRequest>, InvoiceUpdateValidator>();
 builder.Services.AddScoped<IValidator<InvoicePatchRequest>, InvoicePatchValidator>();

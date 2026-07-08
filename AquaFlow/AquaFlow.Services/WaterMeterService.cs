@@ -22,11 +22,12 @@ public class WaterMeterService
     }
 
     protected override IQueryable<WaterMeter> IncludeForRead(IQueryable<WaterMeter> query) =>
-        query.Include(w => w.Settlement);
+        query.Include(w => w.Settlement).Include(w => w.Customer);
 
     protected override async Task LoadReferencesAsync(WaterMeter entity)
     {
         await DbContext.Entry(entity).Reference(w => w.Settlement).LoadAsync();
+        await DbContext.Entry(entity).Reference(w => w.Customer).LoadAsync();
     }
 
     protected override IQueryable<WaterMeter> ApplyFilters(IQueryable<WaterMeter> query, WaterMeterSearchObject? search)
@@ -54,6 +55,22 @@ public class WaterMeterService
         if (search.CustomerId.HasValue)
         {
             query = query.Where(w => w.CustomerId == search.CustomerId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search.Term))
+        {
+            // Lowered explicitly rather than relying on the DB collation being case-insensitive, so
+            // the match is guaranteed regardless of provider/collation.
+            var term = search.Term.Trim().ToLower();
+            query = query.Where(w =>
+                w.SerialNumber.ToLower().Contains(term) ||
+                (w.Customer != null && (
+                    w.Customer.FirstName.ToLower().Contains(term) ||
+                    w.Customer.LastName.ToLower().Contains(term) ||
+                    (w.Customer.FirstName + " " + w.Customer.LastName).ToLower().Contains(term))) ||
+                (w.Settlement != null && w.Settlement.Name.ToLower().Contains(term)) ||
+                (w.Street != null && w.Street.ToLower().Contains(term)) ||
+                (w.HouseNumber != null && w.HouseNumber.ToLower().Contains(term)));
         }
 
         return query;

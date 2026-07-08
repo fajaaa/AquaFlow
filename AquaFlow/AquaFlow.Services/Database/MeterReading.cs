@@ -9,6 +9,10 @@ public class MeterReading : EntityBase
     public WaterMeter? WaterMeter { get; set; }
     public int CollectorId { get; set; }
     public CollectorProfile? Collector { get; set; }
+    public int? BillingCycleId { get; set; }
+    public BillingCycle? BillingCycle { get; set; }
+    public int? TariffId { get; set; }
+    public Tariff? Tariff { get; set; }
     [Column(TypeName = "decimal(18,2)")]
     public decimal ReadingValue { get; set; }
     [Column(TypeName = "decimal(18,2)")]

@@ -34,8 +34,6 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<PaymentSettings> PaymentSettings => Set<PaymentSettings>();
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
     public DbSet<Permission> Permissions => Set<Permission>();
-    public DbSet<ReadingRoute> ReadingRoutes => Set<ReadingRoute>();
-    public DbSet<ReadingRouteItem> ReadingRouteItems => Set<ReadingRouteItem>();
     public DbSet<Recommendation> Recommendations => Set<Recommendation>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Settlement> Settlements => Set<Settlement>();
@@ -125,6 +123,13 @@ public partial class AquaFlowDbContext : DbContext
         modelBuilder.Entity<Invoice>()
             .Property(invoice => invoice.RowVersion)
             .IsRowVersion();
+
+        // At most one reading per water meter per billing cycle; filtered so historical rows
+        // with no BillingCycleId (BillingCycleId IS NULL) are excluded from the uniqueness check.
+        modelBuilder.Entity<MeterReading>()
+            .HasIndex(reading => new { reading.WaterMeterId, reading.BillingCycleId })
+            .IsUnique()
+            .HasFilter("[BillingCycleId] IS NOT NULL");
 
         CreateSeed(modelBuilder);
     }
