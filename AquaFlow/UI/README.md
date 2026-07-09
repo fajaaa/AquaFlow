@@ -81,3 +81,58 @@ cleartext traffic by default. These **DEV-ONLY** exceptions are already in place
 > the backend must be served over **HTTPS**, and both exceptions must be removed
 > (delete `usesCleartextTraffic` from the debug manifest / the
 > `NSAppTransportSecurity` block from `Info.plist`) so the app rejects cleartext.
+
+## Push notifications (Firebase Cloud Messaging)
+
+Push is mobile-only (Android/iOS) - there is no admin desktop UI for it, so
+`Firebase.initializeApp()` in `lib/main.dart` only runs when the platform is
+neither web nor desktop (same check as `PlatformGate.isDesktop`). This section
+covers the native config every developer must supply locally; none of it is
+committed (see `.gitignore`).
+
+### Android
+
+1. In the [Firebase console](https://console.firebase.google.com/), add an Android
+   app with package name `ba.aquaflow.aquaflow_desktop`, download
+   **`google-services.json`**, and place it at `android/app/google-services.json`.
+2. That's it - `android/settings.gradle.kts` and `android/app/build.gradle.kts`
+   already apply the `com.google.gms.google-services` Gradle plugin, which reads
+   this file at build time. Without the file, any `flutter build android` /
+   `flutter run` targeting Android fails immediately with a clear
+   "File google-services.json is missing" error.
+3. `POST_NOTIFICATIONS` (required on Android 13+ to actually show a notification)
+   is declared in `android/app/src/main/AndroidManifest.xml`; the runtime prompt
+   itself is requested by `PushNotificationService.requestPermissionAndRegister()`
+   (see below).
+
+### iOS
+
+1. In the Firebase console, add an iOS app with bundle ID
+   `ba.aquaflow.aquaflowDesktop`, download **`GoogleService-Info.plist`**, and
+   place it at `ios/Runner/GoogleService-Info.plist`. Also drag it into the
+   `Runner` target in Xcode (Runner.xcworkspace) so it's copied into the app
+   bundle - adding the file on disk alone is not enough.
+2. In Xcode, select the `Runner` target > **Signing & Capabilities** > **+
+   Capability** > **Push Notifications**. This can only be done from Xcode, not
+   from code, and also requires an Apple Developer account with APNs enabled for
+   the app's bundle ID.
+3. `ios/Runner/AppDelegate.swift` calls `FirebaseApp.configure()` before the
+   Flutter engine starts (needed so FirebaseMessaging's APNs wiring attaches
+   early); `firebase_core`'s own `Firebase.initializeApp()` call from
+   `main.dart` detects the already-configured app and is a no-op on iOS.
+4. `firebase_core`/`firebase_messaging` ship CocoaPods podspecs only (no Swift
+   Package Manager manifest yet), so this project - otherwise fully on SPM (see
+   `ios/Flutter/ephemeral/Packages`) - needs `ios/Podfile` (the standard
+   Flutter-generated template) to pull them in via CocoaPods alongside the SPM
+   plugins. Run `flutter pub get` then, on macOS, `pod install` from `ios/`
+   (or just `flutter build ios` / `flutter run`, which does this for you) before
+   opening `Runner.xcworkspace`.
+
+### Client wiring
+
+Runtime permission requests, device-token registration/refresh, and
+foreground/background/terminated message handling are all wired up client-side.
+See the `PushNotificationService`/`PushMessageHandler`/`AuthProvider` bullets in
+the repo `AGENTS.md` for how. Only the native config above (the two
+developer-supplied files and the Xcode capability) still has to be done by hand
+per machine.

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using AquaFlow.Common.Services.CryptoService;
+using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -12,7 +13,9 @@ using AquaFlow.Services.WaterMeterRequestStateMachine;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.RateLimiting;
 using AquaFlow.WebAPI.Services.AccessManager;
+using FirebaseAdmin;
 using FluentValidation;
+using Google.Apis.Auth.OAuth2;
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -82,6 +85,43 @@ if (string.IsNullOrWhiteSpace(jwtIssuer) ||
         "Set JwtToken__Issuer, JwtToken__Audience, and JwtToken__SecretKey with environment variables or user secrets.");
 }
 
+// Firebase Cloud Messaging (push notifications) is optional, unlike the connection string/JWT
+// config above: a missing/invalid value here must not stop the API from starting, since push is
+// a secondary feature, not auth infrastructure. When neither ServiceAccountJson nor
+// ServiceAccountJsonPath resolves to a usable credential, a no-op IPushNotificationSender is
+// registered instead (logs a warning and sends nothing) rather than throwing.
+var firebaseServiceAccountJson = builder.Configuration["Firebase:ServiceAccountJson"];
+var firebaseServiceAccountJsonPath = builder.Configuration["Firebase:ServiceAccountJsonPath"];
+var firebaseProjectId = builder.Configuration["Firebase:ProjectId"];
+
+FirebaseApp? firebaseApp = null;
+if (!string.IsNullOrWhiteSpace(firebaseServiceAccountJson))
+{
+    firebaseApp = FirebaseApp.Create(new AppOptions
+    {
+        Credential = CredentialFactory.FromJson<ServiceAccountCredential>(firebaseServiceAccountJson).ToGoogleCredential(),
+        ProjectId = string.IsNullOrWhiteSpace(firebaseProjectId) ? null : firebaseProjectId
+    });
+}
+else if (!string.IsNullOrWhiteSpace(firebaseServiceAccountJsonPath) && File.Exists(firebaseServiceAccountJsonPath))
+{
+    firebaseApp = FirebaseApp.Create(new AppOptions
+    {
+        Credential = CredentialFactory.FromFile<ServiceAccountCredential>(firebaseServiceAccountJsonPath).ToGoogleCredential(),
+        ProjectId = string.IsNullOrWhiteSpace(firebaseProjectId) ? null : firebaseProjectId
+    });
+}
+
+if (firebaseApp is not null)
+{
+    builder.Services.AddSingleton(firebaseApp);
+    builder.Services.AddScoped<IPushNotificationSender, FirebasePushNotificationSender>();
+}
+else
+{
+    builder.Services.AddScoped<IPushNotificationSender, NoOpPushNotificationSender>();
+}
+
 builder.Services.AddDbContext<AquaFlowDbContext>(options => options.UseSqlServer(connectionString));
 
 builder.Services.AddCors(options =>
@@ -138,6 +178,7 @@ builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IDeviceTokenService, DeviceTokenService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IPermissionLookupService, PermissionLookupService>();
 builder.Services.AddScoped<NotificationRecipientService>();
@@ -221,6 +262,8 @@ AddCrud<PaymentSettings, PaymentSettingsResponse, PaymentSettingsSearchObject, P
 builder.Services.AddScoped<IValidator<UserRegisterRequest>, UserRegisterValidator>();
 builder.Services.AddScoped<IValidator<AccountUpdateRequest>, AccountUpdateValidator>();
 builder.Services.AddScoped<IValidator<AccountChangePasswordRequest>, AccountChangePasswordValidator>();
+builder.Services.AddScoped<IValidator<DeviceTokenRegisterRequest>, DeviceTokenRegisterValidator>();
+builder.Services.AddScoped<IValidator<DeviceTokenUnregisterRequest>, DeviceTokenUnregisterValidator>();
 builder.Services.AddScoped<IValidator<UserInsertRequest>, UserInsertValidator>();
 builder.Services.AddScoped<IValidator<UserUpdateRequest>, UserUpdateValidator>();
 builder.Services.AddScoped<IValidator<UserPatchRequest>, UserPatchValidator>();

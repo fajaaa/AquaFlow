@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/notification_page.dart';
 import '../models/user_notification_item.dart';
 import '../providers/auth_provider.dart';
+import '../providers/notification_badge_provider.dart';
 import '../services/notification_exception.dart';
 import '../services/notification_service.dart';
 import 'notification_detail_screen.dart';
@@ -60,6 +61,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _pageData = pageData;
         _loading = false;
       });
+      context.read<NotificationBadgeProvider>().markSeen();
     } on NotificationException catch (e) {
       if (!mounted || requestId != _requestSerial) return;
       setState(() {

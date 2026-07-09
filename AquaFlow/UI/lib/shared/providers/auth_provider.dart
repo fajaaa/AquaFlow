@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/auth_result.dart';
 import '../models/auth_session.dart';
 import '../services/auth_api_service.dart';
 import '../services/auth_exception.dart';
+import '../services/push_notification_service.dart';
 import '../services/token_storage.dart';
 
 /// Where the app is in the auth lifecycle. [unknown] is the initial state while
@@ -13,12 +16,17 @@ enum AuthStatus { unknown, authenticated, unauthenticated }
 /// Owns all authentication state and is the single source of truth the UI
 /// listens to. Handles startup restore, login, logout and silent refresh.
 class AuthProvider extends ChangeNotifier {
-  AuthProvider({AuthApiService? authService, TokenStorage? tokenStorage})
-      : _authService = authService ?? AuthApiService(),
-        _tokenStorage = tokenStorage ?? TokenStorage();
+  AuthProvider({
+    AuthApiService? authService,
+    TokenStorage? tokenStorage,
+    PushNotificationService? pushNotificationService,
+  }) : _authService = authService ?? AuthApiService(),
+       _tokenStorage = tokenStorage ?? TokenStorage(),
+       _pushService = pushNotificationService ?? PushNotificationService();
 
   final AuthApiService _authService;
   final TokenStorage _tokenStorage;
+  final PushNotificationService _pushService;
 
   AuthStatus _status = AuthStatus.unknown;
   AuthSession? _session;
@@ -39,6 +47,7 @@ class AuthProvider extends ChangeNotifier {
 
     if (accessToken != null && _trySetSession(accessToken)) {
       _setStatus(AuthStatus.authenticated);
+      _registerPushToken();
       return;
     }
 
@@ -114,6 +123,9 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Needs a valid access token, so this must run before the token is
+    // cleared below. Push (de)registration failures must never block logout.
+    await _unregisterPushToken();
     await _tokenStorage.clear();
     _session = null;
     _errorMessage = null;
@@ -134,6 +146,39 @@ class AuthProvider extends ChangeNotifier {
     await _tokenStorage.saveTokens(tokens.accessToken, tokens.refreshToken);
     _session = AuthSession.fromAccessToken(tokens.accessToken);
     _setStatus(AuthStatus.authenticated);
+    _registerPushToken();
+  }
+
+  /// Push (FCM) is mobile-only (Android/iOS) - no admin desktop UI for it, and
+  /// it never runs during the brief web block before login. Same platform
+  /// check as `PlatformGate.isDesktop`, duplicated here (rather than imported)
+  /// to avoid a shared -> app dependency.
+  static bool get _isMobilePlatform {
+    if (kIsWeb) return false;
+    return defaultTargetPlatform != TargetPlatform.windows &&
+        defaultTargetPlatform != TargetPlatform.macOS &&
+        defaultTargetPlatform != TargetPlatform.linux;
+  }
+
+  /// Fire-and-forget: awaiting this would delay the authenticated screen from
+  /// showing until the user responds to the OS permission prompt. Failures
+  /// are logged, never surfaced to the user or allowed to affect auth state.
+  void _registerPushToken() {
+    if (!_isMobilePlatform) return;
+    unawaited(
+      _pushService.requestPermissionAndRegister().catchError((e) {
+        debugPrint('Push token registration failed: $e');
+      }),
+    );
+  }
+
+  Future<void> _unregisterPushToken() async {
+    if (!_isMobilePlatform) return;
+    try {
+      await _pushService.unregister();
+    } catch (e) {
+      debugPrint('Push token unregister failed: $e');
+    }
   }
 
   /// Decodes [accessToken] into a session, rejecting expired/invalid tokens.
@@ -161,6 +206,7 @@ class AuthProvider extends ChangeNotifier {
   @override
   void dispose() {
     _authService.dispose();
+    _pushService.dispose();
     super.dispose();
   }
 }

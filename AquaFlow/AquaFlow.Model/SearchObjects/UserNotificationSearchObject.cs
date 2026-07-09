@@ -6,4 +6,5 @@ public class UserNotificationSearchObject : BaseSearchObject
     public int? NotificationId { get; set; }
     public string? Type { get; set; }
     public string? Search { get; set; }
+    public bool? IsRead { get; set; }
 }

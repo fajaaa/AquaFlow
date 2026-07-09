@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required on Android 13+ (API 33) to show push notifications; the app must
+         also request this permission at runtime (see UI/README.md - Push notifications). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="aquaflow_desktop"
         android:name="${applicationName}"
@@ -30,6 +33,13 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Routes FCM notification messages through the high-importance channel by
+             default when the app is backgrounded/terminated (see MainActivity.kt, which
+             creates this channel, and FirebasePushNotificationSender.cs, which also sets
+             it explicitly on the AndroidNotification payload). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="high_importance_channel" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

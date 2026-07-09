@@ -1,3 +1,4 @@
+using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -5,13 +6,18 @@ using AquaFlow.Services.Database;
 using FluentValidation;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace AquaFlow.Services;
 
 public class NotificationService
     : EfCrudService<Notification, NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>
 {
+    private const int PushBodyMaxLength = 150;
+
     private readonly NotificationRecipientService _recipientService;
+    private readonly IPushNotificationSender _pushNotificationSender;
+    private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
         AquaFlowDbContext dbContext,
@@ -19,10 +25,14 @@ public class NotificationService
         IEnumerable<IValidator<NotificationInsertRequest>> insertValidators,
         IEnumerable<IValidator<NotificationUpdateRequest>> updateValidators,
         IEnumerable<IValidator<NotificationPatchRequest>> patchValidators,
-        NotificationRecipientService recipientService)
+        NotificationRecipientService recipientService,
+        IPushNotificationSender pushNotificationSender,
+        ILogger<NotificationService> logger)
         : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _recipientService = recipientService;
+        _pushNotificationSender = pushNotificationSender;
+        _logger = logger;
     }
 
     protected override IQueryable<Notification> ApplyFilters(IQueryable<Notification> query, NotificationSearchObject? search)
@@ -61,6 +71,9 @@ public class NotificationService
         await DbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();
+
+        await SendPushNotificationAsync(entity, recipientUserIds);
+
         await LoadReferencesAsync(entity);
 
         return Mapper.Map<NotificationResponse>(entity);
@@ -133,6 +146,62 @@ public class NotificationService
         await DbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();
+    }
+
+    // Deliberately outside the InsertAsync transaction (called after CommitAsync): an FCM outage
+    // or bad Firebase config must never block or roll back notification creation, so any failure
+    // here is caught, logged, and swallowed instead of propagating.
+    private async Task SendPushNotificationAsync(Notification notification, List<int> recipientUserIds)
+    {
+        if (recipientUserIds.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var tokens = await DbContext.DeviceTokens
+                .Where(deviceToken => deviceToken.IsActive && recipientUserIds.Contains(deviceToken.UserId))
+                .Select(deviceToken => deviceToken.Token)
+                .ToListAsync();
+
+            if (tokens.Count == 0)
+            {
+                return;
+            }
+
+            var body = notification.Body.Length > PushBodyMaxLength
+                ? notification.Body[..PushBodyMaxLength] + "..."
+                : notification.Body;
+
+            var invalidTokens = await _pushNotificationSender.SendAsync(
+                tokens,
+                notification.Title,
+                body,
+                new Dictionary<string, string>
+                {
+                    ["notificationId"] = notification.Id.ToString(),
+                    ["type"] = notification.Type
+                });
+
+            if (invalidTokens.Count > 0)
+            {
+                var tokensToDeactivate = await DbContext.DeviceTokens
+                    .Where(deviceToken => invalidTokens.Contains(deviceToken.Token) && deviceToken.IsActive)
+                    .ToListAsync();
+
+                foreach (var deviceToken in tokensToDeactivate)
+                {
+                    deviceToken.IsActive = false;
+                }
+
+                await DbContext.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send push notification for notification {NotificationId}.", notification.Id);
+        }
     }
 
     private async Task AddMissingUserNotificationsAsync(Notification notification, List<int> recipientUserIds)
