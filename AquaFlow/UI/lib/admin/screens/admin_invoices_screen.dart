@@ -349,6 +349,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
           width: 200,
           child: DropdownButtonFormField<String>(
             initialValue: _statusFilter ?? '',
+            isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Status',
               prefixIcon: Icon(Icons.filter_alt_outlined),
@@ -367,6 +368,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
           width: 230,
           child: DropdownButtonFormField<String>(
             initialValue: _billingCycleFilter?.toString() ?? '',
+            isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Ciklus obračuna',
               prefixIcon: Icon(Icons.event_repeat_outlined),

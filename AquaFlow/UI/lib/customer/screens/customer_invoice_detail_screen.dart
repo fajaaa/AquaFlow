@@ -83,8 +83,27 @@ class _CustomerInvoiceDetailScreenState
             _AmountCard(invoice: invoice),
             const SizedBox(height: 12),
             _buildPaymentsSection(invoice),
+            if (invoice.isPayable) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => _payInvoice(invoice),
+                  icon: const Icon(Icons.payment_outlined),
+                  label: const Text('Plati'),
+                ),
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  void _payInvoice(CustomerInvoice invoice) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Plaćanje računa uskoro stiže - trenutno nije dostupno.'),
       ),
     );
   }
@@ -175,13 +194,6 @@ class _ReadingsCard extends StatelessWidget {
             label: 'Potrošnja',
             value: '${_formatMoney(invoice.consumptionM3)} m³',
           ),
-          if (invoice.dueDate != null) ...[
-            const SizedBox(height: 6),
-            _KeyValueRow(
-              label: 'Rok plaćanja',
-              value: _formatDate(invoice.dueDate!),
-            ),
-          ],
         ],
       ),
     );

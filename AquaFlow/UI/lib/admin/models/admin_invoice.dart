@@ -23,7 +23,6 @@ class AdminInvoice {
     required this.tax,
     required this.totalAmount,
     required this.status,
-    required this.dueDate,
     required this.createdById,
     required this.createdAt,
   });
@@ -45,7 +44,6 @@ class AdminInvoice {
   final double tax;
   final double totalAmount;
   final String status;
-  final DateTime? dueDate;
   final int createdById;
   final DateTime? createdAt;
 
@@ -71,7 +69,6 @@ class AdminInvoice {
       tax: (json['tax'] as num?)?.toDouble() ?? 0,
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
       status: (json['status'] ?? '') as String,
-      dueDate: _date(json['dueDate']),
       createdById: (json['createdById'] as num?)?.toInt() ?? 0,
       createdAt: _date(json['createdAt']),
     );

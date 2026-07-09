@@ -16,7 +16,6 @@ class CustomerInvoice {
     required this.tax,
     required this.totalAmount,
     required this.status,
-    required this.dueDate,
     required this.waterMeterSerialNumber,
   });
 
@@ -31,8 +30,16 @@ class CustomerInvoice {
   final double tax;
   final double totalAmount;
   final String status;
-  final DateTime? dueDate;
   final String waterMeterSerialNumber;
+
+  /// Whether this invoice still has an outstanding balance a customer could
+  /// act on (Issued/PartiallyPaid/Overdue) - Draft isn't final yet and
+  /// Paid/Cancelled have nothing left to pay.
+  bool get isPayable => const {
+    'issued',
+    'partiallypaid',
+    'overdue',
+  }.contains(status.toLowerCase());
 
   factory CustomerInvoice.fromJson(Map<String, dynamic> json) {
     return CustomerInvoice(
@@ -47,7 +54,6 @@ class CustomerInvoice {
       tax: (json['tax'] as num?)?.toDouble() ?? 0,
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
       status: (json['status'] ?? '') as String,
-      dueDate: _date(json['dueDate']),
       waterMeterSerialNumber: (json['waterMeterSerialNumber'] ?? '') as String,
     );
   }

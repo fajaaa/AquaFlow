@@ -14,6 +14,5 @@ public class InvoicePatchRequest
     public decimal? Tax { get; set; }
     public decimal? TotalAmount { get; set; }
     public string? Status { get; set; }
-    public DateTime? DueDate { get; set; }
     public int? CreatedById { get; set; }
 }

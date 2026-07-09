@@ -638,7 +638,6 @@ public partial class AquaFlowDbContext
                 Tax = 3.85m,
                 TotalAmount = 26.52m,
                 Status = "Issued",
-                DueDate = new DateTime(2026, 6, 15, 0, 0, 0, DateTimeKind.Utc),
                 CreatedById = 1,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null

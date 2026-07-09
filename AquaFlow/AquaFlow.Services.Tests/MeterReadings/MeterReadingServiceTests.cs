@@ -56,7 +56,6 @@ public class MeterReadingServiceTests
         Assert.Equal(30m, invoice.TotalAmount);
         Assert.Equal(response.InvoiceTotalAmount, invoice.TotalAmount);
         Assert.Equal("Draft", invoice.Status);
-        Assert.Null(invoice.DueDate);
 
         var invoiceItem = await context.InvoiceItems.SingleAsync(item => item.InvoiceId == invoice.Id);
         Assert.Equal(1, invoiceItem.TariffId);

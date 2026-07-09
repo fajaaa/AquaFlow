@@ -20,6 +20,5 @@ public class InvoiceResponse : AuditableResponse
     public decimal Tax { get; set; }
     public decimal TotalAmount { get; set; }
     public string Status { get; set; } = string.Empty;
-    public DateTime? DueDate { get; set; }
     public int CreatedById { get; set; }
 }
