@@ -8,6 +8,7 @@ import 'package:aquaflow_desktop/admin/screens/admin_codebook_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_collectors_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_invoices_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_notifications_screen.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_payments_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_tariffs_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_users_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_water_meter_requests_screen.dart';
@@ -162,6 +163,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return const AdminCollectorsScreen();
       case 6:
         return const AdminInvoicesScreen();
+      case 7:
+        return const AdminPaymentsScreen();
       case 9:
         return const AdminUsersScreen(
           key: ValueKey('users-admins'),
