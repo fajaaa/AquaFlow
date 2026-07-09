@@ -36,6 +36,15 @@ public class InvoiceService
         return Task.CompletedTask;
     }
 
+    protected override IQueryable<Invoice> IncludeForRead(IQueryable<Invoice> query) =>
+        query.Include(i => i.Customer).Include(i => i.WaterMeter);
+
+    protected override async Task LoadReferencesAsync(Invoice entity)
+    {
+        await DbContext.Entry(entity).Reference(i => i.Customer).LoadAsync();
+        await DbContext.Entry(entity).Reference(i => i.WaterMeter).LoadAsync();
+    }
+
     public async Task<InvoiceResponse> IssueAsync(int id, int changedById)
     {
         var invoice = await LoadInvoiceAsync(id);

@@ -264,8 +264,7 @@ public class InvoiceStateMachineTransitionTests
             CustomerId = 1,
             WaterMeterId = 1,
             TotalAmount = totalAmount,
-            Status = status,
-            DueDate = DateTime.UtcNow.AddDays(-1)
+            Status = status
         });
 
         if (alreadyPaid > 0m)

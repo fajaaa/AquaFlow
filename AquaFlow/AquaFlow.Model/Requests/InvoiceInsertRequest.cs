@@ -14,6 +14,5 @@ public class InvoiceInsertRequest
     public decimal Tax { get; set; }
     public decimal TotalAmount { get; set; }
     public string Status { get; set; } = "Draft";
-    public DateTime? DueDate { get; set; }
     public int CreatedById { get; set; }
 }

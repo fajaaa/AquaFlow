@@ -111,7 +111,6 @@ public class MeterReadingService
             Tax = 0m,
             TotalAmount = subtotal,
             Status = InvoiceStatus.Draft,
-            DueDate = null,
             CreatedById = callerUserId
         };
         invoice.InvoiceItems.Add(new InvoiceItem

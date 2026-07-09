@@ -4,6 +4,7 @@ using AquaFlow.Services.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AquaFlow.Services.Migrations
 {
     [DbContext(typeof(AquaFlowDbContext))]
-    partial class AquaFlowDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260709114646_AddInvoicesManagePermission")]
+    partial class AddInvoicesManagePermission
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -645,6 +648,9 @@ namespace AquaFlow.Services.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("InvoiceNumber")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -702,6 +708,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 168.40m,
                             CustomerId = 1,
+                            DueDate = new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceNumber = "INV-2026-0001",
                             PreviousReading = 154.20m,
                             Status = "Issued",
