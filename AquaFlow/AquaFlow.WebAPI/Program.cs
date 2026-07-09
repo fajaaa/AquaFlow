@@ -130,6 +130,10 @@ mapperConfig.NewConfig<WaterMeterRequest, WaterMeterRequestResponse>()
     .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
     .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
     .Map(destination => destination.CustomerPhone, source => source.Customer == null || source.Customer.User == null ? null : source.Customer.User.Phone);
+mapperConfig.NewConfig<Invoice, InvoiceResponse>()
+    .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
+    .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
+    .Map(destination => destination.WaterMeterSerialNumber, source => source.WaterMeter == null ? string.Empty : source.WaterMeter.SerialNumber);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
