@@ -74,6 +74,18 @@ public class UserNotificationService
                     userNotification.Notification.Type.Contains(searchText)));
         }
 
+        // IsRead has no direct entity counterpart (the column is ReadAt, a
+        // timestamp, not a bool), so the reflection-based base ApplyFilters
+        // silently skips it - handled explicitly here instead. Used by the
+        // mobile clients' unread-count badge via GET /UserNotifications/mine?
+        // IsRead=false&IncludeTotalCount=true.
+        if (search?.IsRead is { } isRead)
+        {
+            query = isRead
+                ? query.Where(userNotification => userNotification.ReadAt != null)
+                : query.Where(userNotification => userNotification.ReadAt == null);
+        }
+
         return query;
     }
 

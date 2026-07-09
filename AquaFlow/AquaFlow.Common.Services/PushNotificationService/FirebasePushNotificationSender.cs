@@ -46,7 +46,12 @@ public class FirebasePushNotificationSender : IPushNotificationSender
                 Tokens = batch,
 #pragma warning restore CS0618
                 Notification = new Notification { Title = title, Body = body },
-                Data = new Dictionary<string, string>(data)
+                Data = new Dictionary<string, string>(data),
+                Android = new AndroidConfig
+                {
+                    Priority = Priority.High,
+                    Notification = new AndroidNotification { ChannelId = "high_importance_channel" }
+                }
             };
 
             BatchResponse response;

@@ -119,6 +119,40 @@ class NotificationService {
     return UserNotificationItem.fromJson(first);
   }
 
+  /// Number of unread inbox rows for the signed-in user, used for the mobile
+  /// shells' "Obavijesti" tab badge. Backed by the same `/UserNotifications/
+  /// mine` endpoint as [fetchMine] - `IsRead=false` + `IncludeTotalCount=true`
+  /// + `PageSize=1` so only the count is paid for, not a full page of items.
+  Future<int> fetchUnreadCount() async {
+    final token = await _requireToken();
+
+    final uri = Uri.parse('${ApiConfig.baseUrl}/UserNotifications/mine')
+        .replace(
+          queryParameters: {
+            'IsRead': 'false',
+            'IncludeTotalCount': 'true',
+            'PageSize': '1',
+          },
+        );
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw NotificationException(
+        _messageFor(response, 'Broj nepročitanih obavijesti nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const NotificationException('Odgovor je u neispravnom formatu.');
+    }
+
+    return (decoded['totalCount'] as num?)?.toInt() ?? 0;
+  }
+
   Future<String> _requireToken() async {
     final token = await _tokenStorage.getAccessToken();
     if (token == null) {

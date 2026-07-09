@@ -28,12 +28,19 @@ class PushMessageHandler {
   PushMessageHandler({
     required this._navigatorKey,
     required this._scaffoldMessengerKey,
+    this.onForegroundMessage,
     NotificationService? notificationService,
   }) : _notificationService = notificationService ?? NotificationService();
 
   final GlobalKey<NavigatorState> _navigatorKey;
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey;
   final NotificationService _notificationService;
+
+  /// Called for every foreground push (`onMessage`) so callers can bump an
+  /// unread-count badge without a full refetch. Not called for the two tap
+  /// paths (`onMessageOpenedApp`/cold start) - those resume an already-open
+  /// notification rather than deliver a new unread one.
+  final VoidCallback? onForegroundMessage;
 
   /// Call once at mobile app startup, AFTER `runApp` so [_navigatorKey] is
   /// already attached to a live [NavigatorState] (needed because a cold start
@@ -50,6 +57,8 @@ class PushMessageHandler {
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
+    onForegroundMessage?.call();
+
     final title = message.notification?.title;
     if (title == null || title.isEmpty) return;
 

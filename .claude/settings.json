@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"C:/Users/Kenan/Documents/AquaFlow/AquaFlow/UI/build/windows/x64/extracted\" 2>&1; echo \"---\"; ls \"C:/Users/Kenan/Documents/AquaFlow/AquaFlow/UI/windows/flutter/ephemeral/.plugin_symlinks/firebase_core/windows\" 2>&1)",
+      "Read(//c/Users/Kenan/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core-4.11.0/windows/**)",
+      "Read(//c/Users/Kenan/Documents/AquaFlow/AquaFlow/UI/windows/flutter/ephemeral/.plugin_symlinks/firebase_core/windows/**)",
+      "PowerShell(Get-MpThreatDetection)",
+      "PowerShell(Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, AntivirusEnabled, IsTamperProtected; Write-Host \"---exclusions---\"; \\(Get-MpPreference\\).ExclusionPath)",
+      "PowerShell($p = \"$env:TEMP\\\\firebase_test.zip\"; if \\(Test-Path $p\\) { \\(Get-Item $p\\).Length } else { \"not created yet\" })",
+      "PowerShell(Test-NetConnection dl.google.com -Port 443)",
+      "Bash(cmake --version)",
+      "Bash(where cmake *)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(rm -rf extracted)",
+      "Bash(mv extracted_test extracted)",
+      "Bash(env)",
+      "Bash(dotnet user-secrets *)",
+      "Bash(tasklist //FI \"PID eq 18016\")",
+      "Bash(taskkill //PID 18016 //F)"
+    ]
+  }
+}

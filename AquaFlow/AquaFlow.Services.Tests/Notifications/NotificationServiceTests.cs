@@ -503,6 +503,68 @@ public class NotificationServiceTests
         Assert.Empty(pushSender.Calls);
     }
 
+    [Fact]
+    public async Task GetAllAsync_ForUser_FiltersByIsRead()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+        context.Notifications.AddRange(
+            new Notification
+            {
+                Id = 900,
+                Title = "Nepročitana obavijest",
+                Body = "Sadrzaj obavijesti.",
+                Type = "Info",
+                Audience = "Customers",
+                CreatedById = AdminUserId,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Notification
+            {
+                Id = 901,
+                Title = "Pročitana obavijest",
+                Body = "Novi racun je dostupan.",
+                Type = "Billing",
+                Audience = "Customers",
+                CreatedById = AdminUserId,
+                CreatedAt = DateTime.UtcNow
+            });
+        await context.SaveChangesAsync();
+
+        var service = CreateUserNotificationService(context);
+        // Backfill both inbox rows for the customer first, then mark one read.
+        await service.GetAllAsync(new UserNotificationSearchObject { UserId = CustomerUserId });
+        var readRow = await context.UserNotifications.SingleAsync(userNotification =>
+            userNotification.UserId == CustomerUserId && userNotification.NotificationId == 901);
+        readRow.ReadAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+
+        var unreadPage = await service.GetAllAsync(new UserNotificationSearchObject
+        {
+            UserId = CustomerUserId,
+            IsRead = false,
+            Page = 1,
+            PageSize = 10,
+            IncludeTotalCount = true
+        });
+        var unreadItem = Assert.Single(unreadPage.Items);
+        Assert.Equal(1, unreadPage.TotalCount);
+        Assert.Equal(900, unreadItem.NotificationId);
+
+        var readPage = await service.GetAllAsync(new UserNotificationSearchObject
+        {
+            UserId = CustomerUserId,
+            IsRead = true,
+            Page = 1,
+            PageSize = 10,
+            IncludeTotalCount = true
+        });
+        var readItem = Assert.Single(readPage.Items);
+        Assert.Equal(1, readPage.TotalCount);
+        Assert.Equal(901, readItem.NotificationId);
+    }
+
     private static NotificationService CreateNotificationService(
         AquaFlowDbContext context,
         IPushNotificationSender? pushNotificationSender = null)
