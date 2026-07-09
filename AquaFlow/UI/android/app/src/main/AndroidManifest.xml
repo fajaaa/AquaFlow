@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required on Android 13+ (API 33) to show push notifications; the app must
+         also request this permission at runtime (see UI/README.md - Push notifications). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="aquaflow_desktop"
         android:name="${applicationName}"

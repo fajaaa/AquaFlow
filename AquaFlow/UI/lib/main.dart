@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +9,14 @@ import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/login_screen.dart';
 import 'package:aquaflow_desktop/shared/theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Push (FCM) is mobile-only - there is no admin desktop UI for it and the
+  // app never ships as a web build (see the kIsWeb block below), so Firebase
+  // is only initialized on Android/iOS. Same platform check as [PlatformGate].
+  if (!kIsWeb && !PlatformGate.isDesktop) {
+    await Firebase.initializeApp();
+  }
   runApp(const AquaFlowApp());
 }
 

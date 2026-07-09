@@ -49,3 +49,9 @@ app.*.map.json
 # (our dev-only cleartext-traffic exception). Re-include that folder so it stays
 # tracked. This does NOT affect the /android/app/debug build-output rule above.
 !/android/app/src/debug/
+
+# Firebase (push notifications) - project-specific, developer-provided config.
+# Never commit these; each developer downloads their own from the Firebase console.
+# See README.md ("Push notifications") for where to put them.
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
