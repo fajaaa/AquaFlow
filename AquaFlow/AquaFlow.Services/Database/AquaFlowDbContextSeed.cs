@@ -197,6 +197,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 13,
+                Code = "Invoices.Manage",
+                Name = "Manage invoices",
+                Module = "Invoices",
+                Description = "Allows issuing, cancelling, and recording payments against invoices.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -328,6 +339,14 @@ public partial class AquaFlowDbContext
                 Id = 16,
                 UserRoleId = 1,
                 PermissionId = 12,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 17,
+                UserRoleId = 1,
+                PermissionId = 13,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
