@@ -15,6 +15,7 @@ AquaFlow/AquaFlow.WebAPI/appsettings.Development.json
 
 # Claude Code local settings (machine-specific permissions/state, not shared)
 .claude/
+.claude/settings.json
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
