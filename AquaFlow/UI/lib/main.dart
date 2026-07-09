@@ -7,17 +7,33 @@ import 'package:aquaflow_desktop/app/platform_gate.dart';
 import 'package:aquaflow_desktop/app/unavailable_screen.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/login_screen.dart';
+import 'package:aquaflow_desktop/shared/services/push_message_handler.dart';
 import 'package:aquaflow_desktop/shared/theme/app_theme.dart';
+
+/// Root navigator/messenger keys, needed so [PushMessageHandler] can push a
+/// route and show a SnackBar from FCM's top-level message callbacks, which
+/// run outside any screen's own [BuildContext].
+final _navigatorKey = GlobalKey<NavigatorState>();
+final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Push (FCM) is mobile-only - there is no admin desktop UI for it and the
   // app never ships as a web build (see the kIsWeb block below), so Firebase
   // is only initialized on Android/iOS. Same platform check as [PlatformGate].
-  if (!kIsWeb && !PlatformGate.isDesktop) {
+  final isMobile = !kIsWeb && !PlatformGate.isDesktop;
+  if (isMobile) {
     await Firebase.initializeApp();
   }
   runApp(const AquaFlowApp());
+  if (isMobile) {
+    // Runs after runApp so `_navigatorKey.currentState` is already attached -
+    // a cold start can resolve getInitialMessage() immediately.
+    await PushMessageHandler(
+      navigatorKey: _navigatorKey,
+      scaffoldMessengerKey: _scaffoldMessengerKey,
+    ).init();
+  }
 }
 
 class AquaFlowApp extends StatelessWidget {
@@ -29,6 +45,8 @@ class AquaFlowApp extends StatelessWidget {
       // Restore any saved session as soon as the provider is created.
       create: (_) => AuthProvider()..bootstrap(),
       child: MaterialApp(
+        navigatorKey: _navigatorKey,
+        scaffoldMessengerKey: _scaffoldMessengerKey,
         title: 'AquaFlow',
         theme: AppTheme.light,
         home: const _AppEntry(),

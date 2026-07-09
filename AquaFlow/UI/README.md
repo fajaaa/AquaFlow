@@ -101,9 +101,9 @@ committed (see `.gitignore`).
    `flutter run` targeting Android fails immediately with a clear
    "File google-services.json is missing" error.
 3. `POST_NOTIFICATIONS` (required on Android 13+ to actually show a notification)
-   is declared in `android/app/src/main/AndroidManifest.xml`. The manifest entry
-   alone does not prompt the user - requesting it at runtime is wired up in a
-   follow-up change.
+   is declared in `android/app/src/main/AndroidManifest.xml`; the runtime prompt
+   itself is requested by `PushNotificationService.requestPermissionAndRegister()`
+   (see below).
 
 ### iOS
 
@@ -128,10 +128,11 @@ committed (see `.gitignore`).
    (or just `flutter build ios` / `flutter run`, which does this for you) before
    opening `Runner.xcworkspace`.
 
-### Not covered by this change
+### Client wiring
 
-Requesting the `POST_NOTIFICATIONS` runtime permission on Android 13+, calling
-`FirebaseMessaging.instance.requestPermission()` on iOS, reading/refreshing the
-device token, and registering it with `POST /DeviceTokens/register` are wired up
-in a follow-up change - this one only makes `FirebaseMessaging.instance`
-available and buildable on both platforms.
+Runtime permission requests, device-token registration/refresh, and
+foreground/background/terminated message handling are all wired up client-side.
+See the `PushNotificationService`/`PushMessageHandler`/`AuthProvider` bullets in
+the repo `AGENTS.md` for how. Only the native config above (the two
+developer-supplied files and the Xcode capability) still has to be done by hand
+per machine.

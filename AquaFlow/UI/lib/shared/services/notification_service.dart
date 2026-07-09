@@ -77,6 +77,48 @@ class NotificationService {
     );
   }
 
+  /// Looks up the caller's inbox row for [notificationId] via
+  /// `/UserNotifications/mine?NotificationId=` - used to resolve a push's
+  /// `notificationId` data payload (see `NotificationService.InsertAsync` on
+  /// the backend) to a full [UserNotificationItem] when nothing is already
+  /// loaded in memory, e.g. a cold start from a tapped notification. Returns
+  /// null when no matching row exists for the signed-in user.
+  Future<UserNotificationItem?> fetchByNotificationId(
+    int notificationId,
+  ) async {
+    final token = await _requireToken();
+
+    final uri = Uri.parse('${ApiConfig.baseUrl}/UserNotifications/mine')
+        .replace(
+          queryParameters: {
+            'NotificationId': '$notificationId',
+            'PageSize': '1',
+          },
+        );
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw NotificationException(
+        _messageFor(response, 'Obavijest nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const NotificationException('Obavijest je u neispravnom formatu.');
+    }
+
+    final itemsJson = decoded['items'];
+    if (itemsJson is! List || itemsJson.isEmpty) return null;
+
+    final first = itemsJson.first;
+    if (first is! Map<String, dynamic>) return null;
+    return UserNotificationItem.fromJson(first);
+  }
+
   Future<String> _requireToken() async {
     final token = await _tokenStorage.getAccessToken();
     if (token == null) {
