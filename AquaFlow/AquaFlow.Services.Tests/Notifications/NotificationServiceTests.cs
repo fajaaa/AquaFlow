@@ -1,11 +1,14 @@
+using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.Validators;
 using FluentValidation;
+using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace AquaFlow.Services.Tests.Notifications;
@@ -299,9 +302,217 @@ public class NotificationServiceTests
         Assert.Equal("Billing", item.Notification?.Type);
     }
 
-    private static NotificationService CreateNotificationService(AquaFlowDbContext context)
+    [Fact]
+    public async Task InsertAsync_AllAudience_SendsPushToAllActiveDeviceTokensOfActiveUsers()
     {
-        IMapper mapper = new Mapper();
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+        SeedDeviceTokens(context);
+
+        var pushSender = new FakePushNotificationSender();
+        var service = CreateNotificationService(context, pushSender);
+
+        var response = await service.InsertAsync(new NotificationInsertRequest
+        {
+            Title = "Nova obavijest",
+            Body = "Sadrzaj obavijesti",
+            Type = "Info",
+            Audience = "All",
+            CreatedById = AdminUserId
+        });
+
+        var call = Assert.Single(pushSender.Calls);
+        Assert.Equal("Nova obavijest", call.Title);
+        Assert.Equal("Sadrzaj obavijesti", call.Body);
+        Assert.Equal(response.Id.ToString(), call.Data["notificationId"]);
+        Assert.Equal("Info", call.Data["type"]);
+        Assert.Equal(
+            new[] { "token-admin", "token-collector", "token-customer", "token-other-collector", "token-other-customer" }
+                .OrderBy(token => token),
+            call.Tokens.OrderBy(token => token));
+        Assert.DoesNotContain("token-customer-inactive", call.Tokens);
+    }
+
+    [Theory]
+    [InlineData("Customers", new[] { "token-customer", "token-other-customer" })]
+    [InlineData("Collectors", new[] { "token-collector", "token-other-collector" })]
+    public async Task InsertAsync_RoleAudience_SendsPushOnlyToThatRolesActiveTokens(string audience, string[] expectedTokens)
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+        SeedDeviceTokens(context);
+
+        var pushSender = new FakePushNotificationSender();
+        var service = CreateNotificationService(context, pushSender);
+
+        await service.InsertAsync(new NotificationInsertRequest
+        {
+            Title = "Obavijest po ulozi",
+            Body = "Sadrzaj obavijesti",
+            Type = "Info",
+            Audience = audience,
+            CreatedById = AdminUserId
+        });
+
+        var call = Assert.Single(pushSender.Calls);
+        Assert.Equal(expectedTokens.OrderBy(token => token), call.Tokens.OrderBy(token => token));
+    }
+
+    [Fact]
+    public async Task InsertAsync_SettlementAudience_SendsPushOnlyToSettlementRecipients()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+        SeedDeviceTokens(context);
+
+        var pushSender = new FakePushNotificationSender();
+        var service = CreateNotificationService(context, pushSender);
+
+        await service.InsertAsync(new NotificationInsertRequest
+        {
+            Title = "Radovi u naselju",
+            Body = "Planirani radovi na mrezi.",
+            Type = "PlannedWorks",
+            Audience = "Settlement",
+            SettlementId = 10,
+            CreatedById = AdminUserId
+        });
+
+        // Settlement 10 covers CollectorUserId and CustomerUserId only (see the
+        // InsertAsync_SettlementAudience_CreatesInboxRowsForSettlementCustomersAndCollectors test above).
+        var call = Assert.Single(pushSender.Calls);
+        Assert.Equal(
+            new[] { "token-collector", "token-customer" }.OrderBy(token => token),
+            call.Tokens.OrderBy(token => token));
+    }
+
+    [Fact]
+    public async Task InsertAsync_PushSenderThrows_StillReturnsNotificationResponse()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+        SeedDeviceTokens(context);
+
+        var pushSender = new FakePushNotificationSender { ExceptionToThrow = new InvalidOperationException("FCM unavailable") };
+        var service = CreateNotificationService(context, pushSender);
+
+        var response = await service.InsertAsync(new NotificationInsertRequest
+        {
+            Title = "Nova obavijest",
+            Body = "Sadrzaj obavijesti",
+            Type = "Info",
+            Audience = "All",
+            CreatedById = AdminUserId
+        });
+
+        Assert.True(response.Id > 0);
+        Assert.True(await context.UserNotifications.AnyAsync(userNotification => userNotification.NotificationId == response.Id));
+    }
+
+    [Fact]
+    public async Task InsertAsync_PushSenderReportsInvalidToken_DeactivatesThatDeviceToken()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+        SeedDeviceTokens(context);
+
+        var pushSender = new FakePushNotificationSender();
+        pushSender.TokensToReportInvalid.Add("token-customer");
+        var service = CreateNotificationService(context, pushSender);
+
+        await service.InsertAsync(new NotificationInsertRequest
+        {
+            Title = "Nova obavijest",
+            Body = "Sadrzaj obavijesti",
+            Type = "Info",
+            Audience = "All",
+            CreatedById = AdminUserId
+        });
+
+        var deactivatedToken = await context.DeviceTokens.SingleAsync(deviceToken => deviceToken.Token == "token-customer");
+        Assert.False(deactivatedToken.IsActive);
+
+        var untouchedToken = await context.DeviceTokens.SingleAsync(deviceToken => deviceToken.Token == "token-admin");
+        Assert.True(untouchedToken.IsActive);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DoesNotSendPush()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+        SeedDeviceTokens(context);
+
+        var pushSender = new FakePushNotificationSender();
+        var service = CreateNotificationService(context, pushSender);
+
+        var response = await service.InsertAsync(new NotificationInsertRequest
+        {
+            Title = "Nova obavijest",
+            Body = "Sadrzaj obavijesti",
+            Type = "Info",
+            Audience = "All",
+            CreatedById = AdminUserId
+        });
+        pushSender.Calls.Clear();
+
+        await service.UpdateAsync(response.Id, new NotificationUpdateRequest
+        {
+            Title = "Azurirana obavijest",
+            Body = "Novi sadrzaj",
+            Type = "Info",
+            Audience = "All",
+            CreatedById = AdminUserId
+        });
+
+        Assert.Empty(pushSender.Calls);
+    }
+
+    [Fact]
+    public async Task PatchAsync_DoesNotSendPush()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+        SeedDeviceTokens(context);
+
+        var pushSender = new FakePushNotificationSender();
+        var service = CreateNotificationService(context, pushSender);
+
+        var response = await service.InsertAsync(new NotificationInsertRequest
+        {
+            Title = "Nova obavijest",
+            Body = "Sadrzaj obavijesti",
+            Type = "Info",
+            Audience = "All",
+            CreatedById = AdminUserId
+        });
+        pushSender.Calls.Clear();
+
+        await service.PatchAsync(response.Id, new NotificationPatchRequest
+        {
+            Title = "Azurirani naslov"
+        });
+
+        Assert.Empty(pushSender.Calls);
+    }
+
+    private static NotificationService CreateNotificationService(
+        AquaFlowDbContext context,
+        IPushNotificationSender? pushNotificationSender = null)
+    {
+        // Mirrors Program.cs's AddPatchMapping, which only runs for the real app - a plain
+        // `new Mapper()` here would map every null field on NotificationPatchRequest onto the
+        // entity too (wiping e.g. Audience), same precedent as TariffServiceTests.CreateService.
+        var mapperConfig = new TypeAdapterConfig();
+        mapperConfig.NewConfig<NotificationPatchRequest, Notification>().IgnoreNullValues(true);
+        IMapper mapper = new Mapper(mapperConfig);
         var recipientService = new NotificationRecipientService(context);
 
         return new NotificationService(
@@ -310,7 +521,9 @@ public class NotificationServiceTests
             new IValidator<NotificationInsertRequest>[] { new NotificationInsertValidator() },
             new IValidator<NotificationUpdateRequest>[] { new NotificationUpdateValidator() },
             new IValidator<NotificationPatchRequest>[] { new NotificationPatchValidator() },
-            recipientService);
+            recipientService,
+            pushNotificationSender ?? new FakePushNotificationSender(),
+            NullLogger<NotificationService>.Instance);
     }
 
     private static UserNotificationService CreateUserNotificationService(AquaFlowDbContext context)
@@ -350,6 +563,19 @@ public class NotificationServiceTests
         context.CollectorProfiles.AddRange(
             new CollectorProfile { Id = 1, UserId = CollectorUserId, EmployeeCode = "COL-1", AssignedAreaId = 10 },
             new CollectorProfile { Id = 2, UserId = OtherCollectorUserId, EmployeeCode = "COL-2", AssignedAreaId = 20 });
+
+        context.SaveChanges();
+    }
+
+    private static void SeedDeviceTokens(AquaFlowDbContext context)
+    {
+        context.DeviceTokens.AddRange(
+            new DeviceToken { Id = 1, UserId = AdminUserId, Token = "token-admin", Platform = "android", IsActive = true },
+            new DeviceToken { Id = 2, UserId = CollectorUserId, Token = "token-collector", Platform = "android", IsActive = true },
+            new DeviceToken { Id = 3, UserId = CustomerUserId, Token = "token-customer", Platform = "ios", IsActive = true },
+            new DeviceToken { Id = 4, UserId = CustomerUserId, Token = "token-customer-inactive", Platform = "ios", IsActive = false },
+            new DeviceToken { Id = 5, UserId = OtherCustomerUserId, Token = "token-other-customer", Platform = "android", IsActive = true },
+            new DeviceToken { Id = 6, UserId = OtherCollectorUserId, Token = "token-other-collector", Platform = "android", IsActive = true });
 
         context.SaveChanges();
     }

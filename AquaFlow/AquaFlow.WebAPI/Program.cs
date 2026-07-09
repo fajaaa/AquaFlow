@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using AquaFlow.Common.Services.CryptoService;
+using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -12,7 +13,9 @@ using AquaFlow.Services.WaterMeterRequestStateMachine;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.RateLimiting;
 using AquaFlow.WebAPI.Services.AccessManager;
+using FirebaseAdmin;
 using FluentValidation;
+using Google.Apis.Auth.OAuth2;
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -80,6 +83,43 @@ if (string.IsNullOrWhiteSpace(jwtIssuer) ||
     throw new InvalidOperationException(
         "JWT configuration is required because authentication is enabled. " +
         "Set JwtToken__Issuer, JwtToken__Audience, and JwtToken__SecretKey with environment variables or user secrets.");
+}
+
+// Firebase Cloud Messaging (push notifications) is optional, unlike the connection string/JWT
+// config above: a missing/invalid value here must not stop the API from starting, since push is
+// a secondary feature, not auth infrastructure. When neither ServiceAccountJson nor
+// ServiceAccountJsonPath resolves to a usable credential, a no-op IPushNotificationSender is
+// registered instead (logs a warning and sends nothing) rather than throwing.
+var firebaseServiceAccountJson = builder.Configuration["Firebase:ServiceAccountJson"];
+var firebaseServiceAccountJsonPath = builder.Configuration["Firebase:ServiceAccountJsonPath"];
+var firebaseProjectId = builder.Configuration["Firebase:ProjectId"];
+
+FirebaseApp? firebaseApp = null;
+if (!string.IsNullOrWhiteSpace(firebaseServiceAccountJson))
+{
+    firebaseApp = FirebaseApp.Create(new AppOptions
+    {
+        Credential = CredentialFactory.FromJson<ServiceAccountCredential>(firebaseServiceAccountJson).ToGoogleCredential(),
+        ProjectId = string.IsNullOrWhiteSpace(firebaseProjectId) ? null : firebaseProjectId
+    });
+}
+else if (!string.IsNullOrWhiteSpace(firebaseServiceAccountJsonPath) && File.Exists(firebaseServiceAccountJsonPath))
+{
+    firebaseApp = FirebaseApp.Create(new AppOptions
+    {
+        Credential = CredentialFactory.FromFile<ServiceAccountCredential>(firebaseServiceAccountJsonPath).ToGoogleCredential(),
+        ProjectId = string.IsNullOrWhiteSpace(firebaseProjectId) ? null : firebaseProjectId
+    });
+}
+
+if (firebaseApp is not null)
+{
+    builder.Services.AddSingleton(firebaseApp);
+    builder.Services.AddScoped<IPushNotificationSender, FirebasePushNotificationSender>();
+}
+else
+{
+    builder.Services.AddScoped<IPushNotificationSender, NoOpPushNotificationSender>();
 }
 
 builder.Services.AddDbContext<AquaFlowDbContext>(options => options.UseSqlServer(connectionString));
