@@ -6,10 +6,12 @@ import '../services/notification_service.dart';
 /// Backs the unread-count badge on the mobile shells' "Obavijesti" tab
 /// (`CustomerShell`/`CollectorShell`). The count is fetched from the backend
 /// (`NotificationService.fetchUnreadCount`, `GET /UserNotifications/mine` with
-/// `IsRead=false`) when a shell mounts and whenever the tab is reselected, but
-/// resets to 0 locally as soon as `NotificationsScreen` finishes loading its
-/// list - there is no per-item "mark as read" call from the client yet, so
-/// this is a "new since last visit" badge rather than a persisted read count.
+/// `IsRead=false`) when a shell mounts and whenever the tab is reselected, and
+/// also resets to 0 locally as soon as `NotificationsScreen` finishes loading
+/// its list. [decrement] additionally ticks the count down by one whenever
+/// `NotificationDetailScreen` persists a single row's `ReadAt`, so opening a
+/// notification straight from a push (no list load in between) keeps the
+/// badge in sync too.
 class NotificationBadgeProvider extends ChangeNotifier {
   NotificationBadgeProvider({NotificationService? service})
     : _service = service ?? NotificationService();
@@ -34,6 +36,15 @@ class NotificationBadgeProvider extends ChangeNotifier {
   /// foreground, without a full refetch.
   void increment() {
     _unreadCount++;
+    notifyListeners();
+  }
+
+  /// Called once a single notification has been persisted as read (see
+  /// `NotificationDetailScreen`), so the badge reflects it immediately
+  /// without waiting for the next [refresh].
+  void decrement() {
+    if (_unreadCount <= 0) return;
+    _unreadCount--;
     notifyListeners();
   }
 

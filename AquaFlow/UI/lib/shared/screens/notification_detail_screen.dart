@@ -1,21 +1,74 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/user_notification_item.dart';
+import '../providers/notification_badge_provider.dart';
+import '../services/notification_exception.dart';
+import '../services/notification_service.dart';
 
-class NotificationDetailScreen extends StatelessWidget {
-  const NotificationDetailScreen({super.key, required this.item});
+class NotificationDetailScreen extends StatefulWidget {
+  const NotificationDetailScreen({
+    super.key,
+    required this.item,
+    this.onMarkedRead,
+  });
 
   final UserNotificationItem item;
+
+  /// Called once [item] has been persisted as read on the backend, with the
+  /// updated copy (new `readAt`) - lets a caller (e.g. `NotificationsScreen`)
+  /// patch its own in-memory list without a full refetch.
+  final ValueChanged<UserNotificationItem>? onMarkedRead;
+
+  @override
+  State<NotificationDetailScreen> createState() =>
+      _NotificationDetailScreenState();
+}
+
+class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
+  final NotificationService _service = NotificationService();
+  late UserNotificationItem _item;
+
+  @override
+  void initState() {
+    super.initState();
+    _item = widget.item;
+    if (!_item.isRead) {
+      _markAsRead();
+    }
+  }
+
+  Future<void> _markAsRead() async {
+    try {
+      await _service.markAsRead(_item.id);
+    } on NotificationException {
+      // Best-effort, same as NotificationBadgeProvider.refresh(): keep
+      // showing the notification even if the read receipt fails to save.
+      return;
+    }
+
+    if (!mounted) return;
+    final updated = _item.copyWith(readAt: DateTime.now().toUtc());
+    setState(() => _item = updated);
+    context.read<NotificationBadgeProvider>().decrement();
+    widget.onMarkedRead?.call(updated);
+  }
+
+  @override
+  void dispose() {
+    _service.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final notification = item.notification;
+    final notification = _item.notification;
     final type = notification?.type ?? '';
     final accent = _typeColor(type, theme.colorScheme);
-    final title = _title(item);
+    final title = _title(_item);
     final body = notification?.body.trim() ?? '';
-    final createdAt = notification?.createdAt ?? item.createdAt;
+    final createdAt = notification?.createdAt ?? _item.createdAt;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Obavijest')),
@@ -72,7 +125,7 @@ class NotificationDetailScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          _StatusPill(isRead: item.isRead, color: accent),
+                          _StatusPill(isRead: _item.isRead, color: accent),
                         ],
                       ),
                       const SizedBox(height: 22),
@@ -105,12 +158,12 @@ class NotificationDetailScreen extends StatelessWidget {
                           value: _formatDate(notification!.validUntil),
                         ),
                       _InfoRow(
-                        icon: item.isRead
+                        icon: _item.isRead
                             ? Icons.mark_email_read_outlined
                             : Icons.mark_email_unread_outlined,
                         label: 'Status',
-                        value: item.isRead
-                            ? 'Pročitano ${_formatDate(item.readAt)}'
+                        value: _item.isRead
+                            ? 'Pročitano ${_formatDate(_item.readAt)}'
                             : 'Novo',
                       ),
                     ],

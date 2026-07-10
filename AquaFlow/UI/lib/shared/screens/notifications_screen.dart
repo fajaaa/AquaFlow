@@ -97,9 +97,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void _openDetails(UserNotificationItem item) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => NotificationDetailScreen(item: item),
+        builder: (_) => NotificationDetailScreen(
+          item: item,
+          onMarkedRead: _applyMarkedRead,
+        ),
       ),
     );
+  }
+
+  /// Patches the just-opened item in the already-loaded page in place, so the
+  /// "Novo" badge on its list card clears without a full reload.
+  void _applyMarkedRead(UserNotificationItem updated) {
+    final pageData = _pageData;
+    if (!mounted || pageData == null) return;
+    setState(() {
+      _pageData = NotificationPage(
+        items: [
+          for (final existing in pageData.items)
+            if (existing.id == updated.id) updated else existing,
+        ],
+        totalCount: pageData.totalCount,
+      );
+    });
   }
 
   @override
