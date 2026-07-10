@@ -24,4 +24,5 @@ public class FaultReport : EntityBase
     public DateTime? ResolvedAt { get; set; }
     public ICollection<WorkOrder> WorkOrders { get; set; } = new List<WorkOrder>();
     public ICollection<FaultStatusHistory> StatusHistory { get; set; } = new List<FaultStatusHistory>();
+    public ICollection<FaultReportPhoto> Photos { get; set; } = new List<FaultReportPhoto>();
 }

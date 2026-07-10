@@ -230,9 +230,16 @@ public class FaultReportsControllerTests
         FakeFaultReportCrudService service,
         ClaimsPrincipal user,
         IEnumerable<CustomerProfileResponse> profiles)
+        => CreateController(service, user, profiles, new FakeFaultReportPhotoService());
+
+    private static FaultReportsController CreateController(
+        FakeFaultReportCrudService service,
+        ClaimsPrincipal user,
+        IEnumerable<CustomerProfileResponse> profiles,
+        FakeFaultReportPhotoService photoService)
     {
         var profileService = new FakeCustomerProfileCrudService(profiles);
-        return new FaultReportsController(service, profileService)
+        return new FaultReportsController(service, profileService, photoService)
         {
             ControllerContext = new ControllerContext
             {

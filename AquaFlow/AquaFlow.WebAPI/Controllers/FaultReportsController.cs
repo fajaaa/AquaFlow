@@ -2,6 +2,7 @@ using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
+using AquaFlow.Services;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Mvc;
@@ -15,12 +16,25 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
 {
     private const string ManagePermission = "FaultReports.Manage";
     private const string CustomerRoleName = "Customer";
+    private const string NewStatus = "New";
+    private const long MaxPhotoSizeBytes = 5 * 1024 * 1024;
+    private static readonly HashSet<string> AllowedPhotoContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    };
 
     private readonly CustomerProfileCrudService _customerProfileService;
+    private readonly IFaultReportPhotoService _photoService;
 
-    public FaultReportsController(FaultReportCrudService service, CustomerProfileCrudService customerProfileService) : base(service)
+    public FaultReportsController(
+        FaultReportCrudService service,
+        CustomerProfileCrudService customerProfileService,
+        IFaultReportPhotoService photoService) : base(service)
     {
         _customerProfileService = customerProfileService;
+        _photoService = photoService;
     }
 
     // A caller holding FaultReports.Manage (Admin/Collector, per the seeded role
@@ -138,6 +152,150 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     [RequirePermission(ManagePermission)]
     public override Task<IActionResult> Delete(int id)
         => base.Delete(id);
+
+    // Same trust model as Create: a caller holding FaultReports.Manage may attach a photo
+    // to any report; otherwise the caller must own the report (404, not Forbid, when they
+    // don't - same signal as GetById).
+    [HttpPost("{id:int}/photos")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<FaultReportPhotoResponse>> UploadPhoto(int id, IFormFile file)
+    {
+        var (_, error) = await AuthorizeReportAccessAsync(id);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        if (file is null || file.Length == 0)
+        {
+            throw new ClientException("A photo file is required.");
+        }
+
+        if (!AllowedPhotoContentTypes.Contains(file.ContentType))
+        {
+            throw new ClientException("Only JPEG, PNG, or WEBP images are allowed.");
+        }
+
+        if (file.Length > MaxPhotoSizeBytes)
+        {
+            throw new ClientException("Photo exceeds the 5MB size limit.");
+        }
+
+        using var buffer = new MemoryStream();
+        await file.CopyToAsync(buffer);
+
+        var photo = await _photoService.UploadAsync(id, buffer.ToArray(), file.ContentType, file.FileName);
+        return CreatedAtAction(nameof(GetPhoto), new { id, photoId = photo.Id }, photo);
+    }
+
+    [HttpGet("{id:int}/photos")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<FaultReportPhotoResponse>>> GetPhotos(int id)
+    {
+        var (_, error) = await AuthorizeReportAccessAsync(id);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        return Ok(await _photoService.GetMetadataAsync(id));
+    }
+
+    [HttpGet("{id:int}/photos/{photoId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPhoto(int id, int photoId)
+    {
+        var (_, error) = await AuthorizeReportAccessAsync(id);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        try
+        {
+            var photo = await _photoService.GetFileAsync(id, photoId);
+            return File(photo.Data, photo.ContentType, photo.FileName);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    // Deletion is allowed to the report's owner only while Status is still "New" (the
+    // report hasn't started being worked); a FaultReports.Manage holder may delete a
+    // photo in any status.
+    [HttpDelete("{id:int}/photos/{photoId:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletePhoto(int id, int photoId)
+    {
+        var (report, error) = await AuthorizeReportAccessAsync(id);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        if (!HasManagePermission() && !string.Equals(report!.Status, NewStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ClientException("Photos can only be removed while the report is still New.");
+        }
+
+        try
+        {
+            await _photoService.DeleteAsync(id, photoId);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    // Shared ownership gate for the photo sub-routes: mirrors GetById - a FaultReports.Manage
+    // holder passes through unfiltered, otherwise the caller must own the report (404, not
+    // Forbid, when they don't, so the response never confirms the report id exists).
+    private async Task<(FaultReportResponse? Report, ActionResult? Error)> AuthorizeReportAccessAsync(int id)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return (null, Unauthorized());
+        }
+
+        if (HasManagePermission())
+        {
+            try
+            {
+                return (await Service.GetByIdAsync(id), null);
+            }
+            catch (KeyNotFoundException)
+            {
+                return (null, NotFound());
+            }
+        }
+
+        var customerId = await ResolveCustomerProfileIdAsync(userId);
+
+        try
+        {
+            var result = await Service.GetByIdAsync(id);
+            if (customerId is null || result.CustomerId != customerId.Value)
+            {
+                return (null, NotFound());
+            }
+
+            return (result, null);
+        }
+        catch (KeyNotFoundException)
+        {
+            return (null, NotFound());
+        }
+    }
 
     private async Task<int?> ResolveCustomerProfileIdAsync(int userId)
     {
