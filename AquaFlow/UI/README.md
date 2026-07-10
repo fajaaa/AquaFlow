@@ -8,7 +8,7 @@ talk to the HTTP backend.
 ## Prerequisites
 
 - Flutter SDK (Dart `^3.12`).
-- The backend running locally. See the repo `AGENTS.md`: start SQL Server
+- The backend running locally. See the root `README.md`: start SQL Server
   (`docker compose up -d`), set the JWT/connection env vars, then
   `dotnet run --project ...AquaFlow.WebAPI... --launch-profile http`
   (listens on `http://localhost:5161` and on the PC LAN IP for physical
@@ -131,8 +131,8 @@ committed (see `.gitignore`).
 ### Client wiring
 
 Runtime permission requests, device-token registration/refresh, and
-foreground/background/terminated message handling are all wired up client-side.
-See the `PushNotificationService`/`PushMessageHandler`/`AuthProvider` bullets in
-the repo `AGENTS.md` for how. Only the native config above (the two
-developer-supplied files and the Xcode capability) still has to be done by hand
-per machine.
+foreground/background/terminated message handling are all wired up client-side -
+see `PushNotificationService`/`PushMessageHandler`/`AuthProvider` in
+`lib/shared/services` and `lib/shared/providers`. Only the native config above
+(the two developer-supplied files and the Xcode capability) still has to be
+done by hand per machine.

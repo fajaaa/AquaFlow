@@ -15,7 +15,9 @@ AquaFlow/AquaFlow.WebAPI/appsettings.Development.json
 
 # Claude Code local settings (machine-specific permissions/state, not shared)
 .claude/
-.claude/settings.json
+
+# Local-only AI agent instructions, not shared with the repository
+AGENTS.md
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
