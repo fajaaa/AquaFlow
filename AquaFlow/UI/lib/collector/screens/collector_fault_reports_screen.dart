@@ -8,9 +8,11 @@ import 'package:aquaflow_desktop/collector/services/collector_fault_report_excep
 import 'package:aquaflow_desktop/collector/services/collector_fault_report_service.dart';
 import 'package:aquaflow_desktop/collector/widgets/fault_report_status_pill.dart';
 
+// No 'New' option: a New report is by definition not yet assigned, so the
+// pinned listing below can never contain one.
 const _statusOptions = <String, String>{
   '': 'Svi statusi',
-  'New': 'Nova',
+  'Assigned': 'Dodijeljena',
   'InProgress': 'U toku',
   'Resolved': 'Riješena',
 };
@@ -20,11 +22,12 @@ const _statusOptions = <String, String>{
 /// same precedent as `CustomerFaultReportsScreen` on the customer side, which
 /// keeps the fixed 4-tab bottom nav intact.
 ///
-/// Lists every fault report - collector holds `FaultReports.Manage`, so there
-/// is no ownership pinning here (unlike `WaterMeterRequest`'s "assigned to
-/// me"). A debounced `Term` search plus a status filter both re-query the
-/// backend, same template as `CollectorWaterMetersScreen`'s search box; tap a
-/// card to open the detail screen.
+/// Lists only the reports assigned to the signed-in collector: the backend
+/// pins `AssignedCollectorId` to the caller's own `CollectorProfile` (same
+/// model as `WaterMeterRequest`'s "assigned to me" - the query here sends
+/// nothing extra). A debounced `Term` search plus a status filter both
+/// re-query the backend, same template as `CollectorWaterMetersScreen`'s
+/// search box; tap a card to open the detail screen.
 class CollectorFaultReportsScreen extends StatefulWidget {
   const CollectorFaultReportsScreen({super.key});
 

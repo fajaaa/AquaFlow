@@ -29,7 +29,7 @@ public class FaultReportService
     }
 
     protected override IQueryable<FaultReport> IncludeForRead(IQueryable<FaultReport> query) =>
-        query.Include(f => f.Customer).Include(f => f.Settlement);
+        query.Include(f => f.Customer).Include(f => f.Settlement).Include(f => f.AssignedCollector);
 
     // Guards the FK columns the insert validator only checks with GreaterThan(0) - an id that is
     // positive but doesn't exist would otherwise reach SaveChangesAsync and surface as a raw
@@ -71,12 +71,35 @@ public class FaultReportService
         }
     }
 
+    // Same rule as WaterMeterRequestService.EnsureActiveCollectorProfileAsync: a report can only be
+    // assigned to a collector profile that exists and whose linked user is still active.
+    private async Task EnsureActiveCollectorProfileAsync(int collectorId)
+    {
+        var exists = await DbContext.CollectorProfiles.AnyAsync(profile =>
+            profile.Id == collectorId &&
+            profile.User != null &&
+            profile.User.IsActive);
+
+        if (!exists)
+        {
+            throw new ClientException($"Collector profile with id {collectorId} was not found or is not active.");
+        }
+    }
+
     public async Task<FaultReportOwnership?> GetOwnershipAsync(int id)
     {
         return await DbContext.FaultReports
             .Where(f => f.Id == id)
-            .Select(f => new FaultReportOwnership(f.CustomerId, f.Status))
+            .Select(f => new FaultReportOwnership(f.CustomerId, f.Status, f.AssignedCollectorId))
             .FirstOrDefaultAsync();
+    }
+
+    public async Task<FaultReportResponse> AssignAsync(int id, int collectorId, string? note, int changedById)
+    {
+        await EnsureActiveCollectorProfileAsync(collectorId);
+
+        var report = await LoadReportAsync(id);
+        return await _stateResolver.Resolve(report.Status).AssignAsync(report, collectorId, note, changedById);
     }
 
     public async Task<FaultReportResponse> StartAsync(int id, int changedById)
@@ -117,6 +140,7 @@ public class FaultReportService
         var report = await DbContext.FaultReports
             .Include(f => f.Customer)
             .Include(f => f.Settlement)
+            .Include(f => f.AssignedCollector)
             .FirstOrDefaultAsync(f => f.Id == id);
         if (report == null)
         {
@@ -130,6 +154,7 @@ public class FaultReportService
     {
         await DbContext.Entry(entity).Reference(f => f.Customer).LoadAsync();
         await DbContext.Entry(entity).Reference(f => f.Settlement).LoadAsync();
+        await DbContext.Entry(entity).Reference(f => f.AssignedCollector).LoadAsync();
     }
 
     protected override IQueryable<FaultReport> ApplyFilters(IQueryable<FaultReport> query, FaultReportSearchObject? search)
@@ -157,6 +182,11 @@ public class FaultReportService
         if (search.SettlementId.HasValue)
         {
             query = query.Where(f => f.SettlementId == search.SettlementId.Value);
+        }
+
+        if (search.AssignedCollectorId.HasValue)
+        {
+            query = query.Where(f => f.AssignedCollectorId == search.AssignedCollectorId.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(search.Status))

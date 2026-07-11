@@ -16,20 +16,21 @@ public class FaultReportsControllerTests
 {
     private const string ManagePermission = "FaultReports.Manage";
     private const string CustomerRole = "Customer";
+    private const string CollectorRole = "Collector";
     private const string AdminRole = "Admin";
 
     // Enforcement runs in the MVC authorization filter pipeline, which a direct method
     // call bypasses (see AquaFlow.WebAPI.Tests remarks in AGENTS.md), so this pins the
     // declarative gate itself: if [RequirePermission] is ever dropped from one of these
-    // write actions or the state-machine transition actions, this test fails instead of
-    // silently reopening unauthorized writes.
+    // write actions or the Assign transition, this test fails instead of silently
+    // reopening unauthorized writes. Start/Resolve/GetAllowedActions are deliberately
+    // NOT here: they carry no permission attribute so the assigned collector can work
+    // their own reports (gated by AuthorizeAssignedCollectorOrManageAsync instead).
     [Theory]
     [InlineData(nameof(FaultReportsController.Update))]
     [InlineData(nameof(FaultReportsController.Patch))]
     [InlineData(nameof(FaultReportsController.Delete))]
-    [InlineData(nameof(FaultReportsController.Start))]
-    [InlineData(nameof(FaultReportsController.Resolve))]
-    [InlineData(nameof(FaultReportsController.GetAllowedActions))]
+    [InlineData(nameof(FaultReportsController.Assign))]
     public void WriteAction_RequiresFaultReportsManagePermission(string methodName)
     {
         var method = typeof(FaultReportsController)
@@ -104,16 +105,87 @@ public class FaultReportsControllerTests
     }
 
     [Fact]
-    public async Task GetAll_NeitherCustomerNorManagePermission_ReturnsForbid()
+    public async Task GetAll_NeitherCustomerNorCollectorNorManagePermission_ReturnsForbid()
     {
         var controller = CreateController(
-            BuildUser(userId: 5, role: "Collector", permissions: []),
+            BuildUser(userId: 5, role: "Support", permissions: []),
             profiles: [],
             reports: []);
 
         var result = await controller.GetAll(null);
 
         Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetAll_CollectorRole_ForcesOwnAssignedCollectorIdFilter()
+    {
+        var controller = CreateController(
+            new FakeFaultReportCrudService(
+            [
+                new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", AssignedCollectorId = 7 },
+                new FaultReportResponse { Id = 2, CustomerId = 20, Title = "No water", AssignedCollectorId = 8 },
+                new FaultReportResponse { Id = 3, CustomerId = 30, Title = "Burst pipe", AssignedCollectorId = null }
+            ]),
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
+
+        // Caller tries to read reports assigned to another collector via the query string filter.
+        var result = await controller.GetAll(new FaultReportSearchObject { AssignedCollectorId = 8 });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var page = Assert.IsType<PageResult<FaultReportResponse>>(ok.Value);
+        var item = Assert.Single(page.Items);
+        Assert.Equal(7, item.AssignedCollectorId);
+    }
+
+    [Fact]
+    public async Task GetAll_CollectorWithoutProfile_ReturnsEmptyPage()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", AssignedCollectorId = 7 }]);
+
+        var result = await controller.GetAll(new FaultReportSearchObject { IncludeTotalCount = true });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var page = Assert.IsType<PageResult<FaultReportResponse>>(ok.Value);
+        Assert.Empty(page.Items);
+        Assert.Equal(0, page.TotalCount);
+    }
+
+    [Fact]
+    public async Task GetById_AssignedCollector_ReturnsOk()
+    {
+        var controller = CreateController(
+            new FakeFaultReportCrudService(
+                [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", AssignedCollectorId = 7 }]),
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
+
+        var result = await controller.GetById(1);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<FaultReportResponse>(ok.Value);
+        Assert.Equal(7, response.AssignedCollectorId);
+    }
+
+    [Fact]
+    public async Task GetById_UnassignedCollector_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            new FakeFaultReportCrudService(
+                [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", AssignedCollectorId = 8 }]),
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
+
+        var result = await controller.GetById(1);
+
+        Assert.IsType<NotFoundResult>(result.Result);
     }
 
     [Fact]
@@ -356,7 +428,7 @@ public class FaultReportsControllerTests
     }
 
     [Fact]
-    public async Task Start_CallerMissingIdClaim_ThrowsClientException()
+    public async Task Start_CallerMissingIdClaim_ReturnsUnauthorized()
     {
         var service = new FakeFaultReportCrudService(
             [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }]);
@@ -365,7 +437,9 @@ public class FaultReportsControllerTests
             BuildUser(userId: null, role: AdminRole, permissions: [ManagePermission]),
             profiles: []);
 
-        await Assert.ThrowsAsync<ClientException>(() => controller.Start(1));
+        var result = await controller.Start(1);
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
         Assert.Null(service.LastChangedById);
     }
 
@@ -383,6 +457,97 @@ public class FaultReportsControllerTests
         Assert.IsType<NotFoundResult>(result.Result);
     }
 
+    // Start/Resolve carry no [RequirePermission]: the assigned collector must be able to work
+    // their own report, everyone else without Manage gets 404 - same model as the
+    // WaterMeterRequests register endpoint.
+    [Fact]
+    public async Task Start_AssignedCollector_TransitionsReport()
+    {
+        var service = new FakeFaultReportCrudService(
+            [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
+
+        var result = await controller.Start(1);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(1, service.LastTransitionId);
+        Assert.Equal(5, service.LastChangedById);
+    }
+
+    [Fact]
+    public async Task Resolve_AssignedCollector_TransitionsReport()
+    {
+        var service = new FakeFaultReportCrudService(
+            [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "InProgress", AssignedCollectorId = 7 }]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
+
+        var result = await controller.Resolve(1);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(1, service.LastTransitionId);
+        Assert.Equal(5, service.LastChangedById);
+    }
+
+    [Fact]
+    public async Task Start_UnassignedCollector_ReturnsNotFound()
+    {
+        var service = new FakeFaultReportCrudService(
+            [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 8 }]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
+
+        var result = await controller.Start(1);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+        Assert.Null(service.LastTransitionId);
+    }
+
+    [Fact]
+    public async Task Resolve_OwningCustomer_ReturnsNotFound()
+    {
+        var service = new FakeFaultReportCrudService(
+            [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "InProgress", AssignedCollectorId = 7 }]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 1, role: CustomerRole, permissions: []),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }]);
+
+        var result = await controller.Resolve(1);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+        Assert.Null(service.LastTransitionId);
+    }
+
+    [Fact]
+    public async Task Assign_PassesBodyAndJwtUserIdThrough()
+    {
+        var service = new FakeFaultReportCrudService(
+            [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 42, role: AdminRole, permissions: [ManagePermission]),
+            profiles: []);
+
+        var result = await controller.Assign(1, new FaultReportAssignRequest { CollectorId = 7, Note = "Hitno" });
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(1, service.LastTransitionId);
+        Assert.Equal(7, service.LastAssignedCollectorId);
+        Assert.Equal("Hitno", service.LastAssignNote);
+        Assert.Equal(42, service.LastChangedById);
+    }
+
     private static FaultReportsController CreateController(
         ClaimsPrincipal user,
         IEnumerable<CustomerProfileResponse> profiles,
@@ -393,19 +558,22 @@ public class FaultReportsControllerTests
         FakeFaultReportCrudService service,
         ClaimsPrincipal user,
         IEnumerable<CustomerProfileResponse> profiles,
-        IEnumerable<WaterMeterResponse>? waterMeters = null)
-        => CreateController(service, user, profiles, new FakeFaultReportPhotoService(), waterMeters);
+        IEnumerable<WaterMeterResponse>? waterMeters = null,
+        IEnumerable<CollectorProfileResponse>? collectorProfiles = null)
+        => CreateController(service, user, profiles, new FakeFaultReportPhotoService(), waterMeters, collectorProfiles);
 
     private static FaultReportsController CreateController(
         FakeFaultReportCrudService service,
         ClaimsPrincipal user,
         IEnumerable<CustomerProfileResponse> profiles,
         FakeFaultReportPhotoService photoService,
-        IEnumerable<WaterMeterResponse>? waterMeters = null)
+        IEnumerable<WaterMeterResponse>? waterMeters = null,
+        IEnumerable<CollectorProfileResponse>? collectorProfiles = null)
     {
         var profileService = new FakeCustomerProfileCrudService(profiles);
+        var collectorProfileService = new FakeCollectorProfileCrudService(collectorProfiles ?? []);
         var waterMeterService = new FakeWaterMeterCrudService(waterMeters ?? []);
-        return new FaultReportsController(service, profileService, waterMeterService, photoService)
+        return new FaultReportsController(service, profileService, collectorProfileService, waterMeterService, photoService)
         {
             ControllerContext = new ControllerContext
             {

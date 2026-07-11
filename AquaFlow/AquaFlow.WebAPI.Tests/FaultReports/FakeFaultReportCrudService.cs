@@ -19,9 +19,11 @@ public class FakeFaultReportCrudService : IFaultReportService
     public FaultReportInsertRequest? LastInsertRequest { get; private set; }
 
     // Recorded by the state-transition members below so the controller tests can pin that
-    // Start/Resolve pass the JWT-sourced user id through as changedById.
+    // Assign/Start/Resolve pass the JWT-sourced user id through as changedById.
     public int? LastTransitionId { get; private set; }
     public int? LastChangedById { get; private set; }
+    public int? LastAssignedCollectorId { get; private set; }
+    public string? LastAssignNote { get; private set; }
 
     public Task<PageResult<FaultReportResponse>> GetAllAsync(FaultReportSearchObject? search = null)
     {
@@ -29,6 +31,11 @@ public class FakeFaultReportCrudService : IFaultReportService
         if (search?.CustomerId is > 0)
         {
             items = items.Where(row => row.CustomerId == search.CustomerId);
+        }
+
+        if (search?.AssignedCollectorId is > 0)
+        {
+            items = items.Where(row => row.AssignedCollectorId == search.AssignedCollectorId);
         }
 
         var list = items.ToList();
@@ -53,7 +60,7 @@ public class FakeFaultReportCrudService : IFaultReportService
     public Task<FaultReportOwnership?> GetOwnershipAsync(int id)
     {
         var row = _rows.SingleOrDefault(row => row.Id == id);
-        return Task.FromResult(row is null ? null : new FaultReportOwnership(row.CustomerId, row.Status));
+        return Task.FromResult(row is null ? null : new FaultReportOwnership(row.CustomerId, row.Status, row.AssignedCollectorId));
     }
 
     public Task<FaultReportResponse> InsertAsync(FaultReportInsertRequest request)
@@ -84,6 +91,13 @@ public class FakeFaultReportCrudService : IFaultReportService
 
     public Task DeleteAsync(int id)
         => throw new NotSupportedException();
+
+    public Task<FaultReportResponse> AssignAsync(int id, int collectorId, string? note, int changedById)
+    {
+        LastAssignedCollectorId = collectorId;
+        LastAssignNote = note;
+        return RecordTransition(id, changedById);
+    }
 
     public Task<FaultReportResponse> StartAsync(int id, int changedById)
         => RecordTransition(id, changedById);

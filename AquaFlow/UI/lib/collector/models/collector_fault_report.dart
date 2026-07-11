@@ -1,8 +1,9 @@
 /// A fault report as returned by `/FaultReports` (`FaultReportResponse`) for
-/// the collector's read+update surface. Collector holds `FaultReports.Manage`
-/// (seeded onto both Admin and Collector, see `FaultReportsController`), so
-/// unlike `WaterMeterRequest` there is no "assigned to me" concept here - a
-/// collector can see and update every report. Mirrors `AdminFaultReport`.
+/// the collector's read+update surface. A collector no longer holds
+/// `FaultReports.Manage`: the backend pins their reads to reports assigned to
+/// their own `CollectorProfile` via `AssignedCollectorId` (same model as
+/// `WaterMeterRequest`), so this list only ever contains the collector's own
+/// assigned reports. Mirrors `AdminFaultReport`.
 class CollectorFaultReport {
   const CollectorFaultReport({
     required this.id,
@@ -36,14 +37,17 @@ class CollectorFaultReport {
   String get customerFullName => '$customerFirstName $customerLastName'.trim();
 
   bool get isNew => status.toLowerCase() == 'new';
+  bool get isAssigned => status.toLowerCase() == 'assigned';
   bool get isInProgress => status.toLowerCase() == 'inprogress';
   bool get isResolved => status.toLowerCase() == 'resolved';
 
-  /// Next status in the New -> InProgress -> Resolved chain, or null once
-  /// Resolved (terminal - same precedent as `AdminFaultReportsScreen`'s
-  /// status-advance action).
+  /// Next status in the (New/)Assigned -> InProgress -> Resolved chain, or
+  /// null once Resolved (terminal - same precedent as
+  /// `AdminFaultReportsScreen`'s status-advance action). A collector only ever
+  /// sees assigned reports, but New is kept for completeness since the
+  /// backend also allows Start straight from New.
   String? get nextStatus {
-    if (isNew) return 'InProgress';
+    if (isNew || isAssigned) return 'InProgress';
     if (isInProgress) return 'Resolved';
     return null;
   }

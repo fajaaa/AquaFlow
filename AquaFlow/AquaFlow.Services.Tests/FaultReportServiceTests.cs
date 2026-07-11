@@ -322,16 +322,159 @@ public class FaultReportServiceTests
 
         // Report 2 is New, report 1 is InProgress.
         Assert.Equal(
-            new List<string> { FaultReportAction.Start, FaultReportAction.Resolve },
+            new List<string> { FaultReportAction.Assign, FaultReportAction.Start, FaultReportAction.Resolve },
             await service.GetAllowedActionsAsync(2));
         Assert.Equal(
             new List<string> { FaultReportAction.Resolve },
             await service.GetAllowedActionsAsync(1));
 
         var report = context.FaultReports.First(f => f.Id == 1);
+        report.Status = FaultReportStatus.Assigned;
+        context.SaveChanges();
+        Assert.Equal(
+            new List<string> { FaultReportAction.Assign, FaultReportAction.Start },
+            await service.GetAllowedActionsAsync(1));
+
         report.Status = FaultReportStatus.Resolved;
         context.SaveChanges();
         Assert.Empty(await service.GetAllowedActionsAsync(1));
+    }
+
+    [Fact]
+    public async Task AssignAsync_NewReport_AssignsCollectorAndWritesHistoryWithNote()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        // Report 2 is New; collector profile 1 is seeded with an active linked user.
+        var response = await service.AssignAsync(2, collectorId: 1, note: "Hitno - centar naselja", changedById: 7);
+
+        Assert.Equal(FaultReportStatus.Assigned, response.Status);
+        Assert.Equal(1, response.AssignedCollectorId);
+        Assert.Equal("COL-0001", response.AssignedCollectorEmployeeCode);
+        Assert.Equal(1, context.FaultReports.First(f => f.Id == 2).AssignedCollectorId);
+
+        var history = Assert.Single(context.FaultStatusHistories.Where(h => h.FaultReportId == 2));
+        Assert.Equal(FaultReportStatus.New, history.OldStatus);
+        Assert.Equal(FaultReportStatus.Assigned, history.NewStatus);
+        Assert.Equal(7, history.ChangedById);
+        Assert.Contains("Hitno - centar naselja", history.Note);
+    }
+
+    [Fact]
+    public async Task AssignAsync_UnknownCollector_ThrowsClientExceptionAndWritesNoHistory()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(
+            () => service.AssignAsync(2, collectorId: 999, note: null, changedById: 7));
+
+        Assert.Contains("not found or is not active", exception.Message);
+        Assert.Null(context.FaultReports.First(f => f.Id == 2).AssignedCollectorId);
+        Assert.Empty(context.FaultStatusHistories);
+    }
+
+    [Fact]
+    public async Task AssignAsync_CollectorWithInactiveUser_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var collectorUser = context.Users.First(u => u.Id == 3);
+        collectorUser.IsActive = false;
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(
+            () => service.AssignAsync(2, collectorId: 1, note: null, changedById: 7));
+    }
+
+    [Fact]
+    public async Task AssignAsync_AssignedReport_ReassignsToAnotherCollector()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        await service.AssignAsync(2, collectorId: 1, note: null, changedById: 7);
+        var response = await service.AssignAsync(2, collectorId: 2, note: "Preraspodjela", changedById: 7);
+
+        Assert.Equal(FaultReportStatus.Assigned, response.Status);
+        Assert.Equal(2, response.AssignedCollectorId);
+        Assert.Equal("COL-0002", response.AssignedCollectorEmployeeCode);
+
+        var histories = context.FaultStatusHistories.Where(h => h.FaultReportId == 2).OrderBy(h => h.Id).ToList();
+        Assert.Equal(2, histories.Count);
+        Assert.Equal(FaultReportStatus.Assigned, histories[1].OldStatus);
+        Assert.Equal(FaultReportStatus.Assigned, histories[1].NewStatus);
+        Assert.Contains("Preraspodjela", histories[1].Note);
+    }
+
+    [Fact]
+    public async Task StartAsync_AssignedReport_TransitionsToInProgressAndKeepsCollector()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        await service.AssignAsync(2, collectorId: 1, note: null, changedById: 7);
+        var response = await service.StartAsync(2, changedById: 3);
+
+        Assert.Equal(FaultReportStatus.InProgress, response.Status);
+        // The assignment survives Start so collector pinning still matches the report.
+        Assert.Equal(1, response.AssignedCollectorId);
+        Assert.Equal(1, context.FaultReports.First(f => f.Id == 2).AssignedCollectorId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_AssignedReport_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        await service.AssignAsync(2, collectorId: 1, note: null, changedById: 7);
+
+        // Assigned only allows Assign (reassignment) and Start - resolving skips the work step.
+        await Assert.ThrowsAsync<ClientException>(() => service.ResolveAsync(2, changedById: 3));
+        Assert.Equal(FaultReportStatus.Assigned, context.FaultReports.First(f => f.Id == 2).Status);
+    }
+
+    [Theory]
+    [InlineData(FaultReportStatus.InProgress)]
+    [InlineData(FaultReportStatus.Resolved)]
+    public async Task AssignAsync_InProgressOrResolvedReport_ThrowsClientException(string status)
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var report = context.FaultReports.First(f => f.Id == 2);
+        report.Status = status;
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(
+            () => service.AssignAsync(2, collectorId: 1, note: null, changedById: 7));
+        Assert.Empty(context.FaultStatusHistories);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_AssignedCollectorIdFilter_ReturnsOnlyThatCollectorsReports()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        await service.AssignAsync(2, collectorId: 1, note: null, changedById: 7);
+
+        var page = await service.GetAllAsync(new FaultReportSearchObject { AssignedCollectorId = 1 });
+
+        var item = Assert.Single(page.Items);
+        Assert.Equal(2, item.Id);
+        Assert.Equal(1, item.AssignedCollectorId);
+
+        Assert.Empty((await service.GetAllAsync(new FaultReportSearchObject { AssignedCollectorId = 2 })).Items);
     }
 
     [Fact]
@@ -372,18 +515,25 @@ public class FaultReportServiceTests
     // Two reports, each owned by a different customer, in different settlements, so a Term search
     // can be asserted to narrow down to exactly one of them by any of the searchable fields.
     // Report 1 is InProgress, report 2 is New - together they cover every non-terminal state the
-    // transition tests need.
+    // transition tests need. Two collector profiles (both with active linked users) back the
+    // Assign/reassign tests.
     private static void SeedTwoReportsInDifferentSettlements(AquaFlowDbContext context)
     {
         context.Settlements.Add(new Settlement { Id = 1, Name = "Sarajevo", MunicipalityId = 1, PostalCode = "71000" });
         context.Settlements.Add(new Settlement { Id = 2, Name = "Ilidza", MunicipalityId = 1, PostalCode = "71210" });
 
         context.UserRoles.Add(new UserRole { Id = 1, Name = "Customer" });
+        context.UserRoles.Add(new UserRole { Id = 2, Name = "Collector" });
         context.Users.Add(new User { Id = 1, Email = "amina@aquaflow.ba", PasswordHash = "hash", PasswordSalt = "salt", UserRoleId = 1, IsActive = true });
         context.Users.Add(new User { Id = 2, Email = "haris@aquaflow.ba", PasswordHash = "hash", PasswordSalt = "salt", UserRoleId = 1, IsActive = true });
+        context.Users.Add(new User { Id = 3, Email = "collector1@aquaflow.ba", PasswordHash = "hash", PasswordSalt = "salt", UserRoleId = 2, IsActive = true });
+        context.Users.Add(new User { Id = 4, Email = "collector2@aquaflow.ba", PasswordHash = "hash", PasswordSalt = "salt", UserRoleId = 2, IsActive = true });
 
         context.CustomerProfiles.Add(new CustomerProfile { Id = 1, UserId = 1, FirstName = "Amina", LastName = "Amidzic", CustomerCode = "CUS-0001", SettlementId = 1 });
         context.CustomerProfiles.Add(new CustomerProfile { Id = 2, UserId = 2, FirstName = "Haris", LastName = "Hodzic", CustomerCode = "CUS-0002", SettlementId = 2 });
+
+        context.CollectorProfiles.Add(new CollectorProfile { Id = 1, UserId = 3, EmployeeCode = "COL-0001" });
+        context.CollectorProfiles.Add(new CollectorProfile { Id = 2, UserId = 4, EmployeeCode = "COL-0002" });
 
         context.FaultReports.Add(new FaultReport
         {
@@ -419,7 +569,8 @@ public class FaultReportServiceTests
         mapperConfig.NewConfig<FaultReport, Model.Responses.FaultReportResponse>()
             .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
             .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
-            .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name);
+            .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
+            .Map(destination => destination.AssignedCollectorEmployeeCode, source => source.AssignedCollector == null ? null : source.AssignedCollector.EmployeeCode);
         // Mirrors Program.cs's AddPatchMapping - without this, a null field in a patch
         // request (e.g. an omitted Title) would overwrite the entity's existing value with
         // null instead of leaving it untouched, same precedent as
@@ -430,6 +581,7 @@ public class FaultReportServiceTests
 
         var stateServices = new ServiceCollection();
         stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.New, (_, _) => new NewFaultReportState(context, mapper));
+        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.Assigned, (_, _) => new AssignedFaultReportState(context, mapper));
         stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.InProgress, (_, _) => new InProgressFaultReportState(context, mapper));
         stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.Resolved, (_, _) => new ResolvedFaultReportState(context, mapper));
         var stateResolver = new FaultReportStateResolver(stateServices.BuildServiceProvider());

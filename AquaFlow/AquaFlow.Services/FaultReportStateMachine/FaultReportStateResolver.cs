@@ -13,6 +13,7 @@ public class FaultReportStateResolver : IFaultReportStateResolver
     private static readonly IReadOnlySet<string> KnownStatuses = new HashSet<string>
     {
         FaultReportStatus.New,
+        FaultReportStatus.Assigned,
         FaultReportStatus.InProgress,
         FaultReportStatus.Resolved
     };

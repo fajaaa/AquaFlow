@@ -13,6 +13,7 @@ public class FaultReportPhotosControllerTests
 {
     private const string ManagePermission = "FaultReports.Manage";
     private const string CustomerRole = "Customer";
+    private const string CollectorRole = "Collector";
     private const string AdminRole = "Admin";
     private static readonly byte[] PngSignatureBytes = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
 
@@ -344,17 +345,104 @@ public class FaultReportPhotosControllerTests
         Assert.IsType<NotFoundResult>(result);
     }
 
+    // The assigned collector gets READ access to the photos (list + bytes) so they can see the
+    // customer's evidence on site, but upload/delete stay owner-while-New-or-Manage only.
+    [Fact]
+    public async Task GetPhotos_AssignedCollector_ReturnsOk()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
+            out var photoService,
+            collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
+        await photoService.UploadAsync(1, new byte[] { 1 }, "image/jpeg", "leak.jpg");
+
+        var result = await controller.GetPhotos(1);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var photos = Assert.IsType<List<FaultReportPhotoResponse>>(ok.Value);
+        Assert.Single(photos);
+    }
+
+    [Fact]
+    public async Task GetPhoto_AssignedCollector_ReturnsBytes()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
+            out var photoService,
+            collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
+        var uploaded = await photoService.UploadAsync(1, new byte[] { 1, 2, 3 }, "image/jpeg", "leak.jpg");
+
+        var result = await controller.GetPhoto(1, uploaded.Id);
+
+        var file = Assert.IsType<FileContentResult>(result);
+        Assert.Equal(new byte[] { 1, 2, 3 }, file.FileContents);
+    }
+
+    [Fact]
+    public async Task GetPhotos_UnassignedCollector_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 8 }],
+            out _,
+            collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
+
+        var result = await controller.GetPhotos(1);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task UploadPhoto_AssignedCollector_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
+            out _,
+            collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
+
+        var file = CreateFormFile(new byte[] { 0xFF, 0xD8, 0xFF }, "image/jpeg", "leak.jpg");
+
+        var result = await controller.UploadPhoto(1, file);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task DeletePhoto_AssignedCollector_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
+            out var photoService,
+            collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
+        var uploaded = await photoService.UploadAsync(1, new byte[] { 1 }, "image/jpeg", "leak.jpg");
+
+        var result = await controller.DeletePhoto(1, uploaded.Id);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
     private static FaultReportsController CreateController(
         ClaimsPrincipal user,
         IEnumerable<CustomerProfileResponse> profiles,
         IEnumerable<FaultReportResponse> reports,
-        out FakeFaultReportPhotoService photoService)
+        out FakeFaultReportPhotoService photoService,
+        IEnumerable<CollectorProfileResponse>? collectorProfiles = null)
     {
         var faultReportService = new FakeFaultReportCrudService(reports);
         var profileService = new FakeCustomerProfileCrudService(profiles);
+        var collectorProfileService = new FakeCollectorProfileCrudService(collectorProfiles ?? []);
         var waterMeterService = new FakeWaterMeterCrudService([]);
         photoService = new FakeFaultReportPhotoService();
-        return new FaultReportsController(faultReportService, profileService, waterMeterService, photoService)
+        return new FaultReportsController(faultReportService, profileService, collectorProfileService, waterMeterService, photoService)
         {
             ControllerContext = new ControllerContext
             {

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/admin/models/admin_collector_profile.dart';
 import 'package:aquaflow_desktop/admin/models/admin_fault_report.dart';
 import 'package:aquaflow_desktop/admin/models/admin_fault_report_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_fault_report_photo.dart';
@@ -14,10 +15,13 @@ import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 /// `AdminFaultReport` data layer). Same `_requestSerial`/450ms-debounce/
 /// `_runMutation`/paging template as `AdminInvoicesScreen`/`AdminTariffsScreen`.
 /// Row click opens a detail dialog with the full description and a photo
-/// gallery; a row action advances the status (New -> InProgress -> Resolved,
-/// via the backend transition endpoints `POST {id}/start`/`{id}/resolve` -
-/// the server stamps `resolvedAt` itself) behind the confirm-dialog pattern
-/// used by `AdminTariffsScreen`'s delete confirmation.
+/// gallery; row actions assign a collector (`POST {id}/assign`, pick-list
+/// from `/CollectorProfiles` - mirrors `AdminWaterMeterRequestsScreen`'s
+/// assign dialog, plus an optional note that lands in `FaultStatusHistory`)
+/// and advance the status (New/Assigned -> InProgress -> Resolved, via the
+/// backend transition endpoints `POST {id}/start`/`{id}/resolve` - the server
+/// stamps `resolvedAt` itself) behind the confirm-dialog pattern used by
+/// `AdminTariffsScreen`'s delete confirmation.
 class AdminFaultReportsScreen extends StatefulWidget {
   const AdminFaultReportsScreen({super.key});
 
@@ -28,6 +32,7 @@ class AdminFaultReportsScreen extends StatefulWidget {
 
 const _statusOptions = <String, String>{
   'New': 'Nova',
+  'Assigned': 'Dodijeljena',
   'InProgress': 'U toku',
   'Resolved': 'Riješena',
 };
@@ -148,15 +153,52 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
     );
     if (!mounted || confirmed != true) return;
 
-    // New -> start, InProgress -> resolve; the backend state machine stamps
-    // resolvedAt itself, so no date is sent from here anymore.
+    // New/Assigned -> start, InProgress -> resolve; the backend state machine
+    // stamps resolvedAt itself, so no date is sent from here anymore.
     await _runMutation(() async {
-      if (report.status == 'New') {
+      if (report.status == 'New' || report.status == 'Assigned') {
         await _service.start(report.id);
       } else {
         await _service.resolve(report.id);
       }
     }, 'Status prijave je promijenjen.');
+  }
+
+  /// Assign (or reassign) the report to a collector: pick-list from
+  /// `/CollectorProfiles` plus an optional note, mirroring
+  /// `AdminWaterMeterRequestsScreen._openAssign`.
+  Future<void> _openAssign(AdminFaultReport report) async {
+    final List<AdminCollectorProfile> collectors;
+    try {
+      collectors = await _service.fetchCollectors();
+    } on AdminFaultReportException catch (e) {
+      if (!mounted) return;
+      _showError(e.message);
+      return;
+    }
+    if (!mounted) return;
+
+    if (collectors.isEmpty) {
+      _showError('Nema dostupnih inkasanata.');
+      return;
+    }
+
+    final result = await showDialog<({int collectorId, String? note})>(
+      context: context,
+      builder: (_) => _AssignDialog(
+        collectors: collectors,
+        currentCollectorId: report.assignedCollectorId,
+      ),
+    );
+    if (!mounted || result == null) return;
+
+    await _runMutation(() async {
+      await _service.assign(
+        report.id,
+        collectorId: result.collectorId,
+        note: result.note,
+      );
+    }, 'Prijava je dodijeljena inkasantu.');
   }
 
   Future<bool?> _confirmAction({
@@ -363,6 +405,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
                       DataColumn(label: Text('Naslov')),
                       DataColumn(label: Text('Kupac')),
                       DataColumn(label: Text('Naselje')),
+                      DataColumn(label: Text('Inkasant')),
                       DataColumn(label: Text('Status')),
                       DataColumn(label: Text('Datum')),
                       DataColumn(label: Text('Akcije')),
@@ -384,12 +427,14 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
                             ),
                             DataCell(Text(item.customerFullName)),
                             DataCell(Text(item.settlementName)),
+                            DataCell(Text(_collectorLabel(item))),
                             DataCell(_StatusPill(status: item.status)),
                             DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
                               _RowActions(
                                 report: item,
                                 disabled: _mutating,
+                                onAssign: () => _openAssign(item),
                                 onAdvanceStatus: () => _advanceStatus(item),
                               ),
                             ),
@@ -418,12 +463,26 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
 String? _nextStatus(String status) {
   switch (status) {
     case 'New':
+    case 'Assigned':
       return 'InProgress';
     case 'InProgress':
       return 'Resolved';
     default:
       return null;
   }
+}
+
+/// Assign is offered while the state machine allows it: New (first assignment)
+/// and Assigned (reassignment to another collector).
+bool _canAssign(String status) => status == 'New' || status == 'Assigned';
+
+/// Table/detail label for the assigned collector: the flattened employee code,
+/// a `#id` fallback when the code is missing, or '-' while unassigned.
+String _collectorLabel(AdminFaultReport report) {
+  final collectorId = report.assignedCollectorId;
+  if (collectorId == null) return '-';
+  final code = report.assignedCollectorEmployeeCode?.trim() ?? '';
+  return code.isEmpty ? 'Inkasant #$collectorId' : code;
 }
 
 IconData _statusIcon(String status) {
@@ -501,20 +560,32 @@ class _RowActions extends StatelessWidget {
   const _RowActions({
     required this.report,
     required this.disabled,
+    required this.onAssign,
     required this.onAdvanceStatus,
   });
 
   final AdminFaultReport report;
   final bool disabled;
+  final VoidCallback onAssign;
   final VoidCallback onAdvanceStatus;
 
   @override
   Widget build(BuildContext context) {
     final next = _nextStatus(report.status);
+    final canAssign = _canAssign(report.status);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        IconButton(
+          tooltip: canAssign
+              ? (report.assignedCollectorId == null
+                    ? 'Dodijeli inkasantu'
+                    : 'Preraspodijeli drugom inkasantu')
+              : 'Dodjela više nije moguća',
+          onPressed: disabled || !canAssign ? null : onAssign,
+          icon: const Icon(Icons.assignment_ind_outlined),
+        ),
         IconButton(
           tooltip: next == null
               ? 'Prijava je riješena'
@@ -527,8 +598,8 @@ class _RowActions extends StatelessWidget {
   }
 }
 
-/// Coloured status pill: New=slate, InProgress=amber, Resolved=green - same
-/// color token pattern as `_InvoiceStatusPill`.
+/// Coloured status pill: New=slate, Assigned=blue, InProgress=amber,
+/// Resolved=green - same color token pattern as `_InvoiceStatusPill`.
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.status});
 
@@ -538,6 +609,11 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (status) {
       'New' => ('Nova', const Color(0xFF64748B), Icons.fiber_new_outlined),
+      'Assigned' => (
+        'Dodijeljena',
+        const Color(0xFF1D4ED8),
+        Icons.assignment_ind_outlined,
+      ),
       'InProgress' => (
         'U toku',
         const Color(0xFFB45309),
@@ -585,6 +661,222 @@ class _Pill extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Collector pick-list for assigning a fault report, mirroring
+/// `AdminWaterMeterRequestsScreen._AssignDialog` plus an optional "Napomena"
+/// field whose text lands in the backend's `FaultStatusHistory` note. Returns
+/// a `(collectorId, note)` record via `Navigator.pop`. The report's current
+/// collector (reassignment case) is pre-selected.
+class _AssignDialog extends StatefulWidget {
+  const _AssignDialog({required this.collectors, this.currentCollectorId});
+
+  final List<AdminCollectorProfile> collectors;
+  final int? currentCollectorId;
+
+  @override
+  State<_AssignDialog> createState() => _AssignDialogState();
+}
+
+class _AssignDialogState extends State<_AssignDialog> {
+  final TextEditingController _noteCtrl = TextEditingController();
+  int? _collectorId;
+
+  @override
+  void initState() {
+    super.initState();
+    final current = widget.currentCollectorId;
+    if (current != null &&
+        widget.collectors.any((collector) => collector.id == current)) {
+      _collectorId = current;
+    } else if (widget.collectors.length == 1) {
+      _collectorId = widget.collectors.first.id;
+    }
+  }
+
+  @override
+  void dispose() {
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  void _selectCollector(AdminCollectorProfile collector) {
+    setState(() => _collectorId = collector.id);
+  }
+
+  void _submit() {
+    final collectorId = _collectorId;
+    if (collectorId == null) return;
+    final note = _noteCtrl.text.trim();
+    Navigator.of(
+      context,
+    ).pop((collectorId: collectorId, note: note.isEmpty ? null : note));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AlertDialog(
+      title: const Text('Dodijeli inkasantu'),
+      content: SizedBox(
+        width: 820,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 300),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: theme.dividerColor.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Scrollbar(
+                    child: SingleChildScrollView(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          showCheckboxColumn: false,
+                          headingRowHeight: 44,
+                          dataRowMinHeight: 58,
+                          dataRowMaxHeight: 66,
+                          columns: const [
+                            DataColumn(label: Text('Izbor')),
+                            DataColumn(label: Text('Ime i prezime')),
+                            DataColumn(label: Text('Email')),
+                            DataColumn(label: Text('Telefon')),
+                            DataColumn(label: Text('Područje')),
+                          ],
+                          rows: [
+                            for (final collector in widget.collectors)
+                              _buildCollectorRow(context, collector),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _noteCtrl,
+              maxLength: 500,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Napomena (opcionalno)',
+                hintText: 'Razlog dodjele ili uputa inkasantu',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Odustani'),
+        ),
+        FilledButton.icon(
+          onPressed: _collectorId == null ? null : _submit,
+          icon: const Icon(Icons.assignment_ind_outlined),
+          label: const Text('Dodijeli'),
+        ),
+      ],
+    );
+  }
+
+  DataRow _buildCollectorRow(
+    BuildContext context,
+    AdminCollectorProfile collector,
+  ) {
+    final theme = Theme.of(context);
+    final selected = collector.id == _collectorId;
+    final iconColor = selected
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurfaceVariant;
+
+    return DataRow(
+      selected: selected,
+      onSelectChanged: (_) => _selectCollector(collector),
+      cells: [
+        DataCell(
+          Icon(
+            selected
+                ? Icons.radio_button_checked
+                : Icons.radio_button_unchecked,
+            color: iconColor,
+            size: 20,
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 230,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  collector.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _profileLabel(collector),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 220,
+            child: Text(
+              _textOrDash(collector.email),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 150,
+            child: Text(
+              _textOrDash(collector.phone),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        DataCell(Text(collector.areaLabel)),
+      ],
+    );
+  }
+
+  String _profileLabel(AdminCollectorProfile collector) {
+    final code = collector.employeeCode.trim();
+    if (code.isNotEmpty) return code;
+    return 'Profil #${collector.id}';
+  }
+
+  String _textOrDash(String value) {
+    final text = value.trim();
+    return text.isEmpty ? '-' : text;
   }
 }
 
@@ -667,6 +959,8 @@ class _FaultReportDetailDialogState extends State<_FaultReportDetailDialog> {
               _KeyValueRow(label: 'Kupac', value: report.customerFullName),
               const SizedBox(height: 6),
               _KeyValueRow(label: 'Naselje', value: report.settlementName),
+              const SizedBox(height: 6),
+              _KeyValueRow(label: 'Inkasant', value: _collectorLabel(report)),
               const SizedBox(height: 6),
               _KeyValueRow(
                 label: 'Prijavljeno',

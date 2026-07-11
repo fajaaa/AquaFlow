@@ -8,6 +8,7 @@ using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Mvc;
 
+using CollectorProfileCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.CollectorProfileResponse, AquaFlow.Model.SearchObjects.CollectorProfileSearchObject, AquaFlow.Model.Requests.CollectorProfileInsertRequest, AquaFlow.Model.Requests.CollectorProfileUpdateRequest, AquaFlow.Model.Requests.CollectorProfilePatchRequest>;
 using CustomerProfileCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.CustomerProfileResponse, AquaFlow.Model.SearchObjects.CustomerProfileSearchObject, AquaFlow.Model.Requests.CustomerProfileInsertRequest, AquaFlow.Model.Requests.CustomerProfileUpdateRequest, AquaFlow.Model.Requests.CustomerProfilePatchRequest>;
 using WaterMeterCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.WaterMeterResponse, AquaFlow.Model.SearchObjects.WaterMeterSearchObject, AquaFlow.Model.Requests.WaterMeterInsertRequest, AquaFlow.Model.Requests.WaterMeterUpdateRequest, AquaFlow.Model.Requests.WaterMeterPatchRequest>;
 
@@ -16,6 +17,7 @@ namespace AquaFlow.WebAPI.Controllers;
 public class FaultReportsController : BaseCRUDController<FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest, IFaultReportService>
 {
     private const string ManagePermission = "FaultReports.Manage";
+    private const string CollectorRoleName = "Collector";
     private const string CustomerRoleName = "Customer";
     private const long MaxPhotoSizeBytes = 5 * 1024 * 1024;
     private const int MaxPhotosPerReport = 5;
@@ -27,24 +29,28 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     };
 
     private readonly CustomerProfileCrudService _customerProfileService;
+    private readonly CollectorProfileCrudService _collectorProfileService;
     private readonly WaterMeterCrudService _waterMeterService;
     private readonly IFaultReportPhotoService _photoService;
 
     public FaultReportsController(
         IFaultReportService service,
         CustomerProfileCrudService customerProfileService,
+        CollectorProfileCrudService collectorProfileService,
         WaterMeterCrudService waterMeterService,
         IFaultReportPhotoService photoService) : base(service)
     {
         _customerProfileService = customerProfileService;
+        _collectorProfileService = collectorProfileService;
         _waterMeterService = waterMeterService;
         _photoService = photoService;
     }
 
-    // A caller holding FaultReports.Manage (Admin/Collector, per the seeded role
-    // assignment) passes through unmodified. A Customer only ever sees their own
-    // reports: the search is pinned to their CustomerProfile id (resolved from the
-    // JWT user id) regardless of what the query string asked for.
+    // A caller holding FaultReports.Manage (Admin, per the seeded role assignment) passes
+    // through unmodified. A Customer only ever sees their own reports (pinned to their
+    // CustomerProfile id), a Collector only reports assigned to their own CollectorProfile
+    // (pinned via AssignedCollectorId) - both resolved from the JWT user id regardless of
+    // what the query string asked for, same model as WaterMeterRequestsController.GetAll.
     public override async Task<ActionResult<PageResult<FaultReportResponse>>> GetAll([FromQuery] FaultReportSearchObject? search)
     {
         if (HasManagePermission())
@@ -57,30 +63,47 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
             return Unauthorized();
         }
 
-        if (!IsCustomer())
+        if (IsCustomer())
         {
-            return Forbid();
-        }
-
-        var customerId = await ResolveCustomerProfileIdAsync(userId);
-        if (customerId is null)
-        {
-            // A customer without a profile owns no reports; short-circuit rather than
-            // fall through to the unfiltered listing.
-            return Ok(new PageResult<FaultReportResponse>
+            var customerId = await ResolveCustomerProfileIdAsync(userId);
+            if (customerId is null)
             {
-                Items = new List<FaultReportResponse>(),
-                TotalCount = search?.IncludeTotalCount == true ? 0 : null
-            });
+                // A customer without a profile owns no reports; short-circuit rather than
+                // fall through to the unfiltered listing.
+                return Ok(new PageResult<FaultReportResponse>
+                {
+                    Items = new List<FaultReportResponse>(),
+                    TotalCount = search?.IncludeTotalCount == true ? 0 : null
+                });
+            }
+
+            search ??= new FaultReportSearchObject();
+            search.CustomerId = customerId;
+            return await base.GetAll(search);
         }
 
-        search ??= new FaultReportSearchObject();
-        search.CustomerId = customerId;
-        return await base.GetAll(search);
+        if (IsCollector())
+        {
+            var collectorId = await ResolveCollectorProfileIdAsync(userId);
+            if (collectorId is null)
+            {
+                return Ok(new PageResult<FaultReportResponse>
+                {
+                    Items = new List<FaultReportResponse>(),
+                    TotalCount = search?.IncludeTotalCount == true ? 0 : null
+                });
+            }
+
+            search ??= new FaultReportSearchObject();
+            search.AssignedCollectorId = collectorId;
+            return await base.GetAll(search);
+        }
+
+        return Forbid();
     }
 
-    // Returns NotFound (not Forbid) for another customer's report so the response does
-    // not reveal whether the id exists - same signal as WaterMetersController.GetById.
+    // Returns NotFound (not Forbid) for another customer's/collector's report so the response
+    // does not reveal whether the id exists - same signal as WaterMetersController.GetById.
     public override async Task<ActionResult<FaultReportResponse>> GetById(int id)
     {
         if (HasManagePermission())
@@ -93,22 +116,33 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
             return Unauthorized();
         }
 
-        if (!IsCustomer())
-        {
-            return Forbid();
-        }
-
-        var customerId = await ResolveCustomerProfileIdAsync(userId);
-
         try
         {
             var result = await Service.GetByIdAsync(id);
-            if (customerId is null || result.CustomerId != customerId.Value)
+
+            if (IsCustomer())
             {
-                return NotFound();
+                var customerId = await ResolveCustomerProfileIdAsync(userId);
+                if (customerId is null || result.CustomerId != customerId.Value)
+                {
+                    return NotFound();
+                }
+
+                return Ok(result);
             }
 
-            return Ok(result);
+            if (IsCollector())
+            {
+                var collectorId = await ResolveCollectorProfileIdAsync(userId);
+                if (collectorId is null || result.AssignedCollectorId != collectorId.Value)
+                {
+                    return NotFound();
+                }
+
+                return Ok(result);
+            }
+
+            return Forbid();
         }
         catch (KeyNotFoundException)
         {
@@ -165,28 +199,61 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     public override Task<IActionResult> Delete(int id)
         => base.Delete(id);
 
+    [HttpPost("{id:int}/assign")]
     [RequirePermission(ManagePermission)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public Task<ActionResult<FaultReportResponse>> Assign(int id, [FromBody] FaultReportAssignRequest request)
+        => RunStateActionAsync(() => Service.AssignAsync(id, request.CollectorId, request.Note, ResolveChangedById()));
+
+    // No [RequirePermission] here: a Manage holder may transition any report, but the assigned
+    // collector must also be able to work their own reports - the caller must resolve to exactly
+    // the report's AssignedCollectorId or gets 404, same model as WaterMeterRequests register.
     [HttpPost("{id:int}/start")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public Task<ActionResult<FaultReportResponse>> Start(int id)
-        => RunStateActionAsync(() => Service.StartAsync(id, ResolveChangedById()));
+    public async Task<ActionResult<FaultReportResponse>> Start(int id)
+    {
+        var error = await AuthorizeAssignedCollectorOrManageAsync(id);
+        if (error is not null)
+        {
+            return error;
+        }
 
-    [RequirePermission(ManagePermission)]
+        return await RunStateActionAsync(() => Service.StartAsync(id, ResolveChangedById()));
+    }
+
     [HttpPost("{id:int}/resolve")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public Task<ActionResult<FaultReportResponse>> Resolve(int id)
-        => RunStateActionAsync(() => Service.ResolveAsync(id, ResolveChangedById()));
+    public async Task<ActionResult<FaultReportResponse>> Resolve(int id)
+    {
+        var error = await AuthorizeAssignedCollectorOrManageAsync(id);
+        if (error is not null)
+        {
+            return error;
+        }
 
-    [RequirePermission(ManagePermission)]
+        return await RunStateActionAsync(() => Service.ResolveAsync(id, ResolveChangedById()));
+    }
+
+    // Same access rule as Start/Resolve: a Manage holder resolves any id, the assigned collector
+    // only their own reports (404 otherwise).
     [HttpGet("{id:int}/allowed-actions")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<string>>> GetAllowedActions(int id)
     {
+        var error = await AuthorizeAssignedCollectorOrManageAsync(id);
+        if (error is not null)
+        {
+            return error;
+        }
+
         try
         {
             return Ok(await Service.GetAllowedActionsAsync(id));
@@ -197,9 +264,40 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
         }
     }
 
+    // Gate for the state-machine actions: a FaultReports.Manage holder passes (404 only for a
+    // genuinely missing id), anyone else must resolve to the exact CollectorProfile stored in
+    // AssignedCollectorId - a customer, an unassigned collector, and a nonexistent report all
+    // surface the same 404 so the response never confirms the id exists.
+    private async Task<ActionResult?> AuthorizeAssignedCollectorOrManageAsync(int id)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var ownership = await Service.GetOwnershipAsync(id);
+        if (ownership is null)
+        {
+            return NotFound();
+        }
+
+        if (HasManagePermission())
+        {
+            return null;
+        }
+
+        var collectorId = await ResolveCollectorProfileIdAsync(userId);
+        if (collectorId is null || ownership.AssignedCollectorId != collectorId.Value)
+        {
+            return NotFound();
+        }
+
+        return null;
+    }
+
     // Resolves the acting user for FaultStatusHistory stamping. Authentication is guaranteed by
-    // [Authorize] (via BaseReadController) plus the [RequirePermission] gates above, so the JWT
-    // Id claim is always present here - same pattern as InvoicesController.ResolveChangedById.
+    // [Authorize] (via BaseReadController), so the JWT Id claim is always present here - same
+    // pattern as InvoicesController.ResolveChangedById.
     private int ResolveChangedById()
     {
         var claim = User.FindFirst(ClaimNames.Id)?.Value;
@@ -338,7 +436,7 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<FaultReportPhotoResponse>>> GetPhotos(int id)
     {
-        var (_, error) = await AuthorizeReportAccessAsync(id);
+        var (_, error) = await AuthorizeReportAccessAsync(id, allowAssignedCollector: true);
         if (error is not null)
         {
             return error;
@@ -352,7 +450,7 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPhoto(int id, int photoId)
     {
-        var (_, error) = await AuthorizeReportAccessAsync(id);
+        var (_, error) = await AuthorizeReportAccessAsync(id, allowAssignedCollector: true);
         if (error is not null)
         {
             return error;
@@ -401,12 +499,15 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     }
 
     // Shared ownership gate for the photo sub-routes: mirrors GetById - a FaultReports.Manage
-    // holder passes through unfiltered (skipping the CustomerProfile lookup below entirely),
-    // otherwise the caller must own the report (404, not Forbid, when they don't, so the response
-    // never confirms the report id exists). Uses Service.GetOwnershipAsync's CustomerId+Status
-    // projection rather than the full GetByIdAsync (which brings in the Customer/Settlement joins
-    // the detail screen needs but these routes don't), since this runs once per photo sub-route call.
-    private async Task<(FaultReportOwnership? Ownership, ActionResult? Error)> AuthorizeReportAccessAsync(int id)
+    // holder passes through unfiltered (skipping the profile lookups below entirely), otherwise
+    // the caller must own the report (404, not Forbid, when they don't, so the response never
+    // confirms the report id exists). The READ routes (GetPhotos/GetPhoto) additionally pass
+    // allowAssignedCollector: true so the collector the report is assigned to can view the
+    // customer's photos on site; upload/delete keep the stricter owner-while-New-or-Manage rule.
+    // Uses Service.GetOwnershipAsync's projection rather than the full GetByIdAsync (which brings
+    // in the Customer/Settlement joins the detail screen needs but these routes don't), since this
+    // runs once per photo sub-route call.
+    private async Task<(FaultReportOwnership? Ownership, ActionResult? Error)> AuthorizeReportAccessAsync(int id, bool allowAssignedCollector = false)
     {
         if (!TryGetCurrentUserId(out var userId))
         {
@@ -422,6 +523,15 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
         if (HasManagePermission())
         {
             return (ownership, null);
+        }
+
+        if (allowAssignedCollector && ownership.AssignedCollectorId is not null && IsCollector())
+        {
+            var collectorId = await ResolveCollectorProfileIdAsync(userId);
+            if (collectorId is not null && ownership.AssignedCollectorId == collectorId.Value)
+            {
+                return (ownership, null);
+            }
         }
 
         var customerId = await ResolveCustomerProfileIdAsync(userId);
@@ -464,6 +574,17 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
         return page.Items.FirstOrDefault()?.Id;
     }
 
+    private async Task<int?> ResolveCollectorProfileIdAsync(int userId)
+    {
+        var page = await _collectorProfileService.GetAllAsync(new CollectorProfileSearchObject
+        {
+            UserId = userId,
+            PageSize = 1
+        });
+
+        return page.Items.FirstOrDefault()?.Id;
+    }
+
     private bool HasManagePermission()
     {
         return User.Claims.Any(claim =>
@@ -475,6 +596,12 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     {
         var role = User.FindFirst(ClaimNames.UserRole)?.Value;
         return string.Equals(role, CustomerRoleName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsCollector()
+    {
+        var role = User.FindFirst(ClaimNames.UserRole)?.Value;
+        return string.Equals(role, CollectorRoleName, StringComparison.OrdinalIgnoreCase);
     }
 
     private bool TryGetCurrentUserId(out int userId)

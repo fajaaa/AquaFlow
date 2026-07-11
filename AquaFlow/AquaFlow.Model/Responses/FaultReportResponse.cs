@@ -13,5 +13,9 @@ public class FaultReportResponse : AuditableResponse
     public string Description { get; set; } = string.Empty;
     public string? PhotoUrl { get; set; }
     public string Status { get; set; } = string.Empty;
+    public int? AssignedCollectorId { get; set; }
+    // The assigned collector's employee code, flattened from the linked CollectorProfile so the
+    // admin table can show who works the report without a per-row profile lookup.
+    public string? AssignedCollectorEmployeeCode { get; set; }
     public DateTime? ResolvedAt { get; set; }
 }

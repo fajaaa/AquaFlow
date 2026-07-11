@@ -178,7 +178,8 @@ mapperConfig.NewConfig<Invoice, InvoiceResponse>()
 mapperConfig.NewConfig<FaultReport, FaultReportResponse>()
     .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
     .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
-    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name);
+    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
+    .Map(destination => destination.AssignedCollectorEmployeeCode, source => source.AssignedCollector == null ? null : source.AssignedCollector.EmployeeCode);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
@@ -265,6 +266,7 @@ builder.Services.AddScoped<IFaultReportService, FaultReportService>();
 builder.Services.AddScoped<IBaseCRUDService<FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IFaultReportService>());
 builder.Services.AddKeyedScoped<BaseFaultReportState, NewFaultReportState>(FaultReportStatus.New);
+builder.Services.AddKeyedScoped<BaseFaultReportState, AssignedFaultReportState>(FaultReportStatus.Assigned);
 builder.Services.AddKeyedScoped<BaseFaultReportState, InProgressFaultReportState>(FaultReportStatus.InProgress);
 builder.Services.AddKeyedScoped<BaseFaultReportState, ResolvedFaultReportState>(FaultReportStatus.Resolved);
 builder.Services.AddScoped<IFaultReportStateResolver, FaultReportStateResolver>();

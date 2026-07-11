@@ -13,10 +13,11 @@ import 'package:aquaflow_desktop/shared/config/api_config.dart';
 import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 
 /// Mobile collector data layer over `/FaultReports`, following the
-/// `AdminFaultReportService` template. `FaultReports.Manage` is seeded onto
-/// both Admin and Collector (see `FaultReportsController`), so a collector
-/// reads every report - there is no "assigned to me" pinning like
-/// `WaterMeterRequest`, since `FaultReport` has no assignment concept.
+/// `AdminFaultReportService` template. A collector no longer holds
+/// `FaultReports.Manage`: the backend pins reads to reports assigned to the
+/// caller's own `CollectorProfile` via `AssignedCollectorId` (same model as
+/// `WaterMeterRequest`), and start/resolve are likewise allowed only for the
+/// assigned collector - nothing extra is sent from here.
 class CollectorFaultReportService {
   CollectorFaultReportService({
     http.Client? client,

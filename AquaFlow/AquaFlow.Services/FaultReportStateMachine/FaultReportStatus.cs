@@ -6,6 +6,7 @@ namespace AquaFlow.Services.FaultReportStateMachine;
 public static class FaultReportStatus
 {
     public const string New = "New";
+    public const string Assigned = "Assigned";
     public const string InProgress = "InProgress";
     public const string Resolved = "Resolved";
 }

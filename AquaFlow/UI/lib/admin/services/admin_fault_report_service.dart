@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import 'package:aquaflow_desktop/admin/models/admin_collector_profile.dart';
 import 'package:aquaflow_desktop/admin/models/admin_fault_report.dart';
 import 'package:aquaflow_desktop/admin/models/admin_fault_report_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_fault_report_photo.dart';
@@ -14,9 +15,11 @@ import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 
 /// Desktop admin data layer over `/FaultReports`, following the
 /// `AdminInvoiceService`/`AdminTariffService` template. `FaultReports.Manage`
-/// (seeded onto Admin/Collector) lets a caller read every report and drive the
-/// status transitions (`POST {id}/start`/`{id}/resolve`); there is no
-/// admin-side create/delete for this resource.
+/// (seeded onto Admin only - a collector is pinned to reports assigned to
+/// them) lets a caller read every report, assign a collector
+/// (`POST {id}/assign`) and drive the status transitions
+/// (`POST {id}/start`/`{id}/resolve`); there is no admin-side create/delete
+/// for this resource.
 class AdminFaultReportService {
   AdminFaultReportService({
     http.Client? client,
@@ -148,21 +151,91 @@ class AdminFaultReportService {
     return response.bodyBytes;
   }
 
-  /// `POST /FaultReports/{id}/start` (New -> InProgress). No body: the backend
-  /// state machine owns the transition (clearing `resolvedAt`) and stamps the
-  /// acting user from the JWT into `FaultStatusHistory`.
+  /// Collector pick-list for the assign dialog (`GET /CollectorProfiles`),
+  /// mirroring `AdminWaterMeterRequestService.fetchCollectors`.
+  Future<List<AdminCollectorProfile>> fetchCollectors() async {
+    final token = await _requireToken();
+    final uri = Uri.parse('${ApiConfig.baseUrl}/CollectorProfiles').replace(
+      queryParameters: {
+        'PageSize': '100',
+        'IncludeTotalCount': 'true',
+        'SortBy': 'EmployeeCode',
+      },
+    );
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw AdminFaultReportException(
+        _messageFor(response, 'Inkasante nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const AdminFaultReportException(
+        'Inkasanti su u neispravnom formatu.',
+      );
+    }
+
+    final itemsJson = decoded['items'];
+    if (itemsJson is! List) {
+      throw const AdminFaultReportException('Lista inkasanata je neispravna.');
+    }
+
+    return itemsJson
+        .whereType<Map<String, dynamic>>()
+        .map(AdminCollectorProfile.fromJson)
+        .toList();
+  }
+
+  /// `POST /FaultReports/{id}/assign` (New/Assigned -> Assigned; requires
+  /// `FaultReports.Manage`). The optional [note] is the admin's reason and
+  /// lands in the backend's `FaultStatusHistory` note.
+  Future<AdminFaultReport> assign(
+    int id, {
+    required int collectorId,
+    String? note,
+  }) {
+    final trimmedNote = note?.trim();
+    return _postTransition(
+      id,
+      'assign',
+      body: {
+        'collectorId': collectorId,
+        if (trimmedNote != null && trimmedNote.isNotEmpty) 'note': trimmedNote,
+      },
+    );
+  }
+
+  /// `POST /FaultReports/{id}/start` (New/Assigned -> InProgress). No body:
+  /// the backend state machine owns the transition (clearing `resolvedAt`) and
+  /// stamps the acting user from the JWT into `FaultStatusHistory`.
   Future<AdminFaultReport> start(int id) => _postTransition(id, 'start');
 
   /// `POST /FaultReports/{id}/resolve` (New/InProgress -> Resolved). No body:
   /// the backend stamps `resolvedAt` itself - the FE no longer sends it.
   Future<AdminFaultReport> resolve(int id) => _postTransition(id, 'resolve');
 
-  Future<AdminFaultReport> _postTransition(int id, String action) async {
+  Future<AdminFaultReport> _postTransition(
+    int id,
+    String action, {
+    Map<String, dynamic>? body,
+  }) async {
     final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id/$action');
 
     final response = await _send(
-      () => _client.post(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          if (body != null) 'Content-Type': 'application/json',
+        },
+        body: body != null ? jsonEncode(body) : null,
+      ),
     );
 
     if (response.statusCode != 200) {

@@ -18,6 +18,8 @@ class AdminFaultReport {
     required this.description,
     required this.photoUrl,
     required this.status,
+    required this.assignedCollectorId,
+    required this.assignedCollectorEmployeeCode,
     required this.resolvedAt,
     required this.createdAt,
   });
@@ -34,6 +36,12 @@ class AdminFaultReport {
   final String description;
   final String? photoUrl;
   final String status;
+
+  /// The collector the report is assigned to (`AssignedCollectorId` +
+  /// `AssignedCollectorEmployeeCode`, flattened from the linked
+  /// `CollectorProfile`); both null while the report is unassigned.
+  final int? assignedCollectorId;
+  final String? assignedCollectorEmployeeCode;
   final DateTime? resolvedAt;
   final DateTime? createdAt;
 
@@ -54,6 +62,9 @@ class AdminFaultReport {
       description: (json['description'] ?? '') as String,
       photoUrl: json['photoUrl'] as String?,
       status: (json['status'] ?? '') as String,
+      assignedCollectorId: (json['assignedCollectorId'] as num?)?.toInt(),
+      assignedCollectorEmployeeCode:
+          json['assignedCollectorEmployeeCode'] as String?,
       resolvedAt: _date(json['resolvedAt']),
       createdAt: _date(json['createdAt']),
     );

@@ -19,6 +19,8 @@ public class FaultReport : EntityBase
     public string? PhotoUrl { get; set; }
     [MaxLength(30)]
     public string Status { get; set; } = "New";
+    public int? AssignedCollectorId { get; set; }
+    public CollectorProfile? AssignedCollector { get; set; }
     public DateTime? ResolvedAt { get; set; }
     public ICollection<WorkOrder> WorkOrders { get; set; } = new List<WorkOrder>();
     public ICollection<FaultStatusHistory> StatusHistory { get; set; } = new List<FaultStatusHistory>();

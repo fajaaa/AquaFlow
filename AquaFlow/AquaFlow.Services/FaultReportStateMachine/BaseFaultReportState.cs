@@ -34,6 +34,11 @@ public abstract class BaseFaultReportState
 
     public virtual Task<FaultReportResponse> ResolveAsync(FaultReport report, int changedById) => throw NotAllowed("Resolve");
 
+    // collectorId is already validated by FaultReportService.AssignAsync (profile exists, linked
+    // user active) before the state is resolved; the optional note is the admin's reason and goes
+    // into the FaultStatusHistory row alongside the default assignment text.
+    public virtual Task<FaultReportResponse> AssignAsync(FaultReport report, int collectorId, string? note, int changedById) => throw NotAllowed("Assign");
+
     // The actions a state advertises here MUST be exactly the transition methods it overrides
     // (StartAsync -> FaultReportAction.Start, ResolveAsync -> Resolve). This list is the public
     // contract for GET {id}/allowed-actions, so it is intentionally hand-maintained next to the
@@ -68,6 +73,15 @@ public abstract class BaseFaultReportState
         });
 
         await DbContext.SaveChangesAsync();
+    }
+
+    // History note for Assign: the default assignment text, with the admin's optional reason
+    // appended - same shape as PendingWaterMeterRequestState.RejectAsync's note.
+    protected static string AssignmentNote(int collectorId, string? note)
+    {
+        return string.IsNullOrWhiteSpace(note)
+            ? $"Report assigned to collector {collectorId}."
+            : $"Report assigned to collector {collectorId}: {note}";
     }
 
     private ClientException NotAllowed(string action)

@@ -6,6 +6,7 @@ namespace AquaFlow.Services.FaultReportStateMachine;
 // references these constants instead of raw strings to keep the contract in one place.
 public static class FaultReportAction
 {
+    public const string Assign = "Assign";
     public const string Start = "Start";
     public const string Resolve = "Resolve";
 }

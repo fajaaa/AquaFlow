@@ -301,14 +301,10 @@ public partial class AquaFlowDbContext
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
-            new
-            {
-                Id = 9,
-                UserRoleId = 2,
-                PermissionId = 6,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
+            // Id = 9 (Collector + FaultReports.Manage) was deliberately removed: a collector no
+            // longer reads fault reports unfiltered - they are pinned to reports assigned to their
+            // own CollectorProfile via FaultReport.AssignedCollectorId, same model as
+            // WaterMeterRequests. Do not reuse the id.
             new
             {
                 Id = 10,

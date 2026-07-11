@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 /// Coloured status pill for a fault report, covering the backend
-/// `FaultReport.Status` values (New/InProgress/Resolved - a plain string
-/// column, not a state machine like `WaterMeterRequest`/`Invoice`). Mirrors
-/// `CustomerFaultReportsScreen`'s `FaultReportStatusPill`; kept as a separate
+/// `FaultReport.Status` values (New/Assigned/InProgress/Resolved). Mirrors
+/// `CustomerFaultReportsScreen`'s `FaultReportStatusPill` (incl. the violet
+/// Assigned - blue already means "U toku" here); kept as a separate
 /// collector-local copy, same per-role widget precedent as the rest of this
 /// folder.
 class FaultReportStatusPill extends StatelessWidget {
@@ -15,6 +15,11 @@ class FaultReportStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (status.toLowerCase()) {
       'new' => ('Nova', const Color(0xFFB45309), Icons.fiber_new_outlined),
+      'assigned' => (
+        'Dodijeljena',
+        const Color(0xFF6D28D9),
+        Icons.assignment_ind_outlined,
+      ),
       'inprogress' => (
         'U toku',
         const Color(0xFF1D4ED8),

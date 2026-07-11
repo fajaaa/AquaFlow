@@ -11,6 +11,7 @@ import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 
 const _statusLabels = <String, String>{
   'New': 'Nova',
+  'Assigned': 'Dodijeljena',
   'InProgress': 'U toku',
   'Resolved': 'Riješena',
 };
@@ -18,11 +19,13 @@ const _statusLabels = <String, String>{
 /// Detail view of a single fault report, pushed from
 /// `CollectorFaultReportsScreen`. Shows the full description plus a grid of
 /// every attached photo (same layout as `CustomerFaultReportDetailScreen`),
-/// and a status-advance action (New -> InProgress -> Resolved, disabled once
-/// Resolved - terminal, same precedent as `AdminFaultReportsScreen`'s row
-/// action) since the collector holds `FaultReports.Manage`. On pop, the
-/// caller receives the updated report (if any status change was made) so the
-/// list can be patched in place without a full reload.
+/// and a status-advance action ("Započni": Assigned -> InProgress, then
+/// "Riješi": InProgress -> Resolved; hidden once Resolved - terminal, same
+/// precedent as `AdminFaultReportsScreen`'s row action). The backend permits
+/// this without `FaultReports.Manage` because the caller resolves to the
+/// report's own `AssignedCollectorId`. On pop, the caller receives the
+/// updated report (if any status change was made) so the list can be patched
+/// in place without a full reload.
 class CollectorFaultReportDetailScreen extends StatefulWidget {
   const CollectorFaultReportDetailScreen({super.key, required this.report});
 
@@ -105,9 +108,9 @@ class _CollectorFaultReportDetailScreenState
 
     setState(() => _updatingStatus = true);
     try {
-      // New -> start, InProgress -> resolve; the backend state machine stamps
-      // resolvedAt itself, so no date is sent from here anymore.
-      final updated = _report.isNew
+      // New/Assigned -> start, InProgress -> resolve; the backend state
+      // machine stamps resolvedAt itself, so no date is sent from here.
+      final updated = _report.isNew || _report.isAssigned
           ? await _service.start(_report.id)
           : await _service.resolve(_report.id);
       if (!mounted) return;
@@ -174,6 +177,8 @@ class _CollectorFaultReportDetailScreenState
       return const SizedBox.shrink();
     }
 
+    final startsWork = next == 'InProgress';
+
     return SizedBox(
       width: double.infinity,
       child: FilledButton.icon(
@@ -184,8 +189,12 @@ class _CollectorFaultReportDetailScreenState
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Icon(Icons.check_circle_outline),
-        label: Text('Označi kao "${_statusLabels[next] ?? next}"'),
+            : Icon(
+                startsWork
+                    ? Icons.engineering_outlined
+                    : Icons.check_circle_outline,
+              ),
+        label: Text(startsWork ? 'Započni' : 'Riješi'),
       ),
     );
   }
