@@ -62,11 +62,6 @@ public class FaultReportService
             query = query.Where(f => f.Status == search.Status);
         }
 
-        if (!string.IsNullOrWhiteSpace(search.Priority))
-        {
-            query = query.Where(f => f.Priority == search.Priority);
-        }
-
         if (!string.IsNullOrWhiteSpace(search.Term))
         {
             // Lowered explicitly rather than relying on the DB collation being case-insensitive, so

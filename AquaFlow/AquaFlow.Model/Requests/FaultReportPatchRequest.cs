@@ -10,6 +10,5 @@ public class FaultReportPatchRequest
     public string? Description { get; set; }
     public string? PhotoUrl { get; set; }
     public string? Status { get; set; }
-    public string? Priority { get; set; }
     public DateTime? ResolvedAt { get; set; }
 }

@@ -60,7 +60,6 @@ public class FakeFaultReportCrudService
             Description = request.Description,
             PhotoUrl = request.PhotoUrl,
             Status = request.Status,
-            Priority = request.Priority,
             ResolvedAt = request.ResolvedAt
         };
         _rows.Add(response);

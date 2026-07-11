@@ -13,6 +13,5 @@ public class FaultReportResponse : AuditableResponse
     public string Description { get; set; } = string.Empty;
     public string? PhotoUrl { get; set; }
     public string Status { get; set; } = string.Empty;
-    public string Priority { get; set; } = string.Empty;
     public DateTime? ResolvedAt { get; set; }
 }

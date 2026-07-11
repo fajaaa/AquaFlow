@@ -18,7 +18,6 @@ class AdminFaultReport {
     required this.description,
     required this.photoUrl,
     required this.status,
-    required this.priority,
     required this.resolvedAt,
     required this.createdAt,
   });
@@ -35,7 +34,6 @@ class AdminFaultReport {
   final String description;
   final String? photoUrl;
   final String status;
-  final String priority;
   final DateTime? resolvedAt;
   final DateTime? createdAt;
 
@@ -56,7 +54,6 @@ class AdminFaultReport {
       description: (json['description'] ?? '') as String,
       photoUrl: json['photoUrl'] as String?,
       status: (json['status'] ?? '') as String,
-      priority: (json['priority'] ?? '') as String,
       resolvedAt: _date(json['resolvedAt']),
       createdAt: _date(json['createdAt']),
     );

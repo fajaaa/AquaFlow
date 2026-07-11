@@ -78,13 +78,13 @@ public class FaultReportServiceTests
     }
 
     [Fact]
-    public async Task GetAllAsync_StatusAndPriorityFilters_StillWorkWithoutTerm()
+    public async Task GetAllAsync_StatusFilter_StillWorksWithoutTerm()
     {
         await using var context = CreateContext();
         SeedTwoReportsInDifferentSettlements(context);
         var service = CreateService(context);
 
-        var page = await service.GetAllAsync(new FaultReportSearchObject { Status = "New", Priority = "High" });
+        var page = await service.GetAllAsync(new FaultReportSearchObject { Status = "New" });
 
         var item = Assert.Single(page.Items);
         Assert.Equal("No water pressure", item.Title);
@@ -121,8 +121,7 @@ public class FaultReportServiceTests
             SettlementId = 1,
             Title = "Leak in the basement",
             Description = "Water pooling near the meter.",
-            Status = "InProgress",
-            Priority = "Medium"
+            Status = "InProgress"
         });
         context.FaultReports.Add(new FaultReport
         {
@@ -132,8 +131,7 @@ public class FaultReportServiceTests
             SettlementId = 2,
             Title = "No water pressure",
             Description = "Low pressure since yesterday.",
-            Status = "New",
-            Priority = "High"
+            Status = "New"
         });
 
         context.SaveChanges();

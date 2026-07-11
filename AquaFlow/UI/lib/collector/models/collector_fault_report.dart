@@ -15,7 +15,6 @@ class CollectorFaultReport {
     required this.title,
     required this.description,
     required this.status,
-    required this.priority,
     required this.resolvedAt,
     required this.createdAt,
   });
@@ -30,7 +29,6 @@ class CollectorFaultReport {
   final String title;
   final String description;
   final String status;
-  final String priority;
   final DateTime? resolvedAt;
   final DateTime? createdAt;
 
@@ -62,7 +60,6 @@ class CollectorFaultReport {
       title: (json['title'] ?? '') as String,
       description: (json['description'] ?? '') as String,
       status: (json['status'] ?? '') as String,
-      priority: (json['priority'] ?? '') as String,
       resolvedAt: _date(json['resolvedAt']),
       createdAt: _date(json['createdAt']),
     );

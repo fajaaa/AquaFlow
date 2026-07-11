@@ -15,7 +15,7 @@ import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 /// Desktop admin data layer over `/FaultReports`, following the
 /// `AdminInvoiceService`/`AdminTariffService` template. `FaultReports.Manage`
 /// (seeded onto Admin/Collector) lets a caller read every report and PATCH
-/// Status/Priority; there is no admin-side create/delete for this resource.
+/// Status; there is no admin-side create/delete for this resource.
 class AdminFaultReportService {
   AdminFaultReportService({
     http.Client? client,
@@ -34,7 +34,6 @@ class AdminFaultReportService {
     required int pageSize,
     String? term,
     String? status,
-    String? priority,
     int? customerId,
   }) async {
     final token = await _requireToken();
@@ -52,9 +51,6 @@ class AdminFaultReportService {
     }
     if (status != null && status.isNotEmpty) {
       query['Status'] = status;
-    }
-    if (priority != null && priority.isNotEmpty) {
-      query['Priority'] = priority;
     }
     if (customerId != null) {
       query['CustomerId'] = '$customerId';
@@ -167,10 +163,6 @@ class AdminFaultReportService {
     }
     return _patch(id, body);
   }
-
-  /// `PATCH /FaultReports/{id}` with just `{ priority }`.
-  Future<AdminFaultReport> updatePriority(int id, String priority) =>
-      _patch(id, {'priority': priority});
 
   Future<AdminFaultReport> _patch(int id, Map<String, dynamic> body) async {
     final token = await _requireToken();

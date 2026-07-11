@@ -14,10 +14,9 @@ import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 /// `AdminFaultReport` data layer). Same `_requestSerial`/450ms-debounce/
 /// `_runMutation`/paging template as `AdminInvoicesScreen`/`AdminTariffsScreen`.
 /// Row click opens a detail dialog with the full description and a photo
-/// gallery; row actions advance the status (New -> InProgress -> Resolved,
-/// stamping `resolvedAt` only on the Resolved transition) and change the
-/// priority, both behind the confirm-dialog pattern used by
-/// `AdminTariffsScreen`'s delete confirmation.
+/// gallery; a row action advances the status (New -> InProgress -> Resolved,
+/// stamping `resolvedAt` only on the Resolved transition) behind the
+/// confirm-dialog pattern used by `AdminTariffsScreen`'s delete confirmation.
 class AdminFaultReportsScreen extends StatefulWidget {
   const AdminFaultReportsScreen({super.key});
 
@@ -32,13 +31,6 @@ const _statusOptions = <String, String>{
   'Resolved': 'Riješena',
 };
 
-const _priorityOptions = <String, String>{
-  'Low': 'Niska',
-  'Medium': 'Srednja',
-  'High': 'Visoka',
-  'Critical': 'Kritična',
-};
-
 class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
   final AdminFaultReportService _service = AdminFaultReportService();
   final TextEditingController _searchCtrl = TextEditingController();
@@ -49,7 +41,6 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
   bool _mutating = false;
   String? _error;
   String? _statusFilter;
-  String? _priorityFilter;
   int _page = 1;
   int _pageSize = 10;
   int _requestSerial = 0;
@@ -75,7 +66,6 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
         pageSize: _pageSize,
         term: _searchCtrl.text,
         status: _statusFilter,
-        priority: _priorityFilter,
       );
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
@@ -118,13 +108,6 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
     final selected = value.isEmpty ? null : value;
     if (selected == _statusFilter) return;
     setState(() => _statusFilter = selected);
-    _load(resetPage: true);
-  }
-
-  void _setPriorityFilter(String value) {
-    final selected = value.isEmpty ? null : value;
-    if (selected == _priorityFilter) return;
-    setState(() => _priorityFilter = selected);
     _load(resetPage: true);
   }
 
@@ -171,24 +154,6 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
         resolvedAt: next == 'Resolved' ? DateTime.now() : null,
       );
     }, 'Status prijave je promijenjen.');
-  }
-
-  Future<void> _changePriority(AdminFaultReport report, String priority) async {
-    if (priority == report.priority) return;
-
-    final confirmed = await _confirmAction(
-      title: 'Promijeni prioritet',
-      message:
-          'Da li želite promijeniti prioritet prijave "${report.title}" u '
-          '"${_priorityOptions[priority] ?? priority}"?',
-      confirmLabel: 'Promijeni',
-      icon: Icons.flag_outlined,
-    );
-    if (!mounted || confirmed != true) return;
-
-    await _runMutation(() async {
-      await _service.updatePriority(report.id, priority);
-    }, 'Prioritet prijave je promijenjen.');
   }
 
   Future<bool?> _confirmAction({
@@ -343,25 +308,6 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
                 : (value) => _setStatusFilter(value ?? ''),
           ),
         ),
-        SizedBox(
-          width: 190,
-          child: DropdownButtonFormField<String>(
-            initialValue: _priorityFilter ?? '',
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Prioritet',
-              prefixIcon: Icon(Icons.flag_outlined),
-            ),
-            items: [
-              const DropdownMenuItem(value: '', child: Text('Svi')),
-              for (final entry in _priorityOptions.entries)
-                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
-            ],
-            onChanged: _loading || _mutating
-                ? null
-                : (value) => _setPriorityFilter(value ?? ''),
-          ),
-        ),
         IconButton.filledTonal(
           tooltip: 'Primijeni filtere',
           onPressed: _loading || _mutating
@@ -414,7 +360,6 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
                       DataColumn(label: Text('Naslov')),
                       DataColumn(label: Text('Kupac')),
                       DataColumn(label: Text('Naselje')),
-                      DataColumn(label: Text('Prioritet')),
                       DataColumn(label: Text('Status')),
                       DataColumn(label: Text('Datum')),
                       DataColumn(label: Text('Akcije')),
@@ -436,7 +381,6 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
                             ),
                             DataCell(Text(item.customerFullName)),
                             DataCell(Text(item.settlementName)),
-                            DataCell(_PriorityPill(priority: item.priority)),
                             DataCell(_StatusPill(status: item.status)),
                             DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
@@ -444,8 +388,6 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
                                 report: item,
                                 disabled: _mutating,
                                 onAdvanceStatus: () => _advanceStatus(item),
-                                onChangePriority: (priority) =>
-                                    _changePriority(item, priority),
                               ),
                             ),
                           ],
@@ -462,9 +404,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
   }
 
   bool get _hasFilters =>
-      _searchCtrl.text.trim().isNotEmpty ||
-      _statusFilter != null ||
-      _priorityFilter != null;
+      _searchCtrl.text.trim().isNotEmpty || _statusFilter != null;
 
   int _totalPages(int totalCount) {
     if (totalCount <= 0) return 1;
@@ -520,7 +460,7 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Pregled prijava kvarova i upravljanje statusom i prioritetom.',
+          'Pregled prijava kvarova i upravljanje statusom.',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -559,13 +499,11 @@ class _RowActions extends StatelessWidget {
     required this.report,
     required this.disabled,
     required this.onAdvanceStatus,
-    required this.onChangePriority,
   });
 
   final AdminFaultReport report;
   final bool disabled;
   final VoidCallback onAdvanceStatus;
-  final ValueChanged<String> onChangePriority;
 
   @override
   Widget build(BuildContext context) {
@@ -580,19 +518,6 @@ class _RowActions extends StatelessWidget {
               : 'Promijeni status u "${_statusOptions[next] ?? next}"',
           onPressed: disabled || next == null ? null : onAdvanceStatus,
           icon: Icon(_statusIcon(next ?? report.status)),
-        ),
-        PopupMenuButton<String>(
-          tooltip: 'Promijeni prioritet',
-          enabled: !disabled,
-          icon: const Icon(Icons.flag_outlined),
-          onSelected: onChangePriority,
-          itemBuilder: (context) => [
-            for (final entry in _priorityOptions.entries)
-              PopupMenuItem(
-                value: entry.key,
-                child: Text(entry.value),
-              ),
-          ],
         ),
       ],
     );
@@ -621,29 +546,6 @@ class _StatusPill extends StatelessWidget {
         Icons.check_circle_outline,
       ),
       _ => (status, const Color(0xFF64748B), Icons.help_outline),
-    };
-
-    return _Pill(label: label, color: color, icon: icon);
-  }
-}
-
-class _PriorityPill extends StatelessWidget {
-  const _PriorityPill({required this.priority});
-
-  final String priority;
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, color, icon) = switch (priority) {
-      'Low' => ('Niska', const Color(0xFF64748B), Icons.arrow_downward),
-      'Medium' => ('Srednja', const Color(0xFF1D4ED8), Icons.remove),
-      'High' => ('Visoka', const Color(0xFFB45309), Icons.arrow_upward),
-      'Critical' => (
-        'Kritična',
-        const Color(0xFFB91C1C),
-        Icons.priority_high,
-      ),
-      _ => (priority, const Color(0xFF64748B), Icons.flag_outlined),
     };
 
     return _Pill(label: label, color: color, icon: icon);
@@ -757,13 +659,7 @@ class _FaultReportDetailDialogState extends State<_FaultReportDetailDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  _StatusPill(status: report.status),
-                  const SizedBox(width: 8),
-                  _PriorityPill(priority: report.priority),
-                ],
-              ),
+              _StatusPill(status: report.status),
               const SizedBox(height: 14),
               _KeyValueRow(label: 'Kupac', value: report.customerFullName),
               const SizedBox(height: 6),

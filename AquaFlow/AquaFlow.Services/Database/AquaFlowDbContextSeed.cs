@@ -745,7 +745,6 @@ public partial class AquaFlowDbContext
                 Description = "Pritisak vode je nizak u jutarnjim satima.",
                 PhotoUrl = (string?)null,
                 Status = "New",
-                Priority = "Medium",
                 ResolvedAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
