@@ -255,8 +255,9 @@ public class FaultReportPhotosControllerTests
     {
         var faultReportService = new FakeFaultReportCrudService(reports);
         var profileService = new FakeCustomerProfileCrudService(profiles);
+        var waterMeterService = new FakeWaterMeterCrudService([]);
         photoService = new FakeFaultReportPhotoService();
-        return new FaultReportsController(faultReportService, profileService, photoService)
+        return new FaultReportsController(faultReportService, profileService, waterMeterService, photoService)
         {
             ControllerContext = new ControllerContext
             {

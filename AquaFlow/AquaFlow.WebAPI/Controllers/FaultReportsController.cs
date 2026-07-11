@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using FaultReportCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.FaultReportResponse, AquaFlow.Model.SearchObjects.FaultReportSearchObject, AquaFlow.Model.Requests.FaultReportInsertRequest, AquaFlow.Model.Requests.FaultReportUpdateRequest, AquaFlow.Model.Requests.FaultReportPatchRequest>;
 using CustomerProfileCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.CustomerProfileResponse, AquaFlow.Model.SearchObjects.CustomerProfileSearchObject, AquaFlow.Model.Requests.CustomerProfileInsertRequest, AquaFlow.Model.Requests.CustomerProfileUpdateRequest, AquaFlow.Model.Requests.CustomerProfilePatchRequest>;
+using WaterMeterCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.WaterMeterResponse, AquaFlow.Model.SearchObjects.WaterMeterSearchObject, AquaFlow.Model.Requests.WaterMeterInsertRequest, AquaFlow.Model.Requests.WaterMeterUpdateRequest, AquaFlow.Model.Requests.WaterMeterPatchRequest>;
 
 namespace AquaFlow.WebAPI.Controllers;
 
@@ -26,14 +27,17 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     };
 
     private readonly CustomerProfileCrudService _customerProfileService;
+    private readonly WaterMeterCrudService _waterMeterService;
     private readonly IFaultReportPhotoService _photoService;
 
     public FaultReportsController(
         FaultReportCrudService service,
         CustomerProfileCrudService customerProfileService,
+        WaterMeterCrudService waterMeterService,
         IFaultReportPhotoService photoService) : base(service)
     {
         _customerProfileService = customerProfileService;
+        _waterMeterService = waterMeterService;
         _photoService = photoService;
     }
 
@@ -116,7 +120,10 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     // request body is trusted as-is. Anyone else can only report against their own
     // CustomerProfile: CustomerId/ReportedById are forced from the JWT rather than the
     // request body, and Status/ResolvedAt are reset so a self-service report always
-    // starts fresh, same trust model as WaterMeterRequestsController.Create.
+    // starts fresh, same trust model as WaterMeterRequestsController.Create. A
+    // self-service caller may also only attach a WaterMeterId that belongs to their own
+    // CustomerProfile (or leave it null for a general/no-meter fault) - otherwise the
+    // request body could bind the report to someone else's meter.
     public override async Task<ActionResult<FaultReportResponse>> Create([FromBody] FaultReportInsertRequest request)
     {
         if (!TryGetCurrentUserId(out var userId))
@@ -130,6 +137,11 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
             if (customerId is null)
             {
                 throw new ClientException("Caller has no customer profile.");
+            }
+
+            if (request.WaterMeterId is not null)
+            {
+                await EnsureWaterMeterOwnedByCustomerAsync(request.WaterMeterId.Value, customerId.Value);
             }
 
             request.CustomerId = customerId.Value;
@@ -294,6 +306,26 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
         catch (KeyNotFoundException)
         {
             return (null, NotFound());
+        }
+    }
+
+    // Same source of truth WaterMetersController.GetById uses for customer ownership
+    // pinning (WaterMeter.CustomerId is a direct column, no Mapster flattening involved) -
+    // a missing meter or one owned by someone else both surface as the same ClientException
+    // so a self-service caller can't distinguish "doesn't exist" from "not yours".
+    private async Task EnsureWaterMeterOwnedByCustomerAsync(int waterMeterId, int customerId)
+    {
+        try
+        {
+            var meter = await _waterMeterService.GetByIdAsync(waterMeterId);
+            if (meter.CustomerId != customerId)
+            {
+                throw new ClientException("Water meter does not belong to the caller.");
+            }
+        }
+        catch (KeyNotFoundException)
+        {
+            throw new ClientException("Water meter does not belong to the caller.");
         }
     }
 

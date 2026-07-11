@@ -220,6 +220,100 @@ public class FaultReportsControllerTests
         Assert.Equal(5, service.LastInsertRequest.ReportedById);
     }
 
+    [Fact]
+    public async Task Create_CustomerRole_ForeignWaterMeter_ThrowsClientException()
+    {
+        var service = new FakeFaultReportCrudService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 1, role: CustomerRole, permissions: []),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
+            waterMeters: [new WaterMeterResponse { Id = 5, CustomerId = 999 }]);
+
+        // Caller tries to bind their report to a meter owned by another customer.
+        var request = new FaultReportInsertRequest
+        {
+            WaterMeterId = 5,
+            Title = "Leak",
+            Description = "Water leaking from the meter"
+        };
+
+        await Assert.ThrowsAsync<ClientException>(() => controller.Create(request));
+    }
+
+    [Fact]
+    public async Task Create_CustomerRole_OwnWaterMeter_Succeeds()
+    {
+        var service = new FakeFaultReportCrudService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 1, role: CustomerRole, permissions: []),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
+            waterMeters: [new WaterMeterResponse { Id = 5, CustomerId = 10 }]);
+
+        var request = new FaultReportInsertRequest
+        {
+            WaterMeterId = 5,
+            Title = "Leak",
+            Description = "Water leaking from the meter"
+        };
+
+        await controller.Create(request);
+
+        Assert.NotNull(service.LastInsertRequest);
+        Assert.Equal(5, service.LastInsertRequest!.WaterMeterId);
+        Assert.Equal(10, service.LastInsertRequest.CustomerId);
+    }
+
+    [Fact]
+    public async Task Create_CustomerRole_NoWaterMeter_Succeeds()
+    {
+        var service = new FakeFaultReportCrudService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 1, role: CustomerRole, permissions: []),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }]);
+
+        // A general fault report with no associated meter must still be allowed.
+        var request = new FaultReportInsertRequest
+        {
+            WaterMeterId = null,
+            Title = "No water in the settlement",
+            Description = "Entire street has no supply"
+        };
+
+        await controller.Create(request);
+
+        Assert.NotNull(service.LastInsertRequest);
+        Assert.Null(service.LastInsertRequest!.WaterMeterId);
+        Assert.Equal(10, service.LastInsertRequest.CustomerId);
+    }
+
+    [Fact]
+    public async Task Create_ManagePermissionHolder_NotRestrictedByWaterMeterOwnership()
+    {
+        var service = new FakeFaultReportCrudService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 99, role: AdminRole, permissions: [ManagePermission]),
+            profiles: [],
+            waterMeters: [new WaterMeterResponse { Id = 5, CustomerId = 999 }]);
+
+        var request = new FaultReportInsertRequest
+        {
+            CustomerId = 20,
+            ReportedById = 5,
+            WaterMeterId = 5,
+            Title = "Leak",
+            Description = "Reported by staff on a site visit"
+        };
+
+        await controller.Create(request);
+
+        Assert.NotNull(service.LastInsertRequest);
+        Assert.Equal(5, service.LastInsertRequest!.WaterMeterId);
+    }
+
     private static FaultReportsController CreateController(
         ClaimsPrincipal user,
         IEnumerable<CustomerProfileResponse> profiles,
@@ -229,17 +323,20 @@ public class FaultReportsControllerTests
     private static FaultReportsController CreateController(
         FakeFaultReportCrudService service,
         ClaimsPrincipal user,
-        IEnumerable<CustomerProfileResponse> profiles)
-        => CreateController(service, user, profiles, new FakeFaultReportPhotoService());
+        IEnumerable<CustomerProfileResponse> profiles,
+        IEnumerable<WaterMeterResponse>? waterMeters = null)
+        => CreateController(service, user, profiles, new FakeFaultReportPhotoService(), waterMeters);
 
     private static FaultReportsController CreateController(
         FakeFaultReportCrudService service,
         ClaimsPrincipal user,
         IEnumerable<CustomerProfileResponse> profiles,
-        FakeFaultReportPhotoService photoService)
+        FakeFaultReportPhotoService photoService,
+        IEnumerable<WaterMeterResponse>? waterMeters = null)
     {
         var profileService = new FakeCustomerProfileCrudService(profiles);
-        return new FaultReportsController(service, profileService, photoService)
+        var waterMeterService = new FakeWaterMeterCrudService(waterMeters ?? []);
+        return new FaultReportsController(service, profileService, waterMeterService, photoService)
         {
             ControllerContext = new ControllerContext
             {
