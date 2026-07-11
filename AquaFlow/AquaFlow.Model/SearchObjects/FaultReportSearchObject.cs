@@ -8,4 +8,5 @@ public class FaultReportSearchObject : BaseSearchObject
     public int? SettlementId { get; set; }
     public string? Status { get; set; }
     public string? Priority { get; set; }
+    public string? Term { get; set; }
 }

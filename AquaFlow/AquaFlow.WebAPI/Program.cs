@@ -174,6 +174,10 @@ mapperConfig.NewConfig<Invoice, InvoiceResponse>()
     .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
     .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
     .Map(destination => destination.WaterMeterSerialNumber, source => source.WaterMeter == null ? string.Empty : source.WaterMeter.SerialNumber);
+mapperConfig.NewConfig<FaultReport, FaultReportResponse>()
+    .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
+    .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
+    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
@@ -251,7 +255,8 @@ builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, CancelledWaterMeterR
 builder.Services.AddScoped<IWaterMeterRequestStateResolver, WaterMeterRequestStateResolver>();
 AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
-AddCrud<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>();
+AddPatchMapping<FaultReportPatchRequest, FaultReport>();
+builder.Services.AddScoped<IBaseCRUDService<FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>, FaultReportService>();
 builder.Services.AddScoped<IFaultReportPhotoService, FaultReportPhotoService>();
 AddPatchMapping<NotificationPatchRequest, Notification>();
 builder.Services.AddScoped<IBaseCRUDService<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>, NotificationService>();
