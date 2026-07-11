@@ -208,9 +208,69 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
 
         using var buffer = new MemoryStream();
         await file.CopyToAsync(buffer);
+        var data = buffer.ToArray();
 
-        var photo = await _photoService.UploadAsync(id, buffer.ToArray(), file.ContentType, file.FileName);
+        // file.ContentType is client-declared and already checked against the whitelist above,
+        // but a caller can label arbitrary bytes "image/png". Sniff the actual bytes against each
+        // format's magic-byte signature as an additional layer, and store/serve the type derived
+        // from the signature rather than the client's claim.
+        var detectedContentType = DetectImageContentType(data);
+        if (detectedContentType is null)
+        {
+            throw new ClientException("Uploaded file is not a valid JPEG, PNG, or WEBP image.");
+        }
+
+        var photo = await _photoService.UploadAsync(id, data, detectedContentType, file.FileName);
         return CreatedAtAction(nameof(GetPhoto), new { id, photoId = photo.Id }, photo);
+    }
+
+    private static readonly byte[] JpegSignature = { 0xFF, 0xD8, 0xFF };
+    private static readonly byte[] PngSignature = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+
+    private static string? DetectImageContentType(byte[] data)
+    {
+        if (StartsWith(data, JpegSignature))
+        {
+            return "image/jpeg";
+        }
+
+        if (StartsWith(data, PngSignature))
+        {
+            return "image/png";
+        }
+
+        if (IsWebP(data))
+        {
+            return "image/webp";
+        }
+
+        return null;
+    }
+
+    private static bool IsWebP(byte[] data)
+    {
+        // RIFF <4-byte size> WEBP
+        return data.Length >= 12
+            && data[0] == (byte)'R' && data[1] == (byte)'I' && data[2] == (byte)'F' && data[3] == (byte)'F'
+            && data[8] == (byte)'W' && data[9] == (byte)'E' && data[10] == (byte)'B' && data[11] == (byte)'P';
+    }
+
+    private static bool StartsWith(byte[] data, byte[] signature)
+    {
+        if (data.Length < signature.Length)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < signature.Length; i++)
+        {
+            if (data[i] != signature[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     [HttpGet("{id:int}/photos")]

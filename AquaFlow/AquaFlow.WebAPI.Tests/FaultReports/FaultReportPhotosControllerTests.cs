@@ -14,6 +14,7 @@ public class FaultReportPhotosControllerTests
     private const string ManagePermission = "FaultReports.Manage";
     private const string CustomerRole = "Customer";
     private const string AdminRole = "Admin";
+    private static readonly byte[] PngSignatureBytes = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
 
     [Fact]
     public async Task UploadPhoto_OwnReport_ReturnsCreatedWithMetadataOnly()
@@ -24,7 +25,7 @@ public class FaultReportPhotosControllerTests
             reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out _);
 
-        var file = CreateFormFile(new byte[] { 1, 2, 3 }, "image/jpeg", "leak.jpg");
+        var file = CreateFormFile(new byte[] { 0xFF, 0xD8, 0xFF }, "image/jpeg", "leak.jpg");
 
         var result = await controller.UploadPhoto(1, file);
 
@@ -60,7 +61,7 @@ public class FaultReportPhotosControllerTests
             reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "New" }],
             out _);
 
-        var file = CreateFormFile(new byte[] { 1, 2, 3 }, "image/png", "leak.png");
+        var file = CreateFormFile(PngSignatureBytes, "image/png", "leak.png");
 
         var result = await controller.UploadPhoto(1, file);
 
@@ -152,11 +153,29 @@ public class FaultReportPhotosControllerTests
             reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "InProgress" }],
             out _);
 
-        var file = CreateFormFile(new byte[] { 1, 2, 3 }, "image/png", "leak.png");
+        var file = CreateFormFile(PngSignatureBytes, "image/png", "leak.png");
 
         var result = await controller.UploadPhoto(1, file);
 
         Assert.IsType<CreatedAtActionResult>(result.Result);
+    }
+
+    // The client's declared Content-Type is not trustworthy on its own: a caller can label
+    // arbitrary bytes "image/png". Magic-byte sniffing must reject content that doesn't match
+    // any allowed image signature even though the declared type passes the whitelist check.
+    [Fact]
+    public async Task UploadPhoto_ContentDoesNotMatchDeclaredContentType_ThrowsClientException()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 1, role: CustomerRole, permissions: []),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            out _);
+
+        var file = CreateFormFile(System.Text.Encoding.UTF8.GetBytes("not a real image"), "image/png", "fake.png");
+
+        var exception = await Assert.ThrowsAsync<ClientException>(() => controller.UploadPhoto(1, file));
+        Assert.Equal("Uploaded file is not a valid JPEG, PNG, or WEBP image.", exception.Message);
     }
 
     [Fact]
