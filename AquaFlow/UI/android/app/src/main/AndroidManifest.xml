@@ -2,6 +2,10 @@
     <!-- Required on Android 13+ (API 33) to show push notifications; the app must
          also request this permission at runtime (see UI/README.md - Push notifications). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- image_picker (fault-report photos): CAMERA to take a photo directly,
+         READ_MEDIA_IMAGES (Android 13+) to pick one from the gallery. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <application
         android:label="aquaflow_desktop"
         android:name="${applicationName}"

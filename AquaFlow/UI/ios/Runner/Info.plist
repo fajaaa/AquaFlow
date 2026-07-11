@@ -4,6 +4,12 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<!-- image_picker (fault-report photos): required strings for the camera and
+	     photo library pickers used by NewFaultReportDialog. -->
+	<key>NSCameraUsageDescription</key>
+	<string>AquaFlow treba pristup kameri da biste slikali fotografiju za prijavu kvara.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>AquaFlow treba pristup galeriji da biste odabrali fotografiju za prijavu kvara.</string>
 	<!-- DEV-ONLY: the AquaFlow backend runs over plain HTTP (http://...:5161).
 	     NSAllowsLocalNetworking permits cleartext to local/LAN hosts without
 	     disabling App Transport Security globally. Remove this in production;
