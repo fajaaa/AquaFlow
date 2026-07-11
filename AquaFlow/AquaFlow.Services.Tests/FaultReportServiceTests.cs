@@ -1,3 +1,5 @@
+using AquaFlow.Model.Exceptions;
+using AquaFlow.Model.Requests;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.Validators;
@@ -11,6 +13,26 @@ namespace AquaFlow.Services.Tests;
 
 public class FaultReportServiceTests
 {
+    [Fact]
+    public async Task InsertAsync_NonExistentSettlementId_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var request = new FaultReportInsertRequest
+        {
+            ReportedById = 1,
+            CustomerId = 1,
+            SettlementId = 999,
+            Title = "Broken pipe",
+            Description = "Water leaking from the main pipe.",
+            Status = "New"
+        };
+
+        await Assert.ThrowsAsync<ClientException>(() => service.InsertAsync(request));
+    }
+
     [Fact]
     public async Task GetAllAsync_FlattensCustomerNameAndSettlementName()
     {

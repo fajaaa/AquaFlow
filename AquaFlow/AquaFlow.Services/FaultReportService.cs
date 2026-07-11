@@ -1,3 +1,4 @@
+using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -23,6 +24,36 @@ public class FaultReportService
 
     protected override IQueryable<FaultReport> IncludeForRead(IQueryable<FaultReport> query) =>
         query.Include(f => f.Customer).Include(f => f.Settlement);
+
+    // Guards the FK columns the insert validator only checks with GreaterThan(0) - an id that is
+    // positive but doesn't exist would otherwise reach SaveChangesAsync and surface as a raw
+    // DbUpdateException (500) instead of a clean 400. Covers both the self-service and the
+    // admin (manage) insert path, since both go through InsertAsync.
+    protected override async Task BeforeInsertAsync(FaultReportInsertRequest request)
+    {
+        await EnsureSettlementExistsAsync(request.SettlementId);
+
+        if (request.WaterMeterId.HasValue)
+        {
+            await EnsureWaterMeterExistsAsync(request.WaterMeterId.Value);
+        }
+    }
+
+    private async Task EnsureSettlementExistsAsync(int settlementId)
+    {
+        if (!await DbContext.Settlements.AnyAsync(settlement => settlement.Id == settlementId))
+        {
+            throw new ClientException("Settlement not found.");
+        }
+    }
+
+    private async Task EnsureWaterMeterExistsAsync(int waterMeterId)
+    {
+        if (!await DbContext.WaterMeters.AnyAsync(waterMeter => waterMeter.Id == waterMeterId))
+        {
+            throw new ClientException("Water meter not found.");
+        }
+    }
 
     protected override async Task LoadReferencesAsync(FaultReport entity)
     {
