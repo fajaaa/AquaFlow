@@ -3,6 +3,7 @@ using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
+using AquaFlow.Services.FaultReportStateMachine;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +17,6 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
 {
     private const string ManagePermission = "FaultReports.Manage";
     private const string CustomerRoleName = "Customer";
-    private const string NewStatus = "New";
     private const long MaxPhotoSizeBytes = 5 * 1024 * 1024;
     private const int MaxPhotosPerReport = 5;
     private static readonly HashSet<string> AllowedPhotoContentTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -146,7 +146,7 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
 
             request.CustomerId = customerId.Value;
             request.ReportedById = userId;
-            request.Status = "New";
+            request.Status = FaultReportStatus.New;
             request.ResolvedAt = null;
         }
 
@@ -165,6 +165,66 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     public override Task<IActionResult> Delete(int id)
         => base.Delete(id);
 
+    [RequirePermission(ManagePermission)]
+    [HttpPost("{id:int}/start")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public Task<ActionResult<FaultReportResponse>> Start(int id)
+        => RunStateActionAsync(() => Service.StartAsync(id, ResolveChangedById()));
+
+    [RequirePermission(ManagePermission)]
+    [HttpPost("{id:int}/resolve")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public Task<ActionResult<FaultReportResponse>> Resolve(int id)
+        => RunStateActionAsync(() => Service.ResolveAsync(id, ResolveChangedById()));
+
+    [RequirePermission(ManagePermission)]
+    [HttpGet("{id:int}/allowed-actions")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<string>>> GetAllowedActions(int id)
+    {
+        try
+        {
+            return Ok(await Service.GetAllowedActionsAsync(id));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    // Resolves the acting user for FaultStatusHistory stamping. Authentication is guaranteed by
+    // [Authorize] (via BaseReadController) plus the [RequirePermission] gates above, so the JWT
+    // Id claim is always present here - same pattern as InvoicesController.ResolveChangedById.
+    private int ResolveChangedById()
+    {
+        var claim = User.FindFirst(ClaimNames.Id)?.Value;
+        if (int.TryParse(claim, out var userId))
+        {
+            return userId;
+        }
+
+        throw new ClientException("Unable to determine the acting user.");
+    }
+
+    // Business-rule violations (ClientException) bubble to the global ExceptionFilter as 400s; only
+    // the missing-report case needs translating to 404 here.
+    private async Task<ActionResult<FaultReportResponse>> RunStateActionAsync(Func<Task<FaultReportResponse>> action)
+    {
+        try
+        {
+            return Ok(await action());
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
     // Same trust model as Create: a caller holding FaultReports.Manage may attach a photo
     // to any report in any status; otherwise the caller must own the report (404, not
     // Forbid, when they don't - same signal as GetById) and the report must still be New,
@@ -181,7 +241,7 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
             return error;
         }
 
-        if (!HasManagePermission() && !string.Equals(ownership!.Status, NewStatus, StringComparison.OrdinalIgnoreCase))
+        if (!HasManagePermission() && !string.Equals(ownership!.Status, FaultReportStatus.New, StringComparison.OrdinalIgnoreCase))
         {
             throw new ClientException("Photos can only be added while the report is still New.");
         }
@@ -324,7 +384,7 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
             return error;
         }
 
-        if (!HasManagePermission() && !string.Equals(ownership!.Status, NewStatus, StringComparison.OrdinalIgnoreCase))
+        if (!HasManagePermission() && !string.Equals(ownership!.Status, FaultReportStatus.New, StringComparison.OrdinalIgnoreCase))
         {
             throw new ClientException("Photos can only be removed while the report is still New.");
         }

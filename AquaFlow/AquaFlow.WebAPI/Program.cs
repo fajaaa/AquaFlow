@@ -7,6 +7,7 @@ using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.FaultReportStateMachine;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Validators;
 using AquaFlow.Services.WaterMeterRequestStateMachine;
@@ -255,10 +256,18 @@ builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, CancelledWaterMeterR
 builder.Services.AddScoped<IWaterMeterRequestStateResolver, WaterMeterRequestStateResolver>();
 AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
+// FaultReport mirrors the Invoice/WaterMeterRequest registrations above: the state machine service
+// is registered by hand, the generic IBaseCRUDService alias resolves to the same instance, and each
+// report state is a keyed scoped BaseFaultReportState (status string as key) that
+// IFaultReportStateResolver resolves through.
 AddPatchMapping<FaultReportPatchRequest, FaultReport>();
 builder.Services.AddScoped<IFaultReportService, FaultReportService>();
 builder.Services.AddScoped<IBaseCRUDService<FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IFaultReportService>());
+builder.Services.AddKeyedScoped<BaseFaultReportState, NewFaultReportState>(FaultReportStatus.New);
+builder.Services.AddKeyedScoped<BaseFaultReportState, InProgressFaultReportState>(FaultReportStatus.InProgress);
+builder.Services.AddKeyedScoped<BaseFaultReportState, ResolvedFaultReportState>(FaultReportStatus.Resolved);
+builder.Services.AddScoped<IFaultReportStateResolver, FaultReportStateResolver>();
 builder.Services.AddScoped<IFaultReportPhotoService, FaultReportPhotoService>();
 AddPatchMapping<NotificationPatchRequest, Notification>();
 builder.Services.AddScoped<IBaseCRUDService<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>, NotificationService>();

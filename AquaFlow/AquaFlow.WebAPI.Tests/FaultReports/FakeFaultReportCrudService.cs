@@ -18,6 +18,11 @@ public class FakeFaultReportCrudService : IFaultReportService
 
     public FaultReportInsertRequest? LastInsertRequest { get; private set; }
 
+    // Recorded by the state-transition members below so the controller tests can pin that
+    // Start/Resolve pass the JWT-sourced user id through as changedById.
+    public int? LastTransitionId { get; private set; }
+    public int? LastChangedById { get; private set; }
+
     public Task<PageResult<FaultReportResponse>> GetAllAsync(FaultReportSearchObject? search = null)
     {
         var items = _rows.AsEnumerable();
@@ -79,4 +84,20 @@ public class FakeFaultReportCrudService : IFaultReportService
 
     public Task DeleteAsync(int id)
         => throw new NotSupportedException();
+
+    public Task<FaultReportResponse> StartAsync(int id, int changedById)
+        => RecordTransition(id, changedById);
+
+    public Task<FaultReportResponse> ResolveAsync(int id, int changedById)
+        => RecordTransition(id, changedById);
+
+    public Task<List<string>> GetAllowedActionsAsync(int id)
+        => throw new NotSupportedException();
+
+    private Task<FaultReportResponse> RecordTransition(int id, int changedById)
+    {
+        LastTransitionId = id;
+        LastChangedById = changedById;
+        return GetByIdAsync(id);
+    }
 }

@@ -13,6 +13,5 @@ public class FaultReportPatchValidator : AbstractValidator<FaultReportPatchReque
         RuleFor(x => x.WaterMeterId).GreaterThan(0).When(x => x.WaterMeterId.HasValue);
         RuleFor(x => x.Title).NotEmpty().MaximumLength(150).When(x => x.Title != null);
         RuleFor(x => x.Description).NotEmpty().When(x => x.Description != null);
-        RuleFor(x => x.Status).NotEmpty().MaximumLength(30).When(x => x.Status != null);
     }
 }

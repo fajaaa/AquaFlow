@@ -21,11 +21,15 @@ public class FaultReportsControllerTests
     // Enforcement runs in the MVC authorization filter pipeline, which a direct method
     // call bypasses (see AquaFlow.WebAPI.Tests remarks in AGENTS.md), so this pins the
     // declarative gate itself: if [RequirePermission] is ever dropped from one of these
-    // write actions, this test fails instead of silently reopening unauthorized writes.
+    // write actions or the state-machine transition actions, this test fails instead of
+    // silently reopening unauthorized writes.
     [Theory]
     [InlineData(nameof(FaultReportsController.Update))]
     [InlineData(nameof(FaultReportsController.Patch))]
     [InlineData(nameof(FaultReportsController.Delete))]
+    [InlineData(nameof(FaultReportsController.Start))]
+    [InlineData(nameof(FaultReportsController.Resolve))]
+    [InlineData(nameof(FaultReportsController.GetAllowedActions))]
     public void WriteAction_RequiresFaultReportsManagePermission(string methodName)
     {
         var method = typeof(FaultReportsController)
@@ -312,6 +316,71 @@ public class FaultReportsControllerTests
 
         Assert.NotNull(service.LastInsertRequest);
         Assert.Equal(5, service.LastInsertRequest!.WaterMeterId);
+    }
+
+    // Start/Resolve stamp FaultStatusHistory with the acting user resolved exclusively from the
+    // JWT Id claim (same trust model as InvoicesController.ResolveChangedById) - the endpoints
+    // take no body, so there is nothing a caller could smuggle a different user id through.
+    [Fact]
+    public async Task Start_PassesJwtUserIdAsChangedById()
+    {
+        var service = new FakeFaultReportCrudService(
+            [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 42, role: AdminRole, permissions: [ManagePermission]),
+            profiles: []);
+
+        var result = await controller.Start(1);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(1, service.LastTransitionId);
+        Assert.Equal(42, service.LastChangedById);
+    }
+
+    [Fact]
+    public async Task Resolve_PassesJwtUserIdAsChangedById()
+    {
+        var service = new FakeFaultReportCrudService(
+            [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "InProgress" }]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 42, role: AdminRole, permissions: [ManagePermission]),
+            profiles: []);
+
+        var result = await controller.Resolve(1);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(1, service.LastTransitionId);
+        Assert.Equal(42, service.LastChangedById);
+    }
+
+    [Fact]
+    public async Task Start_CallerMissingIdClaim_ThrowsClientException()
+    {
+        var service = new FakeFaultReportCrudService(
+            [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: null, role: AdminRole, permissions: [ManagePermission]),
+            profiles: []);
+
+        await Assert.ThrowsAsync<ClientException>(() => controller.Start(1));
+        Assert.Null(service.LastChangedById);
+    }
+
+    [Fact]
+    public async Task Start_UnknownReport_ReturnsNotFound()
+    {
+        var service = new FakeFaultReportCrudService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 42, role: AdminRole, permissions: [ManagePermission]),
+            profiles: []);
+
+        var result = await controller.Start(999);
+
+        Assert.IsType<NotFoundResult>(result.Result);
     }
 
     private static FaultReportsController CreateController(

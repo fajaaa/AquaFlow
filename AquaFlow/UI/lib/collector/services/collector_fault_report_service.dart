@@ -146,33 +146,21 @@ class CollectorFaultReportService {
     return response.bodyBytes;
   }
 
-  /// `PATCH /FaultReports/{id}` with just `{ status }`, or `{ status,
-  /// resolvedAt }` when transitioning to `Resolved` - the backend has no
-  /// status/resolvedAt correlation logic of its own (`FaultReportPatchRequest`
-  /// sets exactly the fields it is given), so the caller decides when to stamp
-  /// `resolvedAt`.
-  Future<CollectorFaultReport> updateStatus(
-    int id,
-    String status, {
-    DateTime? resolvedAt,
-  }) async {
-    final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id');
+  /// `POST /FaultReports/{id}/start` (New -> InProgress). No body: the backend
+  /// state machine owns the transition (clearing `resolvedAt`) and stamps the
+  /// acting user from the JWT into `FaultStatusHistory`.
+  Future<CollectorFaultReport> start(int id) => _postTransition(id, 'start');
 
-    final body = <String, dynamic>{'status': status};
-    if (resolvedAt != null) {
-      body['resolvedAt'] = resolvedAt.toUtc().toIso8601String();
-    }
+  /// `POST /FaultReports/{id}/resolve` (New/InProgress -> Resolved). No body:
+  /// the backend stamps `resolvedAt` itself - the FE no longer sends it.
+  Future<CollectorFaultReport> resolve(int id) => _postTransition(id, 'resolve');
+
+  Future<CollectorFaultReport> _postTransition(int id, String action) async {
+    final token = await _requireToken();
+    final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id/$action');
 
     final response = await _send(
-      () => _client.patch(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
-      ),
+      () => _client.post(uri, headers: {'Authorization': 'Bearer $token'}),
     );
 
     if (response.statusCode != 200) {

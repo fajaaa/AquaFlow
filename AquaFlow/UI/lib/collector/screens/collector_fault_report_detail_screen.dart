@@ -105,11 +105,11 @@ class _CollectorFaultReportDetailScreenState
 
     setState(() => _updatingStatus = true);
     try {
-      final updated = await _service.updateStatus(
-        _report.id,
-        next,
-        resolvedAt: next == 'Resolved' ? DateTime.now() : null,
-      );
+      // New -> start, InProgress -> resolve; the backend state machine stamps
+      // resolvedAt itself, so no date is sent from here anymore.
+      final updated = _report.isNew
+          ? await _service.start(_report.id)
+          : await _service.resolve(_report.id);
       if (!mounted) return;
       setState(() {
         _report = updated;

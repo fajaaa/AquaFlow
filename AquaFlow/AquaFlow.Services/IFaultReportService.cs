@@ -16,4 +16,11 @@ public interface IFaultReportService
     // every caller here immediately turns that into a 404, so there's no need for exception-based
     // control flow.
     Task<FaultReportOwnership?> GetOwnershipAsync(int id);
+
+    // State-machine transitions (see AquaFlow.Services/FaultReportStateMachine): each loads the
+    // tracked entity once, resolves the state from its Status, and delegates to the state action.
+    // changedById is the acting user stamped onto the FaultStatusHistory row.
+    Task<FaultReportResponse> StartAsync(int id, int changedById);
+    Task<FaultReportResponse> ResolveAsync(int id, int changedById);
+    Task<List<string>> GetAllowedActionsAsync(int id);
 }

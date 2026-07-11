@@ -15,8 +15,9 @@ import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 /// `_runMutation`/paging template as `AdminInvoicesScreen`/`AdminTariffsScreen`.
 /// Row click opens a detail dialog with the full description and a photo
 /// gallery; a row action advances the status (New -> InProgress -> Resolved,
-/// stamping `resolvedAt` only on the Resolved transition) behind the
-/// confirm-dialog pattern used by `AdminTariffsScreen`'s delete confirmation.
+/// via the backend transition endpoints `POST {id}/start`/`{id}/resolve` -
+/// the server stamps `resolvedAt` itself) behind the confirm-dialog pattern
+/// used by `AdminTariffsScreen`'s delete confirmation.
 class AdminFaultReportsScreen extends StatefulWidget {
   const AdminFaultReportsScreen({super.key});
 
@@ -147,12 +148,14 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
     );
     if (!mounted || confirmed != true) return;
 
+    // New -> start, InProgress -> resolve; the backend state machine stamps
+    // resolvedAt itself, so no date is sent from here anymore.
     await _runMutation(() async {
-      await _service.updateStatus(
-        report.id,
-        next,
-        resolvedAt: next == 'Resolved' ? DateTime.now() : null,
-      );
+      if (report.status == 'New') {
+        await _service.start(report.id);
+      } else {
+        await _service.resolve(report.id);
+      }
     }, 'Status prijave je promijenjen.');
   }
 

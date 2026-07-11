@@ -1,3 +1,4 @@
+using AquaFlow.Services.FaultReportStateMachine;
 using Microsoft.EntityFrameworkCore;
 
 namespace AquaFlow.Services.Database;
@@ -744,7 +745,7 @@ public partial class AquaFlowDbContext
                 Title = "Slab pritisak vode",
                 Description = "Pritisak vode je nizak u jutarnjim satima.",
                 PhotoUrl = (string?)null,
-                Status = "New",
+                Status = FaultReportStatus.New,
                 ResolvedAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null

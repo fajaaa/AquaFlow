@@ -14,8 +14,9 @@ import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 
 /// Desktop admin data layer over `/FaultReports`, following the
 /// `AdminInvoiceService`/`AdminTariffService` template. `FaultReports.Manage`
-/// (seeded onto Admin/Collector) lets a caller read every report and PATCH
-/// Status; there is no admin-side create/delete for this resource.
+/// (seeded onto Admin/Collector) lets a caller read every report and drive the
+/// status transitions (`POST {id}/start`/`{id}/resolve`); there is no
+/// admin-side create/delete for this resource.
 class AdminFaultReportService {
   AdminFaultReportService({
     http.Client? client,
@@ -147,36 +148,21 @@ class AdminFaultReportService {
     return response.bodyBytes;
   }
 
-  /// `PATCH /FaultReports/{id}` with just `{ status }`, or `{ status,
-  /// resolvedAt }` when transitioning to `Resolved` - the backend has no
-  /// status/resolvedAt correlation logic of its own (`FaultReportPatchRequest`
-  /// sets exactly the fields it is given), so the caller decides when to stamp
-  /// `resolvedAt`.
-  Future<AdminFaultReport> updateStatus(
-    int id,
-    String status, {
-    DateTime? resolvedAt,
-  }) {
-    final body = <String, dynamic>{'status': status};
-    if (resolvedAt != null) {
-      body['resolvedAt'] = resolvedAt.toUtc().toIso8601String();
-    }
-    return _patch(id, body);
-  }
+  /// `POST /FaultReports/{id}/start` (New -> InProgress). No body: the backend
+  /// state machine owns the transition (clearing `resolvedAt`) and stamps the
+  /// acting user from the JWT into `FaultStatusHistory`.
+  Future<AdminFaultReport> start(int id) => _postTransition(id, 'start');
 
-  Future<AdminFaultReport> _patch(int id, Map<String, dynamic> body) async {
+  /// `POST /FaultReports/{id}/resolve` (New/InProgress -> Resolved). No body:
+  /// the backend stamps `resolvedAt` itself - the FE no longer sends it.
+  Future<AdminFaultReport> resolve(int id) => _postTransition(id, 'resolve');
+
+  Future<AdminFaultReport> _postTransition(int id, String action) async {
     final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id');
+    final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id/$action');
 
     final response = await _send(
-      () => _client.patch(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
-      ),
+      () => _client.post(uri, headers: {'Authorization': 'Bearer $token'}),
     );
 
     if (response.statusCode != 200) {
