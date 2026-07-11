@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:aquaflow_desktop/collector/models/collector_water_meter.dart';
+import 'package:aquaflow_desktop/collector/screens/collector_fault_reports_screen.dart';
 import 'package:aquaflow_desktop/collector/screens/collector_meter_reading_entry_screen.dart';
 import 'package:aquaflow_desktop/collector/services/collector_water_meter_exception.dart';
 import 'package:aquaflow_desktop/collector/services/collector_water_meter_service.dart';
@@ -92,6 +93,14 @@ class _CollectorWaterMetersScreenState
     );
   }
 
+  Future<void> _openFaultReports() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const CollectorFaultReportsScreen(),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
@@ -107,11 +116,22 @@ class _CollectorWaterMetersScreenState
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'Vodomjeri',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Vodomjeri',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Prijave kvarova',
+                  onPressed: _openFaultReports,
+                  icon: const Icon(Icons.report_problem_outlined),
+                ),
+              ],
             ),
           ),
           Padding(
