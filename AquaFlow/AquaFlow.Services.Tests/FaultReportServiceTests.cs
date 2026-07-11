@@ -138,6 +138,80 @@ public class FaultReportServiceTests
         Assert.Null(ownership);
     }
 
+    [Fact]
+    public async Task PatchAsync_StatusOutsideAllowedSet_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(
+            () => service.PatchAsync(2, new FaultReportPatchRequest { Status = "Closed" }));
+    }
+
+    [Fact]
+    public async Task PatchAsync_ToResolvedWithoutResolvedAt_StampsUtcNow()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var before = DateTime.UtcNow;
+        var response = await service.PatchAsync(1, new FaultReportPatchRequest { Status = "Resolved" });
+        var after = DateTime.UtcNow;
+
+        Assert.NotNull(response.ResolvedAt);
+        Assert.InRange(response.ResolvedAt!.Value, before, after);
+    }
+
+    [Fact]
+    public async Task PatchAsync_ToResolvedWithExplicitResolvedAt_KeepsProvidedValue()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var explicitResolvedAt = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var response = await service.PatchAsync(
+            1,
+            new FaultReportPatchRequest { Status = "Resolved", ResolvedAt = explicitResolvedAt });
+
+        Assert.Equal(explicitResolvedAt, response.ResolvedAt);
+    }
+
+    [Fact]
+    public async Task PatchAsync_ToNonTerminalStatusWithoutResolvedAt_ClearsResolvedAt()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var report = context.FaultReports.First(f => f.Id == 1);
+        report.Status = "Resolved";
+        report.ResolvedAt = DateTime.UtcNow;
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var response = await service.PatchAsync(1, new FaultReportPatchRequest { Status = "InProgress" });
+
+        Assert.Null(response.ResolvedAt);
+    }
+
+    [Fact]
+    public async Task PatchAsync_StatusNotProvided_DoesNotTouchResolvedAt()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var report = context.FaultReports.First(f => f.Id == 1);
+        var existingResolvedAt = new DateTime(2026, 2, 2, 8, 0, 0, DateTimeKind.Utc);
+        report.Status = "Resolved";
+        report.ResolvedAt = existingResolvedAt;
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var response = await service.PatchAsync(1, new FaultReportPatchRequest { Title = "Updated title" });
+
+        Assert.Equal(existingResolvedAt, response.ResolvedAt);
+    }
+
     private static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
@@ -194,6 +268,12 @@ public class FaultReportServiceTests
             .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
             .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
             .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name);
+        // Mirrors Program.cs's AddPatchMapping - without this, a null field in a patch
+        // request (e.g. an omitted ResolvedAt) would overwrite the entity's existing
+        // value with null instead of leaving it untouched, same precedent as
+        // TariffServiceTests/NotificationServiceTests.CreateService.
+        mapperConfig.NewConfig<FaultReportPatchRequest, FaultReport>()
+            .IgnoreNullValues(true);
         IMapper mapper = new Mapper(mapperConfig);
 
         return new FaultReportService(

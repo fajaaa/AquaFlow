@@ -13,6 +13,20 @@ public class FaultReportService
     : EfCrudService<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>,
         IFaultReportService
 {
+    // Matches the exact values the FE status pills/admin advance-button switch on
+    // (fault_report_status_pill.dart, admin_fault_reports_screen.dart's _nextStatus) -
+    // there is no "Closed" status anywhere in the client, so it is deliberately not
+    // included here. Ordinal (case-sensitive) since every caller today writes/reads
+    // these exact PascalCase values (e.g. FaultReport.Status's "New" default,
+    // FaultReportSearchObject's exact-equality filter).
+    private const string ResolvedStatus = "Resolved";
+    private static readonly HashSet<string> AllowedStatuses = new(StringComparer.Ordinal)
+    {
+        "New",
+        "InProgress",
+        ResolvedStatus
+    };
+
     public FaultReportService(
         AquaFlowDbContext dbContext,
         IMapper mapper,
@@ -54,6 +68,36 @@ public class FaultReportService
         {
             throw new ClientException("Water meter not found.");
         }
+    }
+
+    // Enforces the allowed status set on PATCH (the only endpoint the FE ever uses to
+    // change status - Insert always forces "New" server-side, Update/PUT is unused by
+    // the FE) and keeps ResolvedAt in sync with Status server-side, since
+    // FaultReportPatchRequest lets a caller set them independently otherwise:
+    // - Status outside AllowedStatuses -> ClientException (400).
+    // - Status moving to Resolved with no ResolvedAt in the request -> stamp UtcNow.
+    // - Status moving to a non-terminal value with no ResolvedAt in the request -> clear it.
+    // Both stamp/clear branches only apply when the request didn't already supply an
+    // explicit ResolvedAt; an explicit value in the same request always wins, since the
+    // patch mapper (Program.cs's IgnoreNullValues(true) config) skips null members, so a
+    // non-null request.ResolvedAt overwrites whatever is set here right after.
+    protected override Task BeforePatchAsync(int id, FaultReportPatchRequest request, FaultReport entity)
+    {
+        if (request.Status is not null)
+        {
+            if (!AllowedStatuses.Contains(request.Status))
+            {
+                throw new ClientException(
+                    $"Status must be one of: {string.Join(", ", AllowedStatuses)}.");
+            }
+
+            if (request.ResolvedAt is null)
+            {
+                entity.ResolvedAt = request.Status == ResolvedStatus ? DateTime.UtcNow : null;
+            }
+        }
+
+        return Task.CompletedTask;
     }
 
     public async Task<FaultReportOwnership?> GetOwnershipAsync(int id)
