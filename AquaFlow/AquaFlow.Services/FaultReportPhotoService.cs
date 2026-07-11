@@ -30,6 +30,13 @@ public class FaultReportPhotoService : IFaultReportPhotoService
         return ToResponse(photo);
     }
 
+    public Task<int> CountAsync(int faultReportId)
+    {
+        return _dbContext.FaultReportPhotos
+            .Where(photo => photo.FaultReportId == faultReportId)
+            .CountAsync();
+    }
+
     public async Task<List<FaultReportPhotoResponse>> GetMetadataAsync(int faultReportId)
     {
         return await _dbContext.FaultReportPhotos

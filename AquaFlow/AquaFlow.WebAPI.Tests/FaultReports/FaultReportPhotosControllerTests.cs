@@ -112,6 +112,54 @@ public class FaultReportPhotosControllerTests
     }
 
     [Fact]
+    public async Task UploadPhoto_SixthPhoto_ThrowsClientException()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 1, role: CustomerRole, permissions: []),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            out var photoService);
+        for (var i = 0; i < 5; i++)
+        {
+            await photoService.UploadAsync(1, new byte[] { 1 }, "image/jpeg", $"{i}.jpg");
+        }
+
+        var file = CreateFormFile(new byte[] { 1, 2, 3 }, "image/jpeg", "sixth.jpg");
+
+        await Assert.ThrowsAsync<ClientException>(() => controller.UploadPhoto(1, file));
+    }
+
+    [Fact]
+    public async Task UploadPhoto_CustomerOnNonNewReport_ThrowsClientException()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 1, role: CustomerRole, permissions: []),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "InProgress" }],
+            out _);
+
+        var file = CreateFormFile(new byte[] { 1, 2, 3 }, "image/jpeg", "leak.jpg");
+
+        await Assert.ThrowsAsync<ClientException>(() => controller.UploadPhoto(1, file));
+    }
+
+    [Fact]
+    public async Task UploadPhoto_ManagePermissionHolder_CanUploadRegardlessOfStatus()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 99, role: AdminRole, permissions: [ManagePermission]),
+            profiles: [],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "InProgress" }],
+            out _);
+
+        var file = CreateFormFile(new byte[] { 1, 2, 3 }, "image/png", "leak.png");
+
+        var result = await controller.UploadPhoto(1, file);
+
+        Assert.IsType<CreatedAtActionResult>(result.Result);
+    }
+
+    [Fact]
     public async Task GetPhotos_OwnReport_ReturnsMetadataOnly()
     {
         var controller = CreateController(

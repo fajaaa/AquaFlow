@@ -19,6 +19,7 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     private const string CustomerRoleName = "Customer";
     private const string NewStatus = "New";
     private const long MaxPhotoSizeBytes = 5 * 1024 * 1024;
+    private const int MaxPhotosPerReport = 5;
     private static readonly HashSet<string> AllowedPhotoContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "image/jpeg",
@@ -166,18 +167,24 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
         => base.Delete(id);
 
     // Same trust model as Create: a caller holding FaultReports.Manage may attach a photo
-    // to any report; otherwise the caller must own the report (404, not Forbid, when they
-    // don't - same signal as GetById).
+    // to any report in any status; otherwise the caller must own the report (404, not
+    // Forbid, when they don't - same signal as GetById) and the report must still be New,
+    // same pattern as DeletePhoto. Capped at MaxPhotosPerReport regardless of caller.
     [HttpPost("{id:int}/photos")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<FaultReportPhotoResponse>> UploadPhoto(int id, IFormFile file)
     {
-        var (_, error) = await AuthorizeReportAccessAsync(id);
+        var (report, error) = await AuthorizeReportAccessAsync(id);
         if (error is not null)
         {
             return error;
+        }
+
+        if (!HasManagePermission() && !string.Equals(report!.Status, NewStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ClientException("Photos can only be added while the report is still New.");
         }
 
         if (file is null || file.Length == 0)
@@ -193,6 +200,11 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
         if (file.Length > MaxPhotoSizeBytes)
         {
             throw new ClientException("Photo exceeds the 5MB size limit.");
+        }
+
+        if (await _photoService.CountAsync(id) >= MaxPhotosPerReport)
+        {
+            throw new ClientException("A fault report can have at most 5 photos.");
         }
 
         using var buffer = new MemoryStream();

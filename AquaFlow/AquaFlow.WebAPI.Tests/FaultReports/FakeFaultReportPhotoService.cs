@@ -29,6 +29,11 @@ public class FakeFaultReportPhotoService : IFaultReportPhotoService
         return Task.FromResult(response);
     }
 
+    public Task<int> CountAsync(int faultReportId)
+    {
+        return Task.FromResult(_rows.Count(row => row.FaultReportId == faultReportId));
+    }
+
     public Task<List<FaultReportPhotoResponse>> GetMetadataAsync(int faultReportId)
     {
         var items = _rows.Where(row => row.FaultReportId == faultReportId).Select(row => row.Response).ToList();

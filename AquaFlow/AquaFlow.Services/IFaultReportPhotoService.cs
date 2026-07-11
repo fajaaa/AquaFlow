@@ -11,6 +11,9 @@ public interface IFaultReportPhotoService
 {
     Task<FaultReportPhotoResponse> UploadAsync(int faultReportId, byte[] data, string contentType, string fileName);
 
+    // Row count only - does not load photo blob data.
+    Task<int> CountAsync(int faultReportId);
+
     Task<List<FaultReportPhotoResponse>> GetMetadataAsync(int faultReportId);
 
     // Throws KeyNotFoundException when no photo with photoId exists under faultReportId.

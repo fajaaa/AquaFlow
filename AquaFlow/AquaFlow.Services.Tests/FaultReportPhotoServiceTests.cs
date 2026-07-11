@@ -43,6 +43,24 @@ public class FaultReportPhotoServiceTests
     }
 
     [Fact]
+    public async Task CountAsync_OnlyCountsRowsForTheGivenReport()
+    {
+        await using var context = CreateContext();
+        context.FaultReports.AddRange(
+            new FaultReport { Id = 1, ReportedById = 1, CustomerId = 1, SettlementId = 1, Title = "Leak" },
+            new FaultReport { Id = 2, ReportedById = 1, CustomerId = 1, SettlementId = 1, Title = "No water" });
+        await context.SaveChangesAsync();
+        var service = new FaultReportPhotoService(context);
+        await service.UploadAsync(1, new byte[] { 1 }, "image/jpeg", "a.jpg");
+        await service.UploadAsync(1, new byte[] { 1 }, "image/jpeg", "b.jpg");
+        await service.UploadAsync(2, new byte[] { 1 }, "image/jpeg", "c.jpg");
+
+        var count = await service.CountAsync(1);
+
+        Assert.Equal(2, count);
+    }
+
+    [Fact]
     public async Task GetFileAsync_ReturnsRawBytesAndContentType()
     {
         await using var context = CreateContext();
