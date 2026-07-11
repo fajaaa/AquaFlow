@@ -224,6 +224,36 @@ public class FaultReportPhotosControllerTests
     }
 
     [Fact]
+    public async Task GetPhoto_UnknownReportId_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 1, role: CustomerRole, permissions: []),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            out _);
+
+        var result = await controller.GetPhoto(999, 1);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    // Pins that a FaultReports.Manage holder - who otherwise skips the ownership comparison
+    // entirely - still gets a 404 (not a crash) when the report id itself doesn't exist.
+    [Fact]
+    public async Task GetPhoto_ManagePermissionHolder_UnknownReportId_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 99, role: AdminRole, permissions: [ManagePermission]),
+            profiles: [],
+            reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "New" }],
+            out _);
+
+        var result = await controller.GetPhoto(999, 1);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
     public async Task GetPhoto_UnknownPhotoId_ReturnsNotFound()
     {
         var controller = CreateController(

@@ -112,6 +112,32 @@ public class FaultReportServiceTests
         Assert.Equal("No water pressure", item.Title);
     }
 
+    [Fact]
+    public async Task GetOwnershipAsync_ExistingReport_ReturnsCustomerIdAndStatusOnly()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var ownership = await service.GetOwnershipAsync(1);
+
+        Assert.NotNull(ownership);
+        Assert.Equal(1, ownership!.CustomerId);
+        Assert.Equal("InProgress", ownership.Status);
+    }
+
+    [Fact]
+    public async Task GetOwnershipAsync_UnknownId_ReturnsNull()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var ownership = await service.GetOwnershipAsync(999);
+
+        Assert.Null(ownership);
+    }
+
     private static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()

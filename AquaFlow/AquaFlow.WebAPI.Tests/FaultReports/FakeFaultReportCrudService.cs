@@ -5,10 +5,9 @@ using AquaFlow.Services;
 
 namespace AquaFlow.WebAPI.Tests.FaultReports;
 
-// Hand-written stand-in for IBaseCRUDService<...> so controller tests can drive
+// Hand-written stand-in for IFaultReportService so controller tests can drive
 // FaultReportsController's ownership pinning and Create trust model without a database.
-public class FakeFaultReportCrudService
-    : IBaseCRUDService<FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>
+public class FakeFaultReportCrudService : IFaultReportService
 {
     private readonly List<FaultReportResponse> _rows;
 
@@ -44,6 +43,12 @@ public class FakeFaultReportCrudService
         }
 
         return Task.FromResult(row);
+    }
+
+    public Task<FaultReportOwnership?> GetOwnershipAsync(int id)
+    {
+        var row = _rows.SingleOrDefault(row => row.Id == id);
+        return Task.FromResult(row is null ? null : new FaultReportOwnership(row.CustomerId, row.Status));
     }
 
     public Task<FaultReportResponse> InsertAsync(FaultReportInsertRequest request)

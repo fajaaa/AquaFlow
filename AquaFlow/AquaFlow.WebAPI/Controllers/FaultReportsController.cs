@@ -7,13 +7,12 @@ using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Mvc;
 
-using FaultReportCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.FaultReportResponse, AquaFlow.Model.SearchObjects.FaultReportSearchObject, AquaFlow.Model.Requests.FaultReportInsertRequest, AquaFlow.Model.Requests.FaultReportUpdateRequest, AquaFlow.Model.Requests.FaultReportPatchRequest>;
 using CustomerProfileCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.CustomerProfileResponse, AquaFlow.Model.SearchObjects.CustomerProfileSearchObject, AquaFlow.Model.Requests.CustomerProfileInsertRequest, AquaFlow.Model.Requests.CustomerProfileUpdateRequest, AquaFlow.Model.Requests.CustomerProfilePatchRequest>;
 using WaterMeterCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.WaterMeterResponse, AquaFlow.Model.SearchObjects.WaterMeterSearchObject, AquaFlow.Model.Requests.WaterMeterInsertRequest, AquaFlow.Model.Requests.WaterMeterUpdateRequest, AquaFlow.Model.Requests.WaterMeterPatchRequest>;
 
 namespace AquaFlow.WebAPI.Controllers;
 
-public class FaultReportsController : BaseCRUDController<FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest, FaultReportCrudService>
+public class FaultReportsController : BaseCRUDController<FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest, IFaultReportService>
 {
     private const string ManagePermission = "FaultReports.Manage";
     private const string CustomerRoleName = "Customer";
@@ -32,7 +31,7 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     private readonly IFaultReportPhotoService _photoService;
 
     public FaultReportsController(
-        FaultReportCrudService service,
+        IFaultReportService service,
         CustomerProfileCrudService customerProfileService,
         WaterMeterCrudService waterMeterService,
         IFaultReportPhotoService photoService) : base(service)
@@ -176,13 +175,13 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<FaultReportPhotoResponse>> UploadPhoto(int id, IFormFile file)
     {
-        var (report, error) = await AuthorizeReportAccessAsync(id);
+        var (ownership, error) = await AuthorizeReportAccessAsync(id);
         if (error is not null)
         {
             return error;
         }
 
-        if (!HasManagePermission() && !string.Equals(report!.Status, NewStatus, StringComparison.OrdinalIgnoreCase))
+        if (!HasManagePermission() && !string.Equals(ownership!.Status, NewStatus, StringComparison.OrdinalIgnoreCase))
         {
             throw new ClientException("Photos can only be added while the report is still New.");
         }
@@ -259,13 +258,13 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeletePhoto(int id, int photoId)
     {
-        var (report, error) = await AuthorizeReportAccessAsync(id);
+        var (ownership, error) = await AuthorizeReportAccessAsync(id);
         if (error is not null)
         {
             return error;
         }
 
-        if (!HasManagePermission() && !string.Equals(report!.Status, NewStatus, StringComparison.OrdinalIgnoreCase))
+        if (!HasManagePermission() && !string.Equals(ownership!.Status, NewStatus, StringComparison.OrdinalIgnoreCase))
         {
             throw new ClientException("Photos can only be removed while the report is still New.");
         }
@@ -282,43 +281,36 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     }
 
     // Shared ownership gate for the photo sub-routes: mirrors GetById - a FaultReports.Manage
-    // holder passes through unfiltered, otherwise the caller must own the report (404, not
-    // Forbid, when they don't, so the response never confirms the report id exists).
-    private async Task<(FaultReportResponse? Report, ActionResult? Error)> AuthorizeReportAccessAsync(int id)
+    // holder passes through unfiltered (skipping the CustomerProfile lookup below entirely),
+    // otherwise the caller must own the report (404, not Forbid, when they don't, so the response
+    // never confirms the report id exists). Uses Service.GetOwnershipAsync's CustomerId+Status
+    // projection rather than the full GetByIdAsync (which brings in the Customer/Settlement joins
+    // the detail screen needs but these routes don't), since this runs once per photo sub-route call.
+    private async Task<(FaultReportOwnership? Ownership, ActionResult? Error)> AuthorizeReportAccessAsync(int id)
     {
         if (!TryGetCurrentUserId(out var userId))
         {
             return (null, Unauthorized());
         }
 
-        if (HasManagePermission())
-        {
-            try
-            {
-                return (await Service.GetByIdAsync(id), null);
-            }
-            catch (KeyNotFoundException)
-            {
-                return (null, NotFound());
-            }
-        }
-
-        var customerId = await ResolveCustomerProfileIdAsync(userId);
-
-        try
-        {
-            var result = await Service.GetByIdAsync(id);
-            if (customerId is null || result.CustomerId != customerId.Value)
-            {
-                return (null, NotFound());
-            }
-
-            return (result, null);
-        }
-        catch (KeyNotFoundException)
+        var ownership = await Service.GetOwnershipAsync(id);
+        if (ownership is null)
         {
             return (null, NotFound());
         }
+
+        if (HasManagePermission())
+        {
+            return (ownership, null);
+        }
+
+        var customerId = await ResolveCustomerProfileIdAsync(userId);
+        if (customerId is null || ownership.CustomerId != customerId.Value)
+        {
+            return (null, NotFound());
+        }
+
+        return (ownership, null);
     }
 
     // Same source of truth WaterMetersController.GetById uses for customer ownership

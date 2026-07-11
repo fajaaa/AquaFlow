@@ -10,7 +10,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AquaFlow.Services;
 
 public class FaultReportService
-    : EfCrudService<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>
+    : EfCrudService<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>,
+        IFaultReportService
 {
     public FaultReportService(
         AquaFlowDbContext dbContext,
@@ -53,6 +54,14 @@ public class FaultReportService
         {
             throw new ClientException("Water meter not found.");
         }
+    }
+
+    public async Task<FaultReportOwnership?> GetOwnershipAsync(int id)
+    {
+        return await DbContext.FaultReports
+            .Where(f => f.Id == id)
+            .Select(f => new FaultReportOwnership(f.CustomerId, f.Status))
+            .FirstOrDefaultAsync();
     }
 
     protected override async Task LoadReferencesAsync(FaultReport entity)
