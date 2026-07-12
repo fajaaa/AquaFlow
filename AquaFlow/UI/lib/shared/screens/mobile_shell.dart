@@ -1,7 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_desktop/shared/models/user_preferences.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
+import 'package:aquaflow_desktop/shared/providers/theme_provider.dart';
+import 'package:aquaflow_desktop/shared/services/preferences_api_service.dart';
+import 'package:aquaflow_desktop/shared/services/preferences_exception.dart';
 
 /// One entry in a [MobileShell]'s bottom navigation: the destination shown in
 /// the bar plus the body rendered when it is selected.
@@ -48,23 +54,92 @@ class MobileShell extends StatefulWidget {
 class _MobileShellState extends State<MobileShell> {
   int _selectedIndex = 0;
 
+  final PreferencesApiService _preferencesService = PreferencesApiService();
+  UserPreferences? _preferences;
+  Timer? _themeSaveDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  @override
+  void dispose() {
+    _themeSaveDebounce?.cancel();
+    _preferencesService.dispose();
+    super.dispose();
+  }
+
   void _onTabSelected(int index) {
     setState(() => _selectedIndex = index);
     widget.onTabChanged?.call(index);
   }
 
+  /// Fetches `GET /Account/preferences` just to have a base object (language/
+  /// notification flags) for the `PUT` in [_saveTheme] - a failure here (e.g.
+  /// offline) is silently ignored, same as [AccountEditScreen]; the theme
+  /// toggle still works locally via [ThemeProvider], it just won't have the
+  /// user's other saved preferences to echo back until this succeeds.
+  Future<void> _loadPreferences() async {
+    try {
+      final preferences = await _preferencesService.getPreferences();
+      if (!mounted) return;
+      setState(() => _preferences = preferences);
+    } on PreferencesException {
+      // Silently ignored - see the method doc above.
+    }
+  }
+
+  /// Toggles [ThemeProvider] immediately so the app reacts without delay,
+  /// then debounces the `PUT /Account/preferences` call by 3 seconds so
+  /// rapid taps only trigger a single save of the final theme.
+  void _onThemeToggle() {
+    final themeProvider = context.read<ThemeProvider>();
+    final newMode =
+        themeProvider.themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    themeProvider.setThemeMode(newMode);
+
+    _themeSaveDebounce?.cancel();
+    _themeSaveDebounce = Timer(const Duration(seconds: 3), () => _saveTheme(newMode));
+  }
+
+  Future<void> _saveTheme(ThemeMode mode) async {
+    final current = _preferences ??
+        const UserPreferences(
+          theme: 'light',
+          language: 'bs',
+          receiveEmailNotifications: true,
+          receivePushNotifications: true,
+        );
+    final updated = current.copyWith(theme: mode == ThemeMode.dark ? 'dark' : 'light');
+
+    try {
+      final saved = await _preferencesService.updatePreferences(updated);
+      if (mounted) setState(() => _preferences = saved);
+    } on PreferencesException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Tema nije sačuvana: ${e.message}'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tabs = widget.tabs;
+    final themeMode = context.select<ThemeProvider, ThemeMode>((p) => p.themeMode);
+    final isDark = themeMode == ThemeMode.dark;
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.info_outline),
-          tooltip: 'Informacije',
-          onPressed: () {
-            // TODO: wire up the info/about action.
-          },
+          icon: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined),
+          tooltip: 'Promijeni temu',
+          onPressed: _onThemeToggle,
         ),
         title: const Text('AquaFlow'),
         actions: [
