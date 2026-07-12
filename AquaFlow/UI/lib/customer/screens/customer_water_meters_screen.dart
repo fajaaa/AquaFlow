@@ -6,6 +6,7 @@ import 'package:aquaflow_desktop/customer/screens/customer_requests_screen.dart'
 import 'package:aquaflow_desktop/customer/services/customer_water_meter_exception.dart';
 import 'package:aquaflow_desktop/customer/services/customer_water_meter_service.dart';
 import 'package:aquaflow_desktop/customer/widgets/new_water_meter_request_dialog.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 
 /// "Vodomjeri" tab body: lists the signed-in customer's own water meters and
 /// lets them file a new-meter request (the "+" action) or open the full
@@ -67,19 +68,11 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
   }
 
   Future<void> _openRequests() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const CustomerRequestsScreen(),
-      ),
-    );
+    await context.pushScreen(const CustomerRequestsScreen());
   }
 
   Future<void> _openFaultReports() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const CustomerFaultReportsScreen(),
-      ),
-    );
+    await context.pushScreen(const CustomerFaultReportsScreen());
   }
 
   @override

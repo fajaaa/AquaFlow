@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
+import '../navigation/app_navigation.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import 'register_screen.dart';
@@ -203,11 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextButton(
                     onPressed: isBusy
                         ? null
-                        : () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const RegisterScreen(),
-                              ),
-                            ),
+                        : () => context.pushScreen(const RegisterScreen()),
                     child: const Text('Nemate račun? Registrujte se'),
                   ),
                             ],

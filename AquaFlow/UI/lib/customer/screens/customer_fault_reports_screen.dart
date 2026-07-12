@@ -8,6 +8,7 @@ import 'package:aquaflow_desktop/customer/services/customer_fault_report_excepti
 import 'package:aquaflow_desktop/customer/services/customer_fault_report_service.dart';
 import 'package:aquaflow_desktop/customer/widgets/fault_report_status_pill.dart';
 import 'package:aquaflow_desktop/customer/widgets/new_fault_report_dialog.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 
 /// Full-screen list of ALL of the signed-in customer's fault reports, every
@@ -127,10 +128,8 @@ class _CustomerFaultReportsScreenState
   }
 
   Future<void> _openDetail(CustomerFaultReport report) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => CustomerFaultReportDetailScreen(report: report),
-      ),
+    await context.pushScreen(
+      CustomerFaultReportDetailScreen(report: report),
     );
   }
 

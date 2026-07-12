@@ -14,23 +14,35 @@ import 'package:aquaflow_desktop/admin/services/admin_municipality_service.dart'
 import 'package:aquaflow_desktop/admin/services/admin_settlement_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_settlement_service.dart';
 import 'package:aquaflow_desktop/shared/models/account_details.dart';
+import 'package:aquaflow_desktop/shared/models/user_preferences.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
+import 'package:aquaflow_desktop/shared/providers/theme_provider.dart';
 import 'package:aquaflow_desktop/shared/services/account_exception.dart';
 import 'package:aquaflow_desktop/shared/services/account_service.dart';
+import 'package:aquaflow_desktop/shared/services/preferences_api_service.dart';
+import 'package:aquaflow_desktop/shared/services/preferences_exception.dart';
 
 /// Admin-only "Moj nalog" screen (embedded directly in
 /// [AdminDashboardScreen], not pushed as a route - unlike the shared
 /// `AccountEditScreen` used by the mobile customer/collector "Nalog" tab).
 ///
 /// Edits the signed-in admin's own account with the same depth as the
-/// "Korisnici" editor dialog (email, phone, profile name/language/theme,
+/// "Korisnici" editor dialog (email, phone, profile name/language,
 /// password) - minus role and active status, which stay off-limits for
 /// self-editing everywhere in this app to avoid privilege escalation.
 ///
+/// App theme ("Izgled") is separate from the profile fields: it reads/writes
+/// `UserPreference.Theme` via `GET`/`PUT /Account/preferences`
+/// ([PreferencesApiService]) and applies immediately to the shared
+/// [ThemeProvider] on change, rather than being part of the deferred-save
+/// form below. It is intentionally not the same as the CustomerProfile
+/// `Theme` column ([AdminCustomerProfileDraft.theme]/[_profileTheme]), a
+/// legacy field the app itself never reads.
+///
 /// Three independent writes happen on save, each only when relevant data
 /// changed: `PUT /Account/me` (email/phone, via [AccountService]), a
-/// create-or-update of the caller's own CustomerProfile (name/language/theme,
-/// via [AdminAccountService]) only when a name was entered, and
+/// create-or-update of the caller's own CustomerProfile (name/language, via
+/// [AdminAccountService]) only when a name was entered, and
 /// `PUT /Account/me/password` (via [AdminAccountService]) only when the
 /// password fields were filled in - which requires the current password for
 /// confirmation, unlike an admin resetting another user's password from the
@@ -48,6 +60,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   final AdminCityService _cityService = AdminCityService();
   final AdminMunicipalityService _municipalityService = AdminMunicipalityService();
   final AdminSettlementService _settlementService = AdminSettlementService();
+  final PreferencesApiService _preferencesService = PreferencesApiService();
   final _formKey = GlobalKey<FormState>();
 
   final _emailCtrl = TextEditingController();
@@ -64,7 +77,12 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   int? _existingProfileId;
   String? _customerCode;
   String _defaultLanguage = 'bs';
-  String _theme = 'light';
+  // CustomerProfile.Theme: legacy field on the profile row, unrelated to the
+  // app's actual theme (that's UserPreference.Theme / [_preferences] below).
+  // Kept only so `saveProfile` echoes back whatever was already stored - no
+  // UI edits it anymore.
+  String _profileTheme = 'light';
+  UserPreferences? _preferences;
 
   List<AdminCity> _cities = const [];
   List<AdminMunicipality> _municipalities = const [];
@@ -139,11 +157,12 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
       _firstNameCtrl.text = profile?.firstName ?? '';
       _lastNameCtrl.text = profile?.lastName ?? '';
       _defaultLanguage = profile?.defaultLanguage ?? 'bs';
-      _theme = profile?.theme ?? 'light';
+      _profileTheme = profile?.theme ?? 'light';
       _streetCtrl.text = profile?.street ?? '';
       _houseNumberCtrl.text = profile?.houseNumber ?? '';
       _applySettlement(profile?.settlementId);
       setState(() => _loading = false);
+      _loadPreferences();
     } on AccountException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -168,6 +187,51 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
         _loading = false;
         _loadError = e.message;
       });
+    }
+  }
+
+  /// Fetches `GET /Account/preferences` separately from [_load]: a failure
+  /// here (e.g. offline) must not block editing the rest of the account, so
+  /// it just leaves [_preferences] null and the theme switch defaults to
+  /// whatever [ThemeProvider] is already showing.
+  Future<void> _loadPreferences() async {
+    try {
+      final preferences = await _preferencesService.getPreferences();
+      if (!mounted) return;
+      setState(() => _preferences = preferences);
+    } on PreferencesException {
+      // Silently ignored - see the method doc above.
+    }
+  }
+
+  /// Applies [isDark] to the shared [ThemeProvider] immediately, then
+  /// persists it via `PUT /Account/preferences` in the background. On save
+  /// failure the app theme stays changed (better than reverting under the
+  /// admin), but a snackbar reports that the choice wasn't saved.
+  Future<void> _setTheme(bool isDark) async {
+    final current = _preferences ??
+        const UserPreferences(
+          theme: 'light',
+          language: 'bs',
+          receiveEmailNotifications: true,
+          receivePushNotifications: true,
+        );
+    final updated = current.copyWith(theme: isDark ? 'dark' : 'light');
+
+    setState(() => _preferences = updated);
+    context.read<ThemeProvider>().setThemeMode(isDark ? ThemeMode.dark : ThemeMode.light);
+
+    try {
+      final saved = await _preferencesService.updatePreferences(updated);
+      if (mounted) setState(() => _preferences = saved);
+    } on PreferencesException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Tema nije sačuvana: ${e.message}'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
   }
 
@@ -246,7 +310,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
             firstName: _firstNameCtrl.text.trim(),
             lastName: _lastNameCtrl.text.trim(),
             defaultLanguage: _defaultLanguage,
-            theme: _theme,
+            theme: _profileTheme,
             settlementId: _selectedSettlementId,
             street: street.isEmpty ? null : street,
             houseNumber: houseNumber.isEmpty ? null : houseNumber,
@@ -290,6 +354,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     _cityService.dispose();
     _municipalityService.dispose();
     _settlementService.dispose();
+    _preferencesService.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _firstNameCtrl.dispose();
@@ -346,6 +411,26 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                     maxLength: 30,
                   ),
                   const SizedBox(height: 8),
+                  const _SectionLabel('Izgled'),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(
+                          value: false,
+                          label: Text('Svijetla'),
+                          icon: Icon(Icons.light_mode_outlined),
+                        ),
+                        ButtonSegment(
+                          value: true,
+                          label: Text('Tamna'),
+                          icon: Icon(Icons.dark_mode_outlined),
+                        ),
+                      ],
+                      selected: {_preferences?.isDarkTheme ?? false},
+                      onSelectionChanged: (selection) => _setTheme(selection.first),
+                    ),
+                  ),
                   const _SectionLabel('Profil'),
                   if (_customerCode != null) ...[
                     TextFormField(
@@ -375,46 +460,25 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                     onChanged: () => setState(() {}),
                     maxLength: 80,
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _defaultLanguage,
-                          decoration: const InputDecoration(
-                            labelText: 'Jezik',
-                            prefixIcon: Icon(Icons.language_outlined),
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: 'bs', child: Text('Bosanski')),
-                            DropdownMenuItem(value: 'en', child: Text('Engleski')),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() => _defaultLanguage = value);
-                          },
-                        ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _defaultLanguage,
+                      decoration: const InputDecoration(
+                        labelText: 'Jezik',
+                        prefixIcon: Icon(Icons.language_outlined),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _theme,
-                          decoration: const InputDecoration(
-                            labelText: 'Tema',
-                            prefixIcon: Icon(Icons.palette_outlined),
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: 'light', child: Text('Svijetla')),
-                            DropdownMenuItem(value: 'dark', child: Text('Tamna')),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() => _theme = value);
-                          },
-                        ),
-                      ),
-                    ],
+                      items: const [
+                        DropdownMenuItem(value: 'bs', child: Text('Bosanski')),
+                        DropdownMenuItem(value: 'en', child: Text('Engleski')),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() => _defaultLanguage = value);
+                      },
+                    ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
                   const _SectionLabel('Adresa'),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),

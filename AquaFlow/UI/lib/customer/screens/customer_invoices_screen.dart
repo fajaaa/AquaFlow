@@ -5,6 +5,9 @@ import 'package:aquaflow_desktop/customer/screens/customer_invoice_detail_screen
 import 'package:aquaflow_desktop/customer/services/customer_invoice_exception.dart';
 import 'package:aquaflow_desktop/customer/services/customer_invoice_service.dart';
 import 'package:aquaflow_desktop/customer/widgets/invoice_status_pill.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
+import 'package:aquaflow_desktop/shared/widgets/async_state_view.dart';
+import 'package:aquaflow_desktop/shared/widgets/list_skeleton.dart';
 
 /// "Računi" tab body: lists the signed-in customer's own invoices, every
 /// status, newest first. Real server-side pagination via
@@ -113,11 +116,7 @@ class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen> {
   }
 
   Future<void> _openDetail(CustomerInvoice invoice) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => CustomerInvoiceDetailScreen(invoice: invoice),
-      ),
-    );
+    await context.pushScreen(CustomerInvoiceDetailScreen(invoice: invoice));
   }
 
   @override
@@ -152,54 +151,73 @@ class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen> {
   }
 
   Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final error = _error;
-    if (error != null) {
-      return _ErrorRetry(message: error, onRetry: _loadFirstPage);
-    }
-
-    if (_items.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: _loadFirstPage,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
-          children: [
-            SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-            const _EmptyState(),
-          ],
+    return AsyncStateView(
+      loading: _loading,
+      error: _error,
+      onRetry: _loadFirstPage,
+      loadingBuilder: (context) => ListSkeleton(
+        itemBuilder: (context, index) => _InvoiceCard(
+          invoice: _skeletonInvoice,
+          onTap: () {},
         ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadFirstPage,
-      child: ListView.separated(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        itemCount: _items.length + (_hasMore ? 1 : 0),
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (context, index) {
-          if (index >= _items.length) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final invoice = _items[index];
-          return _InvoiceCard(
-            invoice: invoice,
-            onTap: () => _openDetail(invoice),
-          );
-        },
       ),
+      builder: (context) {
+        if (_items.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: _loadFirstPage,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(24),
+              children: [
+                SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
+                const _EmptyState(),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: _loadFirstPage,
+          child: ListView.separated(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            itemCount: _items.length + (_hasMore ? 1 : 0),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              if (index >= _items.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final invoice = _items[index];
+              return _InvoiceCard(
+                invoice: invoice,
+                onTap: () => _openDetail(invoice),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
+
+final _skeletonInvoice = CustomerInvoice(
+  id: 0,
+  invoiceNumber: 'INV-000000',
+  billingPeriodFrom: DateTime(2024, 1, 1),
+  billingPeriodTo: DateTime(2024, 1, 31),
+  previousReading: 0,
+  currentReading: 0,
+  consumptionM3: 0,
+  subtotal: 0,
+  tax: 0,
+  totalAmount: 0,
+  status: 'Paid',
+  waterMeterSerialNumber: 'SN-0000000',
+);
 
 class _InvoiceCard extends StatelessWidget {
   const _InvoiceCard({required this.invoice, required this.onTap});
@@ -318,37 +336,6 @@ class _EmptyState extends StatelessWidget {
             style: theme.textTheme.titleMedium,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
-            ),
-          ],
-        ),
       ),
     );
   }

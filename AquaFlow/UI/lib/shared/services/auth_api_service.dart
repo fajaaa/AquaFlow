@@ -39,8 +39,9 @@ class AuthApiService {
   }
 
   /// `POST /Access/register` with `{ email, password, phone, firstName,
-  /// lastName }`. Always creates a Customer (backend ignores any role input)
-  /// plus its `CustomerProfile`. The backend returns the created user, not
+  /// lastName, theme }`. Always creates a Customer (backend ignores any role
+  /// input) plus its `CustomerProfile`; `theme` seeds the new user's
+  /// `UserPreference.Theme`. The backend returns the created user, not
   /// tokens, so callers must follow up with [login] to establish a session.
   Future<void> register({
     required String email,
@@ -48,6 +49,7 @@ class AuthApiService {
     required String phone,
     required String firstName,
     required String lastName,
+    required String theme,
   }) async {
     final response = await _post('/Access/register', {
       'email': email,
@@ -55,6 +57,7 @@ class AuthApiService {
       'phone': phone,
       'firstName': firstName,
       'lastName': lastName,
+      'theme': theme,
     });
 
     if (response.statusCode == 201) return;

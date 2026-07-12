@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/notification_page.dart';
 import '../models/user_notification_item.dart';
+import '../navigation/app_navigation.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notification_badge_provider.dart';
 import '../services/notification_exception.dart';
@@ -95,13 +96,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _openDetails(UserNotificationItem item) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => NotificationDetailScreen(
-          item: item,
-          onMarkedRead: _applyMarkedRead,
-        ),
-      ),
+    context.pushScreen(
+      NotificationDetailScreen(item: item, onMarkedRead: _applyMarkedRead),
     );
   }
 

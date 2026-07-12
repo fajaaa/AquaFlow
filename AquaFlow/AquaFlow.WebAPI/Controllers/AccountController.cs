@@ -20,17 +20,23 @@ namespace AquaFlow.WebAPI.Controllers;
 public class AccountController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IUserPreferenceService _userPreferenceService;
     private readonly IValidator<AccountUpdateRequest> _updateValidator;
     private readonly IValidator<AccountChangePasswordRequest> _changePasswordValidator;
+    private readonly IValidator<UserPreferenceUpdateRequest> _preferenceUpdateValidator;
 
     public AccountController(
         IUserService userService,
+        IUserPreferenceService userPreferenceService,
         IValidator<AccountUpdateRequest> updateValidator,
-        IValidator<AccountChangePasswordRequest> changePasswordValidator)
+        IValidator<AccountChangePasswordRequest> changePasswordValidator,
+        IValidator<UserPreferenceUpdateRequest> preferenceUpdateValidator)
     {
         _userService = userService;
+        _userPreferenceService = userPreferenceService;
         _updateValidator = updateValidator;
         _changePasswordValidator = changePasswordValidator;
+        _preferenceUpdateValidator = preferenceUpdateValidator;
     }
 
     [HttpGet("me")]
@@ -54,6 +60,21 @@ public class AccountController : ControllerBase
         await _changePasswordValidator.ValidateAndThrowAsync(request);
         await _userService.ChangeOwnPasswordAsync(GetCurrentUserId(), request);
         return NoContent();
+    }
+
+    [HttpGet("preferences")]
+    public async Task<ActionResult<UserPreferenceResponse>> GetPreferences()
+    {
+        var preferences = await _userPreferenceService.GetByUserIdAsync(GetCurrentUserId());
+        return Ok(preferences);
+    }
+
+    [HttpPut("preferences")]
+    public async Task<ActionResult<UserPreferenceResponse>> UpdatePreferences([FromBody] UserPreferenceUpdateRequest request)
+    {
+        await _preferenceUpdateValidator.ValidateAndThrowAsync(request);
+        var updated = await _userPreferenceService.UpdateAsync(GetCurrentUserId(), request);
+        return Ok(updated);
     }
 
     private int GetCurrentUserId()

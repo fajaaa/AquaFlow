@@ -7,4 +7,5 @@ public class UserRegisterRequest
     public string Phone { get; set; } = string.Empty;
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
+    public string Theme { get; set; } = "light";
 }

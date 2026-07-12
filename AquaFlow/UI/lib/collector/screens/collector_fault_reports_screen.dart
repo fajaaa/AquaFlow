@@ -7,6 +7,7 @@ import 'package:aquaflow_desktop/collector/screens/collector_fault_report_detail
 import 'package:aquaflow_desktop/collector/services/collector_fault_report_exception.dart';
 import 'package:aquaflow_desktop/collector/services/collector_fault_report_service.dart';
 import 'package:aquaflow_desktop/collector/widgets/fault_report_status_pill.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 
 // No 'New' option: a New report is by definition not yet assigned, so the
 // pinned listing below can never contain one.
@@ -103,10 +104,8 @@ class _CollectorFaultReportsScreenState
   }
 
   Future<void> _openDetail(CollectorFaultReport report) async {
-    final updated = await Navigator.of(context).push<CollectorFaultReport>(
-      MaterialPageRoute<CollectorFaultReport>(
-        builder: (_) => CollectorFaultReportDetailScreen(report: report),
-      ),
+    final updated = await context.pushScreen<CollectorFaultReport>(
+      CollectorFaultReportDetailScreen(report: report),
     );
     if (!mounted || updated == null) return;
     setState(() {

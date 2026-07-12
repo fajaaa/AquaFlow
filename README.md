@@ -48,6 +48,10 @@ and walks you from zero to a running system.
   a **push notification** on their phone (Firebase Cloud Messaging).
 - **Company & payment settings** — a single admin-managed record for company details
   (name, contact info, tax number, bank account) and payment gateway configuration.
+- **User preferences** — each user has a persisted theme (`light`/`dark`), language, and
+  notification toggles (`GET`/`PUT /Account/preferences`); the Flutter app applies the
+  saved theme app-wide and lets users switch it from account settings (and pick it at
+  registration).
 
 ---
 
@@ -256,6 +260,7 @@ update, and delete** (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`), unless noted oth
 
 - **People & access:** `/Users`, `/UserRoles`, `/Permissions`, `/UserRolePermissions`,
   `/CustomerProfiles`, `/CollectorProfiles`, `/Account` (edit your own profile),
+  `/Account/preferences` (`GET`/`PUT` your theme, language, notification toggles),
   `/DeviceTokens` (push notification registration)
 - **Places:** `/Cities`, `/Municipalities`, `/Settlements`
 - **Meters & billing:** `/WaterMeters`, `/WaterMeterRequests`, `/MeterReadings`,

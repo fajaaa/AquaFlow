@@ -7,6 +7,7 @@ import 'package:aquaflow_desktop/customer/models/customer_fault_report_photo.dar
 import 'package:aquaflow_desktop/customer/services/customer_fault_report_exception.dart';
 import 'package:aquaflow_desktop/customer/services/customer_fault_report_service.dart';
 import 'package:aquaflow_desktop/customer/widgets/fault_report_status_pill.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 
 /// Detail view of a single fault report belonging to the signed-in customer,
@@ -68,12 +69,10 @@ class _CustomerFaultReportDetailScreenState
   }
 
   void _openFullscreen(CustomerFaultReportPhoto photo) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _FullscreenPhotoScreen(
-          fileName: photo.fileName,
-          fetcher: () => _service.fetchPhotoBytes(widget.report.id, photo.id),
-        ),
+    context.pushScreen(
+      _FullscreenPhotoScreen(
+        fileName: photo.fileName,
+        fetcher: () => _service.fetchPhotoBytes(widget.report.id, photo.id),
       ),
     );
   }

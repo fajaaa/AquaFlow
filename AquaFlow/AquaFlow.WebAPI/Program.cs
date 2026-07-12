@@ -185,6 +185,7 @@ builder.Services.AddScoped<IMapper, ServiceMapper>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDeviceTokenService, DeviceTokenService>();
+builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IPermissionLookupService, PermissionLookupService>();
 builder.Services.AddScoped<NotificationRecipientService>();
@@ -283,6 +284,7 @@ builder.Services.AddScoped<IValidator<AccountUpdateRequest>, AccountUpdateValida
 builder.Services.AddScoped<IValidator<AccountChangePasswordRequest>, AccountChangePasswordValidator>();
 builder.Services.AddScoped<IValidator<DeviceTokenRegisterRequest>, DeviceTokenRegisterValidator>();
 builder.Services.AddScoped<IValidator<DeviceTokenUnregisterRequest>, DeviceTokenUnregisterValidator>();
+builder.Services.AddScoped<IValidator<UserPreferenceUpdateRequest>, UserPreferenceUpdateValidator>();
 builder.Services.AddScoped<IValidator<UserInsertRequest>, UserInsertValidator>();
 builder.Services.AddScoped<IValidator<UserUpdateRequest>, UserUpdateValidator>();
 builder.Services.AddScoped<IValidator<UserPatchRequest>, UserPatchValidator>();

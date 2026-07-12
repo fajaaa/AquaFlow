@@ -22,6 +22,7 @@ import 'package:aquaflow_desktop/admin/services/admin_settlement_exception.dart'
 import 'package:aquaflow_desktop/admin/services/admin_settlement_service.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_service.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 
 /// Which role this screen manages. The listing is pinned server-side to that
@@ -348,11 +349,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   void _openWaterMeters(AdminUser user) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AdminUserWaterMetersScreen(user: user),
-      ),
-    );
+    context.pushScreen(AdminUserWaterMetersScreen(user: user));
   }
 
   Future<void> _confirmDelete(AdminUser user) async {

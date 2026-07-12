@@ -7,6 +7,7 @@ import 'package:aquaflow_desktop/app/platform_gate.dart';
 import 'package:aquaflow_desktop/app/unavailable_screen.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/providers/notification_badge_provider.dart';
+import 'package:aquaflow_desktop/shared/providers/theme_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/login_screen.dart';
 import 'package:aquaflow_desktop/shared/services/push_message_handler.dart';
 import 'package:aquaflow_desktop/shared/theme/app_theme.dart';
@@ -22,6 +23,12 @@ final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 /// "Obavijesti" tab badge directly from FCM's `onMessage` callback. Provided
 /// to the widget tree below via `ChangeNotifierProvider.value`.
 final _notificationBadgeProvider = NotificationBadgeProvider();
+
+/// Created here (not inside [AquaFlowApp]'s `build`) so the same instance can
+/// be passed into [AuthProvider], which applies the signed-in user's
+/// `UserPreference.Theme` to it after login/session restore - it must be the
+/// exact instance the widget tree below watches, not a disconnected one.
+final _themeProvider = ThemeProvider();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,18 +59,31 @@ class AquaFlowApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         // Restore any saved session as soon as the provider is created.
-        ChangeNotifierProvider(create: (_) => AuthProvider()..bootstrap()),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(themeProvider: _themeProvider)..bootstrap(),
+        ),
         // Shared instance (not `create`) so PushMessageHandler's onMessage
         // callback in `main()`, which runs outside the widget tree, bumps the
         // exact same badge state the mobile shells read.
         ChangeNotifierProvider.value(value: _notificationBadgeProvider),
+        // Shared instance (not `create`) - see the comment on [_themeProvider].
+        ChangeNotifierProvider.value(value: _themeProvider),
       ],
-      child: MaterialApp(
-        navigatorKey: _navigatorKey,
-        scaffoldMessengerKey: _scaffoldMessengerKey,
-        title: 'AquaFlow',
-        theme: AppTheme.light,
-        home: const _AppEntry(),
+      child: Builder(
+        builder: (context) {
+          final themeMode = context.select<ThemeProvider, ThemeMode>(
+            (p) => p.themeMode,
+          );
+          return MaterialApp(
+            navigatorKey: _navigatorKey,
+            scaffoldMessengerKey: _scaffoldMessengerKey,
+            title: 'AquaFlow',
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: themeMode,
+            home: const _AppEntry(),
+          );
+        },
       ),
     );
   }
