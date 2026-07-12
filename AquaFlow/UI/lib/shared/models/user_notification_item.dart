@@ -21,6 +21,18 @@ class UserNotificationItem {
 
   bool get isRead => readAt != null;
 
+  UserNotificationItem copyWith({DateTime? readAt}) {
+    return UserNotificationItem(
+      id: id,
+      userId: userId,
+      notificationId: notificationId,
+      notification: notification,
+      readAt: readAt ?? this.readAt,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
   factory UserNotificationItem.fromJson(Map<String, dynamic> json) {
     final notificationJson = json['notification'];
 

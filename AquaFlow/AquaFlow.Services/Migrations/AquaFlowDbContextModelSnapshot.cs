@@ -497,23 +497,25 @@ namespace AquaFlow.Services.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AssignedCollectorId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("CustomerId")
+                    b.Property<int?>("CustomerId")
                         .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PhotoUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Priority")
-                        .IsRequired()
+                    b.Property<string>("HouseNumber")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("PhotoUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ReportedById")
                         .HasColumnType("int");
@@ -529,6 +531,10 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<string>("Street")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -541,6 +547,8 @@ namespace AquaFlow.Services.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedCollectorId");
 
                     b.HasIndex("CustomerId");
 
@@ -559,13 +567,53 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             Description = "Pritisak vode je nizak u jutarnjim satima.",
-                            Priority = "Medium",
                             ReportedById = 3,
                             SettlementId = 1,
                             Status = "New",
                             Title = "Slab pritisak vode",
                             WaterMeterId = 1
                         });
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.FaultReportPhoto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("FaultReportId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FaultReportId");
+
+                    b.ToTable("FaultReportPhotos");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.FaultStatusHistory", b =>
@@ -2456,13 +2504,6 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 9,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            PermissionId = 6,
-                            UserRoleId = 2
-                        },
-                        new
-                        {
                             Id = 10,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 4,
@@ -2883,11 +2924,15 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.FaultReport", b =>
                 {
+                    b.HasOne("AquaFlow.Services.Database.CollectorProfile", "AssignedCollector")
+                        .WithMany()
+                        .HasForeignKey("AssignedCollectorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
                         .WithMany()
                         .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("AquaFlow.Services.Database.User", "ReportedBy")
                         .WithMany()
@@ -2906,6 +2951,8 @@ namespace AquaFlow.Services.Migrations
                         .HasForeignKey("WaterMeterId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.Navigation("AssignedCollector");
+
                     b.Navigation("Customer");
 
                     b.Navigation("ReportedBy");
@@ -2913,6 +2960,17 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Settlement");
 
                     b.Navigation("WaterMeter");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.FaultReportPhoto", b =>
+                {
+                    b.HasOne("AquaFlow.Services.Database.FaultReport", "FaultReport")
+                        .WithMany("Photos")
+                        .HasForeignKey("FaultReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FaultReport");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.FaultStatusHistory", b =>
@@ -3436,6 +3494,8 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.FaultReport", b =>
                 {
+                    b.Navigation("Photos");
+
                     b.Navigation("StatusHistory");
 
                     b.Navigation("WorkOrders");

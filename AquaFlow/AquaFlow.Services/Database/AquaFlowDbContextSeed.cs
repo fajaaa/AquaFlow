@@ -1,3 +1,4 @@
+using AquaFlow.Services.FaultReportStateMachine;
 using Microsoft.EntityFrameworkCore;
 
 namespace AquaFlow.Services.Database;
@@ -300,14 +301,10 @@ public partial class AquaFlowDbContext
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
-            new
-            {
-                Id = 9,
-                UserRoleId = 2,
-                PermissionId = 6,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
+            // Id = 9 (Collector + FaultReports.Manage) was deliberately removed: a collector no
+            // longer reads fault reports unfiltered - they are pinned to reports assigned to their
+            // own CollectorProfile via FaultReport.AssignedCollectorId, same model as
+            // WaterMeterRequests. Do not reuse the id.
             new
             {
                 Id = 10,
@@ -739,13 +736,14 @@ public partial class AquaFlowDbContext
                 Id = 1,
                 ReportedById = 3,
                 WaterMeterId = (int?)1,
-                CustomerId = 1,
+                CustomerId = (int?)1,
                 SettlementId = 1,
+                Street = (string?)null,
+                HouseNumber = (string?)null,
                 Title = "Slab pritisak vode",
                 Description = "Pritisak vode je nizak u jutarnjim satima.",
                 PhotoUrl = (string?)null,
-                Status = "New",
-                Priority = "Medium",
+                Status = FaultReportStatus.New,
                 ResolvedAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null

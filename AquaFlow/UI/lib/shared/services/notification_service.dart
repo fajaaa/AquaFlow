@@ -141,7 +141,10 @@ class NotificationService {
 
     if (response.statusCode != 200) {
       throw NotificationException(
-        _messageFor(response, 'Broj nepročitanih obavijesti nije moguće učitati'),
+        _messageFor(
+          response,
+          'Broj nepročitanih obavijesti nije moguće učitati',
+        ),
       );
     }
 
@@ -151,6 +154,34 @@ class NotificationService {
     }
 
     return (decoded['totalCount'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Persists a read receipt for [userNotificationId] via `PATCH
+  /// /UserNotifications/{id}` (`{"readAt": "ISO8601 UTC"}`). The owner of
+  /// the row may only patch `ReadAt` this way - any other field throws a
+  /// `ClientException` on the backend (`UserNotificationsController.Patch`).
+  Future<void> markAsRead(int userNotificationId) async {
+    final token = await _requireToken();
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/UserNotifications/$userNotificationId',
+    );
+
+    final response = await _send(
+      () => _client.patch(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'readAt': DateTime.now().toUtc().toIso8601String()}),
+      ),
+    );
+
+    if (response.statusCode != 200) {
+      throw NotificationException(
+        _messageFor(response, 'Obavijest nije moguće označiti kao pročitanu'),
+      );
+    }
   }
 
   Future<String> _requireToken() async {

@@ -6,6 +6,7 @@ public class FaultReportSearchObject : BaseSearchObject
     public int? WaterMeterId { get; set; }
     public int? CustomerId { get; set; }
     public int? SettlementId { get; set; }
+    public int? AssignedCollectorId { get; set; }
     public string? Status { get; set; }
-    public string? Priority { get; set; }
+    public string? Term { get; set; }
 }

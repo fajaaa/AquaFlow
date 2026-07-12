@@ -19,6 +19,7 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<FaultReport> FaultReports => Set<FaultReport>();
+    public DbSet<FaultReportPhoto> FaultReportPhotos => Set<FaultReportPhoto>();
     public DbSet<FaultStatusHistory> FaultStatusHistories => Set<FaultStatusHistory>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
@@ -130,6 +131,15 @@ public partial class AquaFlowDbContext : DbContext
             .HasIndex(reading => new { reading.WaterMeterId, reading.BillingCycleId })
             .IsUnique()
             .HasFilter("[BillingCycleId] IS NOT NULL");
+
+        // Photos have no independent lifecycle outside their report (unlike
+        // WorkOrder/FaultStatusHistory rows, which stay Restrict so a report can't be
+        // deleted while still referenced elsewhere) - deleting a FaultReport deletes its photos too.
+        modelBuilder.Entity<FaultReportPhoto>()
+            .HasOne(photo => photo.FaultReport)
+            .WithMany(report => report.Photos)
+            .HasForeignKey(photo => photo.FaultReportId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         CreateSeed(modelBuilder);
     }

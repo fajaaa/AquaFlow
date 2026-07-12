@@ -7,6 +7,7 @@ using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.FaultReportStateMachine;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Validators;
 using AquaFlow.Services.WaterMeterRequestStateMachine;
@@ -174,6 +175,11 @@ mapperConfig.NewConfig<Invoice, InvoiceResponse>()
     .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
     .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
     .Map(destination => destination.WaterMeterSerialNumber, source => source.WaterMeter == null ? string.Empty : source.WaterMeter.SerialNumber);
+mapperConfig.NewConfig<FaultReport, FaultReportResponse>()
+    .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
+    .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
+    .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
+    .Map(destination => destination.AssignedCollectorEmployeeCode, source => source.AssignedCollector == null ? null : source.AssignedCollector.EmployeeCode);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
@@ -251,7 +257,20 @@ builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, CancelledWaterMeterR
 builder.Services.AddScoped<IWaterMeterRequestStateResolver, WaterMeterRequestStateResolver>();
 AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
-AddCrud<FaultReport, FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>();
+// FaultReport mirrors the Invoice/WaterMeterRequest registrations above: the state machine service
+// is registered by hand, the generic IBaseCRUDService alias resolves to the same instance, and each
+// report state is a keyed scoped BaseFaultReportState (status string as key) that
+// IFaultReportStateResolver resolves through.
+AddPatchMapping<FaultReportPatchRequest, FaultReport>();
+builder.Services.AddScoped<IFaultReportService, FaultReportService>();
+builder.Services.AddScoped<IBaseCRUDService<FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IFaultReportService>());
+builder.Services.AddKeyedScoped<BaseFaultReportState, NewFaultReportState>(FaultReportStatus.New);
+builder.Services.AddKeyedScoped<BaseFaultReportState, AssignedFaultReportState>(FaultReportStatus.Assigned);
+builder.Services.AddKeyedScoped<BaseFaultReportState, InProgressFaultReportState>(FaultReportStatus.InProgress);
+builder.Services.AddKeyedScoped<BaseFaultReportState, ResolvedFaultReportState>(FaultReportStatus.Resolved);
+builder.Services.AddScoped<IFaultReportStateResolver, FaultReportStateResolver>();
+builder.Services.AddScoped<IFaultReportPhotoService, FaultReportPhotoService>();
 AddPatchMapping<NotificationPatchRequest, Notification>();
 builder.Services.AddScoped<IBaseCRUDService<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>, NotificationService>();
 AddPatchMapping<UserNotificationPatchRequest, UserNotification>();

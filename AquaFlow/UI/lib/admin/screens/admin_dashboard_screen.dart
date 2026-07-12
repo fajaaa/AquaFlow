@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_account_edit_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_codebook_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_collectors_screen.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_fault_reports_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_invoices_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_notifications_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_payments_screen.dart';
@@ -20,8 +21,9 @@ import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 /// Classic admin layout: a fixed left [_Sidebar] (brand on top, a vertical menu
 /// below with the active item highlighted in blue and a left indicator bar) and
 /// a content area on the right that swaps with the selected menu item. The
-/// "Obavijesti", "Šifarnik", "Tarife", "Računi", "Postavke firme", and "Moj nalog" sections
-/// embed their existing screens; the rest are placeholders until wired up. "Moj nalog" uses
+/// "Obavijesti", "Šifarnik", "Tarife", "Računi", "Prijave kvarova", "Postavke firme",
+/// and "Moj nalog" sections embed their existing screens; the rest are placeholders
+/// until wired up. "Moj nalog" uses
 /// the admin-only [AdminAccountEditScreen] (not the shared `AccountEditScreen`
 /// used by the mobile customer/collector "Nalog" tab), since it edits more than
 /// contact data here.
@@ -165,6 +167,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return const AdminInvoicesScreen();
       case 7:
         return const AdminPaymentsScreen();
+      case 8:
+        return const AdminFaultReportsScreen();
       case 9:
         return const AdminUsersScreen(
           key: ValueKey('users-admins'),
