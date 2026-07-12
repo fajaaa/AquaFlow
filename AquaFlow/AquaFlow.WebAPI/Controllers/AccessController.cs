@@ -23,17 +23,20 @@ public class AccessController : ControllerBase
     private readonly IAccessManager _accessManager;
     private readonly IUserService _userService;
     private readonly IBaseCRUDService<CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest, CustomerProfilePatchRequest> _customerProfileService;
+    private readonly IUserPreferenceService _userPreferenceService;
     private readonly IValidator<UserRegisterRequest> _registerValidator;
 
     public AccessController(
         IAccessManager accessManager,
         IUserService userService,
         IBaseCRUDService<CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest, CustomerProfilePatchRequest> customerProfileService,
+        IUserPreferenceService userPreferenceService,
         IValidator<UserRegisterRequest> registerValidator)
     {
         _accessManager = accessManager;
         _userService = userService;
         _customerProfileService = customerProfileService;
+        _userPreferenceService = userPreferenceService;
         _registerValidator = registerValidator;
     }
 
@@ -75,6 +78,15 @@ public class AccessController : ControllerBase
             UserId = result.Id,
             FirstName = request.FirstName,
             LastName = request.LastName
+        });
+
+        var theme = string.IsNullOrEmpty(request.Theme) ? "light" : request.Theme;
+        await _userPreferenceService.UpdateAsync(result.Id, new UserPreferenceUpdateRequest
+        {
+            Theme = theme,
+            Language = "bs",
+            ReceiveEmailNotifications = true,
+            ReceivePushNotifications = true
         });
 
         return CreatedAtAction(nameof(Register), new { id = result.Id }, result);

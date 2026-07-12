@@ -13,5 +13,10 @@ public class UserRegisterValidator : AbstractValidator<UserRegisterRequest>
             .WithMessage("Telefon smije sadržavati samo brojeve i simbole + - ( ).");
         RuleFor(x => x.FirstName).NotEmpty().MaximumLength(80);
         RuleFor(x => x.LastName).NotEmpty().MaximumLength(80);
+        RuleFor(x => x.Theme)
+            .Must(theme => string.IsNullOrEmpty(theme)
+                || theme.Equals("light", StringComparison.OrdinalIgnoreCase)
+                || theme.Equals("dark", StringComparison.OrdinalIgnoreCase))
+            .WithMessage("Theme must be 'light' or 'dark'.");
     }
 }
