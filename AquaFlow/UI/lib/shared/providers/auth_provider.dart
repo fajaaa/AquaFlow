@@ -1,13 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../models/auth_result.dart';
 import '../models/auth_session.dart';
 import '../services/auth_api_service.dart';
 import '../services/auth_exception.dart';
+import '../services/preferences_api_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/token_storage.dart';
+import 'theme_provider.dart';
 
 /// Where the app is in the auth lifecycle. [unknown] is the initial state while
 /// [bootstrap] checks the secure store; the UI shows a splash until it resolves.
@@ -20,13 +23,21 @@ class AuthProvider extends ChangeNotifier {
     AuthApiService? authService,
     TokenStorage? tokenStorage,
     PushNotificationService? pushNotificationService,
+    PreferencesApiService? preferencesService,
+    ThemeProvider? themeProvider,
   }) : _authService = authService ?? AuthApiService(),
        _tokenStorage = tokenStorage ?? TokenStorage(),
-       _pushService = pushNotificationService ?? PushNotificationService();
+       _pushService = pushNotificationService ?? PushNotificationService(),
+       _preferencesService = preferencesService ?? PreferencesApiService(),
+       _themeProvider = themeProvider ?? ThemeProvider();
 
   final AuthApiService _authService;
   final TokenStorage _tokenStorage;
   final PushNotificationService _pushService;
+  final PreferencesApiService _preferencesService;
+  // Shared with `main.dart`'s widget tree (passed in, not created there) so
+  // applying the fetched theme here actually repaints the app.
+  final ThemeProvider _themeProvider;
 
   AuthStatus _status = AuthStatus.unknown;
   AuthSession? _session;
@@ -48,6 +59,7 @@ class AuthProvider extends ChangeNotifier {
     if (accessToken != null && _trySetSession(accessToken)) {
       _setStatus(AuthStatus.authenticated);
       _registerPushToken();
+      _applyThemePreference();
       return;
     }
 
@@ -150,6 +162,23 @@ class AuthProvider extends ChangeNotifier {
     _session = AuthSession.fromAccessToken(tokens.accessToken);
     _setStatus(AuthStatus.authenticated);
     _registerPushToken();
+    _applyThemePreference();
+  }
+
+  /// Fire-and-forget: fetches `UserPreference.Theme` and applies it to the
+  /// shared [ThemeProvider]. Awaiting this would delay entering the app on a
+  /// slow/unreachable backend, and a failure here must never block sign-in -
+  /// it just leaves [ThemeProvider] at its current (light by default) mode.
+  void _applyThemePreference() {
+    unawaited(
+      _preferencesService.getPreferences().then((preferences) {
+        _themeProvider.setThemeMode(
+          preferences.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+        );
+      }).catchError((e) {
+        debugPrint('Failed to load theme preference: $e');
+      }),
+    );
   }
 
   /// Push (FCM) is mobile-only (Android/iOS) - no admin desktop UI for it, and
@@ -210,6 +239,7 @@ class AuthProvider extends ChangeNotifier {
   void dispose() {
     _authService.dispose();
     _pushService.dispose();
+    _preferencesService.dispose();
     super.dispose();
   }
 }

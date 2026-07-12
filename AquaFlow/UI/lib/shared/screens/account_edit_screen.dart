@@ -6,11 +6,15 @@ import '../models/city_lookup.dart';
 import '../models/customer_profile.dart';
 import '../models/municipality_lookup.dart';
 import '../models/settlement_lookup.dart';
+import '../models/user_preferences.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/account_exception.dart';
 import '../services/account_service.dart';
 import '../services/location_lookup_exception.dart';
 import '../services/location_lookup_service.dart';
+import '../services/preferences_api_service.dart';
+import '../services/preferences_exception.dart';
 import '../services/profile_exception.dart';
 import '../services/profile_service.dart';
 
@@ -31,6 +35,11 @@ import '../services/profile_service.dart';
 /// entered - mirrors the admin "Moj nalog" screen (`AdminAccountEditScreen`).
 /// A password change (`PUT /Account/me/password`) is sent only when the
 /// password fields are filled in - this is the mobile customer/collector path.
+///
+/// The "Izgled" theme switch is separate from the rest of the form: it reads/
+/// writes `UserPreference.Theme` via `GET`/`PUT /Account/preferences`
+/// ([PreferencesApiService]) and applies immediately to the shared
+/// [ThemeProvider] on change, rather than waiting for "Sačuvaj".
 class AccountEditScreen extends StatefulWidget {
   const AccountEditScreen({super.key});
 
@@ -42,6 +51,7 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
   final AccountService _service = AccountService();
   final ProfileService _profileService = ProfileService();
   final LocationLookupService _locationService = LocationLookupService();
+  final PreferencesApiService _preferencesService = PreferencesApiService();
   final _formKey = GlobalKey<FormState>();
 
   // One controller per editable field; created empty and prefilled once the
@@ -58,6 +68,7 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
 
   AccountDetails? _details;
   int? _existingProfileId;
+  UserPreferences? _preferences;
   bool _loading = true;
   String? _loadError;
   bool _saving = false;
@@ -127,6 +138,7 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
       _houseNumberCtrl.text = profile?.houseNumber ?? '';
       _applySettlement(profile?.settlementId);
       setState(() => _loading = false);
+      _loadPreferences();
     } on AccountException catch (e) {
       if (mounted) {
         setState(() {
@@ -148,6 +160,51 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
           _loadError = e.message;
         });
       }
+    }
+  }
+
+  /// Fetches `GET /Account/preferences` separately from [_load]: a failure
+  /// here (e.g. offline) must not block editing email/phone/profile, so it
+  /// just leaves [_preferences] null and the theme switch defaults to
+  /// whatever [ThemeProvider] is already showing.
+  Future<void> _loadPreferences() async {
+    try {
+      final preferences = await _preferencesService.getPreferences();
+      if (!mounted) return;
+      setState(() => _preferences = preferences);
+    } on PreferencesException {
+      // Silently ignored - see the method doc above.
+    }
+  }
+
+  /// Applies [isDark] to the shared [ThemeProvider] immediately, then
+  /// persists it via `PUT /Account/preferences` in the background. On save
+  /// failure the app theme stays changed (better than reverting under the
+  /// user), but a snackbar reports that the choice wasn't saved.
+  Future<void> _setTheme(bool isDark) async {
+    final current = _preferences ??
+        const UserPreferences(
+          theme: 'light',
+          language: 'bs',
+          receiveEmailNotifications: true,
+          receivePushNotifications: true,
+        );
+    final updated = current.copyWith(theme: isDark ? 'dark' : 'light');
+
+    setState(() => _preferences = updated);
+    context.read<ThemeProvider>().setThemeMode(isDark ? ThemeMode.dark : ThemeMode.light);
+
+    try {
+      final saved = await _preferencesService.updatePreferences(updated);
+      if (mounted) setState(() => _preferences = saved);
+    } on PreferencesException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Tema nije sačuvana: ${e.message}'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
   }
 
@@ -272,6 +329,7 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
     _service.dispose();
     _profileService.dispose();
     _locationService.dispose();
+    _preferencesService.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _firstNameCtrl.dispose();
@@ -325,7 +383,35 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
                     keyboardType: TextInputType.phone,
                     maxLength: 30,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Izgled',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(
+                          value: false,
+                          label: Text('Svijetla'),
+                          icon: Icon(Icons.light_mode_outlined),
+                        ),
+                        ButtonSegment(
+                          value: true,
+                          label: Text('Tamna'),
+                          icon: Icon(Icons.dark_mode_outlined),
+                        ),
+                      ],
+                      selected: {_preferences?.isDarkTheme ?? false},
+                      onSelectionChanged: (selection) => _setTheme(selection.first),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   Text(
                     'Ime i prezime',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(

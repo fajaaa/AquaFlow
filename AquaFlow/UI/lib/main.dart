@@ -24,6 +24,12 @@ final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 /// to the widget tree below via `ChangeNotifierProvider.value`.
 final _notificationBadgeProvider = NotificationBadgeProvider();
 
+/// Created here (not inside [AquaFlowApp]'s `build`) so the same instance can
+/// be passed into [AuthProvider], which applies the signed-in user's
+/// `UserPreference.Theme` to it after login/session restore - it must be the
+/// exact instance the widget tree below watches, not a disconnected one.
+final _themeProvider = ThemeProvider();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Push (FCM) is mobile-only - there is no admin desktop UI for it and the
@@ -53,12 +59,15 @@ class AquaFlowApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         // Restore any saved session as soon as the provider is created.
-        ChangeNotifierProvider(create: (_) => AuthProvider()..bootstrap()),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(themeProvider: _themeProvider)..bootstrap(),
+        ),
         // Shared instance (not `create`) so PushMessageHandler's onMessage
         // callback in `main()`, which runs outside the widget tree, bumps the
         // exact same badge state the mobile shells read.
         ChangeNotifierProvider.value(value: _notificationBadgeProvider),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        // Shared instance (not `create`) - see the comment on [_themeProvider].
+        ChangeNotifierProvider.value(value: _themeProvider),
       ],
       child: Builder(
         builder: (context) {
