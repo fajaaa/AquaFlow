@@ -144,7 +144,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             onSelect: _select,
           ),
           const VerticalDivider(width: 1, thickness: 1),
-          Expanded(child: _buildContent()),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: KeyedSubtree(
+                key: ValueKey(_selectedIndex),
+                child: _buildContent(),
+              ),
+            ),
+          ),
         ],
       ),
     );

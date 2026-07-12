@@ -150,7 +150,13 @@ class _MobileShellState extends State<MobileShell> {
           ),
         ],
       ),
-      body: tabs[_selectedIndex].body,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: KeyedSubtree(
+          key: ValueKey(_selectedIndex),
+          child: tabs[_selectedIndex].body,
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onTabSelected,

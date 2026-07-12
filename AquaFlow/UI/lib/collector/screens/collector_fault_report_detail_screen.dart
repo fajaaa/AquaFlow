@@ -7,6 +7,7 @@ import 'package:aquaflow_desktop/collector/models/collector_fault_report_photo.d
 import 'package:aquaflow_desktop/collector/services/collector_fault_report_exception.dart';
 import 'package:aquaflow_desktop/collector/services/collector_fault_report_service.dart';
 import 'package:aquaflow_desktop/collector/widgets/fault_report_status_pill.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 
 const _statusLabels = <String, String>{
@@ -131,12 +132,10 @@ class _CollectorFaultReportDetailScreenState
   }
 
   void _openFullscreen(CollectorFaultReportPhoto photo) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _FullscreenPhotoScreen(
-          fileName: photo.fileName,
-          fetcher: () => _service.fetchPhotoBytes(_report.id, photo.id),
-        ),
+    context.pushScreen(
+      _FullscreenPhotoScreen(
+        fileName: photo.fileName,
+        fetcher: () => _service.fetchPhotoBytes(_report.id, photo.id),
       ),
     );
   }

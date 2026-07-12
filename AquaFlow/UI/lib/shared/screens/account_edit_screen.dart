@@ -17,6 +17,7 @@ import '../services/preferences_api_service.dart';
 import '../services/preferences_exception.dart';
 import '../services/profile_exception.dart';
 import '../services/profile_service.dart';
+import '../widgets/async_state_view.dart';
 
 /// Screen for viewing and editing the signed-in user's own account data.
 ///
@@ -351,12 +352,15 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
   }
 
   Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_loadError != null) {
-      return _ErrorRetry(message: _loadError!, onRetry: _load);
-    }
+    return AsyncStateView(
+      loading: _loading,
+      error: _loadError,
+      onRetry: _load,
+      builder: (context) => _buildForm(context),
+    );
+  }
+
+  Widget _buildForm(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -675,35 +679,3 @@ class _AccountEditScreenState extends State<AccountEditScreen> {
   }
 }
 
-/// Full-screen error state with a retry button, shown when the initial load
-/// fails.
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

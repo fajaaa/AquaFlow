@@ -9,6 +9,7 @@ import 'package:aquaflow_desktop/admin/models/admin_fault_report_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_fault_report_photo.dart';
 import 'package:aquaflow_desktop/admin/services/admin_fault_report_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_fault_report_service.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 
 /// Desktop admin table over `/FaultReports` (`AdminFaultReportService`/
@@ -945,13 +946,11 @@ class _FaultReportDetailDialogState extends State<_FaultReportDetailDialog> {
   }
 
   void _openFullscreen(AdminFaultReportPhoto photo) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _FullscreenPhotoScreen(
-          fileName: photo.fileName,
-          fetcher: () =>
-              widget.service.fetchPhotoBytes(widget.report.id, photo.id),
-        ),
+    context.pushScreen(
+      _FullscreenPhotoScreen(
+        fileName: photo.fileName,
+        fetcher: () =>
+            widget.service.fetchPhotoBytes(widget.report.id, photo.id),
       ),
     );
   }

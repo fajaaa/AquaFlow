@@ -7,6 +7,7 @@ import 'package:aquaflow_desktop/collector/screens/collector_fault_reports_scree
 import 'package:aquaflow_desktop/collector/screens/collector_meter_reading_entry_screen.dart';
 import 'package:aquaflow_desktop/collector/services/collector_water_meter_exception.dart';
 import 'package:aquaflow_desktop/collector/services/collector_water_meter_service.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 
 /// "Vodomjeri" tab body: replaces the former "Očitanja" (reading route) tab.
 /// A single debounced free-text box (`Term`) searches water meters by owner
@@ -86,19 +87,11 @@ class _CollectorWaterMetersScreenState
   }
 
   Future<void> _openEntry(CollectorWaterMeter meter) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => CollectorMeterReadingEntryScreen(meter: meter),
-      ),
-    );
+    await context.pushScreen(CollectorMeterReadingEntryScreen(meter: meter));
   }
 
   Future<void> _openFaultReports() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const CollectorFaultReportsScreen(),
-      ),
-    );
+    await context.pushScreen(const CollectorFaultReportsScreen());
   }
 
   @override
