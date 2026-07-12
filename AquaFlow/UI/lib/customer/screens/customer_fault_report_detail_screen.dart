@@ -187,6 +187,17 @@ class _HeaderCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
+          _KeyValueRow(
+            label: 'Naselje',
+            value: report.settlementName.trim().isEmpty
+                ? '-'
+                : report.settlementName.trim(),
+          ),
+          if (report.address.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _KeyValueRow(label: 'Adresa', value: report.address),
+          ],
+          const SizedBox(height: 6),
           _KeyValueRow(label: 'Prijavljeno', value: _formatDate(report.createdAt)),
           if (report.resolvedAt != null) ...[
             const SizedBox(height: 6),

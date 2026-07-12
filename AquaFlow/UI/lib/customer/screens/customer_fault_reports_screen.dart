@@ -260,6 +260,11 @@ class _ReportCard extends StatelessWidget {
                     FaultReportStatusPill(status: report.status),
                     const SizedBox(height: 6),
                     _InfoRow(
+                      icon: Icons.place_outlined,
+                      label: _locationLabel(report),
+                    ),
+                    const SizedBox(height: 4),
+                    _InfoRow(
                       icon: Icons.event_outlined,
                       label: _formatDate(report.createdAt),
                     ),
@@ -390,6 +395,15 @@ class _ErrorRetry extends StatelessWidget {
       ),
     );
   }
+}
+
+/// "Naselje, Ulica Broj" - the report's own location, not the profile address.
+String _locationLabel(CustomerFaultReport report) {
+  final parts = [
+    report.settlementName.trim(),
+    report.address,
+  ].where((part) => part.isNotEmpty).toList();
+  return parts.isEmpty ? '-' : parts.join(', ');
 }
 
 String _formatDate(DateTime? date) {

@@ -6,9 +6,11 @@ namespace AquaFlow.Services;
 
 // Minimal projection for the photo sub-routes' ownership checks (Upload/GetPhotos/GetPhoto/
 // DeletePhoto): just the columns those routes need, without the Customer/Settlement joins
-// GetByIdAsync's IncludeForRead pulls in for the full FaultReportResponse. AssignedCollectorId
-// lets the photo READ routes grant the assigned collector access without a second query.
-public record FaultReportOwnership(int CustomerId, string Status, int? AssignedCollectorId);
+// GetByIdAsync's IncludeForRead pulls in for the full FaultReportResponse. Ownership is the
+// reporting account (ReportedById), not the CustomerProfile - a reporter without a profile
+// still owns their report. AssignedCollectorId lets the photo READ routes grant the assigned
+// collector access without a second query.
+public record FaultReportOwnership(int ReportedById, string Status, int? AssignedCollectorId);
 
 public interface IFaultReportService
     : IBaseCRUDService<FaultReportResponse, FaultReportSearchObject, FaultReportInsertRequest, FaultReportUpdateRequest, FaultReportPatchRequest>

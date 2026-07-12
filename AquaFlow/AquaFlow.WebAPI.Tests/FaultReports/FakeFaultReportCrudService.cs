@@ -28,6 +28,11 @@ public class FakeFaultReportCrudService : IFaultReportService
     public Task<PageResult<FaultReportResponse>> GetAllAsync(FaultReportSearchObject? search = null)
     {
         var items = _rows.AsEnumerable();
+        if (search?.ReportedById is > 0)
+        {
+            items = items.Where(row => row.ReportedById == search.ReportedById);
+        }
+
         if (search?.CustomerId is > 0)
         {
             items = items.Where(row => row.CustomerId == search.CustomerId);
@@ -60,7 +65,7 @@ public class FakeFaultReportCrudService : IFaultReportService
     public Task<FaultReportOwnership?> GetOwnershipAsync(int id)
     {
         var row = _rows.SingleOrDefault(row => row.Id == id);
-        return Task.FromResult(row is null ? null : new FaultReportOwnership(row.CustomerId, row.Status, row.AssignedCollectorId));
+        return Task.FromResult(row is null ? null : new FaultReportOwnership(row.ReportedById, row.Status, row.AssignedCollectorId));
     }
 
     public Task<FaultReportResponse> InsertAsync(FaultReportInsertRequest request)
@@ -73,6 +78,8 @@ public class FakeFaultReportCrudService : IFaultReportService
             ReportedById = request.ReportedById,
             WaterMeterId = request.WaterMeterId,
             SettlementId = request.SettlementId,
+            Street = request.Street,
+            HouseNumber = request.HouseNumber,
             Title = request.Title,
             Description = request.Description,
             PhotoUrl = request.PhotoUrl,

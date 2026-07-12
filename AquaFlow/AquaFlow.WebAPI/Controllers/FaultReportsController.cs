@@ -47,10 +47,11 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     }
 
     // A caller holding FaultReports.Manage (Admin, per the seeded role assignment) passes
-    // through unmodified. A Customer only ever sees their own reports (pinned to their
-    // CustomerProfile id), a Collector only reports assigned to their own CollectorProfile
-    // (pinned via AssignedCollectorId) - both resolved from the JWT user id regardless of
-    // what the query string asked for, same model as WaterMeterRequestsController.GetAll.
+    // through unmodified. A Customer only ever sees reports they filed themselves (pinned to
+    // their JWT user id via ReportedById - no CustomerProfile lookup, since ownership lives on
+    // the reporting account), a Collector only reports assigned to their own CollectorProfile
+    // (pinned via AssignedCollectorId) - regardless of what the query string asked for, same
+    // model as WaterMeterRequestsController.GetAll.
     public override async Task<ActionResult<PageResult<FaultReportResponse>>> GetAll([FromQuery] FaultReportSearchObject? search)
     {
         if (HasManagePermission())
@@ -65,20 +66,8 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
 
         if (IsCustomer())
         {
-            var customerId = await ResolveCustomerProfileIdAsync(userId);
-            if (customerId is null)
-            {
-                // A customer without a profile owns no reports; short-circuit rather than
-                // fall through to the unfiltered listing.
-                return Ok(new PageResult<FaultReportResponse>
-                {
-                    Items = new List<FaultReportResponse>(),
-                    TotalCount = search?.IncludeTotalCount == true ? 0 : null
-                });
-            }
-
             search ??= new FaultReportSearchObject();
-            search.CustomerId = customerId;
+            search.ReportedById = userId;
             return await base.GetAll(search);
         }
 
@@ -122,8 +111,7 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
 
             if (IsCustomer())
             {
-                var customerId = await ResolveCustomerProfileIdAsync(userId);
-                if (customerId is null || result.CustomerId != customerId.Value)
+                if (result.ReportedById != userId)
                 {
                     return NotFound();
                 }
@@ -151,10 +139,13 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     }
 
     // A caller holding FaultReports.Manage may report on behalf of any customer, so the
-    // request body is trusted as-is. Anyone else can only report against their own
-    // CustomerProfile: CustomerId/ReportedById are forced from the JWT rather than the
-    // request body, and Status/ResolvedAt are reset so a self-service report always
-    // starts fresh, same trust model as WaterMeterRequestsController.Create. A
+    // request body is trusted as-is. Anyone else reports as themselves: ReportedById is
+    // forced from the JWT (that is what ownership/pinning keys on), CustomerId is set to the
+    // caller's own CustomerProfile.Id when one exists (informational only - it lets the admin
+    // table show the customer's name) and null otherwise - a CustomerProfile is NOT required
+    // to file a report. The report's location (SettlementId + optional Street/HouseNumber)
+    // comes from the request body. Status/ResolvedAt are reset so a self-service report
+    // always starts fresh, same trust model as WaterMeterRequestsController.Create. A
     // self-service caller may also only attach a WaterMeterId that belongs to their own
     // CustomerProfile (or leave it null for a general/no-meter fault) - otherwise the
     // request body could bind the report to someone else's meter.
@@ -168,17 +159,20 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
         if (!HasManagePermission())
         {
             var customerId = await ResolveCustomerProfileIdAsync(userId);
-            if (customerId is null)
-            {
-                throw new ClientException("Caller has no customer profile.");
-            }
 
             if (request.WaterMeterId is not null)
             {
+                // A caller with no CustomerProfile owns no meters, so any supplied meter id
+                // fails the same way as someone else's meter.
+                if (customerId is null)
+                {
+                    throw new ClientException("Water meter does not belong to the caller.");
+                }
+
                 await EnsureWaterMeterOwnedByCustomerAsync(request.WaterMeterId.Value, customerId.Value);
             }
 
-            request.CustomerId = customerId.Value;
+            request.CustomerId = customerId;
             request.ReportedById = userId;
             request.Status = FaultReportStatus.New;
             request.ResolvedAt = null;
@@ -499,14 +493,14 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     }
 
     // Shared ownership gate for the photo sub-routes: mirrors GetById - a FaultReports.Manage
-    // holder passes through unfiltered (skipping the profile lookups below entirely), otherwise
-    // the caller must own the report (404, not Forbid, when they don't, so the response never
-    // confirms the report id exists). The READ routes (GetPhotos/GetPhoto) additionally pass
-    // allowAssignedCollector: true so the collector the report is assigned to can view the
-    // customer's photos on site; upload/delete keep the stricter owner-while-New-or-Manage rule.
-    // Uses Service.GetOwnershipAsync's projection rather than the full GetByIdAsync (which brings
-    // in the Customer/Settlement joins the detail screen needs but these routes don't), since this
-    // runs once per photo sub-route call.
+    // holder passes through unfiltered, otherwise the caller must be the reporting account
+    // (ReportedById from the JWT id, no CustomerProfile lookup; 404, not Forbid, when they
+    // aren't, so the response never confirms the report id exists). The READ routes
+    // (GetPhotos/GetPhoto) additionally pass allowAssignedCollector: true so the collector the
+    // report is assigned to can view the reporter's photos on site; upload/delete keep the
+    // stricter owner-while-New-or-Manage rule. Uses Service.GetOwnershipAsync's projection
+    // rather than the full GetByIdAsync (which brings in the Customer/Settlement joins the
+    // detail screen needs but these routes don't), since this runs once per photo sub-route call.
     private async Task<(FaultReportOwnership? Ownership, ActionResult? Error)> AuthorizeReportAccessAsync(int id, bool allowAssignedCollector = false)
     {
         if (!TryGetCurrentUserId(out var userId))
@@ -534,8 +528,7 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
             }
         }
 
-        var customerId = await ResolveCustomerProfileIdAsync(userId);
-        if (customerId is null || ownership.CustomerId != customerId.Value)
+        if (ownership.ReportedById != userId)
         {
             return (null, NotFound());
         }

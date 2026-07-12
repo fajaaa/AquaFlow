@@ -81,6 +81,53 @@ public class FaultReportServiceTests
         Assert.NotNull(response.ResolvedAt);
     }
 
+    // Ownership lives on the reporting account, not the CustomerProfile: a report from a user
+    // with no profile carries a null CustomerId, and the report's own address round-trips.
+    [Fact]
+    public async Task InsertAsync_NullCustomerIdWithAddress_SavesAndReturnsAddress()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var response = await service.InsertAsync(new FaultReportInsertRequest
+        {
+            ReportedById = 3,
+            CustomerId = null,
+            SettlementId = 2,
+            Street = "Butmirska cesta",
+            HouseNumber = "12A",
+            Title = "Pipe burst on the street",
+            Description = "Water gushing near the intersection.",
+            Status = FaultReportStatus.New
+        });
+
+        Assert.Null(response.CustomerId);
+        Assert.Equal(string.Empty, response.CustomerFirstName);
+        Assert.Equal(2, response.SettlementId);
+        Assert.Equal("Butmirska cesta", response.Street);
+        Assert.Equal("12A", response.HouseNumber);
+
+        var entity = context.FaultReports.First(f => f.Id == response.Id);
+        Assert.Null(entity.CustomerId);
+        Assert.Equal("Butmirska cesta", entity.Street);
+        Assert.Equal("12A", entity.HouseNumber);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ReportedByIdFilter_ReturnsOnlyThatReportersReports()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var page = await service.GetAllAsync(new FaultReportSearchObject { ReportedById = 2 });
+
+        var item = Assert.Single(page.Items);
+        Assert.Equal(2, item.Id);
+        Assert.Equal(2, item.ReportedById);
+    }
+
     [Fact]
     public async Task GetAllAsync_FlattensCustomerNameAndSettlementName()
     {
@@ -161,7 +208,7 @@ public class FaultReportServiceTests
     }
 
     [Fact]
-    public async Task GetOwnershipAsync_ExistingReport_ReturnsCustomerIdAndStatusOnly()
+    public async Task GetOwnershipAsync_ExistingReport_ReturnsReportedByIdAndStatusOnly()
     {
         await using var context = CreateContext();
         SeedTwoReportsInDifferentSettlements(context);
@@ -170,7 +217,7 @@ public class FaultReportServiceTests
         var ownership = await service.GetOwnershipAsync(1);
 
         Assert.NotNull(ownership);
-        Assert.Equal(1, ownership!.CustomerId);
+        Assert.Equal(1, ownership!.ReportedById);
         Assert.Equal(FaultReportStatus.InProgress, ownership.Status);
     }
 

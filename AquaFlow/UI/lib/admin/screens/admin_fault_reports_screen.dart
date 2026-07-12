@@ -404,7 +404,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
                     columns: const [
                       DataColumn(label: Text('Naslov')),
                       DataColumn(label: Text('Kupac')),
-                      DataColumn(label: Text('Naselje')),
+                      DataColumn(label: Text('Adresa')),
                       DataColumn(label: Text('Inkasant')),
                       DataColumn(label: Text('Status')),
                       DataColumn(label: Text('Datum')),
@@ -425,8 +425,14 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen> {
                                 ),
                               ),
                             ),
-                            DataCell(Text(item.customerFullName)),
-                            DataCell(Text(item.settlementName)),
+                            // Empty when the reporter has no CustomerProfile
+                            // (CustomerId is null - ownership is ReportedById).
+                            DataCell(Text(
+                              item.customerFullName.isEmpty
+                                  ? '-'
+                                  : item.customerFullName,
+                            )),
+                            DataCell(Text(_reportLocationLabel(item))),
                             DataCell(Text(_collectorLabel(item))),
                             DataCell(_StatusPill(status: item.status)),
                             DataCell(Text(_formatDate(item.createdAt))),
@@ -475,6 +481,16 @@ String? _nextStatus(String status) {
 /// Assign is offered while the state machine allows it: New (first assignment)
 /// and Assigned (reassignment to another collector).
 bool _canAssign(String status) => status == 'New' || status == 'Assigned';
+
+/// Table/detail label for the report's own location: "Naselje, Ulica Broj"
+/// (address part omitted when the report carries no street/house number).
+String _reportLocationLabel(AdminFaultReport report) {
+  final parts = [
+    report.settlementName.trim(),
+    report.address,
+  ].where((part) => part.isNotEmpty).toList();
+  return parts.isEmpty ? '-' : parts.join(', ');
+}
 
 /// Table/detail label for the assigned collector: the flattened employee code,
 /// a `#id` fallback when the code is missing, or '-' while unassigned.
@@ -956,9 +972,14 @@ class _FaultReportDetailDialogState extends State<_FaultReportDetailDialog> {
             children: [
               _StatusPill(status: report.status),
               const SizedBox(height: 14),
-              _KeyValueRow(label: 'Kupac', value: report.customerFullName),
+              _KeyValueRow(
+                label: 'Kupac',
+                value: report.customerFullName.isEmpty
+                    ? '-'
+                    : report.customerFullName,
+              ),
               const SizedBox(height: 6),
-              _KeyValueRow(label: 'Naselje', value: report.settlementName),
+              _KeyValueRow(label: 'Adresa', value: _reportLocationLabel(report)),
               const SizedBox(height: 6),
               _KeyValueRow(label: 'Inkasant', value: _collectorLabel(report)),
               const SizedBox(height: 6),

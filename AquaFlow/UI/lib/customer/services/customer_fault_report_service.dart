@@ -34,7 +34,7 @@ class CustomerFaultReportService {
   final Duration _timeout;
 
   /// One page of the caller's fault reports, newest first. The backend pins
-  /// `CustomerId` to the caller from the JWT, so this only ever returns the
+  /// `ReportedById` to the caller from the JWT, so this only ever returns the
   /// signed-in customer's own reports (every status).
   Future<CustomerFaultReportPage> fetchPage({
     required int page,
@@ -86,19 +86,24 @@ class CustomerFaultReportService {
     );
   }
 
-  /// `FaultReportInsertRequest` requires a `SettlementId` (no location-existence
-  /// check on this path, see AGENTS.md) alongside `Title`/`Description`; the
-  /// backend forces `CustomerId`/`ReportedById`/`Status`/`ResolvedAt` from the
-  /// JWT for a self-service caller, so none of those are sent here.
+  /// `FaultReportInsertRequest` carries the report's own location: a required
+  /// `SettlementId` plus optional `Street`/`HouseNumber` - the report is not
+  /// tied to the caller's profile address. The backend forces
+  /// `CustomerId`/`ReportedById`/`Status`/`ResolvedAt` from the JWT for a
+  /// self-service caller, so none of those are sent here.
   Future<CustomerFaultReport> create({
     required String title,
     required String description,
     required int settlementId,
+    String? street,
+    String? houseNumber,
     int? waterMeterId,
   }) async {
     final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports');
 
+    final trimmedStreet = street?.trim();
+    final trimmedHouseNumber = houseNumber?.trim();
     final response = await _send(
       () => _client.post(
         uri,
@@ -110,6 +115,10 @@ class CustomerFaultReportService {
           'title': title.trim(),
           'description': description.trim(),
           'settlementId': settlementId,
+          if (trimmedStreet != null && trimmedStreet.isNotEmpty)
+            'street': trimmedStreet,
+          if (trimmedHouseNumber != null && trimmedHouseNumber.isNotEmpty)
+            'houseNumber': trimmedHouseNumber,
           'waterMeterId': ?waterMeterId,
         }),
       ),

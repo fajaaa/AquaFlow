@@ -47,41 +47,49 @@ public class FaultReportsControllerTests
         Assert.Contains(ManagePermission, codes);
     }
 
+    // Ownership is keyed on the reporting account (ReportedById), not the CustomerProfile - no
+    // profile lookup happens on the read path at all.
     [Fact]
-    public async Task GetAll_CustomerRole_ForcesOwnCustomerIdFilter()
-    {
-        var controller = CreateController(
-            BuildUser(userId: 1, role: CustomerRole, permissions: []),
-            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports:
-            [
-                new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak" },
-                new FaultReportResponse { Id = 2, CustomerId = 20, Title = "No water" }
-            ]);
-
-        // Caller tries to read another customer's reports via the query string filter.
-        var result = await controller.GetAll(new FaultReportSearchObject { CustomerId = 20 });
-
-        var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var page = Assert.IsType<PageResult<FaultReportResponse>>(ok.Value);
-        var item = Assert.Single(page.Items);
-        Assert.Equal(10, item.CustomerId);
-    }
-
-    [Fact]
-    public async Task GetAll_CustomerWithoutProfile_ReturnsEmptyPage()
+    public async Task GetAll_CustomerRole_ForcesOwnReportedByIdFilter()
     {
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak" }]);
+            reports:
+            [
+                new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak" },
+                new FaultReportResponse { Id = 2, ReportedById = 2, CustomerId = 20, Title = "No water" }
+            ]);
+
+        // Caller tries to read another user's reports via the query string filter.
+        var result = await controller.GetAll(new FaultReportSearchObject { ReportedById = 2 });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var page = Assert.IsType<PageResult<FaultReportResponse>>(ok.Value);
+        var item = Assert.Single(page.Items);
+        Assert.Equal(1, item.ReportedById);
+    }
+
+    // A customer with no CustomerProfile still owns the reports they filed themselves.
+    [Fact]
+    public async Task GetAll_CustomerWithoutProfile_SeesOwnReports()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 1, role: CustomerRole, permissions: []),
+            profiles: [],
+            reports:
+            [
+                new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = null, Title = "Leak" },
+                new FaultReportResponse { Id = 2, ReportedById = 2, CustomerId = 20, Title = "No water" }
+            ]);
 
         var result = await controller.GetAll(new FaultReportSearchObject { IncludeTotalCount = true });
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var page = Assert.IsType<PageResult<FaultReportResponse>>(ok.Value);
-        Assert.Empty(page.Items);
-        Assert.Equal(0, page.TotalCount);
+        var item = Assert.Single(page.Items);
+        Assert.Equal(1, item.Id);
+        Assert.Null(item.CustomerId);
     }
 
     [Fact]
@@ -191,25 +199,26 @@ public class FaultReportsControllerTests
     [Fact]
     public async Task GetById_OwnReport_ReturnsOk()
     {
+        // No CustomerProfile at all: ownership resolves purely from ReportedById.
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
-            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak" }]);
+            profiles: [],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = null, Title = "Leak" }]);
 
         var result = await controller.GetById(1);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var response = Assert.IsType<FaultReportResponse>(ok.Value);
-        Assert.Equal(10, response.CustomerId);
+        Assert.Equal(1, response.ReportedById);
     }
 
     [Fact]
-    public async Task GetById_OtherCustomersReport_ReturnsNotFound()
+    public async Task GetById_OtherUsersReport_ReturnsNotFound()
     {
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak" }]);
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 2, CustomerId = 10, Title = "Leak" }]);
 
         var result = await controller.GetById(1);
 
@@ -258,8 +267,10 @@ public class FaultReportsControllerTests
         Assert.Null(service.LastInsertRequest.ResolvedAt);
     }
 
+    // A CustomerProfile is not required to file a report: ownership lives on ReportedById, and
+    // CustomerId stays null (informational only). The report's location comes from the body.
     [Fact]
-    public async Task Create_CustomerWithoutProfile_ThrowsClientException()
+    public async Task Create_CustomerWithoutProfile_SucceedsWithNullCustomerId()
     {
         var service = new FakeFaultReportCrudService([]);
         var controller = CreateController(
@@ -267,9 +278,49 @@ public class FaultReportsControllerTests
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: []);
 
-        var request = new FaultReportInsertRequest { Title = "Leak", Description = "..." };
+        var request = new FaultReportInsertRequest
+        {
+            CustomerId = 999,
+            SettlementId = 3,
+            Street = "Butmirska cesta",
+            HouseNumber = "bb",
+            Title = "Leak",
+            Description = "Water leaking on the street"
+        };
+
+        await controller.Create(request);
+
+        Assert.NotNull(service.LastInsertRequest);
+        Assert.Null(service.LastInsertRequest!.CustomerId);
+        Assert.Equal(1, service.LastInsertRequest.ReportedById);
+        Assert.Equal(3, service.LastInsertRequest.SettlementId);
+        Assert.Equal("Butmirska cesta", service.LastInsertRequest.Street);
+        Assert.Equal("bb", service.LastInsertRequest.HouseNumber);
+        Assert.Equal("New", service.LastInsertRequest.Status);
+    }
+
+    // A caller with no CustomerProfile owns no meters, so attaching any WaterMeterId must fail
+    // the same way as someone else's meter.
+    [Fact]
+    public async Task Create_CustomerWithoutProfile_WithWaterMeter_ThrowsClientException()
+    {
+        var service = new FakeFaultReportCrudService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 1, role: CustomerRole, permissions: []),
+            profiles: [],
+            waterMeters: [new WaterMeterResponse { Id = 5, CustomerId = 999 }]);
+
+        var request = new FaultReportInsertRequest
+        {
+            WaterMeterId = 5,
+            SettlementId = 3,
+            Title = "Leak",
+            Description = "Water leaking from the meter"
+        };
 
         await Assert.ThrowsAsync<ClientException>(() => controller.Create(request));
+        Assert.Null(service.LastInsertRequest);
     }
 
     [Fact]

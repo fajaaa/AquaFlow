@@ -233,7 +233,10 @@ class _FaultReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final customer = report.customerFullName;
-    final settlement = report.settlementName;
+    final location = [
+      report.settlementName.trim(),
+      report.address,
+    ].where((part) => part.isNotEmpty).join(', ');
 
     return Card(
       margin: EdgeInsets.zero,
@@ -272,14 +275,17 @@ class _FaultReportCard extends StatelessWidget {
               const SizedBox(height: 10),
               _InfoRow(
                 icon: Icons.person_outline,
-                label: customer.isEmpty
-                    ? 'Korisnik #${report.customerId}'
-                    : customer,
+                // customerId is null when the reporter had no CustomerProfile.
+                label: customer.isNotEmpty
+                    ? customer
+                    : report.customerId == null
+                        ? '-'
+                        : 'Korisnik #${report.customerId}',
               ),
               const SizedBox(height: 6),
               _InfoRow(
                 icon: Icons.location_on_outlined,
-                label: settlement.isEmpty ? '-' : settlement,
+                label: location.isEmpty ? '-' : location,
               ),
               const SizedBox(height: 6),
               _InfoRow(

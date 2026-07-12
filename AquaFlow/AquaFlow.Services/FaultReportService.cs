@@ -90,7 +90,7 @@ public class FaultReportService
     {
         return await DbContext.FaultReports
             .Where(f => f.Id == id)
-            .Select(f => new FaultReportOwnership(f.CustomerId, f.Status, f.AssignedCollectorId))
+            .Select(f => new FaultReportOwnership(f.ReportedById, f.Status, f.AssignedCollectorId))
             .FirstOrDefaultAsync();
     }
 

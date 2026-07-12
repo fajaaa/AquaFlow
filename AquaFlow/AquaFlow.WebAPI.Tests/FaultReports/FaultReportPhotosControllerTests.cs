@@ -23,7 +23,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out _);
 
         var file = CreateFormFile(new byte[] { 0xFF, 0xD8, 0xFF }, "image/jpeg", "leak.jpg");
@@ -38,12 +38,12 @@ public class FaultReportPhotosControllerTests
     }
 
     [Fact]
-    public async Task UploadPhoto_OtherCustomersReport_ReturnsNotFound()
+    public async Task UploadPhoto_OtherUsersReport_ReturnsNotFound()
     {
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 2, CustomerId = 20, Title = "Leak", Status = "New" }],
             out _);
 
         var file = CreateFormFile(new byte[] { 1, 2, 3 }, "image/jpeg", "leak.jpg");
@@ -59,7 +59,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 99, role: AdminRole, permissions: [ManagePermission]),
             profiles: [],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 2, CustomerId = 20, Title = "Leak", Status = "New" }],
             out _);
 
         var file = CreateFormFile(PngSignatureBytes, "image/png", "leak.png");
@@ -75,7 +75,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out _);
 
         var file = CreateFormFile(Array.Empty<byte>(), "image/jpeg", "empty.jpg");
@@ -89,7 +89,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out _);
 
         var file = CreateFormFile(new byte[] { 1, 2, 3 }, "application/pdf", "doc.pdf");
@@ -103,7 +103,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out _);
 
         // Declared Length exceeds 5MB; the underlying stream content is irrelevant since
@@ -119,7 +119,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out var photoService);
         for (var i = 0; i < 5; i++)
         {
@@ -137,7 +137,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "InProgress" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "InProgress" }],
             out _);
 
         var file = CreateFormFile(new byte[] { 1, 2, 3 }, "image/jpeg", "leak.jpg");
@@ -151,7 +151,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 99, role: AdminRole, permissions: [ManagePermission]),
             profiles: [],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "InProgress" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 2, CustomerId = 20, Title = "Leak", Status = "InProgress" }],
             out _);
 
         var file = CreateFormFile(PngSignatureBytes, "image/png", "leak.png");
@@ -170,7 +170,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out _);
 
         var file = CreateFormFile(System.Text.Encoding.UTF8.GetBytes("not a real image"), "image/png", "fake.png");
@@ -185,7 +185,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out var photoService);
         await photoService.UploadAsync(1, new byte[] { 1, 2, 3 }, "image/jpeg", "leak.jpg");
 
@@ -197,13 +197,32 @@ public class FaultReportPhotosControllerTests
         Assert.Equal("leak.jpg", item.FileName);
     }
 
+    // Ownership on the photo routes resolves purely from ReportedById - a reporter with no
+    // CustomerProfile still reaches their own report's photos.
     [Fact]
-    public async Task GetPhotos_OtherCustomersReport_ReturnsNotFound()
+    public async Task GetPhotos_OwnerWithoutCustomerProfile_ReturnsOk()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 1, role: CustomerRole, permissions: []),
+            profiles: [],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = null, Title = "Leak", Status = "New" }],
+            out var photoService);
+        await photoService.UploadAsync(1, new byte[] { 1, 2, 3 }, "image/jpeg", "leak.jpg");
+
+        var result = await controller.GetPhotos(1);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var items = Assert.IsAssignableFrom<List<FaultReportPhotoResponse>>(ok.Value);
+        Assert.Single(items);
+    }
+
+    [Fact]
+    public async Task GetPhotos_OtherUsersReport_ReturnsNotFound()
     {
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 2, CustomerId = 20, Title = "Leak", Status = "New" }],
             out _);
 
         var result = await controller.GetPhotos(1);
@@ -217,7 +236,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out var photoService);
         var uploaded = await photoService.UploadAsync(1, new byte[] { 9, 8, 7 }, "image/jpeg", "leak.jpg");
 
@@ -229,12 +248,12 @@ public class FaultReportPhotosControllerTests
     }
 
     [Fact]
-    public async Task GetPhoto_OtherCustomersReport_ReturnsNotFound()
+    public async Task GetPhoto_OtherUsersReport_ReturnsNotFound()
     {
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 2, CustomerId = 20, Title = "Leak", Status = "New" }],
             out var photoService);
         var uploaded = await photoService.UploadAsync(1, new byte[] { 9, 8, 7 }, "image/jpeg", "leak.jpg");
 
@@ -249,7 +268,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out _);
 
         var result = await controller.GetPhoto(999, 1);
@@ -265,7 +284,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 99, role: AdminRole, permissions: [ManagePermission]),
             profiles: [],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 2, CustomerId = 20, Title = "Leak", Status = "New" }],
             out _);
 
         var result = await controller.GetPhoto(999, 1);
@@ -279,7 +298,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out _);
 
         var result = await controller.GetPhoto(1, 999);
@@ -293,7 +312,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "New" }],
             out var photoService);
         var uploaded = await photoService.UploadAsync(1, new byte[] { 1 }, "image/jpeg", "leak.jpg");
 
@@ -308,7 +327,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "InProgress" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "InProgress" }],
             out var photoService);
         var uploaded = await photoService.UploadAsync(1, new byte[] { 1 }, "image/jpeg", "leak.jpg");
 
@@ -321,7 +340,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 99, role: AdminRole, permissions: [ManagePermission]),
             profiles: [],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "InProgress" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 2, CustomerId = 20, Title = "Leak", Status = "InProgress" }],
             out var photoService);
         var uploaded = await photoService.UploadAsync(1, new byte[] { 1 }, "image/jpeg", "leak.jpg");
 
@@ -331,12 +350,12 @@ public class FaultReportPhotosControllerTests
     }
 
     [Fact]
-    public async Task DeletePhoto_OtherCustomersReport_ReturnsNotFound()
+    public async Task DeletePhoto_OtherUsersReport_ReturnsNotFound()
     {
         var controller = CreateController(
             BuildUser(userId: 1, role: CustomerRole, permissions: []),
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 20, Title = "Leak", Status = "New" }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 2, CustomerId = 20, Title = "Leak", Status = "New" }],
             out var photoService);
         var uploaded = await photoService.UploadAsync(1, new byte[] { 1 }, "image/jpeg", "leak.jpg");
 
@@ -353,7 +372,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 5, role: CollectorRole, permissions: []),
             profiles: [],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
             out var photoService,
             collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
         await photoService.UploadAsync(1, new byte[] { 1 }, "image/jpeg", "leak.jpg");
@@ -371,7 +390,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 5, role: CollectorRole, permissions: []),
             profiles: [],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
             out var photoService,
             collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
         var uploaded = await photoService.UploadAsync(1, new byte[] { 1, 2, 3 }, "image/jpeg", "leak.jpg");
@@ -388,7 +407,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 5, role: CollectorRole, permissions: []),
             profiles: [],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 8 }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 8 }],
             out _,
             collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
 
@@ -403,7 +422,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 5, role: CollectorRole, permissions: []),
             profiles: [],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
             out _,
             collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
 
@@ -420,7 +439,7 @@ public class FaultReportPhotosControllerTests
         var controller = CreateController(
             BuildUser(userId: 5, role: CollectorRole, permissions: []),
             profiles: [],
-            reports: [new FaultReportResponse { Id = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
+            reports: [new FaultReportResponse { Id = 1, ReportedById = 1, CustomerId = 10, Title = "Leak", Status = "Assigned", AssignedCollectorId = 7 }],
             out var photoService,
             collectorProfiles: [new CollectorProfileResponse { Id = 7, UserId = 5 }]);
         var uploaded = await photoService.UploadAsync(1, new byte[] { 1 }, "image/jpeg", "leak.jpg");

@@ -8,6 +8,8 @@ public class FaultReportPatchRequest
     public int? WaterMeterId { get; set; }
     public int? CustomerId { get; set; }
     public int? SettlementId { get; set; }
+    public string? Street { get; set; }
+    public string? HouseNumber { get; set; }
     public string? Title { get; set; }
     public string? Description { get; set; }
     public string? PhotoUrl { get; set; }

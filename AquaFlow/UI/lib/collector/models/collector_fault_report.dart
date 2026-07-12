@@ -13,6 +13,8 @@ class CollectorFaultReport {
     required this.customerLastName,
     required this.settlementId,
     required this.settlementName,
+    required this.street,
+    required this.houseNumber,
     required this.title,
     required this.description,
     required this.status,
@@ -22,11 +24,15 @@ class CollectorFaultReport {
 
   final int id;
   final int? waterMeterId;
-  final int customerId;
+  // Null when the reporter had no CustomerProfile - ownership is tracked via
+  // ReportedById, customerId is informational only.
+  final int? customerId;
   final String customerFirstName;
   final String customerLastName;
   final int settlementId;
   final String settlementName;
+  final String? street;
+  final String? houseNumber;
   final String title;
   final String description;
   final String status;
@@ -35,6 +41,13 @@ class CollectorFaultReport {
 
   /// Owning customer's first and last name joined; empty when unknown.
   String get customerFullName => '$customerFirstName $customerLastName'.trim();
+
+  /// "Street HouseNumber" joined; empty when neither is set. This is the
+  /// report's own address, not the customer's profile address.
+  String get address => [
+    street?.trim() ?? '',
+    houseNumber?.trim() ?? '',
+  ].where((part) => part.isNotEmpty).join(' ');
 
   bool get isNew => status.toLowerCase() == 'new';
   bool get isAssigned => status.toLowerCase() == 'assigned';
@@ -56,11 +69,13 @@ class CollectorFaultReport {
     return CollectorFaultReport(
       id: (json['id'] as num?)?.toInt() ?? 0,
       waterMeterId: (json['waterMeterId'] as num?)?.toInt(),
-      customerId: (json['customerId'] as num?)?.toInt() ?? 0,
+      customerId: (json['customerId'] as num?)?.toInt(),
       customerFirstName: (json['customerFirstName'] ?? '') as String,
       customerLastName: (json['customerLastName'] ?? '') as String,
       settlementId: (json['settlementId'] as num?)?.toInt() ?? 0,
       settlementName: (json['settlementName'] ?? '') as String,
+      street: json['street'] as String?,
+      houseNumber: json['houseNumber'] as String?,
       title: (json['title'] ?? '') as String,
       description: (json['description'] ?? '') as String,
       status: (json['status'] ?? '') as String,

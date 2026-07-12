@@ -291,13 +291,22 @@ class _HeaderCard extends StatelessWidget {
           const SizedBox(height: 10),
           _KeyValueRow(
             label: 'Kupac',
-            value: customer.isEmpty ? 'Korisnik #${report.customerId}' : customer,
+            // customerId is null when the reporter had no CustomerProfile.
+            value: customer.isNotEmpty
+                ? customer
+                : report.customerId == null
+                    ? '-'
+                    : 'Korisnik #${report.customerId}',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
             label: 'Naselje',
             value: report.settlementName.isEmpty ? '-' : report.settlementName,
           ),
+          if (report.address.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _KeyValueRow(label: 'Adresa', value: report.address),
+          ],
           const SizedBox(height: 6),
           _KeyValueRow(label: 'Prijavljeno', value: _formatDate(report.createdAt)),
           if (report.resolvedAt != null) ...[
