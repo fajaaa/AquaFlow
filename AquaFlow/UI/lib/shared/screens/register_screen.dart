@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
 
 /// Self-registration form for new Customers. Always pushed on top of
@@ -26,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  ThemeMode _selectedTheme = ThemeMode.light;
 
   @override
   void dispose() {
@@ -49,11 +51,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       phone: _phoneController.text,
       firstName: _firstNameController.text,
       lastName: _lastNameController.text,
+      theme: _selectedTheme == ThemeMode.dark ? 'dark' : 'light',
     );
 
     if (!mounted) return;
 
     if (success) {
+      context.read<ThemeProvider>().setThemeMode(_selectedTheme);
       Navigator.of(context).pop();
       return;
     }
@@ -266,6 +270,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   }
                                   return null;
                                 },
+                              ),
+                              const SizedBox(height: 16),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Tema',
+                                  style: Theme.of(context).textTheme.labelLarge,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SegmentedButton<ThemeMode>(
+                                segments: const [
+                                  ButtonSegment(
+                                    value: ThemeMode.light,
+                                    label: Text('Svijetla'),
+                                    icon: Icon(Icons.light_mode_outlined),
+                                  ),
+                                  ButtonSegment(
+                                    value: ThemeMode.dark,
+                                    label: Text('Tamna'),
+                                    icon: Icon(Icons.dark_mode_outlined),
+                                  ),
+                                ],
+                                selected: {_selectedTheme},
+                                onSelectionChanged: isBusy
+                                    ? null
+                                    : (selection) => setState(
+                                        () => _selectedTheme = selection.first,
+                                      ),
                               ),
                               const SizedBox(height: 24),
                               DecoratedBox(

@@ -87,7 +87,8 @@ class AuthProvider extends ChangeNotifier {
 
   /// Registers a new Customer, then immediately logs in with the same
   /// credentials (the backend register endpoint returns the created user, not
-  /// tokens) so the caller lands in an authenticated session. Returns true on
+  /// tokens) so the caller lands in an authenticated session. [theme] seeds
+  /// the new user's `UserPreference.Theme` on the backend. Returns true on
   /// success; on failure [errorMessage] holds a user-facing reason.
   Future<bool> register({
     required String email,
@@ -95,6 +96,7 @@ class AuthProvider extends ChangeNotifier {
     required String phone,
     required String firstName,
     required String lastName,
+    required String theme,
   }) async {
     _setBusy(true);
     _errorMessage = null;
@@ -105,6 +107,7 @@ class AuthProvider extends ChangeNotifier {
         phone: phone.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        theme: theme,
       );
       final tokens = await _authService.login(email.trim(), password);
       await _persistAndActivate(tokens);
