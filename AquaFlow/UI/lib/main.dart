@@ -7,6 +7,7 @@ import 'package:aquaflow_desktop/app/platform_gate.dart';
 import 'package:aquaflow_desktop/app/unavailable_screen.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/providers/notification_badge_provider.dart';
+import 'package:aquaflow_desktop/shared/providers/theme_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/login_screen.dart';
 import 'package:aquaflow_desktop/shared/services/push_message_handler.dart';
 import 'package:aquaflow_desktop/shared/theme/app_theme.dart';
@@ -57,13 +58,23 @@ class AquaFlowApp extends StatelessWidget {
         // callback in `main()`, which runs outside the widget tree, bumps the
         // exact same badge state the mobile shells read.
         ChangeNotifierProvider.value(value: _notificationBadgeProvider),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        navigatorKey: _navigatorKey,
-        scaffoldMessengerKey: _scaffoldMessengerKey,
-        title: 'AquaFlow',
-        theme: AppTheme.light,
-        home: const _AppEntry(),
+      child: Builder(
+        builder: (context) {
+          final themeMode = context.select<ThemeProvider, ThemeMode>(
+            (p) => p.themeMode,
+          );
+          return MaterialApp(
+            navigatorKey: _navigatorKey,
+            scaffoldMessengerKey: _scaffoldMessengerKey,
+            title: 'AquaFlow',
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: themeMode,
+            home: const _AppEntry(),
+          );
+        },
       ),
     );
   }
