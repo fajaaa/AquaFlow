@@ -141,7 +141,12 @@ class _MobileShellState extends State<MobileShell> {
           tooltip: 'Promijeni temu',
           onPressed: _onThemeToggle,
         ),
-        title: const Text('AquaFlow'),
+        title: Image.asset(
+          'assets/images/logo.png',
+          height: 32,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => const Text('AquaFlow'),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),

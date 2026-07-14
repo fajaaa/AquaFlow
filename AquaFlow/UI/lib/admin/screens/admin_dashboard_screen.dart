@@ -228,19 +228,25 @@ class _Sidebar extends StatelessWidget {
             // Brand.
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 18),
-              child: Row(
-                children: [
-                  Icon(Icons.water_drop,
-                      color: theme.colorScheme.primary, size: 26),
-                  const SizedBox(width: 10),
-                  Text(
-                    'AquaFlow',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1E293B),
+              child: Image.asset(
+                'assets/images/logo.png',
+                height: 32,
+                fit: BoxFit.contain,
+                alignment: Alignment.centerLeft,
+                errorBuilder: (context, error, stackTrace) => Row(
+                  children: [
+                    Icon(Icons.water_drop,
+                        color: theme.colorScheme.primary, size: 26),
+                    const SizedBox(width: 10),
+                    Text(
+                      'AquaFlow',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF1E293B),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             // Menu (scrolls if the window is short).
