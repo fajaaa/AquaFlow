@@ -1,35 +1,44 @@
 import 'package:flutter/material.dart';
 
-/// Brand colors for the AquaFlow client. It is a water-utility app, so the
-/// palette is blues and aqua rather than default white surfaces.
+/// Brand colors for the AquaFlow client. Restricted to the approved brand
+/// palette only - do not introduce colors outside this set.
 class AppColors {
   AppColors._();
 
-  /// Deep water blue - primary brand color (app bar, buttons).
-  static const Color primary = Color(0xFF0277BD);
+  /// Deep navy blue - primary brand color (app bar, buttons, logo wordmark).
+  static const Color primary = Color(0xFF06356C);
 
-  /// Aqua / cyan accent.
-  static const Color secondary = Color(0xFF00ACC1);
+  /// Bright sky blue accent (logo droplet, links, highlights).
+  static const Color secondary = Color(0xFF2FA6F6);
 
-  /// Very light blue tint used as the app background so screens are not white.
-  static const Color background = Color(0xFFEAF4FB);
+  /// Warning / call-out accent.
+  static const Color warning = Color(0xFFF59E0B);
+
+  /// Primary text color on light surfaces.
+  static const Color textDark = Color(0xFF1F2937);
+
+  /// Success accent (confirmations, positive status).
+  static const Color success = Color(0xFF22C55E);
+
+  /// Off-white app background so screens are not stark white.
+  static const Color background = Color(0xFFF5FAFF);
 
   /// Fill color for input fields so they read on a white card.
-  static const Color inputFill = Color(0xFFF1F6FA);
+  static const Color inputFill = Color(0xFFF5FAFF);
 
-  /// Selected-tab indicator in the bottom navigation bar.
-  static const Color navIndicator = Color(0xFFB3E5FC);
+  /// Selected-tab indicator in the bottom navigation bar (tinted secondary).
+  static const Color navIndicator = Color(0x402FA6F6);
 
-  /// Diagonal gradient painted behind the login screen.
+  /// Diagonal gradient painted behind the login/register screens.
   static const List<Color> waterGradient = [
-    Color(0xFF00B4DB),
-    Color(0xFF0083B0),
+    Color(0xFF06356C),
+    Color(0xFF2FA6F6),
   ];
 
-  /// Gradient for the primary call-to-action button (deep blue -> aqua).
+  /// Gradient for the primary call-to-action button (navy -> sky blue).
   static const List<Color> buttonGradient = [
-    Color(0xFF0277BD),
-    Color(0xFF00ACC1),
+    Color(0xFF06356C),
+    Color(0xFF2FA6F6),
   ];
 }
 
@@ -67,7 +76,7 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFDCE6ED)),
+          borderSide: const BorderSide(color: Color(0x332FA6F6)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -96,7 +105,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: const Color(0xFF0B1A21),
+      scaffoldBackgroundColor: AppColors.textDark,
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.surface,
         foregroundColor: colorScheme.onSurface,

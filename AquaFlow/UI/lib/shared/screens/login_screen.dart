@@ -56,10 +56,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: AppColors.waterGradient,
+          gradient: RadialGradient(
+            center: Alignment.topLeft,
+            radius: 1.6,
+            colors: [AppColors.secondary, AppColors.primary],
           ),
         ),
         child: SafeArea(
@@ -72,30 +72,37 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Logo badge on the gradient, above the form card.
+                    // Logo card on the gradient, above the form card.
                     Container(
                       padding: const EdgeInsets.all(20),
-                      decoration: const BoxDecoration(
-                        color: Colors.white24,
-                        shape: BoxShape.circle,
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
-                      child: const Icon(
-                        Icons.water_drop,
-                        size: 56,
-                        color: Colors.white,
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        height: 56,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => const Text(
+                          'AquaFlow',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'AquaFlow',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
+                    const SizedBox(height: 20),
                     // DEBUG-ONLY: shows which backend host the app targets, so
                     // connectivity issues on a device are easy to diagnose.
                     if (kDebugMode)
@@ -173,7 +180,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: isBusy
-                            ? const [Color(0xFF90A4AE), Color(0xFFB0BEC5)]
+                            ? [
+                                AppColors.textDark.withValues(alpha: 0.45),
+                                AppColors.textDark.withValues(alpha: 0.3),
+                              ]
                             : AppColors.buttonGradient,
                       ),
                       borderRadius: BorderRadius.circular(12),

@@ -75,10 +75,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: AppColors.waterGradient,
+          gradient: RadialGradient(
+            center: Alignment.topLeft,
+            radius: 1.6,
+            colors: [AppColors.secondary, AppColors.primary],
           ),
         ),
         child: SafeArea(
@@ -305,9 +305,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     colors: isBusy
-                                        ? const [
-                                            Color(0xFF90A4AE),
-                                            Color(0xFFB0BEC5),
+                                        ? [
+                                            AppColors.textDark.withValues(
+                                              alpha: 0.45,
+                                            ),
+                                            AppColors.textDark.withValues(
+                                              alpha: 0.3,
+                                            ),
                                           ]
                                         : AppColors.buttonGradient,
                                   ),
