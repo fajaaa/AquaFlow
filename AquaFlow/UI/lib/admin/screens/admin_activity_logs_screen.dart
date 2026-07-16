@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:aquaflow_desktop/admin/models/admin_activity_log.dart';
@@ -19,7 +21,9 @@ class AdminActivityLogsScreen extends StatefulWidget {
 
 class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
   final AdminActivityLogService _service = AdminActivityLogService();
+  final TextEditingController _userEmailCtrl = TextEditingController();
 
+  Timer? _userEmailDebounce;
   AdminActivityLogPage? _pageData;
   bool _loading = true;
   String? _error;
@@ -49,6 +53,7 @@ class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
       final pageData = await _service.fetch(
         page: _page,
         pageSize: _pageSize,
+        userEmail: _userEmailCtrl.text,
         eventType: _eventTypeFilter,
         from: _fromDate,
         to: _toDateInclusive,
@@ -72,6 +77,28 @@ class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
     final to = _toDate;
     if (to == null) return null;
     return DateTime(to.year, to.month, to.day, 23, 59, 59, 999);
+  }
+
+  void _queueUserEmailSearch(String _) {
+    setState(() {});
+    _userEmailDebounce?.cancel();
+    _userEmailDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => _load(resetPage: true),
+    );
+  }
+
+  void _submitUserEmailSearch(String _) {
+    _userEmailDebounce?.cancel();
+    _load(resetPage: true);
+  }
+
+  void _clearUserEmailSearch() {
+    if (_userEmailCtrl.text.isEmpty) return;
+    _userEmailDebounce?.cancel();
+    _userEmailCtrl.clear();
+    setState(() {});
+    _load(resetPage: true);
   }
 
   void _setEventTypeFilter(String value) {
@@ -136,6 +163,8 @@ class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
 
   @override
   void dispose() {
+    _userEmailDebounce?.cancel();
+    _userEmailCtrl.dispose();
     _service.dispose();
     super.dispose();
   }
@@ -179,11 +208,34 @@ class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
   }
 
   Widget _buildFilters() {
+    final hasUserEmailSearch = _userEmailCtrl.text.trim().isNotEmpty;
+
     return Wrap(
       spacing: 12,
       runSpacing: 12,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
+        SizedBox(
+          width: 260,
+          child: TextField(
+            controller: _userEmailCtrl,
+            textInputAction: TextInputAction.search,
+            onChanged: _queueUserEmailSearch,
+            onSubmitted: _submitUserEmailSearch,
+            decoration: InputDecoration(
+              labelText: 'Korisnik',
+              hintText: 'Email korisnika',
+              prefixIcon: const Icon(Icons.person_search_outlined),
+              suffixIcon: hasUserEmailSearch
+                  ? IconButton(
+                      tooltip: 'Očisti pretragu',
+                      onPressed: _clearUserEmailSearch,
+                      icon: const Icon(Icons.clear),
+                    )
+                  : null,
+            ),
+          ),
+        ),
         SizedBox(
           width: 220,
           child: DropdownButtonFormField<String>(
@@ -310,7 +362,10 @@ class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
   }
 
   bool get _hasFilters =>
-      _eventTypeFilter != null || _fromDate != null || _toDate != null;
+      _userEmailCtrl.text.trim().isNotEmpty ||
+      _eventTypeFilter != null ||
+      _fromDate != null ||
+      _toDate != null;
 
   int _totalPages(int totalCount) {
     if (totalCount <= 0) return 1;

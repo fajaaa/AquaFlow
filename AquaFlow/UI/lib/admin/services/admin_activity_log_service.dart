@@ -30,6 +30,7 @@ class AdminActivityLogService {
     required int page,
     required int pageSize,
     int? userId,
+    String? userEmail,
     String? eventType,
     DateTime? from,
     DateTime? to,
@@ -45,6 +46,10 @@ class AdminActivityLogService {
 
     if (userId != null) {
       query['UserId'] = '$userId';
+    }
+    final selectedUserEmail = userEmail?.trim();
+    if (selectedUserEmail != null && selectedUserEmail.isNotEmpty) {
+      query['UserEmail'] = selectedUserEmail;
     }
     final selectedEventType = eventType?.trim();
     if (selectedEventType != null && selectedEventType.isNotEmpty) {

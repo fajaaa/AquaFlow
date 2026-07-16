@@ -44,6 +44,14 @@ public class ActivityLogService
             query = query.Where(a => a.CreatedAt <= search.To.Value);
         }
 
+        if (!string.IsNullOrWhiteSpace(search.UserEmail))
+        {
+            // Lowered explicitly rather than relying on the DB collation being case-insensitive,
+            // same reasoning as WaterMeterService.ApplyFilters' Term filter.
+            var email = search.UserEmail.Trim().ToLower();
+            query = query.Where(a => a.User != null && a.User.Email.ToLower().Contains(email));
+        }
+
         return query;
     }
 
