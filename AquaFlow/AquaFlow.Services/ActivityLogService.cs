@@ -10,6 +10,8 @@ namespace AquaFlow.Services;
 public class ActivityLogService
     : BaseReadService<ActivityLog, ActivityLogResponse, ActivityLogSearchObject>, IActivityLogService
 {
+    private const int RetentionDays = 120;
+
     private readonly AquaFlowDbContext _dbContext;
     private readonly ILogger<ActivityLogService> _logger;
 
@@ -60,6 +62,16 @@ public class ActivityLogService
     {
         try
         {
+            // Opportunistically purge rows past the retention window so the table does not grow
+            // unbounded, mirroring RefreshTokenService.InsertAsync. Deleted in the same
+            // SaveChangesAsync call as the insert below (rather than ExecuteDeleteAsync) so this
+            // stays compatible with the EF Core InMemory provider used by AquaFlow.Services.Tests.
+            var cutoff = DateTime.UtcNow.AddDays(-RetentionDays);
+            var expiredLogs = await _dbContext.ActivityLogs
+                .Where(a => a.CreatedAt < cutoff)
+                .ToListAsync();
+            _dbContext.ActivityLogs.RemoveRange(expiredLogs);
+
             _dbContext.ActivityLogs.Add(new ActivityLog
             {
                 UserId = userId,
