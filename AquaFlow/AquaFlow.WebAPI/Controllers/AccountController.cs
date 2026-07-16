@@ -1,3 +1,4 @@
+using AquaFlow.Model;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
@@ -24,19 +25,22 @@ public class AccountController : ControllerBase
     private readonly IValidator<AccountUpdateRequest> _updateValidator;
     private readonly IValidator<AccountChangePasswordRequest> _changePasswordValidator;
     private readonly IValidator<UserPreferenceUpdateRequest> _preferenceUpdateValidator;
+    private readonly IActivityLogService _activityLogService;
 
     public AccountController(
         IUserService userService,
         IUserPreferenceService userPreferenceService,
         IValidator<AccountUpdateRequest> updateValidator,
         IValidator<AccountChangePasswordRequest> changePasswordValidator,
-        IValidator<UserPreferenceUpdateRequest> preferenceUpdateValidator)
+        IValidator<UserPreferenceUpdateRequest> preferenceUpdateValidator,
+        IActivityLogService activityLogService)
     {
         _userService = userService;
         _userPreferenceService = userPreferenceService;
         _updateValidator = updateValidator;
         _changePasswordValidator = changePasswordValidator;
         _preferenceUpdateValidator = preferenceUpdateValidator;
+        _activityLogService = activityLogService;
     }
 
     [HttpGet("me")]
@@ -50,7 +54,15 @@ public class AccountController : ControllerBase
     public async Task<ActionResult<UserResponse>> UpdateMe([FromBody] AccountUpdateRequest request)
     {
         await _updateValidator.ValidateAndThrowAsync(request);
-        var updated = await _userService.UpdateOwnAccountAsync(GetCurrentUserId(), request);
+        var userId = GetCurrentUserId();
+        var updated = await _userService.UpdateOwnAccountAsync(userId, request);
+
+        await _activityLogService.LogAsync(
+            userId,
+            ActivityEventTypes.AccountUpdated,
+            "Ažuriran nalog",
+            HttpContext.Connection.RemoteIpAddress?.ToString());
+
         return Ok(updated);
     }
 
@@ -58,7 +70,15 @@ public class AccountController : ControllerBase
     public async Task<IActionResult> ChangeMyPassword([FromBody] AccountChangePasswordRequest request)
     {
         await _changePasswordValidator.ValidateAndThrowAsync(request);
-        await _userService.ChangeOwnPasswordAsync(GetCurrentUserId(), request);
+        var userId = GetCurrentUserId();
+        await _userService.ChangeOwnPasswordAsync(userId, request);
+
+        await _activityLogService.LogAsync(
+            userId,
+            ActivityEventTypes.PasswordChanged,
+            "Promjena lozinke",
+            HttpContext.Connection.RemoteIpAddress?.ToString());
+
         return NoContent();
     }
 

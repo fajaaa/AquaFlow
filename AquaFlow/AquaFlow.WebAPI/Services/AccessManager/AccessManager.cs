@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using AquaFlow.Common.Services.CryptoService;
+using AquaFlow.Model;
 using AquaFlow.Model.Access;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Responses;
@@ -19,33 +20,49 @@ public class AccessManager : IAccessManager
     private readonly ICryptoService _cryptoService;
     private readonly IRefreshTokenService _refreshTokenService;
     private readonly IPermissionLookupService _permissionLookupService;
+    private readonly IActivityLogService _activityLogService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public AccessManager(
         IUserService userService,
         IConfiguration configuration,
         ICryptoService cryptoService,
         IRefreshTokenService refreshTokenService,
-        IPermissionLookupService permissionLookupService)
+        IPermissionLookupService permissionLookupService,
+        IActivityLogService activityLogService,
+        IHttpContextAccessor httpContextAccessor)
     {
         _userService = userService;
         _configuration = configuration;
         _cryptoService = cryptoService;
         _refreshTokenService = refreshTokenService;
         _permissionLookupService = permissionLookupService;
+        _activityLogService = activityLogService;
+        _httpContextAccessor = httpContextAccessor;
     }
+
+    private string? GetClientIpAddress() =>
+        _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
 
     public async Task<UserLoginResponse> LoginAsync(UserLoginRequest request)
     {
-        var user = await _userService.GetByEmailAsync(request.Email)
-            ?? throw new ClientException("Invalid credentials.");
+        var ipAddress = GetClientIpAddress();
+
+        var user = await _userService.GetByEmailAsync(request.Email);
+        if (user is null)
+        {
+            throw new ClientException("Invalid credentials.");
+        }
 
         if (!_cryptoService.Verify(user.PasswordHash, user.PasswordSalt, request.Password))
         {
+            await _activityLogService.LogAsync(user.Id, ActivityEventTypes.LoginFailed, "Neuspješna prijava", ipAddress);
             throw new ClientException("Invalid credentials.");
         }
 
         if (!user.IsActive)
         {
+            await _activityLogService.LogAsync(user.Id, ActivityEventTypes.LoginFailed, "Neuspješna prijava", ipAddress);
             throw new ClientException("User account is not active.");
         }
 
@@ -60,6 +77,8 @@ public class AccessManager : IAccessManager
             Token = refreshTokenValue,
             ExpiresAt = DateTime.UtcNow.AddDays(7)
         });
+
+        await _activityLogService.LogAsync(user.Id, ActivityEventTypes.LoginSuccess, "Uspješna prijava", ipAddress);
 
         return new UserLoginResponse
         {
@@ -109,6 +128,8 @@ public class AccessManager : IAccessManager
             Token = refreshTokenValue,
             ExpiresAt = DateTime.UtcNow.AddDays(7)
         });
+
+        await _activityLogService.LogAsync(user.Id, ActivityEventTypes.TokenRefreshed, "Token osvježen", GetClientIpAddress());
 
         return new UserLoginResponse
         {
