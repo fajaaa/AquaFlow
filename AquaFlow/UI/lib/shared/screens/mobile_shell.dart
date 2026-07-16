@@ -8,6 +8,7 @@ import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/providers/theme_provider.dart';
 import 'package:aquaflow_desktop/shared/services/preferences_api_service.dart';
 import 'package:aquaflow_desktop/shared/services/preferences_exception.dart';
+import 'package:aquaflow_desktop/shared/theme/app_theme.dart';
 
 /// One entry in a [MobileShell]'s bottom navigation: the destination shown in
 /// the bar plus the body rendered when it is selected.
@@ -136,6 +137,8 @@ class _MobileShellState extends State<MobileShell> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
+        backgroundColor: isDark ? null : AppColors.background,
+        foregroundColor: isDark ? null : AppColors.primary,
         leading: IconButton(
           icon: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined),
           tooltip: 'Promijeni temu',

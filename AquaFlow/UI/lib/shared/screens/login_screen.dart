@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
-import '../navigation/app_navigation.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
-import 'register_screen.dart';
 
-/// Email + password login form. On success the root widget swaps to the home
-/// screen automatically (it listens to [AuthProvider]), so this screen does not
-/// navigate itself.
+/// Email + password login form, pushed on top of [WelcomeScreen]. On success
+/// the root `_AuthGate` rebuilds into the authenticated flow, but since this
+/// screen was pushed (not the root route), it must explicitly pop itself
+/// (and any screens below it) to reveal that rebuilt root.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -23,6 +22,19 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _rememberMe = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberedEmail();
+  }
+
+  Future<void> _loadRememberedEmail() async {
+    final email = await context.read<AuthProvider>().getRememberedEmail();
+    if (!mounted || email == null) return;
+    setState(() => _emailController.text = email);
+  }
 
   @override
   void dispose() {
@@ -39,14 +51,23 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await auth.login(
       email: _emailController.text,
       password: _passwordController.text,
+      rememberMe: _rememberMe,
     );
 
-    if (!success && mounted) {
-      final message = auth.errorMessage ?? 'Login failed.';
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(message)));
+    if (!mounted) return;
+
+    if (success) {
+      // Pop back past the WelcomeScreen (and any other pushed auth screens)
+      // to reveal the root route, which _AuthGate has already rebuilt into
+      // PlatformGate now that the user is authenticated.
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      return;
     }
+
+    final message = auth.errorMessage ?? 'Login failed.';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -56,10 +77,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.topLeft,
-            radius: 1.6,
-            colors: [AppColors.secondary, AppColors.primary],
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: AppColors.waterGradient,
           ),
         ),
         child: SafeArea(
@@ -72,6 +93,30 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const Expanded(
+                          child: Text(
+                            'Prijava',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 48),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     // Logo card on the gradient, above the form card.
                     Container(
                       padding: const EdgeInsets.all(20),
@@ -175,7 +220,18 @@ class _LoginScreenState extends State<LoginScreen> {
                             ? 'Password is required.'
                             : null,
                   ),
-                  const SizedBox(height: 24),
+                  CheckboxListTile(
+                    value: _rememberMe,
+                    onChanged: isBusy
+                        ? null
+                        : (value) =>
+                              setState(() => _rememberMe = value ?? true),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: const Text('Zapamti me'),
+                  ),
+                  const SizedBox(height: 20),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -209,13 +265,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             : const Text('Sign in'),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: isBusy
-                        ? null
-                        : () => context.pushScreen(const RegisterScreen()),
-                    child: const Text('Nemate račun? Registrujte se'),
                   ),
                             ],
                           ),

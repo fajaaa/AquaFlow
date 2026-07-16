@@ -5,11 +5,11 @@ import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
 
-/// Self-registration form for new Customers. Always pushed on top of
-/// [LoginScreen]. On success [AuthProvider] becomes authenticated (the
-/// provider auto-logs in right after registering), so this screen just pops
-/// itself to reveal the root `_AuthGate`, which already renders the
-/// authenticated flow underneath.
+/// Self-registration form for new Customers, pushed on top of either
+/// [WelcomeScreen] or [LoginScreen]. On success [AuthProvider] becomes
+/// authenticated (the provider auto-logs in right after registering), so
+/// this screen pops every pushed auth screen to reveal the root `_AuthGate`,
+/// which already renders the authenticated flow underneath.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -58,7 +58,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (success) {
       context.read<ThemeProvider>().setThemeMode(_selectedTheme);
-      Navigator.of(context).pop();
+      // Pop back past the WelcomeScreen (and LoginScreen, if that's where
+      // registration was opened from) to reveal the root route, which
+      // _AuthGate has already rebuilt into PlatformGate.
+      Navigator.of(context).popUntil((route) => route.isFirst);
       return;
     }
 
@@ -75,10 +78,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.topLeft,
-            radius: 1.6,
-            colors: [AppColors.secondary, AppColors.primary],
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: AppColors.waterGradient,
           ),
         ),
         child: SafeArea(

@@ -77,12 +77,17 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> login({
     required String email,
     required String password,
+    bool rememberMe = true,
   }) async {
     _setBusy(true);
     _errorMessage = null;
     try {
-      final tokens = await _authService.login(email.trim(), password);
-      await _persistAndActivate(tokens);
+      final trimmedEmail = email.trim();
+      final tokens = await _authService.login(trimmedEmail, password);
+      await _persistAndActivate(tokens, rememberMe: rememberMe);
+      await _tokenStorage.saveRememberedEmail(
+        rememberMe ? trimmedEmail : null,
+      );
       return true;
     } on AuthException catch (e) {
       _errorMessage = e.message;
@@ -137,6 +142,10 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// The email from the last "remember me" login, if any, so the login
+  /// screen can pre-fill it.
+  Future<String?> getRememberedEmail() => _tokenStorage.getRememberedEmail();
+
   Future<void> logout() async {
     // Needs a valid access token, so this must run before the token is
     // cleared below. Push (de)registration failures must never block logout.
@@ -157,8 +166,15 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _persistAndActivate(AuthResult tokens) async {
-    await _tokenStorage.saveTokens(tokens.accessToken, tokens.refreshToken);
+  Future<void> _persistAndActivate(
+    AuthResult tokens, {
+    bool rememberMe = true,
+  }) async {
+    await _tokenStorage.saveTokens(
+      tokens.accessToken,
+      tokens.refreshToken,
+      remember: rememberMe,
+    );
     _session = AuthSession.fromAccessToken(tokens.accessToken);
     _setStatus(AuthStatus.authenticated);
     _registerPushToken();

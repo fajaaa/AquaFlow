@@ -8,7 +8,7 @@ import 'package:aquaflow_desktop/app/unavailable_screen.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/providers/notification_badge_provider.dart';
 import 'package:aquaflow_desktop/shared/providers/theme_provider.dart';
-import 'package:aquaflow_desktop/shared/screens/login_screen.dart';
+import 'package:aquaflow_desktop/shared/screens/welcome_screen.dart';
 import 'package:aquaflow_desktop/shared/services/push_message_handler.dart';
 import 'package:aquaflow_desktop/shared/theme/app_theme.dart';
 
@@ -130,7 +130,7 @@ class _AuthGate extends StatelessWidget {
       case AuthStatus.authenticated:
         return const PlatformGate();
       case AuthStatus.unauthenticated:
-        return const LoginScreen();
+        return const WelcomeScreen();
     }
   }
 }
