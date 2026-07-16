@@ -6,6 +6,7 @@ import '../navigation/app_navigation.dart';
 import '../providers/auth_provider.dart';
 import '../services/profile_service.dart';
 import 'account_edit_screen.dart';
+import 'activity_log_screen.dart';
 import 'company_settings_screen.dart';
 
 /// "Nalog" tab body: an account/about card for the signed-in user.
@@ -126,6 +127,22 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.pushScreen(const AccountEditScreen()),
+                  ),
+                ),
+                // Every user can view their own security/audit history.
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 2,
+                  shadowColor: Colors.black26,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.history),
+                    title: const Text('Moje aktivnosti'),
+                    subtitle: const Text('Historija prijava i izmjena naloga'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.pushScreen(const ActivityLogScreen()),
                   ),
                 ),
                 // Admins can manage the company-wide settings; regular users

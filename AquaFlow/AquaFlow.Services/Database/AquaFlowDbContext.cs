@@ -141,6 +141,23 @@ public partial class AquaFlowDbContext : DbContext
             .HasForeignKey(photo => photo.FaultReportId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Security activity feed is queried per-user in reverse-chronological order
+        // (e.g. "recent activity for user X"), so the index is composite rather than on UserId alone.
+        modelBuilder.Entity<ActivityLog>()
+            .HasIndex(log => new { log.UserId, log.CreatedAt });
+
+        modelBuilder.Entity<ActivityLog>()
+            .Property(log => log.EventType)
+            .HasMaxLength(50);
+
+        modelBuilder.Entity<ActivityLog>()
+            .Property(log => log.Description)
+            .HasMaxLength(500);
+
+        modelBuilder.Entity<ActivityLog>()
+            .Property(log => log.IpAddress)
+            .HasMaxLength(45);
+
         CreateSeed(modelBuilder);
     }
 }

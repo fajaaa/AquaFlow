@@ -231,6 +231,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 16,
+                Code = "ActivityLogs.Read",
+                Name = "Pregled aktivnosti korisnika",
+                Module = "ActivityLogs",
+                Description = "Allows reading the security/activity audit trail for all users.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -382,6 +393,14 @@ public partial class AquaFlowDbContext
                 Id = 19,
                 UserRoleId = 1,
                 PermissionId = 15,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 20,
+                UserRoleId = 1,
+                PermissionId = 16,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });

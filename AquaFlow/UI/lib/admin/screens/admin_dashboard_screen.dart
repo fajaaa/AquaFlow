@@ -21,9 +21,11 @@ import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 /// Classic admin layout: a fixed left [_Sidebar] (brand on top, a vertical menu
 /// below with the active item highlighted in blue and a left indicator bar) and
 /// a content area on the right that swaps with the selected menu item. The
-/// "Obavijesti", "Šifarnik", "Tarife", "Računi", "Prijave kvarova", "Postavke firme",
-/// and "Moj nalog" sections embed their existing screens; the rest are placeholders
-/// until wired up. "Moj nalog" uses
+/// "Obavijesti", "Šifarnik", "Tarife", "Računi", "Prijave kvarova",
+/// "Postavke firme", and "Moj nalog" sections embed their existing screens; the rest are placeholders
+/// until wired up. There is no "Aktivnosti" section - a user's activity log is
+/// reached per-row from "Korisnici"/"Administratori" (see
+/// [AdminUserActivityLogsScreen]). "Moj nalog" uses
 /// the admin-only [AdminAccountEditScreen] (not the shared `AccountEditScreen`
 /// used by the mobile customer/collector "Nalog" tab), since it edits more than
 /// contact data here.

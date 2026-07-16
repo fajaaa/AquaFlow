@@ -1,3 +1,4 @@
+using AquaFlow.Model;
 using AquaFlow.Model.Access;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
@@ -25,19 +26,22 @@ public class AccessController : ControllerBase
     private readonly IBaseCRUDService<CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest, CustomerProfilePatchRequest> _customerProfileService;
     private readonly IUserPreferenceService _userPreferenceService;
     private readonly IValidator<UserRegisterRequest> _registerValidator;
+    private readonly IActivityLogService _activityLogService;
 
     public AccessController(
         IAccessManager accessManager,
         IUserService userService,
         IBaseCRUDService<CustomerProfileResponse, CustomerProfileSearchObject, CustomerProfileInsertRequest, CustomerProfileUpdateRequest, CustomerProfilePatchRequest> customerProfileService,
         IUserPreferenceService userPreferenceService,
-        IValidator<UserRegisterRequest> registerValidator)
+        IValidator<UserRegisterRequest> registerValidator,
+        IActivityLogService activityLogService)
     {
         _accessManager = accessManager;
         _userService = userService;
         _customerProfileService = customerProfileService;
         _userPreferenceService = userPreferenceService;
         _registerValidator = registerValidator;
+        _activityLogService = activityLogService;
     }
 
     [HttpPost("login")]
@@ -88,6 +92,12 @@ public class AccessController : ControllerBase
             ReceiveEmailNotifications = true,
             ReceivePushNotifications = true
         });
+
+        await _activityLogService.LogAsync(
+            result.Id,
+            ActivityEventTypes.Registered,
+            "Registracija korisnika",
+            HttpContext.Connection.RemoteIpAddress?.ToString());
 
         return CreatedAtAction(nameof(Register), new { id = result.Id }, result);
     }

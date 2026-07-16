@@ -4,6 +4,7 @@ using AquaFlow.Services.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AquaFlow.Services.Migrations
 {
     [DbContext(typeof(AquaFlowDbContext))]
-    partial class AquaFlowDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260716145646_AddActivityLog")]
+    partial class AddActivityLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1680,16 +1683,6 @@ namespace AquaFlow.Services.Migrations
                             IsActive = true,
                             Module = "PaymentSettings",
                             Name = "Manage payment settings"
-                        },
-                        new
-                        {
-                            Id = 16,
-                            Code = "ActivityLogs.Read",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Allows reading the security/activity audit trail for all users.",
-                            IsActive = true,
-                            Module = "ActivityLogs",
-                            Name = "Pregled aktivnosti korisnika"
                         });
                 });
 
@@ -2576,13 +2569,6 @@ namespace AquaFlow.Services.Migrations
                             Id = 19,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 15,
-                            UserRoleId = 1
-                        },
-                        new
-                        {
-                            Id = 20,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            PermissionId = 16,
                             UserRoleId = 1
                         });
                 });
