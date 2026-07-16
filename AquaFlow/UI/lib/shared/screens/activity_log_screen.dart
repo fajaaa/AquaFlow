@@ -226,6 +226,11 @@ class _ActivityCard extends StatelessWidget {
     );
   }
 
+  // Same event types as AquaFlow.Model.ActivityEventTypes / the admin activity
+  // logs screen - keep both mappings in sync if a type is added.
+  // UserRoleChanged/UserActivated/UserDeactivated/UserDeleted are admin actions
+  // performed on this user's account (UsersController), logged under this
+  // user's own id, so they do appear here even though this user didn't act.
   static IconData _typeIcon(String type) {
     switch (type) {
       case 'LoginSuccess':
@@ -240,6 +245,14 @@ class _ActivityCard extends StatelessWidget {
         return Icons.lock_reset;
       case 'AccountUpdated':
         return Icons.manage_accounts_outlined;
+      case 'UserRoleChanged':
+        return Icons.admin_panel_settings_outlined;
+      case 'UserActivated':
+        return Icons.check_circle_outline;
+      case 'UserDeactivated':
+        return Icons.remove_circle_outline;
+      case 'UserDeleted':
+        return Icons.person_remove_outlined;
       default:
         return Icons.history;
     }
@@ -259,6 +272,14 @@ class _ActivityCard extends StatelessWidget {
         return const Color(0xFFF9A825);
       case 'AccountUpdated':
         return const Color(0xFF00838F);
+      case 'UserRoleChanged':
+        return const Color(0xFF6A1B9A);
+      case 'UserActivated':
+        return const Color(0xFF2E7D32);
+      case 'UserDeactivated':
+        return const Color(0xFFEF6C00);
+      case 'UserDeleted':
+        return const Color(0xFFC62828);
       default:
         return colorScheme.primary;
     }
@@ -278,6 +299,14 @@ class _ActivityCard extends StatelessWidget {
         return 'Promjena lozinke';
       case 'AccountUpdated':
         return 'Izmjena naloga';
+      case 'UserRoleChanged':
+        return 'Promjena role';
+      case 'UserActivated':
+        return 'Korisnik aktiviran';
+      case 'UserDeactivated':
+        return 'Korisnik deaktiviran';
+      case 'UserDeleted':
+        return 'Korisnik obrisan';
       default:
         return type.isEmpty ? 'Aktivnost' : type;
     }

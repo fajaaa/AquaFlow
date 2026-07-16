@@ -654,8 +654,11 @@ class _SelectOption {
   final String label;
 }
 
-// Same six event types as AquaFlow.Model.ActivityEventTypes / the mobile
+// Same event types as AquaFlow.Model.ActivityEventTypes / the mobile
 // "Moje aktivnosti" screen - keep both mappings in sync if a type is added.
+// UserRoleChanged/UserActivated/UserDeactivated/UserDeleted are admin actions
+// performed on another user's account (UsersController), so they show up here
+// (the admin listing) but never on the mobile self-service screen.
 const List<_SelectOption> _eventTypeOptions = [
   _SelectOption(value: 'LoginSuccess', label: 'Uspješna prijava'),
   _SelectOption(value: 'LoginFailed', label: 'Neuspješna prijava'),
@@ -663,6 +666,10 @@ const List<_SelectOption> _eventTypeOptions = [
   _SelectOption(value: 'Registered', label: 'Registracija'),
   _SelectOption(value: 'PasswordChanged', label: 'Promjena lozinke'),
   _SelectOption(value: 'AccountUpdated', label: 'Izmjena naloga'),
+  _SelectOption(value: 'UserRoleChanged', label: 'Promjena role'),
+  _SelectOption(value: 'UserActivated', label: 'Korisnik aktiviran'),
+  _SelectOption(value: 'UserDeactivated', label: 'Korisnik deaktiviran'),
+  _SelectOption(value: 'UserDeleted', label: 'Korisnik obrisan'),
 ];
 
 IconData _eventTypeIcon(String type) {
@@ -679,6 +686,14 @@ IconData _eventTypeIcon(String type) {
       return Icons.lock_reset;
     case 'AccountUpdated':
       return Icons.manage_accounts_outlined;
+    case 'UserRoleChanged':
+      return Icons.admin_panel_settings_outlined;
+    case 'UserActivated':
+      return Icons.check_circle_outline;
+    case 'UserDeactivated':
+      return Icons.remove_circle_outline;
+    case 'UserDeleted':
+      return Icons.person_remove_outlined;
     default:
       return Icons.history;
   }
@@ -698,6 +713,14 @@ Color _eventTypeColor(String type, ColorScheme colorScheme) {
       return const Color(0xFFF9A825);
     case 'AccountUpdated':
       return const Color(0xFF00838F);
+    case 'UserRoleChanged':
+      return const Color(0xFF6A1B9A);
+    case 'UserActivated':
+      return const Color(0xFF2E7D32);
+    case 'UserDeactivated':
+      return const Color(0xFFEF6C00);
+    case 'UserDeleted':
+      return const Color(0xFFC62828);
     default:
       return colorScheme.primary;
   }
@@ -717,6 +740,14 @@ String _eventTypeLabel(String type) {
       return 'Promjena lozinke';
     case 'AccountUpdated':
       return 'Izmjena naloga';
+    case 'UserRoleChanged':
+      return 'Promjena role';
+    case 'UserActivated':
+      return 'Korisnik aktiviran';
+    case 'UserDeactivated':
+      return 'Korisnik deaktiviran';
+    case 'UserDeleted':
+      return 'Korisnik obrisan';
     default:
       return type.isEmpty ? 'Aktivnost' : type;
   }
