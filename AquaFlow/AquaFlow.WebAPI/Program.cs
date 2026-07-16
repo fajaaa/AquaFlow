@@ -181,6 +181,8 @@ mapperConfig.NewConfig<FaultReport, FaultReportResponse>()
     .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
     .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
     .Map(destination => destination.AssignedCollectorEmployeeCode, source => source.AssignedCollector == null ? null : source.AssignedCollector.EmployeeCode);
+mapperConfig.NewConfig<ActivityLog, ActivityLogResponse>()
+    .Map(destination => destination.UserEmail, source => source.User == null ? string.Empty : source.User.Email);
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
@@ -190,6 +192,8 @@ builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IPermissionLookupService, PermissionLookupService>();
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
+builder.Services.AddScoped<IBaseReadService<ActivityLogResponse, ActivityLogSearchObject>>(
+    serviceProvider => serviceProvider.GetRequiredService<IActivityLogService>());
 builder.Services.AddScoped<NotificationRecipientService>();
 builder.Services.AddScoped<IAccessManager, AccessManager>();
 builder.Services.AddScoped<ICryptoService, CryptoService>();
