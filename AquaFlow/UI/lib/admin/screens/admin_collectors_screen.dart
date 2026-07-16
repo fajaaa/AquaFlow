@@ -7,8 +7,10 @@ import 'package:aquaflow_desktop/admin/models/admin_collector_profile_draft.dart
 import 'package:aquaflow_desktop/admin/models/admin_collector_profile_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_settlement_option.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_user_activity_logs_screen.dart';
 import 'package:aquaflow_desktop/admin/services/admin_collector_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_collector_service.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 
 class AdminCollectorsScreen extends StatefulWidget {
   const AdminCollectorsScreen({super.key});
@@ -116,6 +118,15 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen> {
       _page = 1;
     });
     _load();
+  }
+
+  void _openActivityLogs(AdminCollectorProfile profile) {
+    context.pushScreen(
+      AdminUserActivityLogsScreen(
+        userId: profile.userId,
+        displayName: profile.label,
+      ),
+    );
   }
 
   void _goToPage(int page) {
@@ -336,6 +347,7 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen> {
                               _RowActions(
                                 disabled: _mutating,
                                 onEdit: () => _openEdit(item),
+                                onActivityLogs: () => _openActivityLogs(item),
                               ),
                             ),
                           ],
@@ -466,17 +478,32 @@ class _StatusPill extends StatelessWidget {
 }
 
 class _RowActions extends StatelessWidget {
-  const _RowActions({required this.disabled, required this.onEdit});
+  const _RowActions({
+    required this.disabled,
+    required this.onEdit,
+    required this.onActivityLogs,
+  });
 
   final bool disabled;
   final VoidCallback onEdit;
+  final VoidCallback onActivityLogs;
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: 'Uredi profil',
-      onPressed: disabled ? null : onEdit,
-      icon: const Icon(Icons.edit_outlined),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Uredi profil',
+          onPressed: disabled ? null : onEdit,
+          icon: const Icon(Icons.edit_outlined),
+        ),
+        IconButton(
+          tooltip: 'Aktivnosti',
+          onPressed: disabled ? null : onActivityLogs,
+          icon: const Icon(Icons.history_outlined),
+        ),
+      ],
     );
   }
 }

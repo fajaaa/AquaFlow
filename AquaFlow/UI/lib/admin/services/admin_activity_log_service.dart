@@ -32,8 +32,6 @@ class AdminActivityLogService {
     int? userId,
     String? userEmail,
     String? eventType,
-    DateTime? from,
-    DateTime? to,
   }) async {
     final token = await _requireToken();
     final query = <String, String>{
@@ -54,12 +52,6 @@ class AdminActivityLogService {
     final selectedEventType = eventType?.trim();
     if (selectedEventType != null && selectedEventType.isNotEmpty) {
       query['EventType'] = selectedEventType;
-    }
-    if (from != null) {
-      query['From'] = from.toUtc().toIso8601String();
-    }
-    if (to != null) {
-      query['To'] = to.toUtc().toIso8601String();
     }
 
     final uri = Uri.parse(

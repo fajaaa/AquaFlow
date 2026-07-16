@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import 'package:aquaflow_desktop/admin/models/admin_activity_log.dart';
@@ -7,29 +5,40 @@ import 'package:aquaflow_desktop/admin/models/admin_activity_log_page.dart';
 import 'package:aquaflow_desktop/admin/services/admin_activity_log_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_activity_log_service.dart';
 
-/// Read-only admin audit trail over `/ActivityLogs` (requires
-/// `ActivityLogs.Read`, held by the Admin role). Unlike
-/// [AdminNotificationsScreen] there is no create/edit/delete here - rows are
+/// Read-only audit trail of a single user's `ActivityLog` rows, pushed from
+/// the "Aktivnosti" row action on [AdminUsersScreen] (both modes) and
+/// [AdminCollectorsScreen] (same navigation pattern as
+/// [AdminUserWaterMetersScreen]). Takes a raw [userId] + [displayName] rather
+/// than a model so any listing that knows the linked user's id can push it.
+/// Reads `/ActivityLogs` pinned to [userId] (requires `ActivityLogs.Read`,
+/// held by the Admin role); there is no create/edit/delete here - rows are
 /// only ever written server-side via `ActivityLogService.LogAsync`.
-class AdminActivityLogsScreen extends StatefulWidget {
-  const AdminActivityLogsScreen({super.key});
+class AdminUserActivityLogsScreen extends StatefulWidget {
+  const AdminUserActivityLogsScreen({
+    super.key,
+    required this.userId,
+    required this.displayName,
+  });
+
+  final int userId;
+
+  /// Already-resolved label for the app bar (callers pick their own
+  /// name/email/code fallback).
+  final String displayName;
 
   @override
-  State<AdminActivityLogsScreen> createState() =>
-      _AdminActivityLogsScreenState();
+  State<AdminUserActivityLogsScreen> createState() =>
+      _AdminUserActivityLogsScreenState();
 }
 
-class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
+class _AdminUserActivityLogsScreenState
+    extends State<AdminUserActivityLogsScreen> {
   final AdminActivityLogService _service = AdminActivityLogService();
-  final TextEditingController _userEmailCtrl = TextEditingController();
 
-  Timer? _userEmailDebounce;
   AdminActivityLogPage? _pageData;
   bool _loading = true;
   String? _error;
   String? _eventTypeFilter;
-  DateTime? _fromDate;
-  DateTime? _toDate;
   int _page = 1;
   int _pageSize = 10;
   int _requestSerial = 0;
@@ -53,10 +62,8 @@ class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
       final pageData = await _service.fetch(
         page: _page,
         pageSize: _pageSize,
-        userEmail: _userEmailCtrl.text,
+        userId: widget.userId,
         eventType: _eventTypeFilter,
-        from: _fromDate,
-        to: _toDateInclusive,
       );
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
@@ -73,76 +80,10 @@ class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
     }
   }
 
-  DateTime? get _toDateInclusive {
-    final to = _toDate;
-    if (to == null) return null;
-    return DateTime(to.year, to.month, to.day, 23, 59, 59, 999);
-  }
-
-  void _queueUserEmailSearch(String _) {
-    setState(() {});
-    _userEmailDebounce?.cancel();
-    _userEmailDebounce = Timer(
-      const Duration(milliseconds: 450),
-      () => _load(resetPage: true),
-    );
-  }
-
-  void _submitUserEmailSearch(String _) {
-    _userEmailDebounce?.cancel();
-    _load(resetPage: true);
-  }
-
-  void _clearUserEmailSearch() {
-    if (_userEmailCtrl.text.isEmpty) return;
-    _userEmailDebounce?.cancel();
-    _userEmailCtrl.clear();
-    setState(() {});
-    _load(resetPage: true);
-  }
-
   void _setEventTypeFilter(String value) {
     final selected = value.isEmpty ? null : value;
     if (selected == _eventTypeFilter) return;
     setState(() => _eventTypeFilter = selected);
-    _load(resetPage: true);
-  }
-
-  Future<void> _pickFromDate() async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _fromDate ?? now,
-      firstDate: DateTime(now.year - 5),
-      lastDate: now,
-    );
-    if (!mounted || date == null) return;
-    setState(() => _fromDate = date);
-    _load(resetPage: true);
-  }
-
-  void _clearFromDate() {
-    if (_fromDate == null) return;
-    setState(() => _fromDate = null);
-    _load(resetPage: true);
-  }
-
-  Future<void> _pickToDate() async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _toDate ?? now,
-      firstDate: DateTime(now.year - 5),
-      lastDate: now,
-    );
-    if (!mounted || date == null) return;
-    setState(() => _toDate = date);
-    _load(resetPage: true);
-  }
-
-  void _clearToDate() {
-    if (_toDate == null) return;
-    setState(() => _toDate = null);
     _load(resetPage: true);
   }
 
@@ -163,113 +104,79 @@ class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
 
   @override
   void dispose() {
-    _userEmailDebounce?.cancel();
-    _userEmailCtrl.dispose();
     _service.dispose();
     super.dispose();
   }
+
+  String get _title => 'Aktivnosti - ${widget.displayName}';
 
   @override
   Widget build(BuildContext context) {
     final pageData = _pageData;
     final totalPages = _totalPages(pageData?.totalCount ?? 0);
 
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 24, 28, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _Header(loading: _loading, onRefresh: () => _load()),
-                const SizedBox(height: 18),
-                _buildFilters(),
-              ],
-            ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_title),
+        actions: [
+          IconButton(
+            tooltip: 'Osvježi',
+            onPressed: _loading ? null : () => _load(),
+            icon: const Icon(Icons.refresh),
           ),
-          if (_loading && pageData != null)
-            const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent()),
-          if (pageData != null && _error == null)
-            _PaginationBar(
-              page: _page,
-              totalPages: totalPages,
-              totalCount: pageData.totalCount,
-              pageSize: _pageSize,
-              loading: _loading,
-              onPageChanged: _goToPage,
-              onPageSizeChanged: _setPageSize,
-            ),
+          const SizedBox(width: 8),
         ],
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 20, 28, 12),
+              child: _buildFilters(),
+            ),
+            if (_loading && pageData != null)
+              const LinearProgressIndicator(minHeight: 2),
+            Expanded(child: _buildContent()),
+            if (pageData != null && _error == null)
+              _PaginationBar(
+                page: _page,
+                totalPages: totalPages,
+                totalCount: pageData.totalCount,
+                pageSize: _pageSize,
+                loading: _loading,
+                onPageChanged: _goToPage,
+                onPageSizeChanged: _setPageSize,
+              ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildFilters() {
-    final hasUserEmailSearch = _userEmailCtrl.text.trim().isNotEmpty;
-
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        SizedBox(
-          width: 260,
-          child: TextField(
-            controller: _userEmailCtrl,
-            textInputAction: TextInputAction.search,
-            onChanged: _queueUserEmailSearch,
-            onSubmitted: _submitUserEmailSearch,
-            decoration: InputDecoration(
-              labelText: 'Korisnik',
-              hintText: 'Email korisnika',
-              prefixIcon: const Icon(Icons.person_search_outlined),
-              suffixIcon: hasUserEmailSearch
-                  ? IconButton(
-                      tooltip: 'Očisti pretragu',
-                      onPressed: _clearUserEmailSearch,
-                      icon: const Icon(Icons.clear),
-                    )
-                  : null,
-            ),
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: SizedBox(
+        width: 240,
+        child: DropdownButtonFormField<String>(
+          initialValue: _eventTypeFilter ?? '',
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Događaj',
+            prefixIcon: Icon(Icons.category_outlined),
           ),
+          items: [
+            const DropdownMenuItem(value: '', child: Text('Svi')),
+            for (final option in _eventTypeOptions)
+              DropdownMenuItem(
+                value: option.value,
+                child: Text(option.label, overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: _loading ? null : (value) => _setEventTypeFilter(value ?? ''),
         ),
-        SizedBox(
-          width: 220,
-          child: DropdownButtonFormField<String>(
-            initialValue: _eventTypeFilter ?? '',
-            decoration: const InputDecoration(
-              labelText: 'Događaj',
-              prefixIcon: Icon(Icons.category_outlined),
-            ),
-            items: [
-              const DropdownMenuItem(value: '', child: Text('Svi')),
-              for (final option in _eventTypeOptions)
-                DropdownMenuItem(
-                  value: option.value,
-                  child: Text(option.label),
-                ),
-            ],
-            onChanged: _loading ? null : (value) => _setEventTypeFilter(value ?? ''),
-          ),
-        ),
-        _DateFilterField(
-          label: 'Od datuma',
-          value: _fromDate,
-          enabled: !_loading,
-          onPick: _pickFromDate,
-          onClear: _fromDate == null ? null : _clearFromDate,
-        ),
-        _DateFilterField(
-          label: 'Do datuma',
-          value: _toDate,
-          enabled: !_loading,
-          onPick: _pickToDate,
-          onClear: _toDate == null ? null : _clearToDate,
-        ),
-      ],
+      ),
     );
   }
 
@@ -311,7 +218,6 @@ class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
                     dataRowMinHeight: 56,
                     dataRowMaxHeight: 72,
                     columns: const [
-                      DataColumn(label: Text('Korisnik')),
                       DataColumn(label: Text('Događaj')),
                       DataColumn(label: Text('Opis')),
                       DataColumn(label: Text('IP adresa')),
@@ -321,18 +227,6 @@ class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
                       for (final item in items)
                         DataRow(
                           cells: [
-                            DataCell(
-                              SizedBox(
-                                width: 220,
-                                child: Text(
-                                  item.userEmail.isEmpty
-                                      ? '-'
-                                      : item.userEmail,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
                             DataCell(
                               _EventTypePill(eventType: item.eventType),
                             ),
@@ -361,111 +255,11 @@ class _AdminActivityLogsScreenState extends State<AdminActivityLogsScreen> {
     );
   }
 
-  bool get _hasFilters =>
-      _userEmailCtrl.text.trim().isNotEmpty ||
-      _eventTypeFilter != null ||
-      _fromDate != null ||
-      _toDate != null;
+  bool get _hasFilters => _eventTypeFilter != null;
 
   int _totalPages(int totalCount) {
     if (totalCount <= 0) return 1;
     return (totalCount / _pageSize).ceil();
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.loading, required this.onRefresh});
-
-  final bool loading;
-  final VoidCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final title = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Aktivnosti',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Pregled sigurnosnih i korisničkih aktivnosti u sistemu.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-
-    final actions = IconButton(
-      tooltip: 'Osvježi',
-      onPressed: loading ? null : onRefresh,
-      icon: const Icon(Icons.refresh),
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 620) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [title, const SizedBox(height: 12), actions],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: title),
-            actions,
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _DateFilterField extends StatelessWidget {
-  const _DateFilterField({
-    required this.label,
-    required this.value,
-    required this.enabled,
-    required this.onPick,
-    required this.onClear,
-  });
-
-  final String label;
-  final DateTime? value;
-  final bool enabled;
-  final VoidCallback onPick;
-  final VoidCallback? onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 190,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(4),
-        onTap: enabled ? onPick : null,
-        child: InputDecorator(
-          decoration: InputDecoration(
-            labelText: label,
-            prefixIcon: const Icon(Icons.event_outlined),
-            suffixIcon: value != null
-                ? IconButton(
-                    tooltip: 'Očisti',
-                    onPressed: enabled ? onClear : null,
-                    icon: const Icon(Icons.clear),
-                  )
-                : null,
-          ),
-          child: Text(value == null ? '-' : _formatDateOnly(value!)),
-        ),
-      ),
-    );
   }
 }
 
@@ -661,7 +455,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             hasFilters
                 ? 'Nema aktivnosti za zadane filtere.'
-                : 'Nema zabilježenih aktivnosti.',
+                : 'Korisnik nema zabilježenih aktivnosti.',
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium,
           ),
@@ -818,9 +612,4 @@ String _formatDate(DateTime? date) {
   String two(int value) => value.toString().padLeft(2, '0');
   return '${two(date.day)}.${two(date.month)}.${date.year}. '
       '${two(date.hour)}:${two(date.minute)}';
-}
-
-String _formatDateOnly(DateTime date) {
-  String two(int value) => value.toString().padLeft(2, '0');
-  return '${two(date.day)}.${two(date.month)}.${date.year}.';
 }

@@ -13,6 +13,7 @@ import 'package:aquaflow_desktop/admin/models/admin_user.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_draft.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_role_option.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_user_activity_logs_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_user_water_meters_screen.dart';
 import 'package:aquaflow_desktop/admin/services/admin_city_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_city_service.dart';
@@ -352,6 +353,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     context.pushScreen(AdminUserWaterMetersScreen(user: user));
   }
 
+  void _openActivityLogs(AdminUser user) {
+    final name = user.fullName;
+    context.pushScreen(
+      AdminUserActivityLogsScreen(
+        userId: user.id,
+        displayName: name.isEmpty ? user.email : name,
+      ),
+    );
+  }
+
   Future<void> _confirmDelete(AdminUser user) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -617,6 +628,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 onWaterMeters: widget.mode.showWaterMeters
                                     ? () => _openWaterMeters(item)
                                     : null,
+                                onActivityLogs: () => _openActivityLogs(item),
                               ),
                             ),
                           ],
@@ -757,6 +769,7 @@ class _RowActions extends StatelessWidget {
     required this.deleteDisabled,
     required this.onEdit,
     required this.onDelete,
+    required this.onActivityLogs,
     this.onWaterMeters,
   });
 
@@ -764,6 +777,7 @@ class _RowActions extends StatelessWidget {
   final bool deleteDisabled;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onActivityLogs;
 
   /// Null hides the action entirely (admins have no water meters).
   final VoidCallback? onWaterMeters;
@@ -786,6 +800,11 @@ class _RowActions extends StatelessWidget {
             onPressed: disabled ? null : onWaterMeters,
             icon: const Icon(Icons.water_drop_outlined),
           ),
+        IconButton(
+          tooltip: 'Aktivnosti',
+          onPressed: disabled ? null : onActivityLogs,
+          icon: const Icon(Icons.history_outlined),
+        ),
         IconButton(
           tooltip: deleteDisabled
               ? 'Ne možete obrisati vlastiti korisnički nalog.'

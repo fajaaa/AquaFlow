@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/admin/screens/admin_account_edit_screen.dart';
-import 'package:aquaflow_desktop/admin/screens/admin_activity_logs_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_codebook_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_collectors_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_fault_reports_screen.dart';
@@ -22,9 +21,11 @@ import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 /// Classic admin layout: a fixed left [_Sidebar] (brand on top, a vertical menu
 /// below with the active item highlighted in blue and a left indicator bar) and
 /// a content area on the right that swaps with the selected menu item. The
-/// "Obavijesti", "Aktivnosti", "Šifarnik", "Tarife", "Računi", "Prijave kvarova",
+/// "Obavijesti", "Šifarnik", "Tarife", "Računi", "Prijave kvarova",
 /// "Postavke firme", and "Moj nalog" sections embed their existing screens; the rest are placeholders
-/// until wired up. "Moj nalog" uses
+/// until wired up. There is no "Aktivnosti" section - a user's activity log is
+/// reached per-row from "Korisnici"/"Administratori" (see
+/// [AdminUserActivityLogsScreen]). "Moj nalog" uses
 /// the admin-only [AdminAccountEditScreen] (not the shared `AccountEditScreen`
 /// used by the mobile customer/collector "Nalog" tab), since it edits more than
 /// contact data here.
@@ -60,11 +61,6 @@ const List<_AdminNavItem> _navItems = [
     icon: Icons.notifications_outlined,
     selectedIcon: Icons.notifications,
     label: 'Obavijesti',
-  ),
-  _AdminNavItem(
-    icon: Icons.history_outlined,
-    selectedIcon: Icons.history,
-    label: 'Aktivnosti',
   ),
   _AdminNavItem(
     icon: Icons.people_outline,
@@ -170,35 +166,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return const _DashboardOverview();
       case 1:
         return const AdminNotificationsScreen();
-      case 2:
-        return const AdminActivityLogsScreen();
       // "Korisnici" and "Administratori" are the same widget type in the same
       // tree position, so they need distinct keys - otherwise switching between
       // them reuses the State and keeps the other tab's loaded rows.
-      case 3:
+      case 2:
         return const AdminUsersScreen(key: ValueKey('users-customers'));
-      case 4:
+      case 3:
         return const AdminCollectorsScreen();
-      case 7:
+      case 6:
         return const AdminInvoicesScreen();
-      case 8:
+      case 7:
         return const AdminPaymentsScreen();
-      case 9:
+      case 8:
         return const AdminFaultReportsScreen();
-      case 10:
+      case 9:
         return const AdminUsersScreen(
           key: ValueKey('users-admins'),
           mode: AdminUsersScreenMode.admins,
         );
-      case 11:
+      case 10:
         return const AdminCodebookScreen();
-      case 12:
+      case 11:
         return const AdminTariffsScreen();
-      case 13:
+      case 12:
         return const CompanySettingsScreen();
-      case 14:
+      case 13:
         return const AdminAccountEditScreen();
-      case 15:
+      case 14:
         return const AdminWaterMeterRequestsScreen();
       default:
         return _SectionPlaceholder(item: _navItems[_selectedIndex]);
