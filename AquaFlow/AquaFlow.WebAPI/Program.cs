@@ -183,6 +183,10 @@ mapperConfig.NewConfig<FaultReport, FaultReportResponse>()
     .Map(destination => destination.AssignedCollectorEmployeeCode, source => source.AssignedCollector == null ? null : source.AssignedCollector.EmployeeCode);
 mapperConfig.NewConfig<ActivityLog, ActivityLogResponse>()
     .Map(destination => destination.UserEmail, source => source.User == null ? string.Empty : source.User.Email);
+mapperConfig.NewConfig<SupportTicket, SupportTicketResponse>()
+    .Map(destination => destination.CustomerName, source => source.Customer == null ? null : (source.Customer.FirstName + " " + source.Customer.LastName).Trim());
+mapperConfig.NewConfig<SupportTicketMessage, SupportTicketMessageResponse>()
+    .Map(destination => destination.SenderName, source => source.Sender == null || source.Sender.CustomerProfile == null ? null : (source.Sender.CustomerProfile.FirstName + " " + source.Sender.CustomerProfile.LastName).Trim());
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
@@ -358,6 +362,8 @@ builder.Services.AddScoped<IValidator<CompanySettingsPatchRequest>, CompanySetti
 builder.Services.AddScoped<IValidator<PaymentSettingsInsertRequest>, PaymentSettingsInsertValidator>();
 builder.Services.AddScoped<IValidator<PaymentSettingsUpdateRequest>, PaymentSettingsUpdateValidator>();
 builder.Services.AddScoped<IValidator<PaymentSettingsPatchRequest>, PaymentSettingsPatchValidator>();
+builder.Services.AddScoped<IValidator<SupportTicketCreateRequest>, SupportTicketCreateValidator>();
+builder.Services.AddScoped<IValidator<SupportTicketMessageCreateRequest>, SupportTicketMessageCreateValidator>();
 
 builder.Services.AddAuthentication(options =>
 {
