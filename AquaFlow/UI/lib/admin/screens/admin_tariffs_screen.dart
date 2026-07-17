@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,9 +5,9 @@ import 'package:flutter/services.dart';
 
 import 'package:aquaflow_desktop/admin/models/admin_tariff.dart';
 import 'package:aquaflow_desktop/admin/models/admin_tariff_draft.dart';
-import 'package:aquaflow_desktop/admin/models/admin_tariff_page.dart';
 import 'package:aquaflow_desktop/admin/services/admin_tariff_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_tariff_service.dart';
+import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
 import 'package:aquaflow_desktop/shared/utils/money_format.dart';
 import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
@@ -23,77 +22,34 @@ class AdminTariffsScreen extends StatefulWidget {
   State<AdminTariffsScreen> createState() => _AdminTariffsScreenState();
 }
 
-class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
+class _AdminTariffsScreenState extends State<AdminTariffsScreen>
+    with PagedListController<AdminTariff, AdminTariffsScreen> {
   final AdminTariffService _service = AdminTariffService();
-  final TextEditingController _searchCtrl = TextEditingController();
 
-  Timer? _searchDebounce;
-  AdminTariffPage? _pageData;
-  bool _loading = true;
-  bool _mutating = false;
-  String? _error;
   bool? _isActiveFilter;
-  int _page = 1;
-  int _pageSize = 10;
-  int _requestSerial = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
   }
 
-  Future<void> _load({bool resetPage = false}) async {
-    final requestId = ++_requestSerial;
-
-    setState(() {
-      if (resetPage) _page = 1;
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final pageData = await _service.fetch(
-        page: _page,
-        pageSize: _pageSize,
-        name: _searchCtrl.text,
-        isActive: _isActiveFilter,
-      );
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = pageData;
-        _loading = false;
-      });
-    } on AdminTariffException catch (e) {
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = null;
-        _loading = false;
-        _error = e.message;
-      });
-    }
-  }
-
-  void _queueSearch(String _) {
-    setState(() {});
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 450),
-      () => _load(resetPage: true),
+  @override
+  Future<({List<AdminTariff> items, int totalCount})> fetchPage() async {
+    final pageData = await _service.fetch(
+      page: page,
+      pageSize: pageSize,
+      name: searchController.text,
+      isActive: _isActiveFilter,
     );
+    return (items: pageData.items, totalCount: pageData.totalCount);
   }
 
-  void _submitSearch(String _) {
-    _searchDebounce?.cancel();
-    _load(resetPage: true);
-  }
-
-  void _clearSearch() {
-    if (_searchCtrl.text.isEmpty) return;
-    _searchDebounce?.cancel();
-    _searchCtrl.clear();
-    setState(() {});
-    _load(resetPage: true);
+  @override
+  String describeError(Object error) {
+    return error is AdminTariffException
+        ? error.message
+        : 'Došlo je do neočekivane greške.';
   }
 
   void _setStatusFilter(String value) {
@@ -102,27 +58,12 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
     if (value == 'inactive') selected = false;
     if (selected == _isActiveFilter) return;
     setState(() => _isActiveFilter = selected);
-    _load(resetPage: true);
+    load(resetPage: true);
   }
 
   String get _statusFilterValue {
     if (_isActiveFilter == null) return '';
     return _isActiveFilter! ? 'active' : 'inactive';
-  }
-
-  void _setPageSize(int? value) {
-    if (value == null || value == _pageSize || _loading) return;
-    setState(() {
-      _pageSize = value;
-      _page = 1;
-    });
-    _load();
-  }
-
-  void _goToPage(int page) {
-    if (page == _page || _loading) return;
-    setState(() => _page = page);
-    _load();
   }
 
   Future<void> _openCreate() async {
@@ -133,7 +74,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.create(draft);
     }, 'Tarifa je dodana.');
   }
@@ -146,7 +87,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.update(tariff.id, draft);
     }, 'Tarifa je sačuvana.');
   }
@@ -178,56 +119,23 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
     );
     if (!mounted || confirmed != true) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.delete(tariff.id);
-      if ((_pageData?.items.length ?? 0) == 1 && _page > 1) {
-        _page -= 1;
+      if (items.length == 1 && page > 1) {
+        page -= 1;
       }
     }, 'Tarifa je obrisana.');
   }
 
-  Future<void> _runMutation(
-    Future<void> Function() action,
-    String successMessage,
-  ) async {
-    setState(() => _mutating = true);
-    try {
-      await action();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(successMessage)));
-      await _load();
-    } on AdminTariffException catch (e) {
-      if (!mounted) return;
-      _showError(e.message);
-    } finally {
-      if (mounted) setState(() => _mutating = false);
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
   @override
   void dispose() {
-    _searchDebounce?.cancel();
-    _searchCtrl.dispose();
+    disposeController();
     _service.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
-
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -243,12 +151,12 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
                   actions: [
                     IconButton(
                       tooltip: 'Osvježi',
-                      onPressed: _loading || _mutating ? null : () => _load(),
+                      onPressed: loading || mutating ? null : () => load(),
                       icon: const Icon(Icons.refresh),
                     ),
                     const SizedBox(width: 8),
                     FilledButton.icon(
-                      onPressed: _loading || _mutating ? null : _openCreate,
+                      onPressed: loading || mutating ? null : _openCreate,
                       icon: const Icon(Icons.add),
                       label: const Text('Nova tarifa'),
                     ),
@@ -259,18 +167,18 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
               ],
             ),
           ),
-          if ((_loading && pageData != null) || _mutating)
+          if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent()),
-          if (pageData != null && _error == null)
+          if (!isInitialLoad && error == null)
             PagedTablePaginationBar(
-              page: _page,
+              page: page,
               totalPages: totalPages,
-              totalCount: pageData.totalCount,
-              pageSize: _pageSize,
-              loading: _loading || _mutating,
-              onPageChanged: _goToPage,
-              onPageSizeChanged: _setPageSize,
+              totalCount: totalCount,
+              pageSize: pageSize,
+              loading: loading || mutating,
+              onPageChanged: goToPage,
+              onPageSizeChanged: setPageSize,
             ),
         ],
       ),
@@ -278,7 +186,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
   }
 
   Widget _buildFilters() {
-    final hasSearch = _searchCtrl.text.trim().isNotEmpty;
+    final hasSearch = searchController.text.trim().isNotEmpty;
 
     return Wrap(
       spacing: 12,
@@ -288,17 +196,17 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
         SizedBox(
           width: 260,
           child: TextField(
-            controller: _searchCtrl,
+            controller: searchController,
             textInputAction: TextInputAction.search,
-            onChanged: _queueSearch,
-            onSubmitted: _submitSearch,
+            onChanged: queueSearch,
+            onSubmitted: submitSearch,
             decoration: InputDecoration(
               labelText: 'Naziv',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: hasSearch
                   ? IconButton(
                       tooltip: 'Očisti pretragu',
-                      onPressed: _clearSearch,
+                      onPressed: clearSearch,
                       icon: const Icon(Icons.clear),
                     )
                   : null,
@@ -318,16 +226,14 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
               DropdownMenuItem(value: 'active', child: Text('Aktivne')),
               DropdownMenuItem(value: 'inactive', child: Text('Neaktivne')),
             ],
-            onChanged: _loading || _mutating
+            onChanged: loading || mutating
                 ? null
                 : (value) => _setStatusFilter(value ?? ''),
           ),
         ),
         IconButton.filledTonal(
           tooltip: 'Primijeni filtere',
-          onPressed: _loading || _mutating
-              ? null
-              : () => _load(resetPage: true),
+          onPressed: loading || mutating ? null : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
       ],
@@ -335,16 +241,15 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
   }
 
   Widget _buildContent() {
-    if (_loading && _pageData == null) {
+    if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final error = _error;
+    final error = this.error;
     if (error != null) {
-      return ErrorRetry(message: error, onRetry: () => _load());
+      return ErrorRetry(message: error, onRetry: () => load());
     }
 
-    final items = _pageData?.items ?? const <AdminTariff>[];
     if (items.isEmpty) {
       return EmptyStateView(
         icon: Icons.request_quote_outlined,
@@ -407,7 +312,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
                             DataCell(_TariffStatusPill(tariff: item)),
                             DataCell(
                               TableRowActions(
-                                disabled: _mutating,
+                                disabled: mutating,
                                 onEdit: () => _openEdit(item),
                                 onDelete: () => _confirmDelete(item),
                               ),
@@ -426,12 +331,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
   }
 
   bool get _hasFilters =>
-      _searchCtrl.text.trim().isNotEmpty || _isActiveFilter != null;
-
-  int _totalPages(int totalCount) {
-    if (totalCount <= 0) return 1;
-    return (totalCount / _pageSize).ceil();
-  }
+      searchController.text.trim().isNotEmpty || _isActiveFilter != null;
 }
 
 class _TariffStatusPill extends StatelessWidget {
