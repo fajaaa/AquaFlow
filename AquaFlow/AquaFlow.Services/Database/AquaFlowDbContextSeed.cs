@@ -242,6 +242,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 17,
+                Code = "SupportTickets.Manage",
+                Name = "Manage support tickets",
+                Module = "SupportTickets",
+                Description = "Allows reading and responding to customer support tickets.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -401,6 +412,14 @@ public partial class AquaFlowDbContext
                 Id = 20,
                 UserRoleId = 1,
                 PermissionId = 16,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 21,
+                UserRoleId = 1,
+                PermissionId = 17,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
