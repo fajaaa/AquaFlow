@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,17 +5,22 @@ import 'package:flutter/services.dart';
 
 import 'package:aquaflow_desktop/admin/models/admin_invoice.dart';
 import 'package:aquaflow_desktop/admin/models/admin_invoice_billing_cycle_option.dart';
-import 'package:aquaflow_desktop/admin/models/admin_invoice_page.dart';
 import 'package:aquaflow_desktop/admin/services/admin_invoice_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_invoice_service.dart';
+import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
+import 'package:aquaflow_desktop/shared/utils/money_format.dart';
+import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
+import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
+import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 
 /// Desktop admin table over `/Invoices` (`AdminInvoiceService`/`AdminInvoice`
-/// data layer). Same `_requestSerial`/450ms-debounce/`_runMutation`/paging
-/// template as `AdminTariffsScreen`. Row actions mirror the backend
-/// `InvoiceStateMachine` client-side (Draft/Issued/PartiallyPaid/Overdue/
-/// Paid/Cancelled) purely to decide which buttons to show - the server
-/// remains the source of truth and any rejected transition surfaces via the
-/// same error `SnackBar` as other mutation failures.
+/// data layer). Same shared-widget + `PagedListController` template as
+/// `AdminTariffsScreen`. Row actions mirror the backend `InvoiceStateMachine`
+/// client-side (Draft/Issued/PartiallyPaid/Overdue/Paid/Cancelled) purely to
+/// decide which buttons to show - the server remains the source of truth and
+/// any rejected transition surfaces via the same error `SnackBar` as other
+/// mutation failures.
 class AdminInvoicesScreen extends StatefulWidget {
   const AdminInvoicesScreen({super.key});
 
@@ -33,59 +37,38 @@ const _statusOptions = <String, String>{
   'Cancelled': 'Storniran',
 };
 
-class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
+class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
+    with PagedListController<AdminInvoice, AdminInvoicesScreen> {
   final AdminInvoiceService _service = AdminInvoiceService();
-  final TextEditingController _searchCtrl = TextEditingController();
 
-  Timer? _searchDebounce;
-  AdminInvoicePage? _pageData;
-  bool _loading = true;
-  bool _mutating = false;
-  String? _error;
   String? _statusFilter;
   int? _billingCycleFilter;
   List<AdminInvoiceBillingCycleOption> _billingCycles = const [];
-  int _page = 1;
-  int _pageSize = 10;
-  int _requestSerial = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
     _loadBillingCycles();
   }
 
-  Future<void> _load({bool resetPage = false}) async {
-    final requestId = ++_requestSerial;
+  @override
+  Future<({List<AdminInvoice> items, int totalCount})> fetchPage() async {
+    final pageData = await _service.fetch(
+      page: page,
+      pageSize: pageSize,
+      invoiceNumber: searchController.text,
+      status: _statusFilter,
+      billingCycleId: _billingCycleFilter,
+    );
+    return (items: pageData.items, totalCount: pageData.totalCount);
+  }
 
-    setState(() {
-      if (resetPage) _page = 1;
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final pageData = await _service.fetch(
-        page: _page,
-        pageSize: _pageSize,
-        invoiceNumber: _searchCtrl.text,
-        status: _statusFilter,
-        billingCycleId: _billingCycleFilter,
-      );
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = pageData;
-        _loading = false;
-      });
-    } on AdminInvoiceException catch (e) {
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = null;
-        _loading = false;
-        _error = e.message;
-      });
-    }
+  @override
+  String describeError(Object error) {
+    return error is AdminInvoiceException
+        ? error.message
+        : 'Došlo je do neočekivane greške.';
   }
 
   Future<void> _loadBillingCycles() async {
@@ -98,55 +81,18 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
     }
   }
 
-  void _queueSearch(String _) {
-    setState(() {});
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 450),
-      () => _load(resetPage: true),
-    );
-  }
-
-  void _submitSearch(String _) {
-    _searchDebounce?.cancel();
-    _load(resetPage: true);
-  }
-
-  void _clearSearch() {
-    if (_searchCtrl.text.isEmpty) return;
-    _searchDebounce?.cancel();
-    _searchCtrl.clear();
-    setState(() {});
-    _load(resetPage: true);
-  }
-
   void _setStatusFilter(String value) {
     final selected = value.isEmpty ? null : value;
     if (selected == _statusFilter) return;
     setState(() => _statusFilter = selected);
-    _load(resetPage: true);
+    load(resetPage: true);
   }
 
   void _setBillingCycleFilter(String value) {
     final selected = value.isEmpty ? null : int.tryParse(value);
     if (selected == _billingCycleFilter) return;
     setState(() => _billingCycleFilter = selected);
-    _load(resetPage: true);
-  }
-
-  void _setPageSize(int? value) {
-    if (value == null || value == _pageSize || _loading) return;
-    setState(() {
-      _pageSize = value;
-      _page = 1;
-    });
-    _load();
-  }
-
-  void _goToPage(int page) {
-    if (page == _page || _loading) return;
-    setState(() => _page = page);
-    _load();
+    load(resetPage: true);
   }
 
   Future<void> _issue(AdminInvoice invoice) async {
@@ -158,7 +104,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
     );
     if (!mounted || confirmed != true) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.issue(invoice.id);
     }, 'Račun je izdat.');
   }
@@ -173,7 +119,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
     );
     if (!mounted || confirmed != true) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.cancel(invoice.id);
     }, 'Račun je storniran.');
   }
@@ -188,7 +134,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
     );
     if (!mounted || confirmed != true) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.markOverdue(invoice.id);
     }, 'Račun je označen dospjelim.');
   }
@@ -201,7 +147,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
     );
     if (!mounted || amount == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.recordPayment(invoice.id, amount);
     }, 'Uplata je evidentirana.');
   }
@@ -238,48 +184,15 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
     );
   }
 
-  Future<void> _runMutation(
-    Future<void> Function() action,
-    String successMessage,
-  ) async {
-    setState(() => _mutating = true);
-    try {
-      await action();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(successMessage)));
-      await _load();
-    } on AdminInvoiceException catch (e) {
-      if (!mounted) return;
-      _showError(e.message);
-    } finally {
-      if (mounted) setState(() => _mutating = false);
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
   @override
   void dispose() {
-    _searchDebounce?.cancel();
-    _searchCtrl.dispose();
+    disposeController();
     _service.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
-
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -289,28 +202,34 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Header(
-                  loading: _loading,
-                  mutating: _mutating,
-                  onRefresh: () => _load(),
+                ScreenHeader(
+                  title: 'Računi',
+                  subtitle: 'Pregled računa i upravljanje njihovim statusom.',
+                  actions: [
+                    IconButton(
+                      tooltip: 'Osvježi',
+                      onPressed: loading || mutating ? null : () => load(),
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 18),
                 _buildFilters(),
               ],
             ),
           ),
-          if ((_loading && pageData != null) || _mutating)
+          if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent()),
-          if (pageData != null && _error == null)
-            _PaginationBar(
-              page: _page,
+          if (!isInitialLoad && error == null)
+            PagedTablePaginationBar(
+              page: page,
               totalPages: totalPages,
-              totalCount: pageData.totalCount,
-              pageSize: _pageSize,
-              loading: _loading || _mutating,
-              onPageChanged: _goToPage,
-              onPageSizeChanged: _setPageSize,
+              totalCount: totalCount,
+              pageSize: pageSize,
+              loading: loading || mutating,
+              onPageChanged: goToPage,
+              onPageSizeChanged: setPageSize,
             ),
         ],
       ),
@@ -318,7 +237,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
   }
 
   Widget _buildFilters() {
-    final hasSearch = _searchCtrl.text.trim().isNotEmpty;
+    final hasSearch = searchController.text.trim().isNotEmpty;
 
     return Wrap(
       spacing: 12,
@@ -328,17 +247,17 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
         SizedBox(
           width: 220,
           child: TextField(
-            controller: _searchCtrl,
+            controller: searchController,
             textInputAction: TextInputAction.search,
-            onChanged: _queueSearch,
-            onSubmitted: _submitSearch,
+            onChanged: queueSearch,
+            onSubmitted: submitSearch,
             decoration: InputDecoration(
               labelText: 'Broj računa',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: hasSearch
                   ? IconButton(
                       tooltip: 'Očisti pretragu',
-                      onPressed: _clearSearch,
+                      onPressed: clearSearch,
                       icon: const Icon(Icons.clear),
                     )
                   : null,
@@ -359,7 +278,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
               for (final entry in _statusOptions.entries)
                 DropdownMenuItem(value: entry.key, child: Text(entry.value)),
             ],
-            onChanged: _loading || _mutating
+            onChanged: loading || mutating
                 ? null
                 : (value) => _setStatusFilter(value ?? ''),
           ),
@@ -381,16 +300,14 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
                   child: Text(cycle.name),
                 ),
             ],
-            onChanged: _loading || _mutating
+            onChanged: loading || mutating
                 ? null
                 : (value) => _setBillingCycleFilter(value ?? ''),
           ),
         ),
         IconButton.filledTonal(
           tooltip: 'Primijeni filtere',
-          onPressed: _loading || _mutating
-              ? null
-              : () => _load(resetPage: true),
+          onPressed: loading || mutating ? null : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
       ],
@@ -398,18 +315,23 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
   }
 
   Widget _buildContent() {
-    if (_loading && _pageData == null) {
+    if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final error = _error;
+    final error = this.error;
     if (error != null) {
-      return _ErrorRetry(message: error, onRetry: () => _load());
+      return ErrorRetry(message: error, onRetry: () => load());
     }
 
-    final items = _pageData?.items ?? const <AdminInvoice>[];
     if (items.isEmpty) {
-      return _EmptyState(hasFilters: _hasFilters);
+      return EmptyStateView(
+        icon: Icons.receipt_long_outlined,
+        message: 'Nema računa.',
+        hasFilters: _hasFilters,
+        filteredIcon: Icons.search_off,
+        filteredMessage: 'Nema računa za zadane filtere.',
+      );
     }
 
     return LayoutBuilder(
@@ -457,13 +379,13 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
                                 '${_formatDate(item.billingPeriodTo)}',
                               ),
                             ),
-                            DataCell(Text(_formatMoney(item.consumptionM3))),
-                            DataCell(Text('${_formatMoney(item.totalAmount)} KM')),
+                            DataCell(Text(formatMoney(item.consumptionM3))),
+                            DataCell(Text('${formatMoney(item.totalAmount)} KM')),
                             DataCell(_InvoiceStatusPill(status: item.status)),
                             DataCell(
                               _RowActions(
                                 invoice: item,
-                                disabled: _mutating,
+                                disabled: mutating,
                                 onIssue: () => _issue(item),
                                 onCancel: () => _cancel(item),
                                 onMarkOverdue: () => _markOverdue(item),
@@ -484,74 +406,9 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen> {
   }
 
   bool get _hasFilters =>
-      _searchCtrl.text.trim().isNotEmpty ||
+      searchController.text.trim().isNotEmpty ||
       _statusFilter != null ||
       _billingCycleFilter != null;
-
-  int _totalPages(int totalCount) {
-    if (totalCount <= 0) return 1;
-    return (totalCount / _pageSize).ceil();
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.loading,
-    required this.mutating,
-    required this.onRefresh,
-  });
-
-  final bool loading;
-  final bool mutating;
-  final VoidCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final title = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Računi',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Pregled računa i upravljanje njihovim statusom.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-
-    final actions = IconButton(
-      tooltip: 'Osvježi',
-      onPressed: loading || mutating ? null : onRefresh,
-      icon: const Icon(Icons.refresh),
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 620) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [title, const SizedBox(height: 12), actions],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: title),
-            actions,
-          ],
-        );
-      },
-    );
-  }
 }
 
 class _RowActions extends StatelessWidget {
@@ -731,7 +588,7 @@ class _PaymentDialogState extends State<_PaymentDialog> {
     final formValid = form != null && form.validate();
     if (!formValid) return;
 
-    Navigator.of(context).pop(_parseDecimal(_amountCtrl.text));
+    Navigator.of(context).pop(parseDecimal(_amountCtrl.text));
   }
 
   @override
@@ -775,221 +632,11 @@ class _PaymentDialogState extends State<_PaymentDialog> {
   }
 
   String? _amountValidator(String? value) {
-    final parsed = _parseDecimal(value ?? '');
+    final parsed = parseDecimal(value ?? '');
     if (parsed == null) return 'Unesite ispravan broj.';
     if (parsed <= 0) return 'Iznos mora biti veći od 0.';
     return null;
   }
-}
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.pageSize,
-    required this.loading,
-    required this.onPageChanged,
-    required this.onPageSizeChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final int pageSize;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-  final ValueChanged<int?> onPageSizeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 500;
-
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            border: Border(
-              top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-            child: isSmallScreen
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            tooltip: 'Prethodna stranica',
-                            onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-                            icon: const Icon(Icons.chevron_left),
-                          ),
-                          Expanded(
-                            child: Text(
-                              'Str. $page/$totalPages',
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelMedium,
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Sljedeća stranica',
-                            onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-                            icon: const Icon(Icons.chevron_right),
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '$totalCount ukupno',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            DropdownButtonHideUnderline(
-                              child: DropdownButton<int>(
-                                value: pageSize,
-                                onChanged: loading ? null : onPageSizeChanged,
-                                items: const [
-                                  DropdownMenuItem(value: 10, child: Text('10')),
-                                  DropdownMenuItem(value: 20, child: Text('20')),
-                                  DropdownMenuItem(value: 50, child: Text('50')),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    children: [
-                      IconButton(
-                        tooltip: 'Prethodna stranica',
-                        onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-                        icon: const Icon(Icons.chevron_left),
-                      ),
-                      Expanded(
-                        child: Text(
-                          'Stranica $page od $totalPages · $totalCount ukupno',
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelLarge,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Sljedeća stranica',
-                        onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-                        icon: const Icon(Icons.chevron_right),
-                      ),
-                      const SizedBox(width: 12),
-                      DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: pageSize,
-                          onChanged: loading ? null : onPageSizeChanged,
-                          items: const [
-                            DropdownMenuItem(value: 10, child: Text('10')),
-                            DropdownMenuItem(value: 20, child: Text('20')),
-                            DropdownMenuItem(value: 50, child: Text('50')),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.hasFilters});
-
-  final bool hasFilters;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            hasFilters ? Icons.search_off : Icons.receipt_long_outlined,
-            size: 56,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            hasFilters ? 'Nema računa za zadane filtere.' : 'Nema računa.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-double? _parseDecimal(String text) {
-  final normalized = text.trim().replaceAll(',', '.');
-  if (normalized.isEmpty) return null;
-  return double.tryParse(normalized);
-}
-
-String _formatMoney(double value) {
-  final text = value.toStringAsFixed(4);
-  final dotIndex = text.indexOf('.');
-  var end = text.length;
-  while (end > dotIndex + 3 && text[end - 1] == '0') {
-    end--;
-  }
-  return text.substring(0, end);
 }
 
 String _formatDate(DateTime date) {
