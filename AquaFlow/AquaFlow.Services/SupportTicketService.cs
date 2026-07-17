@@ -98,6 +98,7 @@ public class SupportTicketService
             Subject = subject,
             Status = SupportTicketStatus.Open,
             LastMessageAt = now,
+            LastMessageFromStaff = false,
             CreatedAt = now,
             Messages = new List<SupportTicketMessage>
             {
@@ -137,6 +138,7 @@ public class SupportTicketService
 
         _dbContext.SupportTicketMessages.Add(message);
         ticket.LastMessageAt = now;
+        ticket.LastMessageFromStaff = isFromStaff;
         await _dbContext.SaveChangesAsync();
 
         // Load the sender's profile so the flattened SenderName populates (mirrors GetByIdAsync's

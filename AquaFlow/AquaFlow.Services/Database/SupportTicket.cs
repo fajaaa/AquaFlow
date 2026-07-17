@@ -11,6 +11,9 @@ public class SupportTicket : EntityBase
     [MaxLength(30)]
     public string Status { get; set; } = "Open";
     public DateTime? LastMessageAt { get; set; }
+    // Denormalized alongside LastMessageAt (same reasoning: the admin ticket list needs to know
+    // whether a ticket is awaiting a staff reply without loading the Messages collection).
+    public bool LastMessageFromStaff { get; set; }
     public DateTime? ClosedAt { get; set; }
     public ICollection<SupportTicketMessage> Messages { get; set; } = new List<SupportTicketMessage>();
 }

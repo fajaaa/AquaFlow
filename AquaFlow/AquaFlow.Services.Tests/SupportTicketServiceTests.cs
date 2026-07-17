@@ -38,6 +38,7 @@ public class SupportTicketServiceTests
         Assert.Equal(SupportTicketStatus.Open, response.Status);
         Assert.Null(response.ClosedAt);
         Assert.NotNull(response.LastMessageAt);
+        Assert.False(response.LastMessageFromStaff);
         var message = Assert.Single(response.Messages);
         Assert.False(message.IsFromStaff);
         Assert.Equal("Voda ne dolazi vec dva dana.", message.Body);
@@ -89,6 +90,29 @@ public class SupportTicketServiceTests
         Assert.True(ticket.LastMessageAt > stale);
         // The bump matches the timestamp stamped on the message it was triggered by.
         Assert.Equal(message.CreatedAt, ticket.LastMessageAt);
+        Assert.True(ticket.LastMessageFromStaff);
+    }
+
+    [Fact]
+    public async Task AddMessageAsync_CustomerReplyAfterStaff_ClearsLastMessageFromStaff()
+    {
+        await using var context = CreateContext();
+        context.SupportTickets.Add(new SupportTicket
+        {
+            Id = 1,
+            CustomerId = 5,
+            Subject = "Nema vode",
+            Status = SupportTicketStatus.Open,
+            LastMessageAt = DateTime.UtcNow.AddDays(-1),
+            LastMessageFromStaff = true
+        });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        await service.AddMessageAsync(1, senderId: 1, isFromStaff: false, body: "Hvala, i dalje nema vode.");
+
+        var ticket = await context.SupportTickets.SingleAsync(t => t.Id == 1);
+        Assert.False(ticket.LastMessageFromStaff);
     }
 
     [Fact]
