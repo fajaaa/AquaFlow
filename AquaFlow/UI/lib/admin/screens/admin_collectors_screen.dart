@@ -4,13 +4,18 @@ import 'package:flutter/material.dart';
 
 import 'package:aquaflow_desktop/admin/models/admin_collector_profile.dart';
 import 'package:aquaflow_desktop/admin/models/admin_collector_profile_draft.dart';
-import 'package:aquaflow_desktop/admin/models/admin_collector_profile_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_settlement_option.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_user_activity_logs_screen.dart';
 import 'package:aquaflow_desktop/admin/services/admin_collector_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_collector_service.dart';
 import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
+import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
+import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
+import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
+import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
+import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
 class AdminCollectorsScreen extends StatefulWidget {
   const AdminCollectorsScreen({super.key});
@@ -19,54 +24,36 @@ class AdminCollectorsScreen extends StatefulWidget {
   State<AdminCollectorsScreen> createState() => _AdminCollectorsScreenState();
 }
 
-class _AdminCollectorsScreenState extends State<AdminCollectorsScreen> {
+class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
+    with PagedListController<AdminCollectorProfile, AdminCollectorsScreen> {
   final AdminCollectorService _service = AdminCollectorService();
 
-  AdminCollectorProfilePage? _pageData;
   List<AdminUser> _collectorUsers = const [];
   List<AdminSettlementOption> _settlements = const [];
-  bool _loading = true;
-  bool _mutating = false;
   bool _lookupsLoading = false;
-  String? _error;
-  int _page = 1;
-  int _pageSize = 10;
-  int _requestSerial = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
     _loadLookups(showErrors: false);
   }
 
-  Future<void> _load({bool resetPage = false}) async {
-    final requestId = ++_requestSerial;
+  @override
+  Future<({List<AdminCollectorProfile> items, int totalCount})>
+  fetchPage() async {
+    final pageData = await _service.fetchCollectors(
+      page: page,
+      pageSize: pageSize,
+    );
+    return (items: pageData.items, totalCount: pageData.totalCount);
+  }
 
-    setState(() {
-      if (resetPage) _page = 1;
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final pageData = await _service.fetchCollectors(
-        page: _page,
-        pageSize: _pageSize,
-      );
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = pageData;
-        _loading = false;
-      });
-    } on AdminCollectorException catch (e) {
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = null;
-        _loading = false;
-        _error = e.message;
-      });
-    }
+  @override
+  String describeError(Object error) {
+    return error is AdminCollectorException
+        ? error.message
+        : 'Došlo je do neočekivane greške.';
   }
 
   Future<bool> _loadLookups({bool showErrors = true}) async {
@@ -84,9 +71,9 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen> {
         _settlements = results[1] as List<AdminSettlementOption>;
       });
       return true;
-    } on AdminCollectorException catch (e) {
+    } catch (e) {
       if (!mounted) return false;
-      if (showErrors) _showError(e.message);
+      if (showErrors) showError(describeError(e));
       return false;
     } finally {
       if (mounted) setState(() => _lookupsLoading = false);
@@ -102,22 +89,13 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen> {
       if (!mounted) return false;
       setState(() => _settlements = settlements);
       return true;
-    } on AdminCollectorException catch (e) {
+    } catch (e) {
       if (!mounted) return false;
-      if (showErrors) _showError(e.message);
+      if (showErrors) showError(describeError(e));
       return false;
     } finally {
       if (mounted) setState(() => _lookupsLoading = false);
     }
-  }
-
-  void _setPageSize(int? value) {
-    if (value == null || value == _pageSize || _loading) return;
-    setState(() {
-      _pageSize = value;
-      _page = 1;
-    });
-    _load();
   }
 
   void _openActivityLogs(AdminCollectorProfile profile) {
@@ -127,12 +105,6 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen> {
         displayName: profile.label,
       ),
     );
-  }
-
-  void _goToPage(int page) {
-    if (page == _page || _loading) return;
-    setState(() => _page = page);
-    _load();
   }
 
   Future<void> _openCreate() async {
@@ -208,76 +180,84 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen> {
     ];
   }
 
+  // The shared `runMutation` doesn't support an optional page reset or a
+  // post-success lookups reload, both of which this screen's create/edit
+  // flows need - so mutations keep this local wrapper, reusing `mutating`/
+  // `load`/`showError`/`describeError` from the mixin.
   Future<void> _runMutation(
     Future<void> Function() action,
     String successMessage, {
     bool resetPageAfterSuccess = false,
   }) async {
-    setState(() => _mutating = true);
+    setState(() => mutating = true);
     try {
       await action();
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(successMessage)));
-      await _load(resetPage: resetPageAfterSuccess);
+      await load(resetPage: resetPageAfterSuccess);
       await _loadLookups(showErrors: false);
-    } on AdminCollectorException catch (e) {
+    } catch (e) {
       if (!mounted) return;
-      _showError(e.message);
+      showError(describeError(e));
     } finally {
-      if (mounted) setState(() => _mutating = false);
+      if (mounted) setState(() => mutating = false);
     }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
   }
 
   @override
   void dispose() {
+    disposeController();
     _service.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
-
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(28, 24, 28, 12),
-            child: _Header(
-              loading: _loading || _lookupsLoading,
-              mutating: _mutating,
-              onRefresh: () {
-                _load();
-                _loadLookups();
-              },
-              onCreate: _openCreate,
+            child: ScreenHeader(
+              title: 'Inkasanti',
+              subtitle: 'Pregled i uređivanje profila inkasanata za terenski rad.',
+              actions: [
+                IconButton(
+                  tooltip: 'Osvježi',
+                  onPressed: loading || mutating || _lookupsLoading
+                      ? null
+                      : () {
+                          load();
+                          _loadLookups();
+                        },
+                  icon: const Icon(Icons.refresh),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: loading || mutating || _lookupsLoading
+                      ? null
+                      : _openCreate,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Dodaj inkasanta'),
+                ),
+              ],
             ),
           ),
-          if ((_loading && pageData != null) || _mutating || _lookupsLoading)
+          if ((loading && !isInitialLoad) || mutating || _lookupsLoading)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent()),
-          if (pageData != null && _error == null)
-            _PaginationBar(
-              page: _page,
+          if (!isInitialLoad && error == null)
+            PagedTablePaginationBar(
+              page: page,
               totalPages: totalPages,
-              totalCount: pageData.totalCount,
-              pageSize: _pageSize,
-              loading: _loading || _mutating,
-              onPageChanged: _goToPage,
-              onPageSizeChanged: _setPageSize,
+              totalCount: totalCount,
+              pageSize: pageSize,
+              loading: loading || mutating,
+              onPageChanged: goToPage,
+              onPageSizeChanged: setPageSize,
             ),
         ],
       ),
@@ -285,18 +265,20 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen> {
   }
 
   Widget _buildContent() {
-    if (_loading && _pageData == null) {
+    if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final error = _error;
+    final error = this.error;
     if (error != null) {
-      return _ErrorRetry(message: error, onRetry: () => _load());
+      return ErrorRetry(message: error, onRetry: () => load());
     }
 
-    final items = _pageData?.items ?? const <AdminCollectorProfile>[];
     if (items.isEmpty) {
-      return const _EmptyState();
+      return const EmptyStateView(
+        icon: Icons.assignment_ind_outlined,
+        message: 'Nema profila inkasanata.',
+      );
     }
 
     return LayoutBuilder(
@@ -344,10 +326,24 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen> {
                             DataCell(Text(item.areaLabel)),
                             DataCell(_StatusPill(isActive: item.isActive)),
                             DataCell(
-                              _RowActions(
-                                disabled: _mutating,
-                                onEdit: () => _openEdit(item),
-                                onActivityLogs: () => _openActivityLogs(item),
+                              TableRowActions(
+                                disabled: mutating,
+                                extraActions: [
+                                  IconButton(
+                                    tooltip: 'Uredi profil',
+                                    onPressed: mutating
+                                        ? null
+                                        : () => _openEdit(item),
+                                    icon: const Icon(Icons.edit_outlined),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Aktivnosti',
+                                    onPressed: mutating
+                                        ? null
+                                        : () => _openActivityLogs(item),
+                                    icon: const Icon(Icons.history_outlined),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -358,84 +354,6 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen> {
               ),
             ),
           ),
-        );
-      },
-    );
-  }
-
-  int _totalPages(int totalCount) {
-    if (totalCount <= 0) return 1;
-    return (totalCount / _pageSize).ceil();
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.loading,
-    required this.mutating,
-    required this.onRefresh,
-    required this.onCreate,
-  });
-
-  final bool loading;
-  final bool mutating;
-  final VoidCallback onRefresh;
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final title = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Inkasanti',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Pregled i uređivanje profila inkasanata za terenski rad.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-
-    final actions = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Osvježi',
-          onPressed: loading || mutating ? null : onRefresh,
-          icon: const Icon(Icons.refresh),
-        ),
-        const SizedBox(width: 8),
-        FilledButton.icon(
-          onPressed: loading || mutating ? null : onCreate,
-          icon: const Icon(Icons.add),
-          label: const Text('Dodaj inkasanta'),
-        ),
-      ],
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 620) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [title, const SizedBox(height: 12), actions],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: title),
-            actions,
-          ],
         );
       },
     );
@@ -473,37 +391,6 @@ class _StatusPill extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _RowActions extends StatelessWidget {
-  const _RowActions({
-    required this.disabled,
-    required this.onEdit,
-    required this.onActivityLogs,
-  });
-
-  final bool disabled;
-  final VoidCallback onEdit;
-  final VoidCallback onActivityLogs;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Uredi profil',
-          onPressed: disabled ? null : onEdit,
-          icon: const Icon(Icons.edit_outlined),
-        ),
-        IconButton(
-          tooltip: 'Aktivnosti',
-          onPressed: disabled ? null : onActivityLogs,
-          icon: const Icon(Icons.history_outlined),
-        ),
-      ],
     );
   }
 }
@@ -913,138 +800,6 @@ class _GeneratedCodeInfo extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.pageSize,
-    required this.loading,
-    required this.onPageChanged,
-    required this.onPageSizeChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final int pageSize;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-  final ValueChanged<int?> onPageSizeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Prethodna stranica',
-              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Expanded(
-              child: Text(
-                'Stranica $page od $totalPages · $totalCount ukupno',
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelLarge,
-              ),
-            ),
-            IconButton(
-              tooltip: 'Sljedeća stranica',
-              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-            const SizedBox(width: 12),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: pageSize,
-                onChanged: loading ? null : onPageSizeChanged,
-                items: const [
-                  DropdownMenuItem(value: 10, child: Text('10')),
-                  DropdownMenuItem(value: 20, child: Text('20')),
-                  DropdownMenuItem(value: 50, child: Text('50')),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.assignment_ind_outlined,
-            size: 56,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Nema profila inkasanata.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
-            ),
-          ],
-        ),
       ),
     );
   }
