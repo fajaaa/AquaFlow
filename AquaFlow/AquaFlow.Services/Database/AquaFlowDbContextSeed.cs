@@ -253,6 +253,39 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 18,
+                Code = "Customers.Manage",
+                Name = "Manage customers",
+                Module = "Customers",
+                Description = "Allows creating, updating, and deleting customer profiles.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 19,
+                Code = "Collectors.Manage",
+                Name = "Manage collectors",
+                Module = "Collectors",
+                Description = "Allows creating, updating, and deleting collector profiles.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 20,
+                Code = "WaterMeters.Manage",
+                Name = "Manage water meters",
+                Module = "WaterMeters",
+                Description = "Allows creating, updating, and deleting water meters.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -420,6 +453,30 @@ public partial class AquaFlowDbContext
                 Id = 21,
                 UserRoleId = 1,
                 PermissionId = 17,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 22,
+                UserRoleId = 1,
+                PermissionId = 18,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 23,
+                UserRoleId = 1,
+                PermissionId = 19,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 24,
+                UserRoleId = 1,
+                PermissionId = 20,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
