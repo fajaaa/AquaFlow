@@ -8,8 +8,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AquaFlow.WebAPI.Controllers;
 
-// TODO: add [RequirePermission("...")] to the generic Update/Patch/Delete/GetAll/GetById actions
-// once their final gating rules are defined; CreateForCollector below is already gated.
+// Gated at class level, so the generic CRUD actions (reads included) are covered too. That is
+// correct here because this controller has no self-service callers: the only consumers are the
+// admin backfill path and the collector's data entry/duplicate-check lookups, and both roles
+// already hold MeterReadings.Manage. A customer never touches this controller - their consumption
+// data reaches them through the invoice endpoints - so unlike WaterMetersController there is no
+// read path that a class-level gate would break, and leaving GetAll ungated would have leaked
+// every customer's readings to any authenticated caller.
+[RequirePermission(ManagePermission)]
 public class MeterReadingsController : BaseCRUDController<MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest, IMeterReadingService>
 {
     private const string ManagePermission = "MeterReadings.Manage";
@@ -23,6 +29,8 @@ public class MeterReadingsController : BaseCRUDController<MeterReadingResponse, 
     // model as NotificationsController.Create. Kept as a separate route from the generic POST
     // /MeterReadings (which stays available for administrative backfill) because the request shape
     // and business rules (billing cycle resolution, duplicate check, LastReading update) differ.
+    // The [RequirePermission] below is redundant with the class-level gate; kept deliberately so
+    // this route stays gated on its own if the class-level attribute is ever narrowed.
     [HttpPost("collector-entry")]
     [RequirePermission(ManagePermission)]
     [ProducesResponseType(StatusCodes.Status201Created)]
