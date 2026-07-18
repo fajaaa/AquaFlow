@@ -6,6 +6,8 @@ import '../models/activity_log_page.dart';
 import '../providers/auth_provider.dart';
 import '../services/activity_log_exception.dart';
 import '../services/activity_log_service.dart';
+import '../widgets/empty_state_view.dart';
+import '../widgets/error_retry.dart';
 
 class ActivityLogScreen extends StatefulWidget {
   const ActivityLogScreen({super.key});
@@ -124,7 +126,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
 
     final error = _error;
     if (error != null) {
-      return _ErrorRetry(message: error, onRetry: () => _load());
+      return ErrorRetry(message: error, onRetry: () => _load());
     }
 
     final items = _pageData?.items ?? const <ActivityLogItem>[];
@@ -136,7 +138,10 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
           padding: const EdgeInsets.all(24),
           children: [
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-            const _EmptyState(),
+            const EmptyStateView(
+              icon: Icons.history_toggle_off,
+              message: 'Nema zabilježenih aktivnosti.',
+            ),
           ],
         ),
       );
@@ -390,60 +395,3 @@ class _PaginationBar extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.history_toggle_off,
-            size: 52,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Nema zabilježenih aktivnosti.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

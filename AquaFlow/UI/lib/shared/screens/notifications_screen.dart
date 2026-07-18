@@ -8,6 +8,8 @@ import '../providers/auth_provider.dart';
 import '../providers/notification_badge_provider.dart';
 import '../services/notification_exception.dart';
 import '../services/notification_service.dart';
+import '../widgets/empty_state_view.dart';
+import '../widgets/error_retry.dart';
 import 'notification_detail_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -199,7 +201,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     final error = _error;
     if (error != null) {
-      return _ErrorRetry(message: error, onRetry: () => _load());
+      return ErrorRetry(message: error, onRetry: () => _load());
     }
 
     final items = _pageData?.items ?? const <UserNotificationItem>[];
@@ -211,7 +213,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           padding: const EdgeInsets.all(24),
           children: [
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-            _EmptyState(hasFilter: _typeFilter != null),
+            EmptyStateView(
+              icon: Icons.notifications_none,
+              message: 'Nema obavijesti.',
+              hasFilters: _typeFilter != null,
+              filteredIcon: Icons.filter_alt_off_outlined,
+              filteredMessage: 'Nema obavijesti za odabrani tip.',
+            ),
           ],
         ),
       );
@@ -552,64 +560,3 @@ const List<_SelectOption> _notificationTypeOptions = [
   _SelectOption(value: 'Outage', label: 'Prekid usluge'),
 ];
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.hasFilter});
-
-  final bool hasFilter;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            hasFilter
-                ? Icons.filter_alt_off_outlined
-                : Icons.notifications_none,
-            size: 52,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            hasFilter ? 'Nema obavijesti za odabrani tip.' : 'Nema obavijesti.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
