@@ -1,6 +1,7 @@
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
+using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,9 +10,9 @@ using WaterMeterCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.
 
 namespace AquaFlow.WebAPI.Controllers;
 
-// TODO: add [RequirePermission("...")] once the final permission codes are defined.
 public class WaterMetersController : BaseCRUDController<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest, WaterMeterCrudService>
 {
+    private const string ManagePermission = "WaterMeters.Manage";
     private const string CustomerRoleName = "Customer";
 
     private readonly CustomerProfileCrudService _customerProfileService;
@@ -83,6 +84,26 @@ public class WaterMetersController : BaseCRUDController<WaterMeterResponse, Wate
             return NotFound();
         }
     }
+
+    // Writes are admin-only: the meter register is company data, not something a customer
+    // may add to or edit. Applied per-action rather than at class level on purpose - a
+    // class-level [RequirePermission] would also gate GetAll/GetById above and break the
+    // customer's self-service view of their own meters.
+    [RequirePermission(ManagePermission)]
+    public override Task<ActionResult<WaterMeterResponse>> Create([FromBody] WaterMeterInsertRequest request)
+        => base.Create(request);
+
+    [RequirePermission(ManagePermission)]
+    public override Task<ActionResult<WaterMeterResponse>> Update(int id, [FromBody] WaterMeterUpdateRequest request)
+        => base.Update(id, request);
+
+    [RequirePermission(ManagePermission)]
+    public override Task<ActionResult<WaterMeterResponse>> Patch(int id, [FromBody] WaterMeterPatchRequest request)
+        => base.Patch(id, request);
+
+    [RequirePermission(ManagePermission)]
+    public override Task<IActionResult> Delete(int id)
+        => base.Delete(id);
 
     private async Task<int?> ResolveCustomerProfileIdAsync(int userId)
     {

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,9 +5,15 @@ import 'package:flutter/services.dart';
 
 import 'package:aquaflow_desktop/admin/models/admin_tariff.dart';
 import 'package:aquaflow_desktop/admin/models/admin_tariff_draft.dart';
-import 'package:aquaflow_desktop/admin/models/admin_tariff_page.dart';
 import 'package:aquaflow_desktop/admin/services/admin_tariff_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_tariff_service.dart';
+import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
+import 'package:aquaflow_desktop/shared/utils/money_format.dart';
+import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
+import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
+import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
+import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
 class AdminTariffsScreen extends StatefulWidget {
   const AdminTariffsScreen({super.key});
@@ -17,77 +22,34 @@ class AdminTariffsScreen extends StatefulWidget {
   State<AdminTariffsScreen> createState() => _AdminTariffsScreenState();
 }
 
-class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
+class _AdminTariffsScreenState extends State<AdminTariffsScreen>
+    with PagedListController<AdminTariff, AdminTariffsScreen> {
   final AdminTariffService _service = AdminTariffService();
-  final TextEditingController _searchCtrl = TextEditingController();
 
-  Timer? _searchDebounce;
-  AdminTariffPage? _pageData;
-  bool _loading = true;
-  bool _mutating = false;
-  String? _error;
   bool? _isActiveFilter;
-  int _page = 1;
-  int _pageSize = 10;
-  int _requestSerial = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
   }
 
-  Future<void> _load({bool resetPage = false}) async {
-    final requestId = ++_requestSerial;
-
-    setState(() {
-      if (resetPage) _page = 1;
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final pageData = await _service.fetch(
-        page: _page,
-        pageSize: _pageSize,
-        name: _searchCtrl.text,
-        isActive: _isActiveFilter,
-      );
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = pageData;
-        _loading = false;
-      });
-    } on AdminTariffException catch (e) {
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = null;
-        _loading = false;
-        _error = e.message;
-      });
-    }
-  }
-
-  void _queueSearch(String _) {
-    setState(() {});
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 450),
-      () => _load(resetPage: true),
+  @override
+  Future<({List<AdminTariff> items, int totalCount})> fetchPage() async {
+    final pageData = await _service.fetch(
+      page: page,
+      pageSize: pageSize,
+      name: searchController.text,
+      isActive: _isActiveFilter,
     );
+    return (items: pageData.items, totalCount: pageData.totalCount);
   }
 
-  void _submitSearch(String _) {
-    _searchDebounce?.cancel();
-    _load(resetPage: true);
-  }
-
-  void _clearSearch() {
-    if (_searchCtrl.text.isEmpty) return;
-    _searchDebounce?.cancel();
-    _searchCtrl.clear();
-    setState(() {});
-    _load(resetPage: true);
+  @override
+  String describeError(Object error) {
+    return error is AdminTariffException
+        ? error.message
+        : 'Došlo je do neočekivane greške.';
   }
 
   void _setStatusFilter(String value) {
@@ -96,27 +58,12 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
     if (value == 'inactive') selected = false;
     if (selected == _isActiveFilter) return;
     setState(() => _isActiveFilter = selected);
-    _load(resetPage: true);
+    load(resetPage: true);
   }
 
   String get _statusFilterValue {
     if (_isActiveFilter == null) return '';
     return _isActiveFilter! ? 'active' : 'inactive';
-  }
-
-  void _setPageSize(int? value) {
-    if (value == null || value == _pageSize || _loading) return;
-    setState(() {
-      _pageSize = value;
-      _page = 1;
-    });
-    _load();
-  }
-
-  void _goToPage(int page) {
-    if (page == _page || _loading) return;
-    setState(() => _page = page);
-    _load();
   }
 
   Future<void> _openCreate() async {
@@ -127,7 +74,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.create(draft);
     }, 'Tarifa je dodana.');
   }
@@ -140,7 +87,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.update(tariff.id, draft);
     }, 'Tarifa je sačuvana.');
   }
@@ -172,56 +119,23 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
     );
     if (!mounted || confirmed != true) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.delete(tariff.id);
-      if ((_pageData?.items.length ?? 0) == 1 && _page > 1) {
-        _page -= 1;
+      if (items.length == 1 && page > 1) {
+        page -= 1;
       }
     }, 'Tarifa je obrisana.');
   }
 
-  Future<void> _runMutation(
-    Future<void> Function() action,
-    String successMessage,
-  ) async {
-    setState(() => _mutating = true);
-    try {
-      await action();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(successMessage)));
-      await _load();
-    } on AdminTariffException catch (e) {
-      if (!mounted) return;
-      _showError(e.message);
-    } finally {
-      if (mounted) setState(() => _mutating = false);
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
   @override
   void dispose() {
-    _searchDebounce?.cancel();
-    _searchCtrl.dispose();
+    disposeController();
     _service.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
-
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -231,29 +145,40 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Header(
-                  loading: _loading,
-                  mutating: _mutating,
-                  onRefresh: () => _load(),
-                  onCreate: _openCreate,
+                ScreenHeader(
+                  title: 'Tarife',
+                  subtitle: 'Pregled, dodavanje, uređivanje i brisanje tarifa.',
+                  actions: [
+                    IconButton(
+                      tooltip: 'Osvježi',
+                      onPressed: loading || mutating ? null : () => load(),
+                      icon: const Icon(Icons.refresh),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: loading || mutating ? null : _openCreate,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Nova tarifa'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 18),
                 _buildFilters(),
               ],
             ),
           ),
-          if ((_loading && pageData != null) || _mutating)
+          if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent()),
-          if (pageData != null && _error == null)
-            _PaginationBar(
-              page: _page,
+          if (!isInitialLoad && error == null)
+            PagedTablePaginationBar(
+              page: page,
               totalPages: totalPages,
-              totalCount: pageData.totalCount,
-              pageSize: _pageSize,
-              loading: _loading || _mutating,
-              onPageChanged: _goToPage,
-              onPageSizeChanged: _setPageSize,
+              totalCount: totalCount,
+              pageSize: pageSize,
+              loading: loading || mutating,
+              onPageChanged: goToPage,
+              onPageSizeChanged: setPageSize,
             ),
         ],
       ),
@@ -261,7 +186,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
   }
 
   Widget _buildFilters() {
-    final hasSearch = _searchCtrl.text.trim().isNotEmpty;
+    final hasSearch = searchController.text.trim().isNotEmpty;
 
     return Wrap(
       spacing: 12,
@@ -271,17 +196,17 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
         SizedBox(
           width: 260,
           child: TextField(
-            controller: _searchCtrl,
+            controller: searchController,
             textInputAction: TextInputAction.search,
-            onChanged: _queueSearch,
-            onSubmitted: _submitSearch,
+            onChanged: queueSearch,
+            onSubmitted: submitSearch,
             decoration: InputDecoration(
               labelText: 'Naziv',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: hasSearch
                   ? IconButton(
                       tooltip: 'Očisti pretragu',
-                      onPressed: _clearSearch,
+                      onPressed: clearSearch,
                       icon: const Icon(Icons.clear),
                     )
                   : null,
@@ -301,16 +226,14 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
               DropdownMenuItem(value: 'active', child: Text('Aktivne')),
               DropdownMenuItem(value: 'inactive', child: Text('Neaktivne')),
             ],
-            onChanged: _loading || _mutating
+            onChanged: loading || mutating
                 ? null
                 : (value) => _setStatusFilter(value ?? ''),
           ),
         ),
         IconButton.filledTonal(
           tooltip: 'Primijeni filtere',
-          onPressed: _loading || _mutating
-              ? null
-              : () => _load(resetPage: true),
+          onPressed: loading || mutating ? null : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
       ],
@@ -318,18 +241,23 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
   }
 
   Widget _buildContent() {
-    if (_loading && _pageData == null) {
+    if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final error = _error;
+    final error = this.error;
     if (error != null) {
-      return _ErrorRetry(message: error, onRetry: () => _load());
+      return ErrorRetry(message: error, onRetry: () => load());
     }
 
-    final items = _pageData?.items ?? const <AdminTariff>[];
     if (items.isEmpty) {
-      return _EmptyState(hasFilters: _hasFilters);
+      return EmptyStateView(
+        icon: Icons.request_quote_outlined,
+        message: 'Nema tarifa.',
+        hasFilters: _hasFilters,
+        filteredIcon: Icons.search_off,
+        filteredMessage: 'Nema tarifa za zadane filtere.',
+      );
     }
 
     return LayoutBuilder(
@@ -380,11 +308,11 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
                                 ),
                               ),
                             ),
-                            DataCell(Text('${_formatMoney(item.pricePerM3)} KM/m³')),
+                            DataCell(Text('${formatMoney(item.pricePerM3)} KM/m³')),
                             DataCell(_TariffStatusPill(tariff: item)),
                             DataCell(
-                              _RowActions(
-                                disabled: _mutating,
+                              TableRowActions(
+                                disabled: mutating,
                                 onEdit: () => _openEdit(item),
                                 onDelete: () => _confirmDelete(item),
                               ),
@@ -403,117 +331,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen> {
   }
 
   bool get _hasFilters =>
-      _searchCtrl.text.trim().isNotEmpty || _isActiveFilter != null;
-
-  int _totalPages(int totalCount) {
-    if (totalCount <= 0) return 1;
-    return (totalCount / _pageSize).ceil();
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.loading,
-    required this.mutating,
-    required this.onRefresh,
-    required this.onCreate,
-  });
-
-  final bool loading;
-  final bool mutating;
-  final VoidCallback onRefresh;
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final title = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Tarife',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Pregled, dodavanje, uređivanje i brisanje tarifa.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-
-    final actions = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Osvježi',
-          onPressed: loading || mutating ? null : onRefresh,
-          icon: const Icon(Icons.refresh),
-        ),
-        const SizedBox(width: 8),
-        FilledButton.icon(
-          onPressed: loading || mutating ? null : onCreate,
-          icon: const Icon(Icons.add),
-          label: const Text('Nova tarifa'),
-        ),
-      ],
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 620) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [title, const SizedBox(height: 12), actions],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: title),
-            actions,
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _RowActions extends StatelessWidget {
-  const _RowActions({
-    required this.disabled,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  final bool disabled;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Uredi',
-          onPressed: disabled ? null : onEdit,
-          icon: const Icon(Icons.edit_outlined),
-        ),
-        IconButton(
-          tooltip: 'Obriši',
-          onPressed: disabled ? null : onDelete,
-          icon: const Icon(Icons.delete_outline),
-          color: Theme.of(context).colorScheme.error,
-        ),
-      ],
-    );
-  }
+      searchController.text.trim().isNotEmpty || _isActiveFilter != null;
 }
 
 class _TariffStatusPill extends StatelessWidget {
@@ -576,7 +394,7 @@ class _TariffEditorDialogState extends State<_TariffEditorDialog> {
     final tariff = widget.tariff;
     _nameCtrl.text = tariff?.name ?? '';
     _descriptionCtrl.text = tariff?.description ?? '';
-    _priceCtrl.text = tariff != null ? _formatMoney(tariff.pricePerM3) : '';
+    _priceCtrl.text = tariff != null ? formatMoney(tariff.pricePerM3) : '';
     _isActive = tariff?.isActive ?? true;
   }
 
@@ -597,7 +415,7 @@ class _TariffEditorDialogState extends State<_TariffEditorDialog> {
       AdminTariffDraft(
         name: _nameCtrl.text.trim(),
         description: _descriptionCtrl.text.trim(),
-        pricePerM3: _parseDecimal(_priceCtrl.text) ?? 0,
+        pricePerM3: parseDecimal(_priceCtrl.text) ?? 0,
         isActive: _isActive,
       ),
     );
@@ -685,220 +503,10 @@ class _TariffEditorDialogState extends State<_TariffEditorDialog> {
   }
 
   String? _decimalValidator(String? value) {
-    final parsed = _parseDecimal(value ?? '');
+    final parsed = parseDecimal(value ?? '');
     if (parsed == null) return 'Unesite ispravan broj.';
     if (parsed < 0) return 'Vrijednost ne smije biti negativna.';
     return null;
   }
-}
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.pageSize,
-    required this.loading,
-    required this.onPageChanged,
-    required this.onPageSizeChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final int pageSize;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-  final ValueChanged<int?> onPageSizeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 500;
-
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            border: Border(
-              top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-            child: isSmallScreen
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            tooltip: 'Prethodna stranica',
-                            onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-                            icon: const Icon(Icons.chevron_left),
-                          ),
-                          Expanded(
-                            child: Text(
-                              'Str. $page/$totalPages',
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelMedium,
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Sljedeća stranica',
-                            onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-                            icon: const Icon(Icons.chevron_right),
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '$totalCount ukupno',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            DropdownButtonHideUnderline(
-                              child: DropdownButton<int>(
-                                value: pageSize,
-                                onChanged: loading ? null : onPageSizeChanged,
-                                items: const [
-                                  DropdownMenuItem(value: 10, child: Text('10')),
-                                  DropdownMenuItem(value: 20, child: Text('20')),
-                                  DropdownMenuItem(value: 50, child: Text('50')),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    children: [
-                      IconButton(
-                        tooltip: 'Prethodna stranica',
-                        onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-                        icon: const Icon(Icons.chevron_left),
-                      ),
-                      Expanded(
-                        child: Text(
-                          'Stranica $page od $totalPages · $totalCount ukupno',
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelLarge,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Sljedeća stranica',
-                        onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-                        icon: const Icon(Icons.chevron_right),
-                      ),
-                      const SizedBox(width: 12),
-                      DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: pageSize,
-                          onChanged: loading ? null : onPageSizeChanged,
-                          items: const [
-                            DropdownMenuItem(value: 10, child: Text('10')),
-                            DropdownMenuItem(value: 20, child: Text('20')),
-                            DropdownMenuItem(value: 50, child: Text('50')),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.hasFilters});
-
-  final bool hasFilters;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            hasFilters ? Icons.search_off : Icons.request_quote_outlined,
-            size: 56,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            hasFilters ? 'Nema tarifa za zadane filtere.' : 'Nema tarifa.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-double? _parseDecimal(String text) {
-  final normalized = text.trim().replaceAll(',', '.');
-  if (normalized.isEmpty) return null;
-  return double.tryParse(normalized);
-}
-
-String _formatMoney(double value) {
-  final text = value.toStringAsFixed(4);
-  final dotIndex = text.indexOf('.');
-  var end = text.length;
-  while (end > dotIndex + 3 && text[end - 1] == '0') {
-    end--;
-  }
-  return text.substring(0, end);
 }
 

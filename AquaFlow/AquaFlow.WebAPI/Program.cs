@@ -183,6 +183,13 @@ mapperConfig.NewConfig<FaultReport, FaultReportResponse>()
     .Map(destination => destination.AssignedCollectorEmployeeCode, source => source.AssignedCollector == null ? null : source.AssignedCollector.EmployeeCode);
 mapperConfig.NewConfig<ActivityLog, ActivityLogResponse>()
     .Map(destination => destination.UserEmail, source => source.User == null ? string.Empty : source.User.Email);
+mapperConfig.NewConfig<SupportTicket, SupportTicketResponse>()
+    .Map(destination => destination.CustomerName, source => source.Customer == null ? null : (source.Customer.FirstName + " " + source.Customer.LastName).Trim())
+    // Counts the loaded Messages in-memory (BaseReadService maps materialized entities): accurate
+    // on GetById, which loads the thread; 0 on the list, which loads only the Customer.
+    .Map(destination => destination.MessageCount, source => source.Messages.Count);
+mapperConfig.NewConfig<SupportTicketMessage, SupportTicketMessageResponse>()
+    .Map(destination => destination.SenderName, source => source.Sender == null || source.Sender.CustomerProfile == null ? null : (source.Sender.CustomerProfile.FirstName + " " + source.Sender.CustomerProfile.LastName).Trim());
 builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddScoped<IMapper, ServiceMapper>();
 
@@ -194,6 +201,9 @@ builder.Services.AddScoped<IPermissionLookupService, PermissionLookupService>();
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 builder.Services.AddScoped<IBaseReadService<ActivityLogResponse, ActivityLogSearchObject>>(
     serviceProvider => serviceProvider.GetRequiredService<IActivityLogService>());
+builder.Services.AddScoped<ISupportTicketService, SupportTicketService>();
+builder.Services.AddScoped<IBaseReadService<SupportTicketResponse, SupportTicketSearchObject>>(
+    serviceProvider => serviceProvider.GetRequiredService<ISupportTicketService>());
 builder.Services.AddScoped<NotificationRecipientService>();
 builder.Services.AddScoped<IAccessManager, AccessManager>();
 builder.Services.AddScoped<ICryptoService, CryptoService>();
@@ -358,6 +368,8 @@ builder.Services.AddScoped<IValidator<CompanySettingsPatchRequest>, CompanySetti
 builder.Services.AddScoped<IValidator<PaymentSettingsInsertRequest>, PaymentSettingsInsertValidator>();
 builder.Services.AddScoped<IValidator<PaymentSettingsUpdateRequest>, PaymentSettingsUpdateValidator>();
 builder.Services.AddScoped<IValidator<PaymentSettingsPatchRequest>, PaymentSettingsPatchValidator>();
+builder.Services.AddScoped<IValidator<SupportTicketCreateRequest>, SupportTicketCreateValidator>();
+builder.Services.AddScoped<IValidator<SupportTicketMessageCreateRequest>, SupportTicketMessageCreateValidator>();
 
 builder.Services.AddAuthentication(options =>
 {

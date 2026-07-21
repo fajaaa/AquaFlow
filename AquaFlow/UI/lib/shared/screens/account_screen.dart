@@ -20,10 +20,36 @@ import 'company_settings_screen.dart';
 /// This is a tab body inside [MasterScreen], so it renders no Scaffold/AppBar
 /// of its own - the shell provides those.
 class AccountScreen extends StatefulWidget {
-  const AccountScreen({super.key});
+  const AccountScreen({super.key, this.extraEntries = const <AccountEntry>[]});
+
+  /// Optional role-specific action tiles injected by a role shell (e.g. the
+  /// customer's "Podrška"). Kept as generic data + an onTap closure so this
+  /// shared screen never has to import a role's screen: the shell in
+  /// `lib/customer` (etc.) supplies the closure that pushes its own screen,
+  /// preserving the one-way `shared <- customer/collector/admin` dependency
+  /// rule. Rendered after "Moje aktivnosti", before any admin-only entry.
+  final List<AccountEntry> extraEntries;
 
   @override
   State<AccountScreen> createState() => _AccountScreenState();
+}
+
+/// A role-specific extra entry for [AccountScreen.extraEntries] - plain data
+/// plus an [onTap] closure. The closure receives the tapped tile's
+/// [BuildContext] so the supplying shell can push its own route without this
+/// shared file ever referencing a role's screen.
+class AccountEntry {
+  const AccountEntry({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final void Function(BuildContext context) onTap;
 }
 
 class _AccountScreenState extends State<AccountScreen> {
@@ -145,6 +171,12 @@ class _AccountScreenState extends State<AccountScreen> {
                     onTap: () => context.pushScreen(const ActivityLogScreen()),
                   ),
                 ),
+                // Role-specific entries injected by the shell (e.g. the
+                // customer's "Podrška"), rendered with the same card styling.
+                for (final entry in widget.extraEntries) ...[
+                  const SizedBox(height: 12),
+                  _AccountActionCard(entry: entry),
+                ],
                 // Admins can manage the company-wide settings; regular users
                 // and collectors never see this entry.
                 if (_isAdmin(session.userRole)) ...[
@@ -271,6 +303,30 @@ class _RoleChip extends StatelessWidget {
       ),
       backgroundColor: visual.color.withValues(alpha: 0.10),
       side: BorderSide(color: visual.color.withValues(alpha: 0.40)),
+    );
+  }
+}
+
+/// Renders one injected [AccountEntry] with the same card styling as the
+/// screen's built-in entries (Email / Uredi nalog / Moje aktivnosti).
+class _AccountActionCard extends StatelessWidget {
+  const _AccountActionCard({required this.entry});
+
+  final AccountEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black26,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        leading: Icon(entry.icon),
+        title: Text(entry.title),
+        subtitle: Text(entry.subtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => entry.onTap(context),
+      ),
     );
   }
 }

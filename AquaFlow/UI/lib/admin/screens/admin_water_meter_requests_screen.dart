@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'package:aquaflow_desktop/admin/models/admin_collector_profile.dart';
 import 'package:aquaflow_desktop/admin/models/admin_water_meter_request.dart';
-import 'package:aquaflow_desktop/admin/models/admin_water_meter_request_page.dart';
 import 'package:aquaflow_desktop/admin/services/admin_water_meter_request_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_water_meter_request_service.dart';
+import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
+import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
+import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
+import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
+import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
 class AdminWaterMeterRequestsScreen extends StatefulWidget {
   const AdminWaterMeterRequestsScreen({super.key});
@@ -15,54 +20,40 @@ class AdminWaterMeterRequestsScreen extends StatefulWidget {
 }
 
 class _AdminWaterMeterRequestsScreenState
-    extends State<AdminWaterMeterRequestsScreen> {
+    extends State<AdminWaterMeterRequestsScreen>
+    with
+        PagedListController<
+          AdminWaterMeterRequest,
+          AdminWaterMeterRequestsScreen
+        > {
   final AdminWaterMeterRequestService _service =
       AdminWaterMeterRequestService();
 
-  AdminWaterMeterRequestPage? _pageData;
   List<AdminCollectorProfile> _collectors = const [];
-  bool _loading = true;
-  bool _mutating = false;
-  String? _error;
   String? _statusFilter;
-  int _page = 1;
-  int _pageSize = 10;
-  int _requestSerial = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
   }
 
-  Future<void> _load({bool resetPage = false}) async {
-    final requestId = ++_requestSerial;
+  @override
+  Future<({List<AdminWaterMeterRequest> items, int totalCount})>
+  fetchPage() async {
+    final pageData = await _service.fetch(
+      page: page,
+      pageSize: pageSize,
+      status: _statusFilter,
+    );
+    return (items: pageData.items, totalCount: pageData.totalCount);
+  }
 
-    setState(() {
-      if (resetPage) _page = 1;
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final pageData = await _service.fetch(
-        page: _page,
-        pageSize: _pageSize,
-        status: _statusFilter,
-      );
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = pageData;
-        _loading = false;
-      });
-    } on AdminWaterMeterRequestException catch (e) {
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = null;
-        _loading = false;
-        _error = e.message;
-      });
-    }
+  @override
+  String describeError(Object error) {
+    return error is AdminWaterMeterRequestException
+        ? error.message
+        : 'Došlo je do neočekivane greške.';
   }
 
   Future<bool> _loadCollectors() async {
@@ -71,9 +62,9 @@ class _AdminWaterMeterRequestsScreenState
       if (!mounted) return false;
       setState(() => _collectors = collectors);
       return true;
-    } on AdminWaterMeterRequestException catch (e) {
+    } catch (e) {
       if (!mounted) return false;
-      _showError(e.message);
+      showError(describeError(e));
       return false;
     }
   }
@@ -82,22 +73,7 @@ class _AdminWaterMeterRequestsScreenState
     final selected = value.isEmpty ? null : value;
     if (selected == _statusFilter) return;
     setState(() => _statusFilter = selected);
-    _load(resetPage: true);
-  }
-
-  void _setPageSize(int? value) {
-    if (value == null || value == _pageSize || _loading) return;
-    setState(() {
-      _pageSize = value;
-      _page = 1;
-    });
-    _load();
-  }
-
-  void _goToPage(int page) {
-    if (page == _page || _loading) return;
-    setState(() => _page = page);
-    _load();
+    load(resetPage: true);
   }
 
   Future<void> _openAssign(AdminWaterMeterRequest request) async {
@@ -105,7 +81,7 @@ class _AdminWaterMeterRequestsScreenState
     if (!mounted || !loaded) return;
 
     if (_collectors.isEmpty) {
-      _showError('Nema dostupnih inkasanata.');
+      showError('Nema dostupnih inkasanata.');
       return;
     }
 
@@ -115,7 +91,7 @@ class _AdminWaterMeterRequestsScreenState
     );
     if (!mounted || collectorId == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.assign(request.id, collectorId);
     }, 'Zahtjev je dodijeljen inkasantu.');
   }
@@ -127,51 +103,20 @@ class _AdminWaterMeterRequestsScreenState
     );
     if (!mounted || reason == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.reject(request.id, reason);
     }, 'Zahtjev je odbijen.');
   }
 
-  Future<void> _runMutation(
-    Future<void> Function() action,
-    String successMessage,
-  ) async {
-    setState(() => _mutating = true);
-    try {
-      await action();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(successMessage)));
-      await _load();
-    } on AdminWaterMeterRequestException catch (e) {
-      if (!mounted) return;
-      _showError(e.message);
-    } finally {
-      if (mounted) setState(() => _mutating = false);
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
   @override
   void dispose() {
+    disposeController();
     _service.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
-
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -181,28 +126,35 @@ class _AdminWaterMeterRequestsScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Header(
-                  loading: _loading,
-                  mutating: _mutating,
-                  onRefresh: () => _load(),
+                ScreenHeader(
+                  title: 'Zahtjevi za vodomjer',
+                  subtitle:
+                      'Pregled, dodjela collectoru i odbijanje zahtjeva za novi vodomjer.',
+                  actions: [
+                    IconButton(
+                      tooltip: 'Osvježi',
+                      onPressed: loading || mutating ? null : () => load(),
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 18),
                 _buildFilters(),
               ],
             ),
           ),
-          if ((_loading && pageData != null) || _mutating)
+          if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent()),
-          if (pageData != null && _error == null)
-            _PaginationBar(
-              page: _page,
+          if (!isInitialLoad && error == null)
+            PagedTablePaginationBar(
+              page: page,
               totalPages: totalPages,
-              totalCount: pageData.totalCount,
-              pageSize: _pageSize,
-              loading: _loading || _mutating,
-              onPageChanged: _goToPage,
-              onPageSizeChanged: _setPageSize,
+              totalCount: totalCount,
+              pageSize: pageSize,
+              loading: loading || mutating,
+              onPageChanged: goToPage,
+              onPageSizeChanged: setPageSize,
             ),
         ],
       ),
@@ -234,16 +186,14 @@ class _AdminWaterMeterRequestsScreenState
               DropdownMenuItem(value: 'Rejected', child: Text('Odbijen')),
               DropdownMenuItem(value: 'Cancelled', child: Text('Otkazan')),
             ],
-            onChanged: _loading || _mutating
+            onChanged: loading || mutating
                 ? null
                 : (value) => _setStatusFilter(value ?? ''),
           ),
         ),
         IconButton.filledTonal(
           tooltip: 'Primijeni filter',
-          onPressed: _loading || _mutating
-              ? null
-              : () => _load(resetPage: true),
+          onPressed: loading || mutating ? null : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
       ],
@@ -251,18 +201,23 @@ class _AdminWaterMeterRequestsScreenState
   }
 
   Widget _buildContent() {
-    if (_loading && _pageData == null) {
+    if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final error = _error;
+    final error = this.error;
     if (error != null) {
-      return _ErrorRetry(message: error, onRetry: () => _load());
+      return ErrorRetry(message: error, onRetry: () => load());
     }
 
-    final items = _pageData?.items ?? const <AdminWaterMeterRequest>[];
     if (items.isEmpty) {
-      return _EmptyState(hasFilter: _statusFilter != null);
+      return EmptyStateView(
+        icon: Icons.assignment_outlined,
+        message: 'Nema zahtjeva za novi vodomjer.',
+        hasFilters: _statusFilter != null,
+        filteredIcon: Icons.search_off,
+        filteredMessage: 'Nema zahtjeva za odabrani status.',
+      );
     }
 
     return LayoutBuilder(
@@ -309,7 +264,7 @@ class _AdminWaterMeterRequestsScreenState
                             DataCell(
                               _RowActions(
                                 request: item,
-                                disabled: _mutating,
+                                disabled: mutating,
                                 onAssign: () => _openAssign(item),
                                 onReject: () => _openReject(item),
                               ),
@@ -333,58 +288,6 @@ class _AdminWaterMeterRequestsScreenState
       if (collector.id == collectorId) return collector.label;
     }
     return 'Collector #$collectorId';
-  }
-
-  int _totalPages(int totalCount) {
-    if (totalCount <= 0) return 1;
-    return (totalCount / _pageSize).ceil();
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.loading,
-    required this.mutating,
-    required this.onRefresh,
-  });
-
-  final bool loading;
-  final bool mutating;
-  final VoidCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final title = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Zahtjevi za vodomjer',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Pregled, dodjela collectoru i odbijanje zahtjeva za novi vodomjer.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-
-    return Row(
-      children: [
-        Expanded(child: title),
-        IconButton(
-          tooltip: 'Osvježi',
-          onPressed: loading || mutating ? null : onRefresh,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    );
   }
 }
 
@@ -501,9 +404,9 @@ class _RowActions extends StatelessWidget {
       return Text(text);
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
+    return TableRowActions(
+      disabled: disabled,
+      extraActions: [
         IconButton(
           tooltip: 'Dodijeli inkasantu',
           onPressed: disabled ? null : onAssign,
@@ -797,142 +700,6 @@ class _RequestStatusPill extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.pageSize,
-    required this.loading,
-    required this.onPageChanged,
-    required this.onPageSizeChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final int pageSize;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-  final ValueChanged<int?> onPageSizeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Prethodna stranica',
-              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Expanded(
-              child: Text(
-                'Stranica $page od $totalPages · $totalCount ukupno',
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelLarge,
-              ),
-            ),
-            IconButton(
-              tooltip: 'Sljedeća stranica',
-              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-            const SizedBox(width: 12),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: pageSize,
-                onChanged: loading ? null : onPageSizeChanged,
-                items: const [
-                  DropdownMenuItem(value: 10, child: Text('10')),
-                  DropdownMenuItem(value: 20, child: Text('20')),
-                  DropdownMenuItem(value: 50, child: Text('50')),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.hasFilter});
-
-  final bool hasFilter;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            hasFilter ? Icons.search_off : Icons.assignment_outlined,
-            size: 56,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            hasFilter
-                ? 'Nema zahtjeva za odabrani status.'
-                : 'Nema zahtjeva za novi vodomjer.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
-            ),
-          ],
-        ),
       ),
     );
   }

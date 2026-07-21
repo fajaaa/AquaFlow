@@ -10,9 +10,11 @@ import 'package:aquaflow_desktop/admin/screens/admin_fault_reports_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_invoices_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_notifications_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_payments_screen.dart';
+import 'package:aquaflow_desktop/admin/screens/admin_support_tickets_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_tariffs_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_users_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_water_meter_requests_screen.dart';
+import 'package:aquaflow_desktop/shared/models/auth_session.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 
@@ -28,7 +30,9 @@ import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 /// [AdminUserActivityLogsScreen]). "Moj nalog" uses
 /// the admin-only [AdminAccountEditScreen] (not the shared `AccountEditScreen`
 /// used by the mobile customer/collector "Nalog" tab), since it edits more than
-/// contact data here.
+/// contact data here. The nav list is built per-session (`_buildNavItems`,
+/// not a static const list) because "Podrška" only appears for a caller
+/// holding `SupportTickets.Manage` - see [AdminSupportTicketsScreen].
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -36,98 +40,136 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-/// A single entry in the admin sidebar menu.
+/// A single entry in the admin sidebar menu. [builder] renders the content
+/// area for this item; left null for a section that isn't wired up yet, in
+/// which case `_buildContent` falls back to `_SectionPlaceholder`.
 class _AdminNavItem {
   const _AdminNavItem({
     required this.icon,
     required this.selectedIcon,
     required this.label,
+    this.builder,
   });
 
   final IconData icon;
   final IconData selectedIcon;
   final String label;
+  final WidgetBuilder? builder;
 }
 
-/// The menu, in display order. Indexes are referenced by the content switch and
-/// by the overview shortcuts, so keep them in sync when reordering.
-const List<_AdminNavItem> _navItems = [
-  _AdminNavItem(
-    icon: Icons.grid_view_outlined,
-    selectedIcon: Icons.grid_view,
-    label: 'Dashboard',
-  ),
-  _AdminNavItem(
-    icon: Icons.notifications_outlined,
-    selectedIcon: Icons.notifications,
-    label: 'Obavijesti',
-  ),
-  _AdminNavItem(
-    icon: Icons.people_outline,
-    selectedIcon: Icons.people,
-    label: 'Korisnici',
-  ),
-  _AdminNavItem(
-    icon: Icons.assignment_ind_outlined,
-    selectedIcon: Icons.assignment_ind,
-    label: 'Inkasanti',
-  ),
-  _AdminNavItem(
-    icon: Icons.water_drop_outlined,
-    selectedIcon: Icons.water_drop,
-    label: 'Vodomjeri',
-  ),
-  _AdminNavItem(
-    icon: Icons.speed_outlined,
-    selectedIcon: Icons.speed,
-    label: 'Očitanja',
-  ),
-  _AdminNavItem(
-    icon: Icons.receipt_long_outlined,
-    selectedIcon: Icons.receipt_long,
-    label: 'Računi',
-  ),
-  _AdminNavItem(
-    icon: Icons.payments_outlined,
-    selectedIcon: Icons.payments,
-    label: 'Plaćanja',
-  ),
-  _AdminNavItem(
-    icon: Icons.report_problem_outlined,
-    selectedIcon: Icons.report_problem,
-    label: 'Prijave kvarova',
-  ),
-  _AdminNavItem(
-    icon: Icons.admin_panel_settings_outlined,
-    selectedIcon: Icons.admin_panel_settings,
-    label: 'Administratori',
-  ),
-  _AdminNavItem(
-    icon: Icons.location_city_outlined,
-    selectedIcon: Icons.location_city,
-    label: 'Šifarnik',
-  ),
-  _AdminNavItem(
-    icon: Icons.request_quote_outlined,
-    selectedIcon: Icons.request_quote,
-    label: 'Tarife',
-  ),
-  _AdminNavItem(
-    icon: Icons.business_outlined,
-    selectedIcon: Icons.business,
-    label: 'Postavke firme',
-  ),
-  _AdminNavItem(
-    icon: Icons.manage_accounts_outlined,
-    selectedIcon: Icons.manage_accounts,
-    label: 'Moj nalog',
-  ),
-  _AdminNavItem(
-    icon: Icons.assignment_outlined,
-    selectedIcon: Icons.assignment,
-    label: 'Zahtjevi',
-  ),
-];
+/// The menu, in display order. Built per-session (rather than a static const
+/// list) because "Podrška" only appears for a caller holding
+/// `SupportTickets.Manage` - everyone else never sees the entry, same
+/// "hide what you can't use" precedent as `AccountScreen`'s admin-only
+/// "Postavke firme" card.
+List<_AdminNavItem> _buildNavItems(AuthSession? session) {
+  final canManageSupportTickets =
+      session?.hasPermission('SupportTickets.Manage') ?? false;
+
+  return [
+    _AdminNavItem(
+      icon: Icons.grid_view_outlined,
+      selectedIcon: Icons.grid_view,
+      label: 'Dashboard',
+      builder: (_) => const _DashboardOverview(),
+    ),
+    _AdminNavItem(
+      icon: Icons.notifications_outlined,
+      selectedIcon: Icons.notifications,
+      label: 'Obavijesti',
+      builder: (_) => const AdminNotificationsScreen(),
+    ),
+    _AdminNavItem(
+      icon: Icons.people_outline,
+      selectedIcon: Icons.people,
+      label: 'Korisnici',
+      // "Korisnici" and "Administratori" are the same widget type in the
+      // same tree position, so they need distinct keys - otherwise switching
+      // between them reuses the State and keeps the other tab's loaded rows.
+      builder: (_) => const AdminUsersScreen(key: ValueKey('users-customers')),
+    ),
+    _AdminNavItem(
+      icon: Icons.assignment_ind_outlined,
+      selectedIcon: Icons.assignment_ind,
+      label: 'Inkasanti',
+      builder: (_) => const AdminCollectorsScreen(),
+    ),
+    const _AdminNavItem(
+      icon: Icons.water_drop_outlined,
+      selectedIcon: Icons.water_drop,
+      label: 'Vodomjeri',
+    ),
+    const _AdminNavItem(
+      icon: Icons.speed_outlined,
+      selectedIcon: Icons.speed,
+      label: 'Očitanja',
+    ),
+    _AdminNavItem(
+      icon: Icons.receipt_long_outlined,
+      selectedIcon: Icons.receipt_long,
+      label: 'Računi',
+      builder: (_) => const AdminInvoicesScreen(),
+    ),
+    _AdminNavItem(
+      icon: Icons.payments_outlined,
+      selectedIcon: Icons.payments,
+      label: 'Plaćanja',
+      builder: (_) => const AdminPaymentsScreen(),
+    ),
+    _AdminNavItem(
+      icon: Icons.report_problem_outlined,
+      selectedIcon: Icons.report_problem,
+      label: 'Prijave kvarova',
+      builder: (_) => const AdminFaultReportsScreen(),
+    ),
+    if (canManageSupportTickets)
+      _AdminNavItem(
+        icon: Icons.support_agent_outlined,
+        selectedIcon: Icons.support_agent,
+        label: 'Podrška',
+        builder: (_) => const AdminSupportTicketsScreen(),
+      ),
+    _AdminNavItem(
+      icon: Icons.admin_panel_settings_outlined,
+      selectedIcon: Icons.admin_panel_settings,
+      label: 'Administratori',
+      builder: (_) => const AdminUsersScreen(
+        key: ValueKey('users-admins'),
+        mode: AdminUsersScreenMode.admins,
+      ),
+    ),
+    _AdminNavItem(
+      icon: Icons.location_city_outlined,
+      selectedIcon: Icons.location_city,
+      label: 'Šifarnik',
+      builder: (_) => const AdminCodebookScreen(),
+    ),
+    _AdminNavItem(
+      icon: Icons.request_quote_outlined,
+      selectedIcon: Icons.request_quote,
+      label: 'Tarife',
+      builder: (_) => const AdminTariffsScreen(),
+    ),
+    _AdminNavItem(
+      icon: Icons.business_outlined,
+      selectedIcon: Icons.business,
+      label: 'Postavke firme',
+      builder: (_) => const CompanySettingsScreen(),
+    ),
+    _AdminNavItem(
+      icon: Icons.manage_accounts_outlined,
+      selectedIcon: Icons.manage_accounts,
+      label: 'Moj nalog',
+      builder: (_) => const AdminAccountEditScreen(),
+    ),
+    _AdminNavItem(
+      icon: Icons.assignment_outlined,
+      selectedIcon: Icons.assignment,
+      label: 'Zahtjevi',
+      builder: (_) => const AdminWaterMeterRequestsScreen(),
+    ),
+  ];
+}
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _selectedIndex = 0;
@@ -136,13 +178,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final session = context.watch<AuthProvider>().session;
+    final items = _buildNavItems(session);
+    // The item count only changes when SupportTickets.Manage flips (a full
+    // re-login), but guard anyway so a stale index can never run off the end.
+    final selectedIndex = _selectedIndex.clamp(0, items.length - 1);
+
     return Scaffold(
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Sidebar(
-            items: _navItems,
-            selectedIndex: _selectedIndex,
+            items: items,
+            selectedIndex: selectedIndex,
             onSelect: _select,
           ),
           const VerticalDivider(width: 1, thickness: 1),
@@ -150,8 +198,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: KeyedSubtree(
-                key: ValueKey(_selectedIndex),
-                child: _buildContent(),
+                key: ValueKey(selectedIndex),
+                child: _buildContent(items[selectedIndex]),
               ),
             ),
           ),
@@ -160,43 +208,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildContent() {
-    switch (_selectedIndex) {
-      case 0:
-        return const _DashboardOverview();
-      case 1:
-        return const AdminNotificationsScreen();
-      // "Korisnici" and "Administratori" are the same widget type in the same
-      // tree position, so they need distinct keys - otherwise switching between
-      // them reuses the State and keeps the other tab's loaded rows.
-      case 2:
-        return const AdminUsersScreen(key: ValueKey('users-customers'));
-      case 3:
-        return const AdminCollectorsScreen();
-      case 6:
-        return const AdminInvoicesScreen();
-      case 7:
-        return const AdminPaymentsScreen();
-      case 8:
-        return const AdminFaultReportsScreen();
-      case 9:
-        return const AdminUsersScreen(
-          key: ValueKey('users-admins'),
-          mode: AdminUsersScreenMode.admins,
-        );
-      case 10:
-        return const AdminCodebookScreen();
-      case 11:
-        return const AdminTariffsScreen();
-      case 12:
-        return const CompanySettingsScreen();
-      case 13:
-        return const AdminAccountEditScreen();
-      case 14:
-        return const AdminWaterMeterRequestsScreen();
-      default:
-        return _SectionPlaceholder(item: _navItems[_selectedIndex]);
-    }
+  Widget _buildContent(_AdminNavItem item) {
+    final builder = item.builder;
+    return builder == null ? _SectionPlaceholder(item: item) : builder(context);
   }
 }
 

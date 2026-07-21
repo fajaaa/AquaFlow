@@ -1690,6 +1690,46 @@ namespace AquaFlow.Services.Migrations
                             IsActive = true,
                             Module = "ActivityLogs",
                             Name = "Pregled aktivnosti korisnika"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            Code = "SupportTickets.Manage",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows reading and responding to customer support tickets.",
+                            IsActive = true,
+                            Module = "SupportTickets",
+                            Name = "Manage support tickets"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            Code = "Customers.Manage",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows creating, updating, and deleting customer profiles.",
+                            IsActive = true,
+                            Module = "Customers",
+                            Name = "Manage customers"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            Code = "Collectors.Manage",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows creating, updating, and deleting collector profiles.",
+                            IsActive = true,
+                            Module = "Collectors",
+                            Name = "Manage collectors"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Code = "WaterMeters.Manage",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows creating, updating, and deleting water meters.",
+                            IsActive = true,
+                            Module = "WaterMeters",
+                            Name = "Manage water meters"
                         });
                 });
 
@@ -2019,14 +2059,11 @@ namespace AquaFlow.Services.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<DateTime?>("LastMessageAt")
+                        .HasColumnType("datetime2");
 
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                    b.Property<bool>("LastMessageFromStaff")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -2046,6 +2083,83 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("CustomerId");
 
                     b.ToTable("SupportTickets");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.SupportTicketMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsFromStaff")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SenderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SupportTicketId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("SupportTicketId");
+
+                    b.ToTable("SupportTicketMessages");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.SupportTicketMessagePhoto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("SupportTicketMessageId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupportTicketMessageId");
+
+                    b.ToTable("SupportTicketMessagePhotos");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.SyncOperation", b =>
@@ -2583,6 +2697,34 @@ namespace AquaFlow.Services.Migrations
                             Id = 20,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 16,
+                            UserRoleId = 1
+                        },
+                        new
+                        {
+                            Id = 21,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 17,
+                            UserRoleId = 1
+                        },
+                        new
+                        {
+                            Id = 22,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 18,
+                            UserRoleId = 1
+                        },
+                        new
+                        {
+                            Id = 23,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 19,
+                            UserRoleId = 1
+                        },
+                        new
+                        {
+                            Id = 24,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 20,
                             UserRoleId = 1
                         });
                 });
@@ -3296,6 +3438,36 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Customer");
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.SupportTicketMessage", b =>
+                {
+                    b.HasOne("AquaFlow.Services.Database.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.SupportTicket", "SupportTicket")
+                        .WithMany("Messages")
+                        .HasForeignKey("SupportTicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sender");
+
+                    b.Navigation("SupportTicket");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.SupportTicketMessagePhoto", b =>
+                {
+                    b.HasOne("AquaFlow.Services.Database.SupportTicketMessage", "SupportTicketMessage")
+                        .WithMany("Photos")
+                        .HasForeignKey("SupportTicketMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SupportTicketMessage");
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.SyncOperation", b =>
                 {
                     b.HasOne("AquaFlow.Services.Database.CollectorProfile", "Collector")
@@ -3555,6 +3727,16 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Notifications");
 
                     b.Navigation("WaterMeters");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.SupportTicket", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.SupportTicketMessage", b =>
+                {
+                    b.Navigation("Photos");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Tariff", b =>

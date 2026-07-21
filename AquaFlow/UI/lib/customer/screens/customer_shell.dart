@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/customer/screens/customer_invoices_screen.dart';
+import 'package:aquaflow_desktop/customer/screens/customer_support_tickets_screen.dart';
 import 'package:aquaflow_desktop/customer/screens/customer_water_meters_screen.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_desktop/shared/providers/notification_badge_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/account_screen.dart';
 import 'package:aquaflow_desktop/shared/screens/mobile_shell.dart';
@@ -62,11 +64,22 @@ class _CustomerShellState extends State<CustomerShell> {
           label: 'Vodomjeri',
           body: CustomerWaterMetersScreen(),
         ),
-        const MobileTab(
+        MobileTab(
           icon: Icons.person_outline,
           selectedIcon: Icons.person,
           label: 'Nalog',
-          body: AccountScreen(),
+          body: AccountScreen(
+            extraEntries: [
+              AccountEntry(
+                icon: Icons.support_agent_outlined,
+                title: 'Podrška',
+                subtitle: 'Vaši tiketi i poruke podršci',
+                onTap: (context) => context.pushScreen(
+                  const CustomerSupportTicketsScreen(),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

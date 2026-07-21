@@ -39,6 +39,8 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Settlement> Settlements => Set<Settlement>();
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
+    public DbSet<SupportTicketMessagePhoto> SupportTicketMessagePhotos => Set<SupportTicketMessagePhoto>();
     public DbSet<SyncOperation> SyncOperations => Set<SyncOperation>();
     public DbSet<Tariff> Tariffs => Set<Tariff>();
     public DbSet<TaxRate> TaxRates => Set<TaxRate>();
@@ -139,6 +141,23 @@ public partial class AquaFlowDbContext : DbContext
             .HasOne(photo => photo.FaultReport)
             .WithMany(report => report.Photos)
             .HasForeignKey(photo => photo.FaultReportId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Support ticket thread cascades (same reasoning as FaultReportPhoto above): a message
+        // and its photos have no independent lifecycle outside the ticket/message they belong to.
+        // Deleting a ticket deletes its messages; deleting a message deletes its photos. The
+        // message -> Sender (User) FK stays Restrict (from the loop above), so deleting a ticket
+        // never cascades into the sending user.
+        modelBuilder.Entity<SupportTicketMessage>()
+            .HasOne(message => message.SupportTicket)
+            .WithMany(ticket => ticket.Messages)
+            .HasForeignKey(message => message.SupportTicketId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SupportTicketMessagePhoto>()
+            .HasOne(photo => photo.SupportTicketMessage)
+            .WithMany(message => message.Photos)
+            .HasForeignKey(photo => photo.SupportTicketMessageId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // Security activity feed is queried per-user in reverse-chronological order

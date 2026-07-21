@@ -5,6 +5,7 @@ using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using AquaFlow.Services.FaultReportStateMachine;
 using AquaFlow.WebAPI.Filters;
+using AquaFlow.WebAPI.Services;
 using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,14 +20,7 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     private const string ManagePermission = "FaultReports.Manage";
     private const string CollectorRoleName = "Collector";
     private const string CustomerRoleName = "Customer";
-    private const long MaxPhotoSizeBytes = 5 * 1024 * 1024;
     private const int MaxPhotosPerReport = 5;
-    private static readonly HashSet<string> AllowedPhotoContentTypes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "image/jpeg",
-        "image/png",
-        "image/webp"
-    };
 
     private readonly CustomerProfileCrudService _customerProfileService;
     private readonly CollectorProfileCrudService _collectorProfileService;
@@ -338,91 +332,17 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
             throw new ClientException("Photos can only be added while the report is still New.");
         }
 
-        if (file is null || file.Length == 0)
-        {
-            throw new ClientException("A photo file is required.");
-        }
-
-        if (!AllowedPhotoContentTypes.Contains(file.ContentType))
-        {
-            throw new ClientException("Only JPEG, PNG, or WEBP images are allowed.");
-        }
-
-        if (file.Length > MaxPhotoSizeBytes)
-        {
-            throw new ClientException("Photo exceeds the 5MB size limit.");
-        }
-
         if (await _photoService.CountAsync(id) >= MaxPhotosPerReport)
         {
             throw new ClientException("A fault report can have at most 5 photos.");
         }
 
-        using var buffer = new MemoryStream();
-        await file.CopyToAsync(buffer);
-        var data = buffer.ToArray();
-
-        // file.ContentType is client-declared and already checked against the whitelist above,
-        // but a caller can label arbitrary bytes "image/png". Sniff the actual bytes against each
-        // format's magic-byte signature as an additional layer, and store/serve the type derived
-        // from the signature rather than the client's claim.
-        var detectedContentType = DetectImageContentType(data);
-        if (detectedContentType is null)
-        {
-            throw new ClientException("Uploaded file is not a valid JPEG, PNG, or WEBP image.");
-        }
+        // Size/type/magic-byte validation is shared with SupportTicketsController via ImageUploadHelper;
+        // the returned content type is the one derived from the signature, not the client's claim.
+        var (data, detectedContentType) = await ImageUploadHelper.ReadValidatedImageAsync(file);
 
         var photo = await _photoService.UploadAsync(id, data, detectedContentType, file.FileName);
         return CreatedAtAction(nameof(GetPhoto), new { id, photoId = photo.Id }, photo);
-    }
-
-    private static readonly byte[] JpegSignature = { 0xFF, 0xD8, 0xFF };
-    private static readonly byte[] PngSignature = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
-
-    private static string? DetectImageContentType(byte[] data)
-    {
-        if (StartsWith(data, JpegSignature))
-        {
-            return "image/jpeg";
-        }
-
-        if (StartsWith(data, PngSignature))
-        {
-            return "image/png";
-        }
-
-        if (IsWebP(data))
-        {
-            return "image/webp";
-        }
-
-        return null;
-    }
-
-    private static bool IsWebP(byte[] data)
-    {
-        // RIFF <4-byte size> WEBP
-        return data.Length >= 12
-            && data[0] == (byte)'R' && data[1] == (byte)'I' && data[2] == (byte)'F' && data[3] == (byte)'F'
-            && data[8] == (byte)'W' && data[9] == (byte)'E' && data[10] == (byte)'B' && data[11] == (byte)'P';
-    }
-
-    private static bool StartsWith(byte[] data, byte[] signature)
-    {
-        if (data.Length < signature.Length)
-        {
-            return false;
-        }
-
-        for (var i = 0; i < signature.Length; i++)
-        {
-            if (data[i] != signature[i])
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     [HttpGet("{id:int}/photos")]

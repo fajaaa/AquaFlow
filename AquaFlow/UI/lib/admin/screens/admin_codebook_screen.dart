@@ -1,20 +1,21 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import 'package:aquaflow_desktop/admin/models/admin_city.dart';
-import 'package:aquaflow_desktop/admin/models/admin_city_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_municipality.dart';
-import 'package:aquaflow_desktop/admin/models/admin_municipality_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_settlement.dart';
-import 'package:aquaflow_desktop/admin/models/admin_settlement_page.dart';
 import 'package:aquaflow_desktop/admin/services/admin_city_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_city_service.dart';
 import 'package:aquaflow_desktop/admin/services/admin_municipality_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_municipality_service.dart';
 import 'package:aquaflow_desktop/admin/services/admin_settlement_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_settlement_service.dart';
+import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
+import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
+import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
+import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
 /// Administrative location codebook: Grad -> Općina -> Naselje. A single
 /// drill-in shell - Gradovi, then the municipalities of a selected city, then
@@ -269,159 +270,13 @@ class _Breadcrumb extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Shared chrome (header, pagination, empty/error states, delete confirm) -
-// identical across all three levels, so it is defined once for the whole
-// file.
+// Shared chrome (empty state, delete confirm) - identical across all three
+// levels, so it is defined once for the whole file. The header/pagination
+// bar/error state now come from lib/shared/widgets/ instead of a local copy;
+// the empty state stays local because it supports an optional "create" action
+// button on the true-empty state (Općine/Naselja), which the generic shared
+// EmptyStateView doesn't.
 // ---------------------------------------------------------------------------
-
-class _LevelHeader extends StatelessWidget {
-  const _LevelHeader({
-    required this.title,
-    required this.subtitle,
-    required this.createLabel,
-    required this.loading,
-    required this.mutating,
-    required this.onRefresh,
-    required this.onCreate,
-  });
-
-  final String title;
-  final String subtitle;
-  final String createLabel;
-  final bool loading;
-  final bool mutating;
-  final VoidCallback onRefresh;
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final text = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-
-    final actions = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Osvježi',
-          onPressed: loading || mutating ? null : onRefresh,
-          icon: const Icon(Icons.refresh),
-        ),
-        const SizedBox(width: 8),
-        FilledButton.icon(
-          onPressed: loading || mutating ? null : onCreate,
-          icon: const Icon(Icons.add),
-          label: Text(createLabel),
-        ),
-      ],
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 560) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [text, const SizedBox(height: 12), actions],
-          );
-        }
-        return Row(
-          children: [Expanded(child: text), actions],
-        );
-      },
-    );
-  }
-}
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.pageSize,
-    required this.loading,
-    required this.onPageChanged,
-    required this.onPageSizeChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final int pageSize;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-  final ValueChanged<int?> onPageSizeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Prethodna stranica',
-              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Expanded(
-              child: Text(
-                'Stranica $page od $totalPages · $totalCount ukupno',
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelLarge,
-              ),
-            ),
-            IconButton(
-              tooltip: 'Sljedeća stranica',
-              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-            const SizedBox(width: 12),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: pageSize,
-                onChanged: loading ? null : onPageSizeChanged,
-                items: const [
-                  DropdownMenuItem(value: 10, child: Text('10')),
-                  DropdownMenuItem(value: 20, child: Text('20')),
-                  DropdownMenuItem(value: 50, child: Text('50')),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _CodebookEmptyState extends StatelessWidget {
   const _CodebookEmptyState({
@@ -472,37 +327,6 @@ class _CodebookEmptyState extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -566,90 +390,31 @@ class _CitiesView extends StatefulWidget {
   State<_CitiesView> createState() => _CitiesViewState();
 }
 
-class _CitiesViewState extends State<_CitiesView> {
+class _CitiesViewState extends State<_CitiesView>
+    with PagedListController<AdminCity, _CitiesView> {
   final AdminCityService _service = AdminCityService();
-  final TextEditingController _searchCtrl = TextEditingController();
-
-  Timer? _searchDebounce;
-  AdminCityPage? _pageData;
-  bool _loading = true;
-  bool _mutating = false;
-  String? _error;
-  int _page = 1;
-  int _pageSize = 10;
-  int _requestSerial = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
   }
 
-  Future<void> _load({bool resetPage = false}) async {
-    final requestId = ++_requestSerial;
-
-    setState(() {
-      if (resetPage) _page = 1;
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final pageData = await _service.fetch(
-        page: _page,
-        pageSize: _pageSize,
-        name: _searchCtrl.text,
-      );
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = pageData;
-        _loading = false;
-      });
-    } on AdminCityException catch (e) {
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = null;
-        _loading = false;
-        _error = e.message;
-      });
-    }
-  }
-
-  void _queueSearch(String _) {
-    setState(() {});
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 450),
-      () => _load(resetPage: true),
+  @override
+  Future<({List<AdminCity> items, int totalCount})> fetchPage() async {
+    final pageData = await _service.fetch(
+      page: page,
+      pageSize: pageSize,
+      name: searchController.text,
     );
+    return (items: pageData.items, totalCount: pageData.totalCount);
   }
 
-  void _submitSearch(String _) {
-    _searchDebounce?.cancel();
-    _load(resetPage: true);
-  }
-
-  void _clearSearch() {
-    if (_searchCtrl.text.isEmpty) return;
-    _searchDebounce?.cancel();
-    _searchCtrl.clear();
-    setState(() {});
-    _load(resetPage: true);
-  }
-
-  void _setPageSize(int? value) {
-    if (value == null || value == _pageSize || _loading) return;
-    setState(() {
-      _pageSize = value;
-      _page = 1;
-    });
-    _load();
-  }
-
-  void _goToPage(int page) {
-    if (page == _page || _loading) return;
-    setState(() => _page = page);
-    _load();
+  @override
+  String describeError(Object error) {
+    return error is AdminCityException
+        ? error.message
+        : 'Došlo je do neočekivane greške.';
   }
 
   Future<void> _openCreate() async {
@@ -660,7 +425,7 @@ class _CitiesViewState extends State<_CitiesView> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.create(name: draft.name, code: draft.code);
     }, 'Grad je dodan.');
   }
@@ -673,7 +438,7 @@ class _CitiesViewState extends State<_CitiesView> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.update(city.id, name: draft.name, code: draft.code);
     }, 'Grad je sačuvan.');
   }
@@ -688,59 +453,23 @@ class _CitiesViewState extends State<_CitiesView> {
     );
     if (!mounted || !confirmed) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.delete(city.id);
-      if (shouldStepBackAfterDelete(
-        itemsOnPage: _pageData?.items.length ?? 0,
-        page: _page,
-      )) {
-        _page -= 1;
+      if (shouldStepBackAfterDelete(itemsOnPage: items.length, page: page)) {
+        page -= 1;
       }
     }, 'Grad je obrisan.');
   }
 
-  Future<void> _runMutation(
-    Future<void> Function() action,
-    String successMessage,
-  ) async {
-    setState(() => _mutating = true);
-    try {
-      await action();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(successMessage)));
-      await _load();
-    } on AdminCityException catch (e) {
-      if (!mounted) return;
-      _showError(e.message);
-    } finally {
-      if (mounted) setState(() => _mutating = false);
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
   @override
   void dispose() {
-    _searchDebounce?.cancel();
-    _searchCtrl.dispose();
+    disposeController();
     _service.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -749,46 +478,54 @@ class _CitiesViewState extends State<_CitiesView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _LevelHeader(
+              ScreenHeader(
                 title: 'Gradovi',
                 subtitle: 'Pregled, dodavanje, uređivanje i brisanje gradova.',
-                createLabel: 'Novi grad',
-                loading: _loading,
-                mutating: _mutating,
-                onRefresh: () => _load(),
-                onCreate: _openCreate,
+                actions: [
+                  IconButton(
+                    tooltip: 'Osvježi',
+                    onPressed: loading || mutating ? null : () => load(),
+                    icon: const Icon(Icons.refresh),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: loading || mutating ? null : _openCreate,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Novi grad'),
+                  ),
+                ],
               ),
               const SizedBox(height: 18),
               _buildFilters(),
             ],
           ),
         ),
-        if ((_loading && pageData != null) || _mutating)
+        if ((loading && !isInitialLoad) || mutating)
           const LinearProgressIndicator(minHeight: 2),
         Expanded(child: _buildContent()),
-        if (pageData != null && _error == null)
-          _PaginationBar(
-            page: _page,
+        if (!isInitialLoad && error == null)
+          PagedTablePaginationBar(
+            page: page,
             totalPages: totalPages,
-            totalCount: pageData.totalCount,
-            pageSize: _pageSize,
-            loading: _loading || _mutating,
-            onPageChanged: _goToPage,
-            onPageSizeChanged: _setPageSize,
+            totalCount: totalCount,
+            pageSize: pageSize,
+            loading: loading || mutating,
+            onPageChanged: goToPage,
+            onPageSizeChanged: setPageSize,
           ),
       ],
     );
   }
 
   Widget _buildFilters() {
-    final hasSearch = _searchCtrl.text.trim().isNotEmpty;
+    final hasSearch = searchController.text.trim().isNotEmpty;
     return SizedBox(
       width: 320,
       child: TextField(
-        controller: _searchCtrl,
+        controller: searchController,
         textInputAction: TextInputAction.search,
-        onChanged: _queueSearch,
-        onSubmitted: _submitSearch,
+        onChanged: queueSearch,
+        onSubmitted: submitSearch,
         decoration: InputDecoration(
           labelText: 'Pretraga',
           hintText: 'Naziv grada',
@@ -796,7 +533,7 @@ class _CitiesViewState extends State<_CitiesView> {
           suffixIcon: hasSearch
               ? IconButton(
                   tooltip: 'Očisti pretragu',
-                  onPressed: _clearSearch,
+                  onPressed: clearSearch,
                   icon: const Icon(Icons.clear),
                 )
               : null,
@@ -806,16 +543,15 @@ class _CitiesViewState extends State<_CitiesView> {
   }
 
   Widget _buildContent() {
-    if (_loading && _pageData == null) {
+    if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final error = _error;
+    final error = this.error;
     if (error != null) {
-      return _ErrorRetry(message: error, onRetry: () => _load());
+      return ErrorRetry(message: error, onRetry: () => load());
     }
 
-    final items = _pageData?.items ?? const <AdminCity>[];
     if (items.isEmpty) {
       return _CodebookEmptyState(
         icon: Icons.location_city_outlined,
@@ -863,20 +599,10 @@ class _CitiesViewState extends State<_CitiesView> {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  IconButton(
-                                    tooltip: 'Uredi',
-                                    onPressed: _mutating
-                                        ? null
-                                        : () => _openEdit(item),
-                                    icon: const Icon(Icons.edit_outlined),
-                                  ),
-                                  IconButton(
-                                    tooltip: 'Obriši',
-                                    onPressed: _mutating
-                                        ? null
-                                        : () => _confirmAndDelete(item),
-                                    icon: const Icon(Icons.delete_outline),
-                                    color: Theme.of(context).colorScheme.error,
+                                  TableRowActions(
+                                    disabled: mutating,
+                                    onEdit: () => _openEdit(item),
+                                    onDelete: () => _confirmAndDelete(item),
                                   ),
                                   const SizedBox(width: 4),
                                   Icon(
@@ -900,12 +626,7 @@ class _CitiesViewState extends State<_CitiesView> {
     );
   }
 
-  bool get _hasFilters => _searchCtrl.text.trim().isNotEmpty;
-
-  int _totalPages(int totalCount) {
-    if (totalCount <= 0) return 1;
-    return (totalCount / _pageSize).ceil();
-  }
+  bool get _hasFilters => searchController.text.trim().isNotEmpty;
 }
 
 class _CityDraft {
@@ -1024,91 +745,32 @@ class _MunicipalitiesView extends StatefulWidget {
   State<_MunicipalitiesView> createState() => _MunicipalitiesViewState();
 }
 
-class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
+class _MunicipalitiesViewState extends State<_MunicipalitiesView>
+    with PagedListController<AdminMunicipality, _MunicipalitiesView> {
   final AdminMunicipalityService _service = AdminMunicipalityService();
-  final TextEditingController _searchCtrl = TextEditingController();
-
-  Timer? _searchDebounce;
-  AdminMunicipalityPage? _pageData;
-  bool _loading = true;
-  bool _mutating = false;
-  String? _error;
-  int _page = 1;
-  int _pageSize = 10;
-  int _requestSerial = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
   }
 
-  Future<void> _load({bool resetPage = false}) async {
-    final requestId = ++_requestSerial;
-
-    setState(() {
-      if (resetPage) _page = 1;
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final pageData = await _service.fetch(
-        page: _page,
-        pageSize: _pageSize,
-        name: _searchCtrl.text,
-        cityId: widget.city.id,
-      );
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = pageData;
-        _loading = false;
-      });
-    } on AdminMunicipalityException catch (e) {
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = null;
-        _loading = false;
-        _error = e.message;
-      });
-    }
-  }
-
-  void _queueSearch(String _) {
-    setState(() {});
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 450),
-      () => _load(resetPage: true),
+  @override
+  Future<({List<AdminMunicipality> items, int totalCount})> fetchPage() async {
+    final pageData = await _service.fetch(
+      page: page,
+      pageSize: pageSize,
+      name: searchController.text,
+      cityId: widget.city.id,
     );
+    return (items: pageData.items, totalCount: pageData.totalCount);
   }
 
-  void _submitSearch(String _) {
-    _searchDebounce?.cancel();
-    _load(resetPage: true);
-  }
-
-  void _clearSearch() {
-    if (_searchCtrl.text.isEmpty) return;
-    _searchDebounce?.cancel();
-    _searchCtrl.clear();
-    setState(() {});
-    _load(resetPage: true);
-  }
-
-  void _setPageSize(int? value) {
-    if (value == null || value == _pageSize || _loading) return;
-    setState(() {
-      _pageSize = value;
-      _page = 1;
-    });
-    _load();
-  }
-
-  void _goToPage(int page) {
-    if (page == _page || _loading) return;
-    setState(() => _page = page);
-    _load();
+  @override
+  String describeError(Object error) {
+    return error is AdminMunicipalityException
+        ? error.message
+        : 'Došlo je do neočekivane greške.';
   }
 
   Future<void> _openCreate() async {
@@ -1119,7 +781,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.create(
         name: draft.name,
         code: draft.code,
@@ -1139,7 +801,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.update(
         municipality.id,
         name: draft.name,
@@ -1159,59 +821,23 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
     );
     if (!mounted || !confirmed) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.delete(municipality.id);
-      if (shouldStepBackAfterDelete(
-        itemsOnPage: _pageData?.items.length ?? 0,
-        page: _page,
-      )) {
-        _page -= 1;
+      if (shouldStepBackAfterDelete(itemsOnPage: items.length, page: page)) {
+        page -= 1;
       }
     }, 'Općina je obrisana.');
   }
 
-  Future<void> _runMutation(
-    Future<void> Function() action,
-    String successMessage,
-  ) async {
-    setState(() => _mutating = true);
-    try {
-      await action();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(successMessage)));
-      await _load();
-    } on AdminMunicipalityException catch (e) {
-      if (!mounted) return;
-      _showError(e.message);
-    } finally {
-      if (mounted) setState(() => _mutating = false);
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
   @override
   void dispose() {
-    _searchDebounce?.cancel();
-    _searchCtrl.dispose();
+    disposeController();
     _service.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1220,46 +846,54 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _LevelHeader(
+              ScreenHeader(
                 title: 'Općine · ${widget.city.name}',
                 subtitle: 'Pregled, dodavanje, uređivanje i brisanje općina.',
-                createLabel: 'Nova općina',
-                loading: _loading,
-                mutating: _mutating,
-                onRefresh: () => _load(),
-                onCreate: _openCreate,
+                actions: [
+                  IconButton(
+                    tooltip: 'Osvježi',
+                    onPressed: loading || mutating ? null : () => load(),
+                    icon: const Icon(Icons.refresh),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: loading || mutating ? null : _openCreate,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Nova općina'),
+                  ),
+                ],
               ),
               const SizedBox(height: 18),
               _buildFilters(),
             ],
           ),
         ),
-        if ((_loading && pageData != null) || _mutating)
+        if ((loading && !isInitialLoad) || mutating)
           const LinearProgressIndicator(minHeight: 2),
         Expanded(child: _buildContent()),
-        if (pageData != null && _error == null)
-          _PaginationBar(
-            page: _page,
+        if (!isInitialLoad && error == null)
+          PagedTablePaginationBar(
+            page: page,
             totalPages: totalPages,
-            totalCount: pageData.totalCount,
-            pageSize: _pageSize,
-            loading: _loading || _mutating,
-            onPageChanged: _goToPage,
-            onPageSizeChanged: _setPageSize,
+            totalCount: totalCount,
+            pageSize: pageSize,
+            loading: loading || mutating,
+            onPageChanged: goToPage,
+            onPageSizeChanged: setPageSize,
           ),
       ],
     );
   }
 
   Widget _buildFilters() {
-    final hasSearch = _searchCtrl.text.trim().isNotEmpty;
+    final hasSearch = searchController.text.trim().isNotEmpty;
     return SizedBox(
       width: 320,
       child: TextField(
-        controller: _searchCtrl,
+        controller: searchController,
         textInputAction: TextInputAction.search,
-        onChanged: _queueSearch,
-        onSubmitted: _submitSearch,
+        onChanged: queueSearch,
+        onSubmitted: submitSearch,
         decoration: InputDecoration(
           labelText: 'Pretraga',
           hintText: 'Naziv općine',
@@ -1267,7 +901,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
           suffixIcon: hasSearch
               ? IconButton(
                   tooltip: 'Očisti pretragu',
-                  onPressed: _clearSearch,
+                  onPressed: clearSearch,
                   icon: const Icon(Icons.clear),
                 )
               : null,
@@ -1277,16 +911,15 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
   }
 
   Widget _buildContent() {
-    if (_loading && _pageData == null) {
+    if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final error = _error;
+    final error = this.error;
     if (error != null) {
-      return _ErrorRetry(message: error, onRetry: () => _load());
+      return ErrorRetry(message: error, onRetry: () => load());
     }
 
-    final items = _pageData?.items ?? const <AdminMunicipality>[];
     if (items.isEmpty) {
       return _CodebookEmptyState(
         icon: Icons.map_outlined,
@@ -1336,20 +969,10 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  IconButton(
-                                    tooltip: 'Uredi',
-                                    onPressed: _mutating
-                                        ? null
-                                        : () => _openEdit(item),
-                                    icon: const Icon(Icons.edit_outlined),
-                                  ),
-                                  IconButton(
-                                    tooltip: 'Obriši',
-                                    onPressed: _mutating
-                                        ? null
-                                        : () => _confirmAndDelete(item),
-                                    icon: const Icon(Icons.delete_outline),
-                                    color: Theme.of(context).colorScheme.error,
+                                  TableRowActions(
+                                    disabled: mutating,
+                                    onEdit: () => _openEdit(item),
+                                    onDelete: () => _confirmAndDelete(item),
                                   ),
                                   const SizedBox(width: 4),
                                   Icon(
@@ -1373,12 +996,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView> {
     );
   }
 
-  bool get _hasFilters => _searchCtrl.text.trim().isNotEmpty;
-
-  int _totalPages(int totalCount) {
-    if (totalCount <= 0) return 1;
-    return (totalCount / _pageSize).ceil();
-  }
+  bool get _hasFilters => searchController.text.trim().isNotEmpty;
 }
 
 class _MunicipalityDraft {
@@ -1503,91 +1121,32 @@ class _SettlementsView extends StatefulWidget {
   State<_SettlementsView> createState() => _SettlementsViewState();
 }
 
-class _SettlementsViewState extends State<_SettlementsView> {
+class _SettlementsViewState extends State<_SettlementsView>
+    with PagedListController<AdminSettlement, _SettlementsView> {
   final AdminSettlementService _service = AdminSettlementService();
-  final TextEditingController _searchCtrl = TextEditingController();
-
-  Timer? _searchDebounce;
-  AdminSettlementPage? _pageData;
-  bool _loading = true;
-  bool _mutating = false;
-  String? _error;
-  int _page = 1;
-  int _pageSize = 10;
-  int _requestSerial = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
   }
 
-  Future<void> _load({bool resetPage = false}) async {
-    final requestId = ++_requestSerial;
-
-    setState(() {
-      if (resetPage) _page = 1;
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final pageData = await _service.fetch(
-        page: _page,
-        pageSize: _pageSize,
-        name: _searchCtrl.text,
-        municipalityId: widget.municipality.id,
-      );
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = pageData;
-        _loading = false;
-      });
-    } on AdminSettlementException catch (e) {
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = null;
-        _loading = false;
-        _error = e.message;
-      });
-    }
-  }
-
-  void _queueSearch(String _) {
-    setState(() {});
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 450),
-      () => _load(resetPage: true),
+  @override
+  Future<({List<AdminSettlement> items, int totalCount})> fetchPage() async {
+    final pageData = await _service.fetch(
+      page: page,
+      pageSize: pageSize,
+      name: searchController.text,
+      municipalityId: widget.municipality.id,
     );
+    return (items: pageData.items, totalCount: pageData.totalCount);
   }
 
-  void _submitSearch(String _) {
-    _searchDebounce?.cancel();
-    _load(resetPage: true);
-  }
-
-  void _clearSearch() {
-    if (_searchCtrl.text.isEmpty) return;
-    _searchDebounce?.cancel();
-    _searchCtrl.clear();
-    setState(() {});
-    _load(resetPage: true);
-  }
-
-  void _setPageSize(int? value) {
-    if (value == null || value == _pageSize || _loading) return;
-    setState(() {
-      _pageSize = value;
-      _page = 1;
-    });
-    _load();
-  }
-
-  void _goToPage(int page) {
-    if (page == _page || _loading) return;
-    setState(() => _page = page);
-    _load();
+  @override
+  String describeError(Object error) {
+    return error is AdminSettlementException
+        ? error.message
+        : 'Došlo je do neočekivane greške.';
   }
 
   Future<void> _openCreate() async {
@@ -1598,7 +1157,7 @@ class _SettlementsViewState extends State<_SettlementsView> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.create(
         name: draft.name,
         municipalityId: widget.municipality.id,
@@ -1618,7 +1177,7 @@ class _SettlementsViewState extends State<_SettlementsView> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.update(
         settlement.id,
         name: draft.name,
@@ -1638,59 +1197,23 @@ class _SettlementsViewState extends State<_SettlementsView> {
     );
     if (!mounted || !confirmed) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.delete(settlement.id);
-      if (shouldStepBackAfterDelete(
-        itemsOnPage: _pageData?.items.length ?? 0,
-        page: _page,
-      )) {
-        _page -= 1;
+      if (shouldStepBackAfterDelete(itemsOnPage: items.length, page: page)) {
+        page -= 1;
       }
     }, 'Naselje je obrisano.');
   }
 
-  Future<void> _runMutation(
-    Future<void> Function() action,
-    String successMessage,
-  ) async {
-    setState(() => _mutating = true);
-    try {
-      await action();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(successMessage)));
-      await _load();
-    } on AdminSettlementException catch (e) {
-      if (!mounted) return;
-      _showError(e.message);
-    } finally {
-      if (mounted) setState(() => _mutating = false);
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
   @override
   void dispose() {
-    _searchDebounce?.cancel();
-    _searchCtrl.dispose();
+    disposeController();
     _service.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1699,46 +1222,54 @@ class _SettlementsViewState extends State<_SettlementsView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _LevelHeader(
+              ScreenHeader(
                 title: 'Naselja · ${widget.municipality.name}',
                 subtitle: 'Pregled, dodavanje, uređivanje i brisanje naselja.',
-                createLabel: 'Novo naselje',
-                loading: _loading,
-                mutating: _mutating,
-                onRefresh: () => _load(),
-                onCreate: _openCreate,
+                actions: [
+                  IconButton(
+                    tooltip: 'Osvježi',
+                    onPressed: loading || mutating ? null : () => load(),
+                    icon: const Icon(Icons.refresh),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: loading || mutating ? null : _openCreate,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Novo naselje'),
+                  ),
+                ],
               ),
               const SizedBox(height: 18),
               _buildFilters(),
             ],
           ),
         ),
-        if ((_loading && pageData != null) || _mutating)
+        if ((loading && !isInitialLoad) || mutating)
           const LinearProgressIndicator(minHeight: 2),
         Expanded(child: _buildContent()),
-        if (pageData != null && _error == null)
-          _PaginationBar(
-            page: _page,
+        if (!isInitialLoad && error == null)
+          PagedTablePaginationBar(
+            page: page,
             totalPages: totalPages,
-            totalCount: pageData.totalCount,
-            pageSize: _pageSize,
-            loading: _loading || _mutating,
-            onPageChanged: _goToPage,
-            onPageSizeChanged: _setPageSize,
+            totalCount: totalCount,
+            pageSize: pageSize,
+            loading: loading || mutating,
+            onPageChanged: goToPage,
+            onPageSizeChanged: setPageSize,
           ),
       ],
     );
   }
 
   Widget _buildFilters() {
-    final hasSearch = _searchCtrl.text.trim().isNotEmpty;
+    final hasSearch = searchController.text.trim().isNotEmpty;
     return SizedBox(
       width: 320,
       child: TextField(
-        controller: _searchCtrl,
+        controller: searchController,
         textInputAction: TextInputAction.search,
-        onChanged: _queueSearch,
-        onSubmitted: _submitSearch,
+        onChanged: queueSearch,
+        onSubmitted: submitSearch,
         decoration: InputDecoration(
           labelText: 'Pretraga',
           hintText: 'Naziv naselja',
@@ -1746,7 +1277,7 @@ class _SettlementsViewState extends State<_SettlementsView> {
           suffixIcon: hasSearch
               ? IconButton(
                   tooltip: 'Očisti pretragu',
-                  onPressed: _clearSearch,
+                  onPressed: clearSearch,
                   icon: const Icon(Icons.clear),
                 )
               : null,
@@ -1756,16 +1287,15 @@ class _SettlementsViewState extends State<_SettlementsView> {
   }
 
   Widget _buildContent() {
-    if (_loading && _pageData == null) {
+    if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final error = _error;
+    final error = this.error;
     if (error != null) {
-      return _ErrorRetry(message: error, onRetry: () => _load());
+      return ErrorRetry(message: error, onRetry: () => load());
     }
 
-    final items = _pageData?.items ?? const <AdminSettlement>[];
     if (items.isEmpty) {
       return _CodebookEmptyState(
         icon: Icons.holiday_village_outlined,
@@ -1812,25 +1342,10 @@ class _SettlementsViewState extends State<_SettlementsView> {
                             DataCell(Text(_textOrDash(item.name))),
                             DataCell(Text(_textOrDash(item.postalCode))),
                             DataCell(
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    tooltip: 'Uredi',
-                                    onPressed: _mutating
-                                        ? null
-                                        : () => _openEdit(item),
-                                    icon: const Icon(Icons.edit_outlined),
-                                  ),
-                                  IconButton(
-                                    tooltip: 'Obriši',
-                                    onPressed: _mutating
-                                        ? null
-                                        : () => _confirmAndDelete(item),
-                                    icon: const Icon(Icons.delete_outline),
-                                    color: Theme.of(context).colorScheme.error,
-                                  ),
-                                ],
+                              TableRowActions(
+                                disabled: mutating,
+                                onEdit: () => _openEdit(item),
+                                onDelete: () => _confirmAndDelete(item),
                               ),
                             ),
                           ],
@@ -1846,12 +1361,7 @@ class _SettlementsViewState extends State<_SettlementsView> {
     );
   }
 
-  bool get _hasFilters => _searchCtrl.text.trim().isNotEmpty;
-
-  int _totalPages(int totalCount) {
-    if (totalCount <= 0) return 1;
-    return (totalCount / _pageSize).ceil();
-  }
+  bool get _hasFilters => searchController.text.trim().isNotEmpty;
 }
 
 class _SettlementDraft {

@@ -11,7 +11,6 @@ import 'package:aquaflow_desktop/admin/models/admin_municipality.dart';
 import 'package:aquaflow_desktop/admin/models/admin_settlement.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_draft.dart';
-import 'package:aquaflow_desktop/admin/models/admin_user_page.dart';
 import 'package:aquaflow_desktop/admin/models/admin_user_role_option.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_user_activity_logs_screen.dart';
 import 'package:aquaflow_desktop/admin/screens/admin_user_water_meters_screen.dart';
@@ -25,6 +24,12 @@ import 'package:aquaflow_desktop/admin/services/admin_user_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_user_service.dart';
 import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
+import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
+import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
+import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
+import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
+import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
 /// Which role this screen manages. The listing is pinned server-side to that
 /// role and the editor dialog creates users with it, so "Korisnici" manages
@@ -82,16 +87,14 @@ class AdminUsersScreen extends StatefulWidget {
   State<AdminUsersScreen> createState() => _AdminUsersScreenState();
 }
 
-class _AdminUsersScreenState extends State<AdminUsersScreen> {
+class _AdminUsersScreenState extends State<AdminUsersScreen>
+    with PagedListController<AdminUser, AdminUsersScreen> {
   final AdminUserService _service = AdminUserService();
   final AdminCityService _cityService = AdminCityService();
   final AdminMunicipalityService _municipalityService =
       AdminMunicipalityService();
   final AdminSettlementService _settlementService = AdminSettlementService();
-  final TextEditingController _searchCtrl = TextEditingController();
 
-  Timer? _searchDebounce;
-  AdminUserPage? _pageData;
   List<AdminUserRoleOption> _roles = [];
   List<AdminCity> _cities = [];
   List<AdminMunicipality> _municipalities = [];
@@ -100,20 +103,48 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   // isn't flattened onto UserResponse, so it's fetched per row after each
   // page load and cached here rather than requiring a backend change.
   Map<int, String> _settlementNameByUserId = {};
-  bool _loading = true;
-  bool _mutating = false;
   bool _locationLookupsLoading = false;
-  String? _error;
   bool? _activeFilter;
-  int _page = 1;
-  int _pageSize = 10;
-  int _requestSerial = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
     _loadRoles();
+  }
+
+  @override
+  Future<({List<AdminUser> items, int totalCount})> fetchPage() async {
+    final pageData = await _service.fetch(
+      page: page,
+      pageSize: pageSize,
+      name: searchController.text,
+      userRole: widget.mode.roleName,
+      isActive: _activeFilter,
+    );
+    return (items: pageData.items, totalCount: pageData.totalCount);
+  }
+
+  @override
+  String describeError(Object error) {
+    // error.message already carries the backend's error text (e.g. the FK
+    // Restrict message when a user has related records), not a generic one.
+    return error is AdminUserException
+        ? error.message
+        : 'Došlo je do neočekivane greške.';
+  }
+
+  // The settlement-name lookup has to refresh after every load (search, page
+  // change, filter, refresh, and post-mutation reload), not just the one
+  // explicit call site this screen owns - so it hooks into `load()` itself
+  // rather than a local wrapper, since every mixin method that reloads data
+  // (queueSearch/submitSearch/clearSearch/goToPage/setPageSize/runMutation)
+  // routes through this override.
+  @override
+  Future<void> load({bool resetPage = false}) async {
+    await super.load(resetPage: resetPage);
+    if (!mounted || widget.mode != AdminUsersScreenMode.customers) return;
+    unawaited(_loadSettlementNames(items));
   }
 
   Future<void> _loadRoles() async {
@@ -123,7 +154,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       setState(() => _roles = roles);
     } on AdminUserException catch (e) {
       if (!mounted) return;
-      _showError(e.message);
+      showError(e.message);
     }
   }
 
@@ -148,61 +179,24 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         _settlements = results[2] as List<AdminSettlement>;
       });
     } on AdminCityException catch (e) {
-      if (mounted) _showError(e.message);
+      if (mounted) showError(e.message);
     } on AdminMunicipalityException catch (e) {
-      if (mounted) _showError(e.message);
+      if (mounted) showError(e.message);
     } on AdminSettlementException catch (e) {
-      if (mounted) _showError(e.message);
+      if (mounted) showError(e.message);
     } finally {
       if (mounted) setState(() => _locationLookupsLoading = false);
     }
   }
 
-  Future<void> _load({bool resetPage = false}) async {
-    final requestId = ++_requestSerial;
-
-    setState(() {
-      if (resetPage) _page = 1;
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final pageData = await _service.fetch(
-        page: _page,
-        pageSize: _pageSize,
-        name: _searchCtrl.text,
-        userRole: widget.mode.roleName,
-        isActive: _activeFilter,
-      );
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = pageData;
-        _loading = false;
-      });
-      if (widget.mode == AdminUsersScreenMode.customers) {
-        unawaited(_loadSettlementNames(requestId, pageData.items));
-      }
-    } on AdminUserException catch (e) {
-      if (!mounted || requestId != _requestSerial) return;
-      setState(() {
-        _pageData = null;
-        _loading = false;
-        _error = e.message;
-      });
-    }
-  }
-
   /// Fetches each row's CustomerProfile to populate the "Naselje" column.
   /// Runs in the background after the page renders, so a slow lookup doesn't
-  /// delay the table itself; [requestId] guards against a stale response
-  /// overwriting a newer page's data.
-  Future<void> _loadSettlementNames(
-    int requestId,
-    List<AdminUser> items,
-  ) async {
+  /// delay the table itself; guarded against a stale response overwriting a
+  /// newer page's data by checking [forItems] is still the mixin's current
+  /// `items` list (a fresh list instance is assigned on every load).
+  Future<void> _loadSettlementNames(List<AdminUser> forItems) async {
     final entries = await Future.wait(
-      items.map((user) async {
+      forItems.map((user) async {
         try {
           final profile = await _service.fetchCustomerProfile(user.id);
           return MapEntry(user.id, profile?.settlementName ?? '');
@@ -211,30 +205,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         }
       }),
     );
-    if (!mounted || requestId != _requestSerial) return;
+    if (!mounted || !identical(items, forItems)) return;
     setState(() => _settlementNameByUserId = Map.fromEntries(entries));
-  }
-
-  void _queueSearch(String _) {
-    setState(() {});
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 450),
-      () => _load(resetPage: true),
-    );
-  }
-
-  void _submitSearch(String _) {
-    _searchDebounce?.cancel();
-    _load(resetPage: true);
-  }
-
-  void _clearSearch() {
-    if (_searchCtrl.text.isEmpty) return;
-    _searchDebounce?.cancel();
-    _searchCtrl.clear();
-    setState(() {});
-    _load(resetPage: true);
   }
 
   void _setActiveFilter(String value) {
@@ -243,22 +215,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         : (value == 'inactive' ? false : null);
     if (selected == _activeFilter) return;
     setState(() => _activeFilter = selected);
-    _load(resetPage: true);
-  }
-
-  void _setPageSize(int? value) {
-    if (value == null || value == _pageSize || _loading) return;
-    setState(() {
-      _pageSize = value;
-      _page = 1;
-    });
-    _load();
-  }
-
-  void _goToPage(int page) {
-    if (page == _page || _loading) return;
-    setState(() => _page = page);
-    _load();
+    load(resetPage: true);
   }
 
   int? get _currentUserId => context.read<AuthProvider>().session?.id;
@@ -271,7 +228,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       await _loadRoles();
       if (!mounted) return null;
       if (_roles.isEmpty) {
-        _showError('Uloge nisu učitane. Pokušajte ponovo.');
+        showError('Uloge nisu učitane. Pokušajte ponovo.');
         return null;
       }
     }
@@ -280,7 +237,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     for (final role in _roles) {
       if (role.name.toLowerCase() == roleName) return role.id;
     }
-    _showError('Rola "${widget.mode.roleName}" nije pronađena.');
+    showError('Rola "${widget.mode.roleName}" nije pronađena.');
     return null;
   }
 
@@ -303,7 +260,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.create(draft);
     }, '${widget.mode.singular} je dodan.');
   }
@@ -319,7 +276,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       existingProfile = await _service.fetchCustomerProfile(user.id);
     } on AdminUserException catch (e) {
       if (!mounted) return;
-      _showError(e.message);
+      showError(e.message);
     }
     if (!mounted) return;
 
@@ -340,7 +297,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     );
     if (!mounted || draft == null) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.update(
         user.id,
         draft,
@@ -390,49 +347,17 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     );
     if (!mounted || confirmed != true) return;
 
-    await _runMutation(() async {
+    await runMutation(() async {
       await _service.delete(user.id);
-      if ((_pageData?.items.length ?? 0) == 1 && _page > 1) {
-        _page -= 1;
+      if (items.length == 1 && page > 1) {
+        page -= 1;
       }
     }, '${widget.mode.singular} je obrisan.');
   }
 
-  Future<void> _runMutation(
-    Future<void> Function() action,
-    String successMessage,
-  ) async {
-    setState(() => _mutating = true);
-    try {
-      await action();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(successMessage)));
-      await _load();
-    } on AdminUserException catch (e) {
-      if (!mounted) return;
-      // e.message already carries the backend's error text (e.g. the FK
-      // Restrict message when a user has related records), not a generic one.
-      _showError(e.message);
-    } finally {
-      if (mounted) setState(() => _mutating = false);
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
   @override
   void dispose() {
-    _searchDebounce?.cancel();
-    _searchCtrl.dispose();
+    disposeController();
     _service.dispose();
     _cityService.dispose();
     _municipalityService.dispose();
@@ -442,9 +367,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
-
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -454,33 +376,45 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Header(
-                  mode: widget.mode,
-                  loading: _loading,
-                  mutating: _mutating,
-                  onRefresh: () {
-                    _load();
-                    _loadRoles();
-                  },
-                  onCreate: _openCreate,
+                ScreenHeader(
+                  title: widget.mode.title,
+                  subtitle: widget.mode.subtitle,
+                  actions: [
+                    IconButton(
+                      tooltip: 'Osvježi',
+                      onPressed: loading || mutating
+                          ? null
+                          : () {
+                              load();
+                              _loadRoles();
+                            },
+                      icon: const Icon(Icons.refresh),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: loading || mutating ? null : _openCreate,
+                      icon: const Icon(Icons.add),
+                      label: Text('Novi ${widget.mode.singular.toLowerCase()}'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 18),
                 _buildFilters(),
               ],
             ),
           ),
-          if ((_loading && pageData != null) || _mutating)
+          if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent()),
-          if (pageData != null && _error == null)
-            _PaginationBar(
-              page: _page,
+          if (!isInitialLoad && error == null)
+            PagedTablePaginationBar(
+              page: page,
               totalPages: totalPages,
-              totalCount: pageData.totalCount,
-              pageSize: _pageSize,
-              loading: _loading || _mutating,
-              onPageChanged: _goToPage,
-              onPageSizeChanged: _setPageSize,
+              totalCount: totalCount,
+              pageSize: pageSize,
+              loading: loading || mutating,
+              onPageChanged: goToPage,
+              onPageSizeChanged: setPageSize,
             ),
         ],
       ),
@@ -488,7 +422,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   Widget _buildFilters() {
-    final hasSearch = _searchCtrl.text.trim().isNotEmpty;
+    final hasSearch = searchController.text.trim().isNotEmpty;
     final activeValue = _activeFilter == null
         ? ''
         : (_activeFilter! ? 'active' : 'inactive');
@@ -501,10 +435,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         SizedBox(
           width: 300,
           child: TextField(
-            controller: _searchCtrl,
+            controller: searchController,
             textInputAction: TextInputAction.search,
-            onChanged: _queueSearch,
-            onSubmitted: _submitSearch,
+            onChanged: queueSearch,
+            onSubmitted: submitSearch,
             decoration: InputDecoration(
               labelText: 'Pretraga',
               hintText: 'Ime ili prezime',
@@ -512,7 +446,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               suffixIcon: hasSearch
                   ? IconButton(
                       tooltip: 'Očisti pretragu',
-                      onPressed: _clearSearch,
+                      onPressed: clearSearch,
                       icon: const Icon(Icons.clear),
                     )
                   : null,
@@ -532,16 +466,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               DropdownMenuItem(value: 'active', child: Text('Aktivan')),
               DropdownMenuItem(value: 'inactive', child: Text('Neaktivan')),
             ],
-            onChanged: _loading || _mutating
+            onChanged: loading || mutating
                 ? null
                 : (value) => _setActiveFilter(value ?? ''),
           ),
         ),
         IconButton.filledTonal(
           tooltip: 'Primijeni filtere',
-          onPressed: _loading || _mutating
+          onPressed: loading || mutating
               ? null
-              : () => _load(resetPage: true),
+              : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
       ],
@@ -549,18 +483,23 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   Widget _buildContent() {
-    if (_loading && _pageData == null) {
+    if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final error = _error;
+    final error = this.error;
     if (error != null) {
-      return _ErrorRetry(message: error, onRetry: () => _load());
+      return ErrorRetry(message: error, onRetry: () => load());
     }
 
-    final items = _pageData?.items ?? const <AdminUser>[];
     if (items.isEmpty) {
-      return _EmptyState(mode: widget.mode, hasFilters: _hasFilters);
+      return EmptyStateView(
+        icon: Icons.people_outline,
+        message: 'Nema ${widget.mode.singularAccusative}.',
+        hasFilters: _hasFilters,
+        filteredIcon: Icons.search_off,
+        filteredMessage: 'Nema ${widget.mode.singularAccusative} za zadane filtere.',
+      );
     }
 
     final currentUserId = _currentUserId;
@@ -620,15 +559,45 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                             DataCell(_StatusPill(isActive: item.isActive)),
                             DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
-                              _RowActions(
-                                disabled: _mutating,
-                                deleteDisabled: item.id == currentUserId,
-                                onEdit: () => _openEdit(item),
-                                onDelete: () => _confirmDelete(item),
-                                onWaterMeters: widget.mode.showWaterMeters
-                                    ? () => _openWaterMeters(item)
-                                    : null,
-                                onActivityLogs: () => _openActivityLogs(item),
+                              TableRowActions(
+                                disabled: mutating,
+                                extraActions: [
+                                  IconButton(
+                                    tooltip: 'Uredi',
+                                    onPressed: mutating
+                                        ? null
+                                        : () => _openEdit(item),
+                                    icon: const Icon(Icons.edit_outlined),
+                                  ),
+                                  if (widget.mode.showWaterMeters)
+                                    IconButton(
+                                      tooltip: 'Vodomjeri',
+                                      onPressed: mutating
+                                          ? null
+                                          : () => _openWaterMeters(item),
+                                      icon: const Icon(
+                                        Icons.water_drop_outlined,
+                                      ),
+                                    ),
+                                  IconButton(
+                                    tooltip: 'Aktivnosti',
+                                    onPressed: mutating
+                                        ? null
+                                        : () => _openActivityLogs(item),
+                                    icon: const Icon(Icons.history_outlined),
+                                  ),
+                                  IconButton(
+                                    tooltip: item.id == currentUserId
+                                        ? 'Ne možete obrisati vlastiti korisnički nalog.'
+                                        : 'Obriši',
+                                    onPressed:
+                                        mutating || item.id == currentUserId
+                                        ? null
+                                        : () => _confirmDelete(item),
+                                    icon: const Icon(Icons.delete_outline),
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -645,87 +614,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   bool get _hasFilters =>
-      _searchCtrl.text.trim().isNotEmpty || _activeFilter != null;
-
-  int _totalPages(int totalCount) {
-    if (totalCount <= 0) return 1;
-    return (totalCount / _pageSize).ceil();
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.mode,
-    required this.loading,
-    required this.mutating,
-    required this.onRefresh,
-    required this.onCreate,
-  });
-
-  final AdminUsersScreenMode mode;
-  final bool loading;
-  final bool mutating;
-  final VoidCallback onRefresh;
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final title = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          mode.title,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          mode.subtitle,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-
-    final actions = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Osvježi',
-          onPressed: loading || mutating ? null : onRefresh,
-          icon: const Icon(Icons.refresh),
-        ),
-        const SizedBox(width: 8),
-        FilledButton.icon(
-          onPressed: loading || mutating ? null : onCreate,
-          icon: const Icon(Icons.add),
-          label: Text('Novi ${mode.singular.toLowerCase()}'),
-        ),
-      ],
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 620) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [title, const SizedBox(height: 12), actions],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: title),
-            actions,
-          ],
-        );
-      },
-    );
-  }
+      searchController.text.trim().isNotEmpty || _activeFilter != null;
 }
 
 class _StatusPill extends StatelessWidget {
@@ -759,61 +648,6 @@ class _StatusPill extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _RowActions extends StatelessWidget {
-  const _RowActions({
-    required this.disabled,
-    required this.deleteDisabled,
-    required this.onEdit,
-    required this.onDelete,
-    required this.onActivityLogs,
-    this.onWaterMeters,
-  });
-
-  final bool disabled;
-  final bool deleteDisabled;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-  final VoidCallback onActivityLogs;
-
-  /// Null hides the action entirely (admins have no water meters).
-  final VoidCallback? onWaterMeters;
-
-  @override
-  Widget build(BuildContext context) {
-    final deleteBlocked = disabled || deleteDisabled;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          tooltip: 'Uredi',
-          onPressed: disabled ? null : onEdit,
-          icon: const Icon(Icons.edit_outlined),
-        ),
-        if (onWaterMeters != null)
-          IconButton(
-            tooltip: 'Vodomjeri',
-            onPressed: disabled ? null : onWaterMeters,
-            icon: const Icon(Icons.water_drop_outlined),
-          ),
-        IconButton(
-          tooltip: 'Aktivnosti',
-          onPressed: disabled ? null : onActivityLogs,
-          icon: const Icon(Icons.history_outlined),
-        ),
-        IconButton(
-          tooltip: deleteDisabled
-              ? 'Ne možete obrisati vlastiti korisnički nalog.'
-              : 'Obriši',
-          onPressed: deleteBlocked ? null : onDelete,
-          icon: const Icon(Icons.delete_outline),
-          color: Theme.of(context).colorScheme.error,
-        ),
-      ],
     );
   }
 }
@@ -1355,203 +1189,6 @@ class _StatusSwitchField extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.pageSize,
-    required this.loading,
-    required this.onPageChanged,
-    required this.onPageSizeChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final int pageSize;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-  final ValueChanged<int?> onPageSizeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 500;
-
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            border: Border(
-              top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-            child: isSmallScreen
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            tooltip: 'Prethodna stranica',
-                            onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-                            icon: const Icon(Icons.chevron_left),
-                          ),
-                          Expanded(
-                            child: Text(
-                              'Str. $page/$totalPages',
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelMedium,
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Sljedeća stranica',
-                            onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-                            icon: const Icon(Icons.chevron_right),
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '$totalCount ukupno',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            DropdownButtonHideUnderline(
-                              child: DropdownButton<int>(
-                                value: pageSize,
-                                onChanged: loading ? null : onPageSizeChanged,
-                                items: const [
-                                  DropdownMenuItem(value: 10, child: Text('10')),
-                                  DropdownMenuItem(value: 20, child: Text('20')),
-                                  DropdownMenuItem(value: 50, child: Text('50')),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    children: [
-                      IconButton(
-                        tooltip: 'Prethodna stranica',
-                        onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-                        icon: const Icon(Icons.chevron_left),
-                      ),
-                      Expanded(
-                        child: Text(
-                          'Stranica $page od $totalPages · $totalCount ukupno',
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelLarge,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Sljedeća stranica',
-                        onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-                        icon: const Icon(Icons.chevron_right),
-                      ),
-                      const SizedBox(width: 12),
-                      DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: pageSize,
-                          onChanged: loading ? null : onPageSizeChanged,
-                          items: const [
-                            DropdownMenuItem(value: 10, child: Text('10')),
-                            DropdownMenuItem(value: 20, child: Text('20')),
-                            DropdownMenuItem(value: 50, child: Text('50')),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.mode, required this.hasFilters});
-
-  final AdminUsersScreenMode mode;
-  final bool hasFilters;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            hasFilters ? Icons.search_off : Icons.people_outline,
-            size: 56,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            hasFilters
-                ? 'Nema ${mode.singularAccusative} za zadane filtere.'
-                : 'Nema ${mode.singularAccusative}.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
