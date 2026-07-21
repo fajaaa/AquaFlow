@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../providers/notification_badge_provider.dart';
 import '../services/notification_exception.dart';
 import '../services/notification_service.dart';
+import '../theme/app_theme.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/error_retry.dart';
 import 'notification_detail_screen.dart';
@@ -257,7 +258,7 @@ class _NotificationCard extends StatelessWidget {
     final theme = Theme.of(context);
     final notification = item.notification;
     final type = notification?.type ?? '';
-    final accent = _typeColor(type, theme.colorScheme);
+    final accent = _readableAccent(_typeColor(type), theme.brightness);
     final createdAt = notification?.createdAt ?? item.createdAt;
     final title = notification?.title.trim();
     final body = notification?.body.trim();
@@ -350,6 +351,8 @@ class _NotificationCard extends StatelessWidget {
     );
   }
 
+  // Keep these icons in sync with `_metaFor` in notification_detail_screen.dart
+  // so a notification looks the same in the list and on its detail screen.
   static IconData _typeIcon(String type) {
     switch (type.toLowerCase()) {
       case 'plannedworks':
@@ -357,25 +360,40 @@ class _NotificationCard extends StatelessWidget {
       case 'billing':
         return Icons.receipt_long_outlined;
       case 'warning':
-      case 'outage':
         return Icons.warning_amber_outlined;
+      case 'outage':
+        return Icons.block_outlined;
       default:
-        return Icons.notifications_outlined;
+        return Icons.info_outline;
     }
   }
 
-  static Color _typeColor(String type, ColorScheme colorScheme) {
+  // Keep these accent colors in sync with `_metaFor` in
+  // notification_detail_screen.dart (see also `_typeIcon` above).
+  static Color _typeColor(String type) {
     switch (type.toLowerCase()) {
       case 'plannedworks':
-        return const Color(0xFF0277BD);
+        return AppColors.success;
       case 'billing':
-        return const Color(0xFF2E7D32);
+        return AppColors.primary;
       case 'warning':
+        return AppColors.warning;
       case 'outage':
-        return const Color(0xFFF9A825);
+        return AppColors.textDark;
       default:
-        return colorScheme.primary;
+        return AppColors.secondary;
     }
+  }
+
+  /// Mirrors `_readableAccent` in notification_detail_screen.dart: the navy
+  /// (`billing`) and dark-gray (`outage`) accents blend into the dark theme's
+  /// background, so lift them toward white there. Light theme and the brighter
+  /// accents are returned unchanged.
+  static Color _readableAccent(Color base, Brightness brightness) {
+    if (brightness == Brightness.dark && base.computeLuminance() < 0.2) {
+      return Color.lerp(base, Colors.white, 0.6)!;
+    }
+    return base;
   }
 
   static String _typeLabel(String type) {

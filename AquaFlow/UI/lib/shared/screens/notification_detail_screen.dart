@@ -169,7 +169,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                                       style: theme.textTheme.titleLarge
                                           ?.copyWith(
                                             fontWeight: FontWeight.w800,
-                                            color: colorScheme.onSurface,
+                                            color: accent,
                                           ),
                                     ),
                                   ),
@@ -189,7 +189,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const _SectionHeading('Opis'),
+                              _SectionHeading('Opis', color: accent),
                               const SizedBox(height: 10),
                               Text(
                                 body.isEmpty ? 'Nema dodatnog sadržaja.' : body,
@@ -211,7 +211,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const _SectionHeading('Detalji'),
+                              _SectionHeading('Detalji', color: accent),
                               const SizedBox(height: 14),
                               _DetailRow(
                                 icon: meta.icon,
@@ -222,31 +222,9 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                               const SizedBox(height: 14),
                               _DetailRow(
                                 icon: Icons.calendar_today_outlined,
-                                iconColor: AppColors.secondary,
+                                iconColor: accent,
                                 label: 'Datum kreiranja',
                                 value: _formatDate(createdAt),
-                              ),
-                              if (notification?.validUntil != null) ...[
-                                const SizedBox(height: 14),
-                                _DetailRow(
-                                  icon: Icons.event_available_outlined,
-                                  iconColor: AppColors.secondary,
-                                  label: 'Važi do',
-                                  value: _formatDate(notification!.validUntil),
-                                ),
-                              ],
-                              const SizedBox(height: 14),
-                              _DetailRow(
-                                icon: _item.isRead
-                                    ? Icons.mark_email_read_outlined
-                                    : Icons.mark_email_unread_outlined,
-                                iconColor: _item.isRead
-                                    ? AppColors.secondary
-                                    : accent,
-                                label: 'Status',
-                                value: _item.isRead
-                                    ? 'Pročitano ${_formatDate(_item.readAt)}'
-                                    : 'Novo',
                               ),
                             ],
                           ),
@@ -362,9 +340,13 @@ class _Card extends StatelessWidget {
 }
 
 class _SectionHeading extends StatelessWidget {
-  const _SectionHeading(this.text);
+  const _SectionHeading(this.text, {this.color});
 
   final String text;
+
+  /// Section headings are tinted with the notification's type color; falls
+  /// back to the muted variant when no color is provided.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -374,7 +356,7 @@ class _SectionHeading extends StatelessWidget {
       style: theme.textTheme.labelSmall?.copyWith(
         fontWeight: FontWeight.w700,
         letterSpacing: 0.5,
-        color: theme.colorScheme.onSurfaceVariant,
+        color: color ?? theme.colorScheme.onSurfaceVariant,
       ),
     );
   }
