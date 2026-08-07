@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:aquaflow_desktop/collector/models/collector_billing_cycle.dart';
+import 'package:aquaflow_desktop/collector/models/collector_meter_reading.dart';
 import 'package:aquaflow_desktop/collector/models/collector_water_meter.dart';
 import 'package:aquaflow_desktop/collector/services/collector_meter_reading_exception.dart';
 import 'package:aquaflow_desktop/collector/services/collector_meter_reading_service.dart';
@@ -13,17 +13,14 @@ import 'package:aquaflow_desktop/shared/services/tariff_lookup_service.dart';
 /// [CollectorWaterMetersScreen]. Submits via
 /// `POST /MeterReadings/collector-entry`
 /// (`CollectorMeterReadingService.submit`) - the server resolves the
-/// collector, the billing cycle, and the previous reading itself, so this
-/// form only collects the new reading value, the tariff to bill it under
-/// (required - picked from the active tariff list), an optional note
-/// (required when the value is lower than the meter's last reading, e.g. a
-/// meter replacement/reset) and an optional photo URL. The server
-/// auto-generates a Draft invoice from the reading and the chosen tariff, so
-/// the success message shows its number/total. On open it looks up the
-/// current Open billing period and whether this meter already has a reading
-/// in it, so a duplicate is flagged before the collector fills anything in -
-/// the server still rejects a duplicate/missing-period submit independently,
-/// this is just an upfront heads-up.
+/// collector and previous reading itself, so this form only collects the new
+/// reading value, the tariff to bill it under (required - picked from the
+/// active tariff list), an optional note (required when the value is lower
+/// than the meter's last reading, e.g. a meter replacement/reset) and an
+/// optional photo URL. The server auto-generates a Draft invoice from the
+/// reading and the chosen tariff, so the success message shows its number/total.
+/// On open it fetches the last reading to suggest a tariff and check that
+/// at least 15 days have passed since the previous reading.
 class CollectorMeterReadingEntryScreen extends StatefulWidget {
   const CollectorMeterReadingEntryScreen({super.key, required this.meter});
 
@@ -46,21 +43,18 @@ class _CollectorMeterReadingEntryScreenState
   bool _submitting = false;
   String? _error;
 
-  bool _loadingPeriod = true;
-  CollectorBillingCycle? _currentCycle;
-  bool _alreadyRead = false;
-  String? _periodError;
-
   bool _loadingTariffs = true;
   List<TariffLookup> _tariffs = [];
   int? _selectedTariffId;
   String? _tariffError;
 
+  CollectorMeterReading? _lastReading;
+  String? _nextReadingAllowedDate;
+
   @override
   void initState() {
     super.initState();
-    _loadPeriodStatus();
-    _loadTariffs();
+    _loadData();
   }
 
   @override
@@ -73,49 +67,49 @@ class _CollectorMeterReadingEntryScreenState
     super.dispose();
   }
 
-  Future<void> _loadPeriodStatus() async {
-    setState(() {
-      _loadingPeriod = true;
-      _periodError = null;
-    });
-
-    try {
-      final cycle = await _service.fetchCurrentCycle();
-      final alreadyRead = cycle == null
-          ? false
-          : await _service.hasReadingForCycle(
-              waterMeterId: widget.meter.id,
-              billingCycleId: cycle.id,
-            );
-      if (!mounted) return;
-      setState(() {
-        _currentCycle = cycle;
-        _alreadyRead = alreadyRead;
-        _loadingPeriod = false;
-      });
-    } on CollectorMeterReadingException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loadingPeriod = false;
-        _periodError = e.message;
-      });
-    }
-  }
-
-  Future<void> _loadTariffs() async {
+  Future<void> _loadData() async {
     setState(() {
       _loadingTariffs = true;
       _tariffError = null;
     });
 
     try {
-      final tariffs = await _tariffService.fetchActiveTariffs();
+      final results = await Future.wait([
+        _tariffService.fetchActiveTariffs(),
+        _service.fetchLastReading(widget.meter.id),
+      ], eagerError: false);
+
+      final tariffs = results[0] as List<TariffLookup>;
+      final lastReading = results[1] as CollectorMeterReading?;
+
+      String? nextReadingAllowedDate;
+      if (lastReading != null) {
+        final minDate = lastReading.readingDate.add(const Duration(days: 15));
+        final now = DateTime.now();
+        if (now.isBefore(minDate)) {
+          String two(int value) => value.toString().padLeft(2, '0');
+          nextReadingAllowedDate =
+              '${two(minDate.day)}.${two(minDate.month)}.${minDate.year}.';
+        }
+      }
+
       if (!mounted) return;
       setState(() {
         _tariffs = tariffs;
+        _lastReading = lastReading;
+        _nextReadingAllowedDate = nextReadingAllowedDate;
+        _selectedTariffId = tariffs.any((t) => t.id == lastReading?.tariffId)
+            ? lastReading!.tariffId
+            : tariffs.firstOrNull?.id;
         _loadingTariffs = false;
       });
     } on TariffLookupException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadingTariffs = false;
+        _tariffError = e.message;
+      });
+    } on CollectorMeterReadingException catch (e) {
       if (!mounted) return;
       setState(() {
         _loadingTariffs = false;
@@ -170,15 +164,6 @@ class _CollectorMeterReadingEntryScreenState
     return null;
   }
 
-  String get _periodLabel {
-    if (_loadingPeriod) return 'učitavanje...';
-    if (_periodError != null) return 'greška pri učitavanju';
-    final cycle = _currentCycle;
-    if (cycle == null) return 'nema otvorenog perioda';
-    return '${cycle.name} (${_formatDate(cycle.periodFrom)} - '
-        '${_formatDate(cycle.periodTo)})';
-  }
-
   @override
   Widget build(BuildContext context) {
     final meter = widget.meter;
@@ -229,15 +214,11 @@ class _CollectorMeterReadingEntryScreenState
                           'Zadnje stanje: ${_formatReading(meter.lastReading)} m³',
                     ),
                     const SizedBox(height: 8),
-                    _InfoRow(
-                      icon: Icons.event_outlined,
-                      label: 'Tekući period: $_periodLabel',
-                    ),
                   ],
                 ),
               ),
             ),
-            if (_alreadyRead) ...[
+            if (_nextReadingAllowedDate != null) ...[
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -249,14 +230,13 @@ class _CollectorMeterReadingEntryScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
-                      Icons.warning_amber_outlined,
+                      Icons.info_outlined,
                       color: theme.colorScheme.onErrorContainer,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Ovaj vodomjer je već očitan u tekućem periodu. '
-                        'Novo očitanje za isti period nije moguće.',
+                        'Sljedeće očitanje je moguće od: $_nextReadingAllowedDate',
                         style: TextStyle(
                           color: theme.colorScheme.onErrorContainer,
                         ),
@@ -281,7 +261,6 @@ class _CollectorMeterReadingEntryScreenState
                 children: [
                   TextFormField(
                     controller: _readingCtrl,
-                    enabled: !_alreadyRead,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -318,14 +297,13 @@ class _CollectorMeterReadingEntryScreenState
                     ],
                     validator: (value) =>
                         value == null ? 'Obavezno polje.' : null,
-                    onChanged: (!_alreadyRead && _tariffs.isNotEmpty)
+                    onChanged: _tariffs.isNotEmpty
                         ? (value) => setState(() => _selectedTariffId = value)
                         : null,
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _noteCtrl,
-                    enabled: !_alreadyRead,
                     maxLines: 2,
                     decoration: const InputDecoration(
                       labelText: 'Napomena (obavezno ako je stanje niže)',
@@ -335,7 +313,6 @@ class _CollectorMeterReadingEntryScreenState
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _photoUrlCtrl,
-                    enabled: !_alreadyRead,
                     decoration: const InputDecoration(
                       labelText: 'Foto (URL, opcionalno)',
                       prefixIcon: Icon(Icons.photo_camera_outlined),
@@ -353,7 +330,7 @@ class _CollectorMeterReadingEntryScreenState
                     width: double.infinity,
                     child: FilledButton.icon(
                       onPressed:
-                          (_submitting || _alreadyRead || _tariffs.isEmpty)
+                          (_submitting || _tariffs.isEmpty || _nextReadingAllowedDate != null)
                           ? null
                           : _submit,
                       icon: _submitting
@@ -401,7 +378,3 @@ String _formatReading(double value) {
   return text.endsWith('.00') ? text.substring(0, text.length - 3) : text;
 }
 
-String _formatDate(DateTime date) {
-  String two(int value) => value.toString().padLeft(2, '0');
-  return '${two(date.day)}.${two(date.month)}.${date.year}.';
-}
