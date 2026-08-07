@@ -13,14 +13,12 @@ class AdminInvoice {
     required this.customerLastName,
     required this.waterMeterId,
     required this.waterMeterSerialNumber,
-    required this.billingCycleId,
     required this.billingPeriodFrom,
     required this.billingPeriodTo,
     required this.previousReading,
     required this.currentReading,
     required this.consumptionM3,
     required this.subtotal,
-    required this.tax,
     required this.totalAmount,
     required this.status,
     required this.createdById,
@@ -34,14 +32,12 @@ class AdminInvoice {
   final String customerLastName;
   final int waterMeterId;
   final String waterMeterSerialNumber;
-  final int? billingCycleId;
   final DateTime billingPeriodFrom;
   final DateTime billingPeriodTo;
   final double previousReading;
   final double currentReading;
   final double consumptionM3;
   final double subtotal;
-  final double tax;
   final double totalAmount;
   final String status;
   final int createdById;
@@ -59,14 +55,12 @@ class AdminInvoice {
       customerLastName: (json['customerLastName'] ?? '') as String,
       waterMeterId: (json['waterMeterId'] as num?)?.toInt() ?? 0,
       waterMeterSerialNumber: (json['waterMeterSerialNumber'] ?? '') as String,
-      billingCycleId: (json['billingCycleId'] as num?)?.toInt(),
       billingPeriodFrom: _dateRequired(json['billingPeriodFrom']),
       billingPeriodTo: _dateRequired(json['billingPeriodTo']),
       previousReading: (json['previousReading'] as num?)?.toDouble() ?? 0,
       currentReading: (json['currentReading'] as num?)?.toDouble() ?? 0,
       consumptionM3: (json['consumptionM3'] as num?)?.toDouble() ?? 0,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
-      tax: (json['tax'] as num?)?.toDouble() ?? 0,
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
       status: (json['status'] ?? '') as String,
       createdById: (json['createdById'] as num?)?.toInt() ?? 0,

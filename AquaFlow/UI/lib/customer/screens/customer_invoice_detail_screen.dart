@@ -219,11 +219,6 @@ class _AmountCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Porez',
-            value: '${_formatMoney(invoice.tax)} KM',
-          ),
-          const SizedBox(height: 6),
-          _KeyValueRow(
             label: 'Ukupno',
             value: '${_formatMoney(invoice.totalAmount)} KM',
             emphasize: true,

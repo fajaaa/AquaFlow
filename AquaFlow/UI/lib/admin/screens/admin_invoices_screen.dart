@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:aquaflow_desktop/admin/models/admin_invoice.dart';
-import 'package:aquaflow_desktop/admin/models/admin_invoice_billing_cycle_option.dart';
 import 'package:aquaflow_desktop/admin/services/admin_invoice_exception.dart';
 import 'package:aquaflow_desktop/admin/services/admin_invoice_service.dart';
 import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
@@ -29,10 +28,7 @@ class AdminInvoicesScreen extends StatefulWidget {
 }
 
 const _statusOptions = <String, String>{
-  'Draft': 'Nacrt',
   'Issued': 'Izdat',
-  'PartiallyPaid': 'Djelimično plaćen',
-  'Overdue': 'Dospio',
   'Paid': 'Plaćen',
   'Cancelled': 'Storniran',
 };
@@ -42,14 +38,12 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
   final AdminInvoiceService _service = AdminInvoiceService();
 
   String? _statusFilter;
-  int? _billingCycleFilter;
-  List<AdminInvoiceBillingCycleOption> _billingCycles = const [];
+  DateTime? _billingPeriodFilter;
 
   @override
   void initState() {
     super.initState();
     load();
-    _loadBillingCycles();
   }
 
   @override
@@ -59,7 +53,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
       pageSize: pageSize,
       invoiceNumber: searchController.text,
       status: _statusFilter,
-      billingCycleId: _billingCycleFilter,
+      billingPeriodFrom: _billingPeriodFilter,
     );
     return (items: pageData.items, totalCount: pageData.totalCount);
   }
@@ -71,16 +65,6 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
         : 'Došlo je do neočekivane greške.';
   }
 
-  Future<void> _loadBillingCycles() async {
-    try {
-      final cycles = await _service.fetchBillingCycles();
-      if (!mounted) return;
-      setState(() => _billingCycles = cycles);
-    } on AdminInvoiceException {
-      // Non-fatal: the cycle filter simply stays empty.
-    }
-  }
-
   void _setStatusFilter(String value) {
     final selected = value.isEmpty ? null : value;
     if (selected == _statusFilter) return;
@@ -88,55 +72,19 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
     load(resetPage: true);
   }
 
-  void _setBillingCycleFilter(String value) {
-    final selected = value.isEmpty ? null : int.tryParse(value);
-    if (selected == _billingCycleFilter) return;
-    setState(() => _billingCycleFilter = selected);
+  Future<void> _selectBillingMonth(BuildContext context) async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _billingPeriodFilter ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDatePickerMode: DatePickerMode.year,
+    );
+    if (!mounted || selected == null) return;
+    setState(
+      () => _billingPeriodFilter = DateTime(selected.year, selected.month, 1),
+    );
     load(resetPage: true);
-  }
-
-  Future<void> _issue(AdminInvoice invoice) async {
-    final confirmed = await _confirmAction(
-      title: 'Izdaj račun',
-      message: 'Da li želite izdati račun "${invoice.invoiceNumber}"?',
-      confirmLabel: 'Izdaj',
-      icon: Icons.send_outlined,
-    );
-    if (!mounted || confirmed != true) return;
-
-    await runMutation(() async {
-      await _service.issue(invoice.id);
-    }, 'Račun je izdat.');
-  }
-
-  Future<void> _cancel(AdminInvoice invoice) async {
-    final confirmed = await _confirmAction(
-      title: 'Storniraj račun',
-      message: 'Da li želite stornirati račun "${invoice.invoiceNumber}"?',
-      confirmLabel: 'Storniraj',
-      icon: Icons.block_outlined,
-      isDestructive: true,
-    );
-    if (!mounted || confirmed != true) return;
-
-    await runMutation(() async {
-      await _service.cancel(invoice.id);
-    }, 'Račun je storniran.');
-  }
-
-  Future<void> _markOverdue(AdminInvoice invoice) async {
-    final confirmed = await _confirmAction(
-      title: 'Označi dospjelim',
-      message:
-          'Da li želite označiti račun "${invoice.invoiceNumber}" kao dospio?',
-      confirmLabel: 'Označi dospjelim',
-      icon: Icons.schedule_outlined,
-    );
-    if (!mounted || confirmed != true) return;
-
-    await runMutation(() async {
-      await _service.markOverdue(invoice.id);
-    }, 'Račun je označen dospjelim.');
   }
 
   Future<void> _recordPayment(AdminInvoice invoice) async {
@@ -152,18 +100,14 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
     }, 'Uplata je evidentirana.');
   }
 
-  Future<bool?> _confirmAction({
-    required String title,
-    required String message,
-    required String confirmLabel,
-    required IconData icon,
-    bool isDestructive = false,
-  }) {
-    return showDialog<bool>(
+  Future<void> _cancel(AdminInvoice invoice) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
+        title: const Text('Storniraj račun'),
+        content: Text(
+          'Da li želite stornirati račun "${invoice.invoiceNumber}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -171,17 +115,20 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
           ),
           FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(true),
-            icon: Icon(icon),
-            label: Text(confirmLabel),
-            style: isDestructive
-                ? FilledButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.error,
-                  )
-                : null,
+            icon: const Icon(Icons.block_outlined),
+            label: const Text('Storniraj'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
           ),
         ],
       ),
     );
+    if (!mounted || confirmed != true) return;
+
+    await runMutation(() async {
+      await _service.cancel(invoice.id);
+    }, 'Račun je storniran.');
   }
 
   @override
@@ -283,27 +230,27 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
                 : (value) => _setStatusFilter(value ?? ''),
           ),
         ),
-        SizedBox(
-          width: 230,
-          child: DropdownButtonFormField<String>(
-            initialValue: _billingCycleFilter?.toString() ?? '',
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Ciklus obračuna',
-              prefixIcon: Icon(Icons.event_repeat_outlined),
+        Wrap(
+          spacing: 4,
+          children: [
+            InputChip(
+              label: Text(
+                _billingPeriodFilter != null
+                    ? '${_billingPeriodFilter!.month}/${_billingPeriodFilter!.year}'
+                    : 'Mjesec',
+              ),
+              avatar: const Icon(Icons.calendar_month_outlined, size: 18),
+              onPressed: loading || mutating
+                  ? null
+                  : () => _selectBillingMonth(context),
+              onDeleted: _billingPeriodFilter != null && !loading && !mutating
+                  ? () {
+                      setState(() => _billingPeriodFilter = null);
+                      load(resetPage: true);
+                    }
+                  : null,
             ),
-            items: [
-              const DropdownMenuItem(value: '', child: Text('Svi ciklusi')),
-              for (final cycle in _billingCycles)
-                DropdownMenuItem(
-                  value: cycle.id.toString(),
-                  child: Text(cycle.name),
-                ),
-            ],
-            onChanged: loading || mutating
-                ? null
-                : (value) => _setBillingCycleFilter(value ?? ''),
-          ),
+          ],
         ),
         IconButton.filledTonal(
           tooltip: 'Primijeni filtere',
@@ -386,9 +333,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
                               _RowActions(
                                 invoice: item,
                                 disabled: mutating,
-                                onIssue: () => _issue(item),
                                 onCancel: () => _cancel(item),
-                                onMarkOverdue: () => _markOverdue(item),
                                 onRecordPayment: () => _recordPayment(item),
                               ),
                             ),
@@ -408,90 +353,42 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
   bool get _hasFilters =>
       searchController.text.trim().isNotEmpty ||
       _statusFilter != null ||
-      _billingCycleFilter != null;
+      _billingPeriodFilter != null;
 }
 
 class _RowActions extends StatelessWidget {
   const _RowActions({
     required this.invoice,
     required this.disabled,
-    required this.onIssue,
     required this.onCancel,
-    required this.onMarkOverdue,
     required this.onRecordPayment,
   });
 
   final AdminInvoice invoice;
   final bool disabled;
-  final VoidCallback onIssue;
   final VoidCallback onCancel;
-  final VoidCallback onMarkOverdue;
   final VoidCallback onRecordPayment;
 
   @override
   Widget build(BuildContext context) {
     final buttons = <Widget>[];
 
-    switch (invoice.status) {
-      case 'Draft':
-        buttons.add(
-          IconButton(
-            tooltip: 'Izdaj',
-            onPressed: disabled ? null : onIssue,
-            icon: const Icon(Icons.send_outlined),
-          ),
-        );
-        buttons.add(
-          IconButton(
-            tooltip: 'Storniraj',
-            onPressed: disabled ? null : onCancel,
-            icon: const Icon(Icons.block_outlined),
-            color: Theme.of(context).colorScheme.error,
-          ),
-        );
-      case 'Issued':
-      case 'PartiallyPaid':
-        buttons.add(
-          IconButton(
-            tooltip: 'Evidentiraj uplatu',
-            onPressed: disabled ? null : onRecordPayment,
-            icon: const Icon(Icons.payments_outlined),
-          ),
-        );
-        buttons.add(
-          IconButton(
-            tooltip: 'Označi dospjelim',
-            onPressed: disabled ? null : onMarkOverdue,
-            icon: const Icon(Icons.schedule_outlined),
-          ),
-        );
-        buttons.add(
-          IconButton(
-            tooltip: 'Storniraj',
-            onPressed: disabled ? null : onCancel,
-            icon: const Icon(Icons.block_outlined),
-            color: Theme.of(context).colorScheme.error,
-          ),
-        );
-      case 'Overdue':
-        buttons.add(
-          IconButton(
-            tooltip: 'Evidentiraj uplatu',
-            onPressed: disabled ? null : onRecordPayment,
-            icon: const Icon(Icons.payments_outlined),
-          ),
-        );
-        buttons.add(
-          IconButton(
-            tooltip: 'Storniraj',
-            onPressed: disabled ? null : onCancel,
-            icon: const Icon(Icons.block_outlined),
-            color: Theme.of(context).colorScheme.error,
-          ),
-        );
-      default:
-        // Paid/Cancelled are terminal - no actions.
-        break;
+    if (invoice.status == 'Issued') {
+      buttons.add(
+        IconButton(
+          tooltip: 'Evidentiraj uplatu',
+          onPressed: disabled ? null : onRecordPayment,
+          icon: const Icon(Icons.payments_outlined),
+        ),
+      );
+      buttons.add(
+        IconButton(
+          tooltip: 'Storniraj',
+          onPressed: disabled ? null : onCancel,
+          icon: const Icon(Icons.block_outlined),
+          color: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
 
     if (buttons.isEmpty) {
@@ -515,18 +412,7 @@ class _InvoiceStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (status) {
-      'Draft' => ('Nacrt', const Color(0xFF64748B), Icons.edit_outlined),
       'Issued' => ('Izdat', const Color(0xFF1D4ED8), Icons.send_outlined),
-      'PartiallyPaid' => (
-        'Djelimično plaćen',
-        const Color(0xFFB45309),
-        Icons.hourglass_bottom_outlined,
-      ),
-      'Overdue' => (
-        'Dospio',
-        const Color(0xFFB91C1C),
-        Icons.warning_amber_outlined,
-      ),
       'Paid' => (
         'Plaćen',
         const Color(0xFF2E7D32),

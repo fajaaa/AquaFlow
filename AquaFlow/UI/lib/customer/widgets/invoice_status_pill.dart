@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
 /// Coloured status pill for a customer's invoice, covering every backend
-/// `InvoiceStatus` (Draft/Issued/PartiallyPaid/Overdue/Paid/Cancelled). Same
-/// colour tokens as the admin `_InvoiceStatusPill`. Shared by the invoice
-/// cards on `CustomerInvoicesScreen` and the header of
-/// `CustomerInvoiceDetailScreen`.
+/// `InvoiceStatus` (Issued/Paid/Cancelled). Same colour tokens as the admin
+/// `_InvoiceStatusPill`. Shared by the invoice cards on
+/// `CustomerInvoicesScreen` and the header of `CustomerInvoiceDetailScreen`.
 class InvoiceStatusPill extends StatelessWidget {
   const InvoiceStatusPill({super.key, required this.status});
 
@@ -13,18 +12,7 @@ class InvoiceStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (status.toLowerCase()) {
-      'draft' => ('U pripremi', const Color(0xFF64748B), Icons.edit_outlined),
       'issued' => ('Izdat', const Color(0xFF1D4ED8), Icons.send_outlined),
-      'partiallypaid' => (
-        'Djelimično plaćen',
-        const Color(0xFFB45309),
-        Icons.hourglass_top_outlined,
-      ),
-      'overdue' => (
-        'Dospio',
-        const Color(0xFFB91C1C),
-        Icons.warning_amber_outlined,
-      ),
       'paid' => ('Plaćen', const Color(0xFF2E7D32), Icons.check_circle_outline),
       'cancelled' => (
         'Storniran',
