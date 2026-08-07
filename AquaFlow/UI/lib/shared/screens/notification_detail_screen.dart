@@ -255,7 +255,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       case 'plannedworks':
         return const _TypeMeta(
           'Planirani radovi',
-          Icons.construction_outlined,
+          Icons.build_outlined,
           AppColors.success,
         );
       case 'billing':
@@ -267,7 +267,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       case 'warning':
         return const _TypeMeta(
           'Upozorenje',
-          Icons.warning_amber_outlined,
+          Icons.warning_amber_rounded,
           AppColors.warning,
         );
       case 'outage':

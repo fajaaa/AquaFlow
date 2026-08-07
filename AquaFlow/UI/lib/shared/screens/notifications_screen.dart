@@ -256,95 +256,183 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+
     final notification = item.notification;
     final type = notification?.type ?? '';
-    final accent = _readableAccent(_typeColor(type), theme.brightness);
-    final createdAt = notification?.createdAt ?? item.createdAt;
-    final title = notification?.title.trim();
-    final body = notification?.body.trim();
+    // Raw brand color drives the branded side bar (always a white glyph on a
+    // colored gradient); the readable variant is used for the tinted accents
+    // (pill, unread dot/border) so the two dark accents stay legible on dark.
+    final baseColor = _typeColor(type);
+    final accent = _readableAccent(baseColor, theme.brightness);
+    final unread = !item.isRead;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 1,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      clipBehavior: Clip.antiAlias,
+    final createdAt = notification?.createdAt ?? item.createdAt;
+    final rawTitle = notification?.title.trim();
+    final title = rawTitle == null || rawTitle.isEmpty
+        ? 'Obavijest #${item.notificationId}'
+        : rawTitle;
+    final body = notification?.body.trim() ?? '';
+
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isLight ? Colors.white : colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: unread
+                  ? accent.withValues(alpha: 0.35)
+                  : (isLight
+                        ? const Color(0x121F2937)
+                        : colorScheme.outlineVariant.withValues(alpha: 0.5)),
+              width: unread ? 1.5 : 1,
+            ),
+            boxShadow: isLight
+                ? const [
+                    BoxShadow(
+                      color: Color(0x14062845),
+                      blurRadius: 24,
+                      offset: Offset(0, 10),
                     ),
-                    child: Icon(_typeIcon(type), color: accent),
+                  ]
+                : null,
+          ),
+          // A ListView gives each row unbounded height, so a bare stretched
+          // Row would force an infinite-height constraint on its children and
+          // crash. IntrinsicHeight bounds the row to its tallest child, letting
+          // the color bar stretch to the card's height.
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Colored type bar - branded gradient with a white glyph.
+                Container(
+                  width: 58,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        _shade(baseColor, 0.16),
+                        _shade(baseColor, -0.20),
+                      ],
+                    ),
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(18),
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
+                  child: Center(
+                    child: Icon(_typeIcon(type), color: Colors.white, size: 20),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          title == null || title.isEmpty
-                              ? 'Obavijest #${item.notificationId}'
-                              : title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: unread
+                                            ? FontWeight.w800
+                                            : FontWeight.w600,
+                                        color: colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                  if (unread) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: accent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.chevron_right,
+                              size: 18,
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.55,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _formatDate(createdAt),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                        if (body.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            body,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              height: 1.4,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                           ),
+                        ],
+                        const SizedBox(height: 9),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                _typeLabel(type),
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: accent,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              _formatDate(createdAt),
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  if (!item.isRead) ...[
-                    const SizedBox(width: 8),
-                    _StatusBadge(color: accent),
-                  ],
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.chevron_right,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-              if (body != null && body.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(body, style: theme.textTheme.bodyMedium),
+                ),
               ],
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _MetaChip(
-                    icon: Icons.category_outlined,
-                    label: _typeLabel(type),
-                  ),
-                  if (notification?.validUntil != null)
-                    _MetaChip(
-                      icon: Icons.event_available_outlined,
-                      label: 'Važi do ${_formatDate(notification!.validUntil)}',
-                    ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -356,11 +444,11 @@ class _NotificationCard extends StatelessWidget {
   static IconData _typeIcon(String type) {
     switch (type.toLowerCase()) {
       case 'plannedworks':
-        return Icons.construction_outlined;
+        return Icons.build_outlined;
       case 'billing':
         return Icons.receipt_long_outlined;
       case 'warning':
-        return Icons.warning_amber_outlined;
+        return Icons.warning_amber_rounded;
       case 'outage':
         return Icons.block_outlined;
       default:
@@ -417,64 +505,12 @@ class _NotificationCard extends StatelessWidget {
     return '${two(date.day)}.${two(date.month)}.${date.year}. '
         '${two(date.hour)}:${two(date.minute)}';
   }
-}
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        'Novo',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.60),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: colorScheme.onSurfaceVariant),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  /// Tints [c] toward white for a positive [percent] or toward black for a
+  /// negative one - used to build the two-stop gradient on the type bar.
+  static Color _shade(Color c, double percent) {
+    if (percent >= 0) return Color.lerp(c, Colors.white, percent)!;
+    return Color.lerp(c, Colors.black, -percent)!;
   }
 }
 
@@ -577,4 +613,3 @@ const List<_SelectOption> _notificationTypeOptions = [
   _SelectOption(value: 'Warning', label: 'Upozorenje'),
   _SelectOption(value: 'Outage', label: 'Prekid usluge'),
 ];
-
