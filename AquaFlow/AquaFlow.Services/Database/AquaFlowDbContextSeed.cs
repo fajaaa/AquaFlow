@@ -189,17 +189,6 @@ public partial class AquaFlowDbContext
             },
             new
             {
-                Id = 12,
-                Code = "BillingCycles.Manage",
-                Name = "Manage billing cycles",
-                Module = "BillingCycles",
-                Description = "Allows opening, closing, and editing billing cycles.",
-                IsActive = true,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
-            new
-            {
                 Id = 13,
                 Code = "Invoices.Manage",
                 Name = "Manage invoices",
@@ -404,14 +393,6 @@ public partial class AquaFlowDbContext
                 Id = 15,
                 UserRoleId = 1,
                 PermissionId = 11,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
-            new
-            {
-                Id = 16,
-                UserRoleId = 1,
-                PermissionId = 12,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -744,7 +725,7 @@ public partial class AquaFlowDbContext
                 CurrentReading = 168.40m,
                 ConsumptionM3 = 14.20m,
                 Subtotal = 22.67m,
-                TotalAmount = 26.52m,
+                TotalAmount = 22.67m,
                 Status = "Issued",
                 CreatedById = 1,
                 CreatedAt = SeedCreatedAt,
