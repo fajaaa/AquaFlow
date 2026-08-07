@@ -34,23 +34,19 @@ public abstract class BaseInvoiceState
     // entity in, so a state never re-reads the invoice for a plain transition. The id of the user
     // performing the transition is passed through each action call so that TransitionToAsync can stamp
     // the InvoiceStatusHistory row with who made the change.
-    public virtual Task<InvoiceResponse> IssueAsync(Invoice invoice, int changedById) => throw NotAllowed("Issue");
-
     public virtual Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, decimal amount, int changedById) => throw NotAllowed("Record payment");
 
     public virtual Task<InvoiceResponse> CancelAsync(Invoice invoice, int changedById) => throw NotAllowed("Cancel");
 
-    public virtual Task<InvoiceResponse> MarkOverdueAsync(Invoice invoice, int changedById) => throw NotAllowed("Mark overdue");
-
     // The actions a state advertises here MUST be exactly the transition methods it overrides
-    // (IssueAsync -> InvoiceAction.Issue, RecordPaymentAsync -> InvoiceAction.RecordPayment,
-    // CancelAsync -> InvoiceAction.Cancel, MarkOverdueAsync -> InvoiceAction.MarkOverdue). This list
-    // is the public contract for GET {id}/allowed-actions, so it is intentionally hand-maintained
-    // next to the overrides in each state: when you add or remove an override, update this list in
-    // the same file. To guard against drift, a unit test can reflect over each registered state and
-    // assert GetAllowedActions() equals the set of action methods whose DeclaringType is the state
-    // itself (i.e. that it actually overrode). Values come from InvoiceAction so the verbs stay in
-    // one place. Terminal states (Paid/Cancelled) override nothing and return an empty list.
+    // (RecordPaymentAsync -> InvoiceAction.RecordPayment, CancelAsync -> InvoiceAction.Cancel).
+    // This list is the public contract for GET {id}/allowed-actions, so it is intentionally
+    // hand-maintained next to the overrides in each state: when you add or remove an override,
+    // update this list in the same file. To guard against drift, a unit test can reflect over
+    // each registered state and assert GetAllowedActions() equals the set of action methods whose
+    // DeclaringType is the state itself (i.e. that it actually overrode). Values come from
+    // InvoiceAction so the verbs stay in one place. Terminal states (Paid/Cancelled) override
+    // nothing and return an empty list.
     public virtual List<string> GetAllowedActions() => new();
 
     // Applies a plain status transition to the already-loaded invoice and returns the mapped response.
@@ -60,12 +56,9 @@ public abstract class BaseInvoiceState
         return Mapper.Map<InvoiceResponse>(invoice);
     }
 
-    // Records a payment against the invoice and moves it to Paid (when the balance is cleared) or to
-    // the caller-supplied partialStatus (when a balance remains). The target for a partial payment is
-    // the calling state's decision, not a fixed value: Overdue stays Overdue, while Issued/PartiallyPaid
-    // land on PartiallyPaid. A full payment always transitions to Paid regardless of partialStatus.
-    // The new Payment row, the status change and the history entry are persisted in a single
-    // SaveChanges so they commit atomically.
+    // Records a payment against the invoice and moves it to Paid (when the balance is cleared).
+    // For partial payments, the status does not change. The new Payment row, any status change
+    // and the history entry are persisted in a single SaveChanges so they commit atomically.
     //
     // The whole "sum existing payments -> check the balance -> insert the payment" sequence runs
     // inside a Serializable transaction. Without it two concurrent payments can both read the same
@@ -75,7 +68,7 @@ public abstract class BaseInvoiceState
     // InvoiceService loads the invoice before this transaction opens (to resolve the state), so that
     // first read is not covered by the Serializable lock. We re-read the invoice row here, inside the
     // transaction, so the balance is computed from a locked snapshot and the overpay guarantee holds.
-    protected async Task<InvoiceResponse> RecordPaymentInternalAsync(Invoice invoice, decimal amount, int changedById, string partialStatus)
+    protected async Task<InvoiceResponse> RecordPaymentInternalAsync(Invoice invoice, decimal amount, int changedById)
     {
         if (amount <= 0)
         {
@@ -109,8 +102,14 @@ public abstract class BaseInvoiceState
             CreatedAt = DateTime.UtcNow
         });
 
-        var newStatus = remaining - amount <= 0m ? InvoiceStatus.Paid : partialStatus;
-        await TransitionToAsync(invoice, newStatus, changedById, $"Recorded payment of {amount:0.00}; invoice now {newStatus}.");
+        if (remaining - amount <= 0m)
+        {
+            await TransitionToAsync(invoice, InvoiceStatus.Paid, changedById, $"Uplata {amount:0.00}; račun plaćen.");
+        }
+        else
+        {
+            await DbContext.SaveChangesAsync();
+        }
 
         await transaction.CommitAsync();
         return Mapper.Map<InvoiceResponse>(invoice);

@@ -11,8 +11,6 @@ public class Invoice : EntityBase
     public CustomerProfile? Customer { get; set; }
     public int WaterMeterId { get; set; }
     public WaterMeter? WaterMeter { get; set; }
-    public int? BillingCycleId { get; set; }
-    public BillingCycle? BillingCycle { get; set; }
     public DateTime BillingPeriodFrom { get; set; }
     public DateTime BillingPeriodTo { get; set; }
     [Column(TypeName = "decimal(18,2)")]
@@ -24,11 +22,9 @@ public class Invoice : EntityBase
     [Column(TypeName = "decimal(18,2)")]
     public decimal Subtotal { get; set; }
     [Column(TypeName = "decimal(18,2)")]
-    public decimal Tax { get; set; }
-    [Column(TypeName = "decimal(18,2)")]
     public decimal TotalAmount { get; set; }
     [MaxLength(30)]
-    public string Status { get; set; } = InvoiceStatus.Draft;
+    public string Status { get; set; } = InvoiceStatus.Issued;
     public int CreatedById { get; set; }
     public User? CreatedBy { get; set; }
     public ICollection<InvoiceItem> InvoiceItems { get; set; } = new List<InvoiceItem>();

@@ -241,8 +241,6 @@ builder.Services.AddScoped<IBaseCRUDService<MeterReadingResponse, MeterReadingSe
     serviceProvider => serviceProvider.GetRequiredService<IMeterReadingService>());
 AddPatchMapping<TariffPatchRequest, Tariff>();
 builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>, TariffService>();
-AddPatchMapping<BillingCyclePatchRequest, BillingCycle>();
-builder.Services.AddScoped<IBillingCycleService, BillingCycleService>();
 // Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
 // it by hand: the patch mapping, IInvoiceService, and the generic IBaseCRUDService alias resolving
 // to the same InvoiceService. Each invoice state is a keyed scoped BaseInvoiceState (status string as
@@ -251,10 +249,7 @@ AddPatchMapping<InvoicePatchRequest, Invoice>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IBaseCRUDService<InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IInvoiceService>());
-builder.Services.AddKeyedScoped<BaseInvoiceState, DraftInvoiceState>(InvoiceStatus.Draft);
 builder.Services.AddKeyedScoped<BaseInvoiceState, IssuedInvoiceState>(InvoiceStatus.Issued);
-builder.Services.AddKeyedScoped<BaseInvoiceState, PartiallyPaidInvoiceState>(InvoiceStatus.PartiallyPaid);
-builder.Services.AddKeyedScoped<BaseInvoiceState, OverdueInvoiceState>(InvoiceStatus.Overdue);
 builder.Services.AddKeyedScoped<BaseInvoiceState, PaidInvoiceState>(InvoiceStatus.Paid);
 builder.Services.AddKeyedScoped<BaseInvoiceState, CancelledInvoiceState>(InvoiceStatus.Cancelled);
 builder.Services.AddScoped<IInvoiceStateResolver, InvoiceStateResolver>();
@@ -341,9 +336,6 @@ builder.Services.AddScoped<IValidator<MeterReadingCollectorEntryRequest>, MeterR
 builder.Services.AddScoped<IValidator<TariffInsertRequest>, TariffInsertValidator>();
 builder.Services.AddScoped<IValidator<TariffUpdateRequest>, TariffUpdateValidator>();
 builder.Services.AddScoped<IValidator<TariffPatchRequest>, TariffPatchValidator>();
-builder.Services.AddScoped<IValidator<BillingCycleInsertRequest>, BillingCycleInsertValidator>();
-builder.Services.AddScoped<IValidator<BillingCycleUpdateRequest>, BillingCycleUpdateValidator>();
-builder.Services.AddScoped<IValidator<BillingCyclePatchRequest>, BillingCyclePatchValidator>();
 builder.Services.AddScoped<IValidator<InvoiceInsertRequest>, InvoiceInsertValidator>();
 builder.Services.AddScoped<IValidator<InvoiceUpdateRequest>, InvoiceUpdateValidator>();
 builder.Services.AddScoped<IValidator<InvoicePatchRequest>, InvoicePatchValidator>();

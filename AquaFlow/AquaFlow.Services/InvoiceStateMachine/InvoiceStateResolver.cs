@@ -12,10 +12,7 @@ public class InvoiceStateResolver : IInvoiceStateResolver
     // not a missing service, so it is guarded here to keep the 400 (ClientException) behaviour.
     private static readonly IReadOnlySet<string> KnownStatuses = new HashSet<string>
     {
-        InvoiceStatus.Draft,
         InvoiceStatus.Issued,
-        InvoiceStatus.PartiallyPaid,
-        InvoiceStatus.Overdue,
         InvoiceStatus.Paid,
         InvoiceStatus.Cancelled
     };
