@@ -31,7 +31,6 @@ public class FakeMeterReadingCrudService : IMeterReadingService
             Id = _rows.Count == 0 ? 1 : _rows.Max(row => row.Id) + 1,
             WaterMeterId = request.WaterMeterId,
             CollectorId = callerUserId,
-            BillingCycleId = request.BillingCycleId,
             TariffId = request.TariffId,
             ReadingValue = request.ReadingValue,
             Note = request.Note,
@@ -74,7 +73,6 @@ public class FakeMeterReadingCrudService : IMeterReadingService
             Id = _rows.Count == 0 ? 1 : _rows.Max(row => row.Id) + 1,
             WaterMeterId = request.WaterMeterId,
             CollectorId = request.CollectorId,
-            BillingCycleId = request.BillingCycleId,
             ReadingValue = request.ReadingValue,
             PreviousReadingValue = request.PreviousReadingValue,
             ConsumptionM3 = request.ConsumptionM3,
@@ -95,7 +93,6 @@ public class FakeMeterReadingCrudService : IMeterReadingService
         var row = _rows.SingleOrDefault(row => row.Id == id) ?? throw new KeyNotFoundException();
         row.WaterMeterId = request.WaterMeterId;
         row.CollectorId = request.CollectorId;
-        row.BillingCycleId = request.BillingCycleId;
         row.ReadingValue = request.ReadingValue;
         row.PreviousReadingValue = request.PreviousReadingValue;
         row.ConsumptionM3 = request.ConsumptionM3;
@@ -114,7 +111,6 @@ public class FakeMeterReadingCrudService : IMeterReadingService
         var row = _rows.SingleOrDefault(row => row.Id == id) ?? throw new KeyNotFoundException();
         if (request.WaterMeterId is not null) row.WaterMeterId = request.WaterMeterId.Value;
         if (request.CollectorId is not null) row.CollectorId = request.CollectorId.Value;
-        if (request.BillingCycleId is not null) row.BillingCycleId = request.BillingCycleId;
         if (request.ReadingValue is not null) row.ReadingValue = request.ReadingValue.Value;
         if (request.PreviousReadingValue is not null) row.PreviousReadingValue = request.PreviousReadingValue.Value;
         if (request.ConsumptionM3 is not null) row.ConsumptionM3 = request.ConsumptionM3.Value;
