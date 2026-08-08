@@ -34,4 +34,9 @@ public class MeterReading : EntityBase
     public DateTime? SyncedAt { get; set; }
     public int? InvoiceId { get; set; }
     public Invoice? Invoice { get; set; }
+    // Set when the invoice this reading billed gets cancelled (IssuedInvoiceState.CancelAsync), so the
+    // reading no longer represents a real billing event. A voided reading is excluded from both the
+    // 15-day cooldown check and the consumption baseline in MeterReadingService, even if WaterMeter.LastReading
+    // could not be reverted (a newer reading landed in the meantime).
+    public DateTime? VoidedAt { get; set; }
 }

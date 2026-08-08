@@ -55,32 +55,31 @@ public class MeterReadingService
         }
 
         const int MinimumDaysBetweenReadings = 15;
-        var lastReading = await _dbContext.MeterReadings
-            .AsNoTracking()
+        // The single query below drives both the cooldown check and the consumption baseline, so the
+        // two "does this reading still count" definitions can never drift apart (CountingReadings). A
+        // reading stops counting once it is voided (IssuedInvoiceState.CancelAsync, invoice cancelled)
+        // or its invoice is Cancelled outright (covers rows voided before the VoidedAt column existed) -
+        // in both cases it no longer represents a real billing event.
+        var lastCountingReading = await CountingReadings(_dbContext.MeterReadings.AsNoTracking())
             .Where(reading => reading.WaterMeterId == request.WaterMeterId)
             .OrderByDescending(reading => reading.ReadingDate)
-            .Select(reading => new
-            {
-                reading.ReadingDate,
-                InvoiceStatus = reading.InvoiceId == null ? null : reading.Invoice!.Status
-            })
+            .Select(reading => new { reading.ReadingDate, reading.ReadingValue })
             .FirstOrDefaultAsync();
 
-        if (lastReading != null
-            && lastReading.InvoiceStatus != InvoiceStatus.Cancelled
-            && (DateTime.UtcNow - lastReading.ReadingDate).TotalDays < MinimumDaysBetweenReadings)
+        if (lastCountingReading != null
+            && (DateTime.UtcNow - lastCountingReading.ReadingDate).TotalDays < MinimumDaysBetweenReadings)
         {
-            var nextAllowedDate = lastReading.ReadingDate.AddDays(MinimumDaysBetweenReadings);
+            var nextAllowedDate = lastCountingReading.ReadingDate.AddDays(MinimumDaysBetweenReadings);
             throw new ClientException(
-                $"A meter reading was recorded {(int)(DateTime.UtcNow - lastReading.ReadingDate).TotalDays} day(s) ago. " +
+                $"A meter reading was recorded {(int)(DateTime.UtcNow - lastCountingReading.ReadingDate).TotalDays} day(s) ago. " +
                 $"The next reading is allowed from {nextAllowedDate:yyyy-MM-dd}.");
         }
 
-        // IsMeterReplacement is the only way a ReadingValue below the water meter's last recorded
-        // reading is ever accepted - without it this is ALWAYS a ClientException, no matter what the
-        // Note says. A physically replaced meter starts counting from 0 again, so the baseline is
-        // forced to 0 instead of WaterMeter.LastReading (MeterReadingCollectorEntryValidator requires
-        // a non-empty Note in this branch as the audit trail for the reset).
+        // IsMeterReplacement is the only way a ReadingValue below the last counting reading is ever
+        // accepted - without it this is ALWAYS a ClientException, no matter what the Note says. A
+        // physically replaced meter starts counting from 0 again, so the baseline is forced to 0
+        // instead (MeterReadingCollectorEntryValidator requires a non-empty Note in this branch as the
+        // audit trail for the reset).
         decimal previousReading;
         if (request.IsMeterReplacement)
         {
@@ -88,7 +87,11 @@ public class MeterReadingService
         }
         else
         {
-            previousReading = waterMeter.LastReading;
+            // Baseline comes from the most recent counting reading, not straight off WaterMeter.LastReading:
+            // that field is reverted on cancel only when nothing newer has landed (belt and braces - see
+            // IssuedInvoiceState.CancelAsync), so it can lag behind reality. It is still the right fallback
+            // when the meter has no readings at all (e.g. a freshly seeded meter with only InitialReading).
+            previousReading = lastCountingReading?.ReadingValue ?? waterMeter.LastReading;
             if (request.ReadingValue < previousReading)
             {
                 throw new ClientException(
@@ -186,6 +189,14 @@ public class MeterReadingService
 
         return response;
     }
+
+    // Shared definition of "a reading that still counts towards this meter's billing history" - used to
+    // pick both the 15-day cooldown reference and the consumption baseline, so the two can never drift
+    // apart (see the callers in CreateForCollectorAsync). A reading stops counting once it is voided or
+    // its invoice was cancelled.
+    private static IQueryable<MeterReading> CountingReadings(IQueryable<MeterReading> readings)
+        => readings.Where(reading => reading.VoidedAt == null
+            && (reading.InvoiceId == null || reading.Invoice!.Status != InvoiceStatus.Cancelled));
 
     // Year-scoped sequential number, e.g. "INV-2026-0001", resetting every calendar year. Mirrors
     // CustomerProfileService.GenerateCustomerCodeAsync/CollectorProfileService.GenerateEmployeeCodeAsync.
