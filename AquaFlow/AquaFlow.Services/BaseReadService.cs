@@ -159,13 +159,21 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
         var pageSize = Math.Clamp(search?.PageSize ?? DefaultPageSize, 1, MaxPageSize);
         query = query.Skip((page - 1) * pageSize).Take(pageSize);
 
-        var entities = await query.ToListAsync();
-
         return new PageResult<TResponse>
         {
-            Items = entities.Select(entity => Mapper.Map<TResponse>(entity)).ToList(),
+            Items = await MaterializeAsync(query),
             TotalCount = totalCount
         };
+    }
+
+    // Converts the final, filtered/sorted/paged entity query into response DTOs. The default just
+    // materializes and maps each entity in memory; override when a response needs extra per-row data
+    // that only belongs in the query itself (e.g. a correlated subquery), so it lands in the same
+    // query instead of a separate round trip per row (see InvoiceService.MaterializeAsync).
+    protected virtual async Task<List<TResponse>> MaterializeAsync(IQueryable<TEntity> query)
+    {
+        var entities = await query.ToListAsync();
+        return entities.Select(entity => Mapper.Map<TResponse>(entity)).ToList();
     }
 
     public virtual async Task<TResponse> GetByIdAsync(int id)

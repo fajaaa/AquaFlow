@@ -34,6 +34,108 @@ public class InvoiceServiceTests
         Assert.Equal("WM-2", second.WaterMeterSerialNumber);
     }
 
+    [Fact]
+    public async Task GetByIdAsync_NoPayments_PaidAmountIsZeroAndRemainingEqualsTotal()
+    {
+        await using var context = CreateContext();
+        SeedTwoInvoicesInDifferentBillingCycles(context);
+        var service = CreateService(context);
+
+        var response = await service.GetByIdAsync(1);
+
+        Assert.Equal(0m, response.PaidAmount);
+        Assert.Equal(response.TotalAmount, response.RemainingAmount);
+    }
+
+    // Also asserts that a non-Completed payment row (e.g. Pending) must not count towards PaidAmount.
+    [Fact]
+    public async Task GetByIdAsync_PartialCompletedPayment_ComputesPaidAndRemainingAndIgnoresNonCompletedRows()
+    {
+        await using var context = CreateContext();
+        SeedTwoInvoicesInDifferentBillingCycles(context);
+        context.Payments.Add(new Payment
+        {
+            InvoiceId = 1,
+            CustomerId = 1,
+            Amount = 20m,
+            PaymentMethod = PaymentMethod.Manual,
+            Status = PaymentStatus.Completed,
+            PaidAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
+        });
+        context.Payments.Add(new Payment
+        {
+            InvoiceId = 1,
+            CustomerId = 1,
+            Amount = 15m,
+            PaymentMethod = PaymentMethod.Manual,
+            Status = "Pending",
+            CreatedAt = DateTime.UtcNow
+        });
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var response = await service.GetByIdAsync(1);
+
+        Assert.Equal(20m, response.PaidAmount);
+        Assert.Equal(30m, response.RemainingAmount);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_FullyPaid_RemainingAmountIsZero()
+    {
+        await using var context = CreateContext();
+        SeedTwoInvoicesInDifferentBillingCycles(context);
+        context.Payments.Add(new Payment
+        {
+            InvoiceId = 1,
+            CustomerId = 1,
+            Amount = 50m,
+            PaymentMethod = PaymentMethod.Manual,
+            Status = PaymentStatus.Completed,
+            PaidAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
+        });
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var response = await service.GetByIdAsync(1);
+
+        Assert.Equal(50m, response.PaidAmount);
+        Assert.Equal(0m, response.RemainingAmount);
+    }
+
+    // GetAllAsync must compute PaidAmount per invoice via its own correlated subquery, not leak one
+    // invoice's payments onto another's total.
+    [Fact]
+    public async Task GetAllAsync_ComputesPaidAmountPerInvoiceIndependently()
+    {
+        await using var context = CreateContext();
+        SeedTwoInvoicesInDifferentBillingCycles(context);
+        context.Payments.Add(new Payment
+        {
+            InvoiceId = 1,
+            CustomerId = 1,
+            Amount = 20m,
+            PaymentMethod = PaymentMethod.Manual,
+            Status = PaymentStatus.Completed,
+            PaidAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
+        });
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var page = await service.GetAllAsync(new InvoiceSearchObject { IncludeTotalCount = true });
+
+        var invoiceOne = Assert.Single(page.Items, i => i.InvoiceNumber == "INV-2026-0001");
+        Assert.Equal(20m, invoiceOne.PaidAmount);
+        Assert.Equal(30m, invoiceOne.RemainingAmount);
+
+        var invoiceTwo = Assert.Single(page.Items, i => i.InvoiceNumber == "INV-2026-0002");
+        Assert.Equal(0m, invoiceTwo.PaidAmount);
+        Assert.Equal(75m, invoiceTwo.RemainingAmount);
+    }
+
     private static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()

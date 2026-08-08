@@ -28,6 +28,12 @@ public class InvoiceStateMachineTransitionTests
         Assert.Equal(InvoiceStatus.Issued, response.Status);
         Assert.Equal(originalStatus, invoice.Status);
 
+        // The response returned directly from RecordPaymentAsync must already carry the updated
+        // PaidAmount/RemainingAmount - this is the state-machine mapping path (BaseInvoiceState maps
+        // the entity directly), which must not silently return PaidAmount 0.
+        Assert.Equal(10m, response.PaidAmount);
+        Assert.Equal(40m, response.RemainingAmount);
+
         // Payment should be recorded in the database
         var payments = await context.Payments.Where(p => p.InvoiceId == invoice.Id).ToListAsync();
         Assert.Single(payments);
@@ -52,6 +58,10 @@ public class InvoiceStateMachineTransitionTests
 
         // Status should change to Paid
         Assert.Equal(InvoiceStatus.Paid, response.Status);
+
+        // Fully paid: PaidAmount matches the payment and RemainingAmount is floored at 0.
+        Assert.Equal(50m, response.PaidAmount);
+        Assert.Equal(0m, response.RemainingAmount);
 
         // Payment should be recorded
         var payment = await context.Payments.FirstOrDefaultAsync(p => p.InvoiceId == invoice.Id);

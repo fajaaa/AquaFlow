@@ -11,7 +11,10 @@ import 'package:aquaflow_desktop/customer/widgets/invoice_status_pill.dart';
 /// (same push pattern as `CustomerRequestsScreen`). Shows the readings,
 /// amount breakdown, and the Completed payments recorded against it
 /// (`CustomerInvoiceService.fetchPayments`, backend pins `CustomerId` to the
-/// caller), plus the client-computed paid/remaining totals.
+/// caller). The "Plaćeno ukupno" total is summed from that payments list;
+/// "Preostalo za platiti" comes straight from `invoice.remainingAmount`
+/// (`InvoiceResponse.RemainingAmount`) rather than being computed here - a
+/// payment provider's charge amount must never originate client-side.
 class CustomerInvoiceDetailScreen extends StatefulWidget {
   const CustomerInvoiceDetailScreen({super.key, required this.invoice});
 
@@ -124,7 +127,7 @@ class _CustomerInvoiceDetailScreenState
     return _PaymentsCard(
       payments: _payments,
       totalPaid: _totalPaid,
-      remaining: invoice.totalAmount - _totalPaid,
+      remaining: invoice.remainingAmount,
     );
   }
 }

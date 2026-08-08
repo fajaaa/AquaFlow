@@ -53,7 +53,7 @@ public abstract class BaseInvoiceState
     protected async Task<InvoiceResponse> TransitionAsync(Invoice invoice, string newStatus, string note, int changedById)
     {
         await TransitionToAsync(invoice, newStatus, changedById, note);
-        return Mapper.Map<InvoiceResponse>(invoice);
+        return await InvoicePaymentAmounts.ToResponseAsync(DbContext, Mapper, invoice);
     }
 
     // Records a payment against the invoice and moves it to Paid (when the balance is cleared).
@@ -112,7 +112,7 @@ public abstract class BaseInvoiceState
         }
 
         await transaction.CommitAsync();
-        return Mapper.Map<InvoiceResponse>(invoice);
+        return await InvoicePaymentAmounts.ToResponseAsync(DbContext, Mapper, invoice);
     }
 
     // Changes the invoice status and appends the matching InvoiceStatusHistory entry. Any rows the

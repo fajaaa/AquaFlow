@@ -14,6 +14,8 @@ class CustomerInvoice {
     required this.consumptionM3,
     required this.subtotal,
     required this.totalAmount,
+    required this.paidAmount,
+    required this.remainingAmount,
     required this.status,
     required this.waterMeterSerialNumber,
   });
@@ -27,6 +29,8 @@ class CustomerInvoice {
   final double consumptionM3;
   final double subtotal;
   final double totalAmount;
+  final double paidAmount;
+  final double remainingAmount;
   final String status;
   final String waterMeterSerialNumber;
 
@@ -45,6 +49,8 @@ class CustomerInvoice {
       consumptionM3: (json['consumptionM3'] as num?)?.toDouble() ?? 0,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
+      paidAmount: (json['paidAmount'] as num?)?.toDouble() ?? 0,
+      remainingAmount: (json['remainingAmount'] as num?)?.toDouble() ?? 0,
       status: (json['status'] ?? '') as String,
       waterMeterSerialNumber: (json['waterMeterSerialNumber'] ?? '') as String,
     );

@@ -214,6 +214,8 @@ final _skeletonInvoice = CustomerInvoice(
   consumptionM3: 0,
   subtotal: 0,
   totalAmount: 0,
+  paidAmount: 0,
+  remainingAmount: 0,
   status: 'Paid',
   waterMeterSerialNumber: 'SN-0000000',
 );

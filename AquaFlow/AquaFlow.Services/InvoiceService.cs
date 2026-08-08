@@ -45,6 +45,28 @@ public class InvoiceService
         await DbContext.Entry(entity).Reference(i => i.WaterMeter).LoadAsync();
     }
 
+    // Attaches PaidAmount as a correlated subquery (InvoicePaymentAmounts.WithPaidAmount) so a page of
+    // invoices gets its paid totals in the same query as the rest of the row, not one query per invoice.
+    protected override async Task<List<InvoiceResponse>> MaterializeAsync(IQueryable<Invoice> query)
+    {
+        var rows = await query.WithPaidAmount().ToListAsync();
+        return rows.Select(row => InvoicePaymentAmounts.ToResponse(Mapper, row.Invoice, row.PaidAmount)).ToList();
+    }
+
+    public override async Task<InvoiceResponse> GetByIdAsync(int id)
+    {
+        var row = await GetDataSource()
+            .Where(invoice => invoice.Id == id)
+            .WithPaidAmount()
+            .FirstOrDefaultAsync();
+        if (row == null)
+        {
+            throw new KeyNotFoundException($"Invoice with id {id} was not found.");
+        }
+
+        return InvoicePaymentAmounts.ToResponse(Mapper, row.Invoice, row.PaidAmount);
+    }
+
     public async Task<InvoiceResponse> RecordPaymentAsync(int id, decimal amount, int changedById)
     {
         var invoice = await LoadInvoiceAsync(id);
