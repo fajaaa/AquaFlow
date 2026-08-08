@@ -59,14 +59,20 @@ public class MeterReadingService
             .AsNoTracking()
             .Where(reading => reading.WaterMeterId == request.WaterMeterId)
             .OrderByDescending(reading => reading.ReadingDate)
-            .Select(reading => (DateTime?)reading.ReadingDate)
+            .Select(reading => new
+            {
+                reading.ReadingDate,
+                InvoiceStatus = reading.InvoiceId == null ? null : reading.Invoice!.Status
+            })
             .FirstOrDefaultAsync();
 
-        if (lastReading.HasValue && (DateTime.UtcNow - lastReading.Value).TotalDays < MinimumDaysBetweenReadings)
+        if (lastReading != null
+            && lastReading.InvoiceStatus != InvoiceStatus.Cancelled
+            && (DateTime.UtcNow - lastReading.ReadingDate).TotalDays < MinimumDaysBetweenReadings)
         {
-            var nextAllowedDate = lastReading.Value.AddDays(MinimumDaysBetweenReadings);
+            var nextAllowedDate = lastReading.ReadingDate.AddDays(MinimumDaysBetweenReadings);
             throw new ClientException(
-                $"A meter reading was recorded {(int)(DateTime.UtcNow - lastReading.Value).TotalDays} day(s) ago. " +
+                $"A meter reading was recorded {(int)(DateTime.UtcNow - lastReading.ReadingDate).TotalDays} day(s) ago. " +
                 $"The next reading is allowed from {nextAllowedDate:yyyy-MM-dd}.");
         }
 
