@@ -9,6 +9,7 @@ using AquaFlow.Services;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.FaultReportStateMachine;
 using AquaFlow.Services.InvoiceStateMachine;
+using AquaFlow.Services.Payments;
 using AquaFlow.Services.Validators;
 using AquaFlow.Services.WaterMeterRequestStateMachine;
 using AquaFlow.WebAPI.Filters;
@@ -241,6 +242,22 @@ builder.Services.AddScoped<IBaseCRUDService<MeterReadingResponse, MeterReadingSe
     serviceProvider => serviceProvider.GetRequiredService<IMeterReadingService>());
 AddPatchMapping<TariffPatchRequest, Tariff>();
 builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>, TariffService>();
+// Payments:Provider selects which IPaymentProvider is registered (today only "Manual" exists);
+// Payments:Currency has no column to persist against and is only surfaced in
+// CheckoutSessionResponse. Adding a real provider (e.g. Stripe) later means adding one case here plus
+// a new IPaymentProvider implementation class - nothing in InvoiceService/InvoicesController changes.
+builder.Services.Configure<PaymentsOptions>(builder.Configuration.GetSection("Payments"));
+var configuredPaymentProvider = builder.Configuration["Payments:Provider"];
+builder.Services.AddScoped<IPaymentProvider>(_ =>
+{
+    var providerName = string.IsNullOrWhiteSpace(configuredPaymentProvider) ? PaymentProvider.Manual : configuredPaymentProvider;
+    return providerName switch
+    {
+        PaymentProvider.Manual => new ManualPaymentProvider(),
+        _ => throw new InvalidOperationException(
+            $"Unknown payment provider '{providerName}'. Configure Payments:Provider to a supported value.")
+    };
+});
 // Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
 // it by hand: the patch mapping, IInvoiceService, and the generic IBaseCRUDService alias resolving
 // to the same InvoiceService. Each invoice state is a keyed scoped BaseInvoiceState (status string as

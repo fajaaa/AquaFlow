@@ -29,9 +29,11 @@ class _CustomerInvoiceDetailScreenState
     extends State<CustomerInvoiceDetailScreen> {
   final CustomerInvoiceService _service = CustomerInvoiceService();
 
+  late CustomerInvoice _invoice = widget.invoice;
   bool _loading = true;
   String? _error;
   List<CustomerPayment> _payments = const [];
+  bool _paying = false;
 
   @override
   void initState() {
@@ -52,7 +54,7 @@ class _CustomerInvoiceDetailScreenState
     });
 
     try {
-      final payments = await _service.fetchPayments(widget.invoice.id);
+      final payments = await _service.fetchPayments(_invoice.id);
       if (!mounted) return;
       setState(() {
         _payments = payments;
@@ -72,7 +74,7 @@ class _CustomerInvoiceDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    final invoice = widget.invoice;
+    final invoice = _invoice;
     return Scaffold(
       appBar: AppBar(title: Text(invoice.invoiceNumber)),
       body: SafeArea(
@@ -91,8 +93,14 @@ class _CustomerInvoiceDetailScreenState
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: () => _payInvoice(invoice),
-                  icon: const Icon(Icons.payment_outlined),
+                  onPressed: _paying ? null : () => _payInvoice(invoice),
+                  icon: _paying
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.payment_outlined),
                   label: const Text('Plati'),
                 ),
               ),
@@ -103,12 +111,62 @@ class _CustomerInvoiceDetailScreenState
     );
   }
 
-  void _payInvoice(CustomerInvoice invoice) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Plaćanje računa uskoro stiže - trenutno nije dostupno.'),
-      ),
-    );
+  // There is no real payment provider behind this yet (see AGENTS.md) - the
+  // checkout only opens a Pending payment session, it does not complete the
+  // payment, so the confirmation must never claim the invoice is paid.
+  Future<void> _payInvoice(CustomerInvoice invoice) async {
+    setState(() => _paying = true);
+
+    try {
+      final session = await _service.checkout(invoice.id);
+      if (!mounted) return;
+
+      final amount = _formatMoney(session.amount);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Plaćanje pokrenuto: $amount ${session.currency} '
+            '(status: ${_statusLabel(session.status)}).',
+          ),
+        ),
+      );
+
+      await _refreshInvoice();
+      await _load();
+    } on CustomerInvoiceException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) {
+        setState(() => _paying = false);
+      }
+    }
+  }
+
+  Future<void> _refreshInvoice() async {
+    try {
+      final refreshed = await _service.fetchById(_invoice.id);
+      if (!mounted) return;
+      setState(() => _invoice = refreshed);
+    } on CustomerInvoiceException {
+      // Non-fatal: the checkout itself already succeeded and was reported above,
+      // so a failed refresh just leaves the previously shown invoice state.
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'Na čekanju';
+      case 'completed':
+        return 'Završeno';
+      case 'failed':
+        return 'Neuspješno';
+      default:
+        return status;
+    }
   }
 
   Widget _buildPaymentsSection(CustomerInvoice invoice) {

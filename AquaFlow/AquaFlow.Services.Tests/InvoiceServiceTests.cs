@@ -1,11 +1,13 @@
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.InvoiceStateMachine;
+using AquaFlow.Services.Payments;
 using AquaFlow.Services.Validators;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace AquaFlow.Services.Tests;
@@ -215,7 +217,9 @@ public class InvoiceServiceTests
             new IValidator<Model.Requests.InvoiceInsertRequest>[] { new InvoiceInsertValidator() },
             new IValidator<Model.Requests.InvoiceUpdateRequest>[] { new InvoiceUpdateValidator() },
             new IValidator<Model.Requests.InvoicePatchRequest>[] { new InvoicePatchValidator() },
-            new NotSupportedInvoiceStateResolver());
+            new NotSupportedInvoiceStateResolver(),
+            new NotSupportedPaymentProvider(),
+            Options.Create(new PaymentsOptions()));
     }
 
     // GetAllAsync never touches the state resolver, so a minimal stub that throws if it were ever
@@ -224,5 +228,15 @@ public class InvoiceServiceTests
     {
         public BaseInvoiceState Resolve(string status) =>
             throw new NotSupportedException("InvoiceServiceTests does not exercise state transitions.");
+    }
+
+    // GetAllAsync/GetByIdAsync never touch the payment provider; checkout is covered separately by
+    // InvoiceCheckoutTests.
+    private sealed class NotSupportedPaymentProvider : IPaymentProvider
+    {
+        public string Name => throw new NotSupportedException("InvoiceServiceTests does not exercise checkout.");
+
+        public Task<PaymentCheckoutResult> CreateCheckoutAsync(PaymentCheckoutContext context) =>
+            throw new NotSupportedException("InvoiceServiceTests does not exercise checkout.");
     }
 }

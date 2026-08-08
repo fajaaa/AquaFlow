@@ -38,8 +38,16 @@ public abstract class BaseInvoiceState
 
     public virtual Task<InvoiceResponse> CancelAsync(Invoice invoice, int changedById) => throw NotAllowed("Cancel");
 
+    // Confirms an existing Pending provider payment (created by InvoiceService.CheckoutAsync) as
+    // Completed. Only IssuedInvoiceState overrides this - a payment can only be confirmed while its
+    // invoice is still awaiting payment.
+    public virtual Task<InvoiceResponse> ConfirmPaymentAsync(Invoice invoice, Payment payment, int changedById) => throw NotAllowed("Confirm payment");
+
     // The actions a state advertises here MUST be exactly the transition methods it overrides
     // (RecordPaymentAsync -> InvoiceAction.RecordPayment, CancelAsync -> InvoiceAction.Cancel).
+    // ConfirmPaymentAsync is deliberately excluded: it is not an admin-triggered action (there is no
+    // request body for a human to supply), only a provider-confirmation path InvoiceService drives
+    // internally, so it has no InvoiceAction entry and never appears in this list.
     // This list is the public contract for GET {id}/allowed-actions, so it is intentionally
     // hand-maintained next to the overrides in each state: when you add or remove an override,
     // update this list in the same file. To guard against drift, a unit test can reflect over
@@ -56,11 +64,44 @@ public abstract class BaseInvoiceState
         return await InvoicePaymentAmounts.ToResponseAsync(DbContext, Mapper, invoice);
     }
 
-    // Records a payment against the invoice and moves it to Paid (when the balance is cleared).
-    // For partial payments, the status does not change. The new Payment row, any status change
-    // and the history entry are persisted in a single SaveChanges so they commit atomically.
+    // Records a brand-new manual/admin payment (Status=Completed from the start) against the invoice.
+    // Shares its balance-check/transition guarantees with ConfirmPendingPaymentAsync below via
+    // CreditInvoiceAsync - see that method for the transaction/overpay-guard reasoning.
+    protected Task<InvoiceResponse> RecordPaymentInternalAsync(Invoice invoice, decimal amount, int changedById)
+    {
+        return CreditInvoiceAsync(invoice, amount, changedById, () => DbContext.Payments.Add(new Payment
+        {
+            InvoiceId = invoice.Id,
+            CustomerId = invoice.CustomerId,
+            Amount = amount,
+            PaymentMethod = PaymentMethod.Manual,
+            Provider = PaymentProvider.Manual,
+            Status = CompletedPaymentStatus,
+            PaidAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
+        }));
+    }
+
+    // Flips an existing Pending provider payment (created by InvoiceService.CheckoutAsync) to
+    // Completed and credits the invoice through the exact same path RecordPaymentInternalAsync uses -
+    // a provider payment must never bypass the overpay guard or the Paid transition a manual payment
+    // gets. The caller (InvoiceService.ConfirmPaymentAsync) has already checked payment.Status is
+    // still Pending, so a retried confirmation never reaches here a second time.
+    protected Task<InvoiceResponse> ConfirmPendingPaymentAsync(Invoice invoice, Payment payment, int changedById)
+    {
+        return CreditInvoiceAsync(invoice, payment.Amount, changedById, () =>
+        {
+            payment.Status = CompletedPaymentStatus;
+            payment.PaidAt = DateTime.UtcNow;
+        });
+    }
+
+    // Shared by RecordPaymentInternalAsync (stages a brand-new Completed payment) and
+    // ConfirmPendingPaymentAsync (flips an already-staged Pending payment to Completed): the
+    // Serializable transaction, overpay guard, and Paid transition must be identical for both, so a
+    // provider payment gets the same guarantees a manually recorded one does.
     //
-    // The whole "sum existing payments -> check the balance -> insert the payment" sequence runs
+    // The whole "sum existing payments -> check the balance -> stage the payment" sequence runs
     // inside a Serializable transaction. Without it two concurrent payments can both read the same
     // paid total, both pass the balance check, and overpay the invoice. Serializable range locks the
     // rows the balance is computed from, so a second concurrent payment waits for this one to commit.
@@ -68,7 +109,10 @@ public abstract class BaseInvoiceState
     // InvoiceService loads the invoice before this transaction opens (to resolve the state), so that
     // first read is not covered by the Serializable lock. We re-read the invoice row here, inside the
     // transaction, so the balance is computed from a locked snapshot and the overpay guarantee holds.
-    protected async Task<InvoiceResponse> RecordPaymentInternalAsync(Invoice invoice, decimal amount, int changedById)
+    //
+    // stagePayment is invoked only after the overpay guard passes, so a rejected payment is never
+    // marked Completed even in memory.
+    private async Task<InvoiceResponse> CreditInvoiceAsync(Invoice invoice, decimal amount, int changedById, Action stagePayment)
     {
         if (amount <= 0)
         {
@@ -91,17 +135,7 @@ public abstract class BaseInvoiceState
             throw new ClientException($"Payment amount {amount:0.00} exceeds the remaining balance {remaining:0.00}.");
         }
 
-        DbContext.Payments.Add(new Payment
-        {
-            InvoiceId = invoice.Id,
-            CustomerId = invoice.CustomerId,
-            Amount = amount,
-            PaymentMethod = PaymentMethod.Manual,
-            Provider = PaymentProvider.Manual,
-            Status = CompletedPaymentStatus,
-            PaidAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow
-        });
+        stagePayment();
 
         if (remaining - amount <= 0m)
         {

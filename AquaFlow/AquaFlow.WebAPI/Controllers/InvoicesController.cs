@@ -129,6 +129,44 @@ public class InvoicesController : BaseCRUDController<InvoiceResponse, InvoiceSea
     public override Task<IActionResult> Delete(int id)
         => base.Delete(id);
 
+    // Customer self-service checkout: gated on Invoices.Pay (granted to Customer only, not
+    // Invoices.Manage) and pinned to the caller's own CustomerProfile.Id, same ownership pattern as
+    // GetById above - a mismatched or unknown invoice is 404, never Forbid, so the response never
+    // confirms whether another customer's invoice id exists.
+    [RequirePermission("Invoices.Pay")]
+    [HttpPost("{id:int}/checkout")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CheckoutSessionResponse>> Checkout(int id, [FromBody] InvoiceCheckoutRequest? request)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var customerId = await ResolveCustomerProfileIdAsync(userId);
+        if (customerId is null)
+        {
+            return NotFound();
+        }
+
+        try
+        {
+            var invoice = await Service.GetByIdAsync(id);
+            if (invoice.CustomerId != customerId.Value)
+            {
+                return NotFound();
+            }
+
+            return Ok(await Service.CheckoutAsync(id, request?.IdempotencyKey));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
     [RequirePermission("Invoices.Manage")]
     [HttpPost("{id:int}/payments")]
     [ProducesResponseType(StatusCodes.Status200OK)]

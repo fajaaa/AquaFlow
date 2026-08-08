@@ -17,6 +17,23 @@ public class FakeInvoiceService : IInvoiceService
         _rows = rows.ToList();
     }
 
+    // Set by a test to observe/drive the Checkout happy path without a real InvoiceService - the
+    // controller's ownership pinning is what these tests exercise, not the checkout business rules
+    // (covered separately by AquaFlow.Services.Tests/InvoiceCheckoutTests).
+    public CheckoutSessionResponse? CheckoutResponse { get; set; }
+    public int? LastCheckoutInvoiceId { get; private set; }
+    public string? LastCheckoutIdempotencyKey { get; private set; }
+
+    public Task<CheckoutSessionResponse> CheckoutAsync(int id, string? idempotencyKey)
+    {
+        LastCheckoutInvoiceId = id;
+        LastCheckoutIdempotencyKey = idempotencyKey;
+        return Task.FromResult(CheckoutResponse ?? throw new NotSupportedException());
+    }
+
+    public Task<PaymentResponse> ConfirmPaymentAsync(string provider, string providerTransactionId, bool succeeded)
+        => throw new NotSupportedException();
+
     public Task<PageResult<InvoiceResponse>> GetAllAsync(InvoiceSearchObject? search = null)
     {
         var items = _rows.AsEnumerable();

@@ -18,6 +18,9 @@ public class IssuedInvoiceState : BaseInvoiceState
     public override Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, decimal amount, int changedById)
         => RecordPaymentInternalAsync(invoice, amount, changedById);
 
+    public override Task<InvoiceResponse> ConfirmPaymentAsync(Invoice invoice, Payment payment, int changedById)
+        => ConfirmPendingPaymentAsync(invoice, payment, changedById);
+
     // Cancelling an invoice must not silently swallow the consumption it billed. The linked reading (if
     // any - an admin-backfilled invoice may have none) is voided so MeterReadingService.CreateForCollectorAsync
     // no longer treats it as the meter's last billed reading, either for the 15-day cooldown or for the
