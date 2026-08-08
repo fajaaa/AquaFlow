@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show SocketException;
+import 'dart:io' show File, SocketException;
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' show MediaType;
+import 'package:mime/mime.dart' show lookupMimeType;
 
 import 'package:aquaflow_desktop/admin/models/admin_notification_draft.dart';
+import 'package:aquaflow_desktop/admin/models/admin_notification_image.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
 import 'package:aquaflow_desktop/shared/models/app_notification.dart';
 import 'package:aquaflow_desktop/shared/models/app_notification_page.dart';
@@ -147,6 +151,128 @@ class AdminNotificationService {
     if (response.statusCode != 204) {
       throw NotificationException(
         _messageFor(response, 'Obavijest nije moguće obrisati'),
+      );
+    }
+  }
+
+  /// Metadata for every image attached to [notificationId] (never raw bytes -
+  /// see `fetchImageBytes`).
+  Future<List<AdminNotificationImage>> fetchImages(int notificationId) async {
+    final token = await _requireToken();
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/Notifications/$notificationId/images',
+    );
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw NotificationException(
+        _messageFor(response, 'Slike nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) {
+      throw const NotificationException('Lista slika je u neispravnom formatu.');
+    }
+
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(AdminNotificationImage.fromJson)
+        .toList();
+  }
+
+  /// Uploads [imageFile] as an image on [notificationId]
+  /// (`POST /Notifications/{id}/images`, multipart form field `file` - matches
+  /// the `IFormFile file` parameter name on `NotificationsController.UploadImage`).
+  Future<AdminNotificationImage> uploadImage(
+    int notificationId,
+    File imageFile,
+  ) async {
+    final token = await _requireToken();
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/Notifications/$notificationId/images',
+    );
+
+    // Same magic-byte sniffing as CustomerFaultReportService.uploadPhoto - a file path with
+    // no/an unrecognized extension (e.g. a cache file from the Android Photo Picker) would
+    // otherwise fall back to application/octet-stream, which the backend's whitelist rejects.
+    final headerBytes = await imageFile.openRead(0, 12).first;
+    final mimeType =
+        lookupMimeType(imageFile.path, headerBytes: headerBytes) ??
+        'image/jpeg';
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          imageFile.path,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+
+    final http.Response response;
+    try {
+      final streamed = await _client.send(request).timeout(_timeout);
+      response = await http.Response.fromStream(streamed);
+    } on SocketException {
+      throw NotificationException('Server nije dostupan na ${ApiConfig.baseUrl}.');
+    } on TimeoutException {
+      throw const NotificationException('Server nije odgovorio na vrijeme.');
+    } on http.ClientException catch (e) {
+      throw NotificationException('Greška mreže: ${e.message}');
+    }
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw NotificationException(
+        _messageFor(response, 'Sliku nije moguće poslati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const NotificationException('Odgovor servera je u neispravnom formatu.');
+    }
+
+    return AdminNotificationImage.fromJson(decoded);
+  }
+
+  /// Raw bytes of one image (`GET /Notifications/{id}/images/{imageId}`), for
+  /// `Image.memory` via the shared `AuthenticatedImage` widget.
+  Future<Uint8List> fetchImageBytes(int notificationId, int imageId) async {
+    final token = await _requireToken();
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/Notifications/$notificationId/images/$imageId',
+    );
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw NotificationException(
+        _messageFor(response, 'Sliku nije moguće učitati'),
+      );
+    }
+
+    return response.bodyBytes;
+  }
+
+  Future<void> deleteImage(int notificationId, int imageId) async {
+    final token = await _requireToken();
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/Notifications/$notificationId/images/$imageId',
+    );
+
+    final response = await _send(
+      () => _client.delete(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 204) {
+      throw NotificationException(
+        _messageFor(response, 'Sliku nije moguće obrisati'),
       );
     }
   }

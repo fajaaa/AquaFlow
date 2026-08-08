@@ -285,6 +285,7 @@ builder.Services.AddScoped<IFaultReportStateResolver, FaultReportStateResolver>(
 builder.Services.AddScoped<IFaultReportPhotoService, FaultReportPhotoService>();
 AddPatchMapping<NotificationPatchRequest, Notification>();
 builder.Services.AddScoped<IBaseCRUDService<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>, NotificationService>();
+builder.Services.AddScoped<INotificationImageService, NotificationImageService>();
 AddPatchMapping<UserNotificationPatchRequest, UserNotification>();
 builder.Services.AddScoped<IBaseCRUDService<UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>, UserNotificationService>();
 AddCrud<CompanySettings, CompanySettingsResponse, CompanySettingsSearchObject, CompanySettingsInsertRequest, CompanySettingsUpdateRequest, CompanySettingsPatchRequest>();

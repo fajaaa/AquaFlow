@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show SocketException;
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
+import '../models/notification_image.dart';
 import '../models/notification_page.dart';
 import '../models/user_notification_item.dart';
 import 'notification_exception.dart';
@@ -182,6 +184,59 @@ class NotificationService {
         _messageFor(response, 'Obavijest nije moguće označiti kao pročitanu'),
       );
     }
+  }
+
+  /// Metadata for every image attached to [notificationId] (never raw bytes -
+  /// see `fetchImageBytes`). Reaches `/Notifications/{id}/images` directly
+  /// (a different controller than `/UserNotifications/...`) - readable by any
+  /// recipient of the notification, not just a Notifications.Manage holder
+  /// (see NotificationsController.AuthorizeImageReadAsync on the backend).
+  Future<List<NotificationImage>> fetchImages(int notificationId) async {
+    final token = await _requireToken();
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/Notifications/$notificationId/images',
+    );
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw NotificationException(
+        _messageFor(response, 'Slike nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) {
+      throw const NotificationException('Lista slika je u neispravnom formatu.');
+    }
+
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(NotificationImage.fromJson)
+        .toList();
+  }
+
+  /// Raw bytes of one image (`GET /Notifications/{id}/images/{imageId}`), for
+  /// `Image.memory` via the shared `AuthenticatedImage` widget.
+  Future<Uint8List> fetchImageBytes(int notificationId, int imageId) async {
+    final token = await _requireToken();
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/Notifications/$notificationId/images/$imageId',
+    );
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw NotificationException(
+        _messageFor(response, 'Sliku nije moguće učitati'),
+      );
+    }
+
+    return response.bodyBytes;
   }
 
   Future<String> _requireToken() async {

@@ -1,9 +1,11 @@
 using System.Security.Claims;
+using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.WebAPI.Controllers;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
+using AquaFlow.WebAPI.Tests.UserNotifications;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
@@ -129,6 +131,8 @@ public class NotificationsControllerTests
     [InlineData(nameof(NotificationsController.Update))]
     [InlineData(nameof(NotificationsController.Patch))]
     [InlineData(nameof(NotificationsController.Delete))]
+    [InlineData(nameof(NotificationsController.UploadImage))]
+    [InlineData(nameof(NotificationsController.DeleteImage))]
     public void Action_RequiresNotificationsManagePermission(string methodName)
     {
         var method = typeof(NotificationsController)
@@ -145,21 +149,232 @@ public class NotificationsControllerTests
         Assert.Contains(ManagePermission, codes);
     }
 
+    [Fact]
+    public async Task UploadImage_ManageHolder_ReturnsCreatedWithMetadataOnly()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 99, ManagePermission),
+            [new NotificationResponse { Id = 1, Title = "Works", Audience = "All" }],
+            [],
+            out _);
+
+        var file = CreateFormFile(new byte[] { 0xFF, 0xD8, 0xFF }, "image/jpeg", "works.jpg");
+
+        var result = await controller.UploadImage(1, file);
+
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var response = Assert.IsType<NotificationImageResponse>(created.Value);
+        Assert.Equal("works.jpg", response.FileName);
+        Assert.Equal("image/jpeg", response.ContentType);
+    }
+
+    [Fact]
+    public async Task UploadImage_UnknownNotificationId_ReturnsNotFound()
+    {
+        var controller = CreateController(BuildUser(userId: 99, ManagePermission), [], [], out _);
+
+        var file = CreateFormFile(new byte[] { 0xFF, 0xD8, 0xFF }, "image/jpeg", "works.jpg");
+
+        var result = await controller.UploadImage(999, file);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task UploadImage_SixthImage_ThrowsClientException()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 99, ManagePermission),
+            [new NotificationResponse { Id = 1, Title = "Works", Audience = "All" }],
+            [],
+            out var imageService);
+        for (var i = 0; i < 5; i++)
+        {
+            await imageService.UploadAsync(1, new byte[] { 1 }, "image/jpeg", $"{i}.jpg");
+        }
+
+        var file = CreateFormFile(new byte[] { 1, 2, 3 }, "image/jpeg", "sixth.jpg");
+
+        await Assert.ThrowsAsync<ClientException>(() => controller.UploadImage(1, file));
+    }
+
+    [Fact]
+    public async Task DeleteImage_ManageHolder_ReturnsNoContent()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 99, ManagePermission),
+            [new NotificationResponse { Id = 1, Title = "Works", Audience = "All" }],
+            [],
+            out var imageService);
+        var uploaded = await imageService.UploadAsync(1, new byte[] { 1 }, "image/jpeg", "a.jpg");
+
+        var result = await controller.DeleteImage(1, uploaded.Id);
+
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task DeleteImage_UnknownImage_ReturnsNotFound()
+    {
+        var controller = CreateController(BuildUser(userId: 99, ManagePermission), [], [], out _);
+
+        var result = await controller.DeleteImage(1, 999);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetImages_ManageHolder_ReturnsMetadata()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 99, ManagePermission),
+            [new NotificationResponse { Id = 1, Title = "Works", Audience = "All" }],
+            [],
+            out var imageService);
+        await imageService.UploadAsync(1, new byte[] { 1, 2, 3 }, "image/jpeg", "a.jpg");
+
+        var result = await controller.GetImages(1);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var items = Assert.IsAssignableFrom<List<NotificationImageResponse>>(ok.Value);
+        Assert.Single(items);
+    }
+
+    // A Manage holder skips the recipient-row lookup entirely, so without this check a
+    // nonexistent notification id would silently return an empty image list instead of 404.
+    [Fact]
+    public async Task GetImages_ManageHolder_UnknownNotificationId_ReturnsNotFound()
+    {
+        var controller = CreateController(BuildUser(userId: 99, ManagePermission), [], [], out _);
+
+        var result = await controller.GetImages(999);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetImages_RecipientWithUserNotificationRow_ReturnsMetadata()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5),
+            [new NotificationResponse { Id = 1, Title = "Works", Audience = "All" }],
+            [new UserNotificationResponse { Id = 1, UserId = 5, NotificationId = 1 }],
+            out var imageService);
+        await imageService.UploadAsync(1, new byte[] { 1, 2, 3 }, "image/jpeg", "a.jpg");
+
+        var result = await controller.GetImages(1);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var items = Assert.IsAssignableFrom<List<NotificationImageResponse>>(ok.Value);
+        Assert.Single(items);
+    }
+
+    // A caller with no UserNotification row for this notification - never delivered to them
+    // per their audience - gets NotFound, not Forbid, so the response never confirms whether
+    // the notification id exists.
+    [Fact]
+    public async Task GetImages_NonRecipientNonManage_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5),
+            [new NotificationResponse { Id = 1, Title = "Works", Audience = "All" }],
+            [new UserNotificationResponse { Id = 1, UserId = 5, NotificationId = 2 }],
+            out _);
+
+        var result = await controller.GetImages(1);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetImage_RecipientWithUserNotificationRow_ReturnsRawBytes()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5),
+            [new NotificationResponse { Id = 1, Title = "Works", Audience = "All" }],
+            [new UserNotificationResponse { Id = 1, UserId = 5, NotificationId = 1 }],
+            out var imageService);
+        var uploaded = await imageService.UploadAsync(1, new byte[] { 9, 8, 7 }, "image/jpeg", "a.jpg");
+
+        var result = await controller.GetImage(1, uploaded.Id);
+
+        var fileResult = Assert.IsType<FileContentResult>(result);
+        Assert.Equal(new byte[] { 9, 8, 7 }, fileResult.FileContents);
+        Assert.Equal("image/jpeg", fileResult.ContentType);
+    }
+
+    [Fact]
+    public async Task GetImage_NonRecipientNonManage_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5),
+            [new NotificationResponse { Id = 1, Title = "Works", Audience = "All" }],
+            [],
+            out var imageService);
+        var uploaded = await imageService.UploadAsync(1, new byte[] { 9, 8, 7 }, "image/jpeg", "a.jpg");
+
+        var result = await controller.GetImage(1, uploaded.Id);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetImages_Unauthenticated_ReturnsUnauthorized()
+    {
+        var controller = CreateController(
+            BuildUser(userId: null),
+            [new NotificationResponse { Id = 1, Title = "Works", Audience = "All" }],
+            [],
+            out _);
+
+        var result = await controller.GetImages(1);
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
     private static NotificationsController CreateController(params NotificationResponse[] rows)
     {
         var service = new FakeNotificationCrudService(rows);
-        return new NotificationsController(service);
+        return new NotificationsController(service, new FakeNotificationImageService(), new FakeUserNotificationCrudService([]));
     }
 
     private static NotificationsController CreateController(ClaimsPrincipal user, params NotificationResponse[] rows)
     {
         var service = new FakeNotificationCrudService(rows);
-        return new NotificationsController(service)
+        return new NotificationsController(service, new FakeNotificationImageService(), new FakeUserNotificationCrudService([]))
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext { User = user }
             }
+        };
+    }
+
+    private static NotificationsController CreateController(
+        ClaimsPrincipal user,
+        IEnumerable<NotificationResponse> rows,
+        IEnumerable<UserNotificationResponse> userNotifications,
+        out FakeNotificationImageService imageService)
+    {
+        var service = new FakeNotificationCrudService(rows);
+        imageService = new FakeNotificationImageService();
+        var userNotificationService = new FakeUserNotificationCrudService(userNotifications);
+        return new NotificationsController(service, imageService, userNotificationService)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = user }
+            }
+        };
+    }
+
+    private static IFormFile CreateFormFile(byte[] content, string contentType, string fileName)
+    {
+        var stream = new MemoryStream(content);
+        return new FormFile(stream, 0, content.LongLength, "file", fileName)
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = contentType
         };
     }
 

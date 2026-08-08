@@ -1,13 +1,17 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/notification_image.dart';
 import '../models/user_notification_item.dart';
+import '../navigation/app_navigation.dart';
 import '../providers/notification_badge_provider.dart';
 import '../services/notification_exception.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/authenticated_image.dart';
 
 /// Icon + accent color + human label for a notification `type`. The three
 /// backend type strings (`Info`/`PlannedWorks`/`Warning`) map here; anything
@@ -49,6 +53,9 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   final NotificationService _service = NotificationService();
   late UserNotificationItem _item;
 
+  bool _imagesLoading = true;
+  List<NotificationImage> _images = const [];
+
   /// Tracks the in-flight [_markAsRead] call (if any) so [dispose] can wait
   /// for it before closing [_service] - `http.Client.close()` force-closes
   /// active connections, and closing it while the PATCH is still in flight
@@ -62,6 +69,24 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     _item = widget.item;
     if (!_item.isRead) {
       _markAsReadFuture = _markAsRead();
+    }
+    unawaited(_loadImages());
+  }
+
+  // Runs alongside (not blocking) the mark-as-read flow above - most notifications carry
+  // no images, so this fails silently into an empty gallery rather than surfacing an error
+  // for what's a secondary, often-empty section of the screen.
+  Future<void> _loadImages() async {
+    try {
+      final images = await _service.fetchImages(_item.notificationId);
+      if (!mounted) return;
+      setState(() {
+        _images = images;
+        _imagesLoading = false;
+      });
+    } on NotificationException {
+      if (!mounted) return;
+      setState(() => _imagesLoading = false);
     }
   }
 
@@ -224,6 +249,10 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                             ],
                           ),
                         ),
+                        if (!_imagesLoading && _images.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          _buildImagesSection(accent),
+                        ],
                         const SizedBox(height: 16),
                         // Details card - type, dates, status.
                         _Card(
@@ -256,6 +285,54 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Renders nothing while loading or when there are no images - most notifications carry
+  // none, so this stays a lazy-loaded, easy-to-miss-if-absent section rather than a
+  // placeholder, same approach as CustomerFaultReportDetailScreen's photo gallery.
+  Widget _buildImagesSection(Color accent) {
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeading('Slike (${_images.length})', color: accent),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              // Fixed square tiles so every thumbnail renders at the same
+              // size regardless of the source image's own aspect ratio.
+              childAspectRatio: 1,
+            ),
+            itemCount: _images.length,
+            itemBuilder: (context, index) {
+              final image = _images[index];
+              return _ImageThumbnail(
+                onTap: () => _openFullscreenImage(image),
+                fetcher: () =>
+                    _service.fetchImageBytes(_item.notificationId, image.id),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openFullscreenImage(NotificationImage image) {
+    final initialIndex = _images.indexOf(image);
+    context.pushScreen(
+      _FullscreenImageScreen(
+        images: _images,
+        initialIndex: initialIndex < 0 ? 0 : initialIndex,
+        fetcherFor: (image) =>
+            _service.fetchImageBytes(_item.notificationId, image.id),
       ),
     );
   }
@@ -449,6 +526,185 @@ class _DetailRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// One square gallery tile - fixed 1:1 aspect ratio (enforced by the grid's
+/// `childAspectRatio`) so every thumbnail is the same size no matter the
+/// source image's own dimensions, with a bordered/shadowed frame matching
+/// [_Card] and a small zoom affordance hinting it opens fullscreen.
+class _ImageThumbnail extends StatelessWidget {
+  const _ImageThumbnail({required this.onTap, required this.fetcher});
+
+  final VoidCallback onTap;
+  final Future<Uint8List> Function() fetcher;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+
+    return Material(
+      color: isLight ? Colors.white : theme.colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      elevation: isLight ? 1.5 : 0,
+      shadowColor: Colors.black.withValues(alpha: 0.15),
+      child: InkWell(
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: isLight
+                  ? const Color(0xFFE1EDF7)
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AuthenticatedImage(fetcher: fetcher, fit: BoxFit.cover),
+              Positioned(
+                right: 4,
+                bottom: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.zoom_in,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FullscreenImageScreen extends StatefulWidget {
+  const _FullscreenImageScreen({
+    required this.images,
+    required this.initialIndex,
+    required this.fetcherFor,
+  });
+
+  final List<NotificationImage> images;
+  final int initialIndex;
+  final Future<Uint8List> Function(NotificationImage image) fetcherFor;
+
+  @override
+  State<_FullscreenImageScreen> createState() =>
+      _FullscreenImageScreenState();
+}
+
+class _FullscreenImageScreenState extends State<_FullscreenImageScreen> {
+  late final PageController _controller;
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.initialIndex;
+    _controller = PageController(initialPage: _index);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _goTo(int index) {
+    _controller.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final images = widget.images;
+    final current = images[_index];
+    final hasMultiple = images.length > 1;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(
+          hasMultiple
+              ? '${current.fileName} (${_index + 1}/${images.length})'
+              : current.fileName,
+        ),
+      ),
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          PageView.builder(
+            controller: _controller,
+            itemCount: images.length,
+            onPageChanged: (index) => setState(() => _index = index),
+            itemBuilder: (context, index) {
+              final image = images[index];
+              return InteractiveViewer(
+                child: AuthenticatedImage(
+                  fetcher: () => widget.fetcherFor(image),
+                  fit: BoxFit.contain,
+                ),
+              );
+            },
+          ),
+          if (hasMultiple) ...[
+            Positioned(
+              left: 4,
+              child: _NavArrow(
+                icon: Icons.chevron_left,
+                onTap: _index > 0 ? () => _goTo(_index - 1) : null,
+              ),
+            ),
+            Positioned(
+              right: 4,
+              child: _NavArrow(
+                icon: Icons.chevron_right,
+                onTap: _index < images.length - 1
+                    ? () => _goTo(_index + 1)
+                    : null,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _NavArrow extends StatelessWidget {
+  const _NavArrow({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return Material(
+      color: Colors.black.withValues(alpha: 0.35),
+      shape: const CircleBorder(),
+      child: IconButton(
+        icon: Icon(icon),
+        color: enabled ? Colors.white : Colors.white38,
+        onPressed: onTap,
+      ),
     );
   }
 }

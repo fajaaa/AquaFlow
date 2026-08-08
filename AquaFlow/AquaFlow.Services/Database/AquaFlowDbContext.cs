@@ -28,6 +28,7 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<MeterReplacement> MeterReplacements => Set<MeterReplacement>();
     public DbSet<Municipality> Municipalities => Set<Municipality>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationImage> NotificationImages => Set<NotificationImage>();
     public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
@@ -149,6 +150,18 @@ public partial class AquaFlowDbContext : DbContext
             .HasOne(photo => photo.SupportTicketMessage)
             .WithMany(message => message.Photos)
             .HasForeignKey(photo => photo.SupportTicketMessageId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Same reasoning as FaultReportPhoto/SupportTicketMessagePhoto above: an image has no
+        // lifecycle independent of the notification it's attached to. Deleting a notification
+        // deletes its images too - SQL Server enforces this FK cascade itself, so
+        // NotificationService.DeleteAsync needs no matching manual cleanup for images (unlike
+        // its manual UserNotifications.ExecuteDeleteAsync() call, which exists precisely
+        // because UserNotification -> Notification is left at the default Restrict below).
+        modelBuilder.Entity<NotificationImage>()
+            .HasOne(image => image.Notification)
+            .WithMany(notification => notification.Images)
+            .HasForeignKey(image => image.NotificationId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // Backstop against duplicate inbox rows: UserNotificationService.EnsureInboxRowsAsync does a

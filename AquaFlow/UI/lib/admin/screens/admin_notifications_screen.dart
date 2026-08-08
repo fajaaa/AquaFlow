@@ -1,20 +1,26 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/admin/models/admin_notification_draft.dart';
+import 'package:aquaflow_desktop/admin/models/admin_notification_image.dart';
 import 'package:aquaflow_desktop/admin/services/admin_notification_service.dart';
 import 'package:aquaflow_desktop/shared/models/app_notification.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
 import 'package:aquaflow_desktop/shared/services/notification_exception.dart';
+import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
 import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
+
+const int _maxNotificationImages = 5;
 
 class AdminNotificationsScreen extends StatefulWidget {
   const AdminNotificationsScreen({super.key});
@@ -70,6 +76,11 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     load(resetPage: true);
   }
 
+  // The dialog now owns the full save flow itself (create/update the notification, then
+  // upload any picked images against its id - see _NotificationEditorDialogState._save),
+  // since uploading images requires the notification to already exist. It resolves to
+  // `true` on success rather than a draft, so this just reloads the list; runMutation is
+  // still reused (with a no-op action) purely for its snackbar + mutating-flag plumbing.
   Future<void> _openCreate() async {
     final createdById = context.read<AuthProvider>().session?.id;
     if (createdById == null || createdById <= 0) {
@@ -77,16 +88,14 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       return;
     }
 
-    final draft = await showDialog<AdminNotificationDraft>(
+    final saved = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => _NotificationEditorDialog(createdById: createdById),
     );
-    if (!mounted || draft == null) return;
+    if (!mounted || saved != true) return;
 
-    await runMutation(() async {
-      await _service.create(draft);
-    }, 'Obavijest je dodana.');
+    await runMutation(() async {}, 'Obavijest je dodana.');
   }
 
   Future<void> _openEdit(AppNotification notification) async {
@@ -99,7 +108,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       return;
     }
 
-    final draft = await showDialog<AdminNotificationDraft>(
+    final saved = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => _NotificationEditorDialog(
@@ -107,11 +116,9 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         createdById: createdById,
       ),
     );
-    if (!mounted || draft == null) return;
+    if (!mounted || saved != true) return;
 
-    await runMutation(() async {
-      await _service.update(notification.id, draft);
-    }, 'Obavijest je sačuvana.');
+    await runMutation(() async {}, 'Obavijest je sačuvana.');
   }
 
   Future<void> _confirmDelete(AppNotification notification) async {
@@ -471,6 +478,15 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
+/// Create/edit dialog for a notification. Unlike the old draft-returning version, this
+/// dialog now owns the full save flow itself - it calls create/update directly (needs the
+/// notification's own id to upload images against) and resolves to a plain `bool` (success)
+/// instead of a draft. Mirrors `NewFaultReportDialog`'s "save entity, then upload picked
+/// images sequentially with progress, dialog stays open on error to retry" pattern - see
+/// that widget for the precedent. Unlike fault reports, a Notification supports Update as
+/// well as Create, so (deliberately, unlike NewFaultReportDialog) the Title/Body/Type/
+/// Audience fields are never locked after the first save: re-pressing "Sačuvaj" after a
+/// failed image upload just re-runs Update (harmless/idempotent) and resumes uploading.
 class _NotificationEditorDialog extends StatefulWidget {
   const _NotificationEditorDialog({
     required this.createdById,
@@ -486,6 +502,8 @@ class _NotificationEditorDialog extends StatefulWidget {
 }
 
 class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
+  final AdminNotificationService _service = AdminNotificationService();
+  final ImagePicker _picker = ImagePicker();
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
@@ -494,6 +512,18 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
   late String _audience;
 
   bool get _isEdit => widget.notification != null;
+
+  AppNotification? _savedNotification;
+  bool _submitting = false;
+  String? _error;
+
+  bool _loadingImages = false;
+  String? _imagesError;
+  List<AdminNotificationImage> _existingImages = const [];
+  final List<File> _selectedImages = [];
+  int _uploadedImageCount = 0;
+
+  int get _totalImageCount => _existingImages.length + _selectedImages.length;
 
   @override
   void initState() {
@@ -507,34 +537,128 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
     _audience = notification?.audience.trim().isNotEmpty == true
         ? notification!.audience
         : 'All';
+    _savedNotification = notification;
+    if (notification != null) {
+      _loadImages(notification.id);
+    }
   }
 
   @override
   void dispose() {
+    _service.dispose();
     _titleCtrl.dispose();
     _bodyCtrl.dispose();
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _loadImages(int notificationId) async {
+    setState(() {
+      _loadingImages = true;
+      _imagesError = null;
+    });
+
+    try {
+      final images = await _service.fetchImages(notificationId);
+      if (!mounted) return;
+      setState(() {
+        _existingImages = images;
+        _loadingImages = false;
+      });
+    } on NotificationException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _imagesError = e.message;
+        _loadingImages = false;
+      });
+    }
+  }
+
+  // This screen is desktop-only (see PlatformGate), where image_picker has no camera
+  // source - only ImageSource.gallery, which itself opens the native OS file picker.
+  // So there's no real choice to offer here; go straight to the file picker instead of
+  // showing a bottom sheet with a "Slikaj" (camera) option that can't work on desktop.
+  Future<void> _pickImage() async {
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _selectedImages.add(File(picked.path)));
+  }
+
+  void _removeSelectedImage(int index) {
+    setState(() => _selectedImages.removeAt(index));
+  }
+
+  // Deletes an already-persisted image immediately (independent of "Sačuvaj") - images are
+  // addable/removable after the notification exists, not just at creation time.
+  Future<void> _removeExistingImage(AdminNotificationImage image) async {
+    final notificationId = _savedNotification?.id;
+    if (notificationId == null) return;
+
+    try {
+      await _service.deleteImage(notificationId, image.id);
+      if (!mounted) return;
+      setState(() {
+        _existingImages = _existingImages
+            .where((existing) => existing.id != image.id)
+            .toList();
+      });
+    } on NotificationException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    }
+  }
+
+  Future<void> _save() async {
     final form = _formKey.currentState;
     if (form == null || !form.validate()) return;
 
-    Navigator.of(context).pop(
-      AdminNotificationDraft(
-        title: _titleCtrl.text.trim(),
-        body: _bodyCtrl.text.trim(),
-        type: _type,
-        audience: _audience,
-        createdById: widget.createdById,
-      ),
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    final draft = AdminNotificationDraft(
+      title: _titleCtrl.text.trim(),
+      body: _bodyCtrl.text.trim(),
+      type: _type,
+      audience: _audience,
+      createdById: widget.createdById,
     );
+
+    try {
+      var saved = _savedNotification;
+      saved = saved == null
+          ? await _service.create(draft)
+          : await _service.update(saved.id, draft);
+      if (!mounted) return;
+      setState(() => _savedNotification = saved);
+
+      for (var i = _uploadedImageCount; i < _selectedImages.length; i++) {
+        await _service.uploadImage(saved.id, _selectedImages[i]);
+        if (!mounted) return;
+        setState(() => _uploadedImageCount = i + 1);
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } on NotificationException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _submitting = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final typeOptions = _optionsWithCurrent(_notificationTypeOptions, _type);
     final audienceOptions = _optionsWithCurrent(_audienceOptions, _audience);
+    final theme = Theme.of(context);
+    final enabled = !_submitting;
+    final atImageLimit = _totalImageCount >= _maxNotificationImages;
 
     return AlertDialog(
       title: Text(_isEdit ? 'Uredi obavijest' : 'Nova obavijest'),
@@ -545,9 +669,11 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextFormField(
                   controller: _titleCtrl,
+                  enabled: enabled,
                   textInputAction: TextInputAction.next,
                   maxLength: 150,
                   validator: _required,
@@ -560,6 +686,7 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _bodyCtrl,
+                  enabled: enabled,
                   minLines: 4,
                   maxLines: 7,
                   validator: _required,
@@ -586,10 +713,12 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                               child: Text(option.label),
                             ),
                         ],
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setState(() => _type = value);
-                        },
+                        onChanged: enabled
+                            ? (value) {
+                                if (value == null) return;
+                                setState(() => _type = value);
+                              }
+                            : null,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -607,14 +736,111 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                               child: Text(option.label),
                             ),
                         ],
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setState(() => _audience = value);
-                        },
+                        onChanged: enabled
+                            ? (value) {
+                                if (value == null) return;
+                                setState(() => _audience = value);
+                              }
+                            : null,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Slike ($_totalImageCount/$_maxNotificationImages)',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: enabled && !atImageLimit
+                          ? _pickImage
+                          : null,
+                      icon: const Icon(Icons.add_a_photo_outlined),
+                      label: const Text('Dodaj sliku'),
+                    ),
+                  ],
+                ),
+                if (_loadingImages)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ),
+                if (_imagesError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      _imagesError!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ),
+                if (_existingImages.isNotEmpty || _selectedImages.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 84,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        for (final image in _existingImages)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: _ExistingImageThumbnail(
+                              image: image,
+                              fetcher: () => _service.fetchImageBytes(
+                                _savedNotification!.id,
+                                image.id,
+                              ),
+                              onRemove: enabled
+                                  ? () => _removeExistingImage(image)
+                                  : null,
+                            ),
+                          ),
+                        for (var i = 0; i < _selectedImages.length; i++)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: _NewImageThumbnail(
+                              file: _selectedImages[i],
+                              uploaded: i < _uploadedImageCount,
+                              onRemove: enabled
+                                  ? () => _removeSelectedImage(i)
+                                  : null,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (_submitting && _uploadedImageCount < _selectedImages.length) ...[
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(
+                    value: _uploadedImageCount / _selectedImages.length,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Slanje slike ${_uploadedImageCount + 1}/${_selectedImages.length}...',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -622,12 +848,18 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
           child: const Text('Odustani'),
         ),
         FilledButton.icon(
-          onPressed: _save,
-          icon: const Icon(Icons.save_outlined),
+          onPressed: enabled ? _save : null,
+          icon: _submitting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save_outlined),
           label: const Text('Sačuvaj'),
         ),
       ],
@@ -636,6 +868,103 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
 
   String? _required(String? value) {
     return value == null || value.trim().isEmpty ? 'Obavezno polje.' : null;
+  }
+}
+
+class _ExistingImageThumbnail extends StatelessWidget {
+  const _ExistingImageThumbnail({
+    required this.image,
+    required this.fetcher,
+    required this.onRemove,
+  });
+
+  final AdminNotificationImage image;
+  final Future<Uint8List> Function() fetcher;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        AuthenticatedImage(
+          fetcher: fetcher,
+          width: 76,
+          height: 76,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        if (onRemove != null)
+          Positioned(
+            right: -4,
+            top: -4,
+            child: InkWell(
+              onTap: onRemove,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, size: 14, color: Colors.white),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _NewImageThumbnail extends StatelessWidget {
+  const _NewImageThumbnail({
+    required this.file,
+    required this.uploaded,
+    required this.onRemove,
+  });
+
+  final File file;
+  final bool uploaded;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.file(file, width: 76, height: 76, fit: BoxFit.cover),
+        ),
+        if (uploaded)
+          Positioned(
+            left: 2,
+            bottom: 2,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check, size: 14, color: Colors.white),
+            ),
+          ),
+        if (onRemove != null)
+          Positioned(
+            right: -4,
+            top: -4,
+            child: InkWell(
+              onTap: onRemove,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, size: 14, color: Colors.white),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 
