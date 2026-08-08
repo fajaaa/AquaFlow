@@ -16,36 +16,23 @@ import 'package:aquaflow_desktop/shared/screens/notifications_screen.dart';
 /// "Vodomjeri" is [CollectorWaterMetersScreen] (replaces the former
 /// "Očitanja"/route tab with a free-text meter search), and "Nalozi" is
 /// [CollectorWaterMeterRequestsScreen].
-class CollectorShell extends StatefulWidget {
+///
+/// The "Obavijesti" tab is always index 0, i.e. [MobileShell] builds it
+/// immediately on mount regardless of which tab the user later selects, so
+/// [NotificationsScreen] itself (via `NotificationBadgeProvider.markSeen`)
+/// is what keeps the unread badge in sync - this shell doesn't need its own
+/// `NotificationBadgeProvider.refresh()` call. It used to have one in
+/// `initState`/on every return to this tab, which raced the list's own load
+/// (two concurrent `GET /UserNotifications/mine` calls for the same user)
+/// and could backfill the same inbox row twice.
+class CollectorShell extends StatelessWidget {
   const CollectorShell({super.key});
-
-  @override
-  State<CollectorShell> createState() => _CollectorShellState();
-}
-
-class _CollectorShellState extends State<CollectorShell> {
-  // Index of the "Obavijesti" tab below - kept in one place so the
-  // onTabChanged check can't drift from the tabs list.
-  static const _notificationsTabIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    context.read<NotificationBadgeProvider>().refresh();
-  }
-
-  void _onTabChanged(int index) {
-    if (index == _notificationsTabIndex) {
-      context.read<NotificationBadgeProvider>().refresh();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final unreadCount = context.watch<NotificationBadgeProvider>().unreadCount;
 
     return MobileShell(
-      onTabChanged: _onTabChanged,
       tabs: [
         MobileTab(
           icon: Icons.notifications_outlined,

@@ -257,31 +257,6 @@ public class SettlementServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_SettlementWithNotification_ThrowsClientExceptionListingBlocker()
-    {
-        await using var context = CreateContext();
-        SeedMunicipalities(context);
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
-        context.UserRoles.Add(new UserRole { Id = 1, Name = "Admin" });
-        context.Users.Add(new User
-        {
-            Id = 1,
-            Email = "admin@aquaflow.ba",
-            PasswordHash = "hash",
-            PasswordSalt = "salt",
-            UserRoleId = 1,
-            IsActive = true
-        });
-        context.Notifications.Add(new Notification { Id = 1, Title = "Planned works", CreatedById = 1, SettlementId = 1 });
-        await context.SaveChangesAsync();
-        var service = CreateService(context);
-
-        var exception = await Assert.ThrowsAsync<ClientException>(() => service.DeleteAsync(1));
-
-        Assert.Contains("notifications", exception.Message);
-    }
-
-    [Fact]
     public async Task DeleteAsync_UnusedSettlement_DeletesSuccessfully()
     {
         await using var context = CreateContext();

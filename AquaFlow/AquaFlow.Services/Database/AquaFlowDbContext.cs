@@ -11,7 +11,6 @@ public partial class AquaFlowDbContext : DbContext
 
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
-    public DbSet<BillingCycle> BillingCycles => Set<BillingCycle>();
     public DbSet<City> Cities => Set<City>();
     public DbSet<CollectorProfile> CollectorProfiles => Set<CollectorProfile>();
     public DbSet<CompanySettings> CompanySettings => Set<CompanySettings>();
@@ -43,7 +42,6 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<SupportTicketMessagePhoto> SupportTicketMessagePhotos => Set<SupportTicketMessagePhoto>();
     public DbSet<SyncOperation> SyncOperations => Set<SyncOperation>();
     public DbSet<Tariff> Tariffs => Set<Tariff>();
-    public DbSet<TaxRate> TaxRates => Set<TaxRate>();
     public DbSet<User> Users => Set<User>();
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
@@ -127,13 +125,6 @@ public partial class AquaFlowDbContext : DbContext
             .Property(invoice => invoice.RowVersion)
             .IsRowVersion();
 
-        // At most one reading per water meter per billing cycle; filtered so historical rows
-        // with no BillingCycleId (BillingCycleId IS NULL) are excluded from the uniqueness check.
-        modelBuilder.Entity<MeterReading>()
-            .HasIndex(reading => new { reading.WaterMeterId, reading.BillingCycleId })
-            .IsUnique()
-            .HasFilter("[BillingCycleId] IS NOT NULL");
-
         // Photos have no independent lifecycle outside their report (unlike
         // WorkOrder/FaultStatusHistory rows, which stay Restrict so a report can't be
         // deleted while still referenced elsewhere) - deleting a FaultReport deletes its photos too.
@@ -159,6 +150,15 @@ public partial class AquaFlowDbContext : DbContext
             .WithMany(message => message.Photos)
             .HasForeignKey(photo => photo.SupportTicketMessageId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Backstop against duplicate inbox rows: UserNotificationService.EnsureInboxRowsAsync does a
+        // check-then-insert with no locking, so two concurrent GET /UserNotifications/mine requests for
+        // the same user (e.g. the mobile shells' badge-count fetch and list fetch firing at once) can
+        // both decide a notification is "missing" and both insert it. The resulting DbUpdateException
+        // is caught and ignored at both call sites (see DbUpdateExceptionExtensions.IsDuplicateKeyViolation).
+        modelBuilder.Entity<UserNotification>()
+            .HasIndex(userNotification => new { userNotification.UserId, userNotification.NotificationId })
+            .IsUnique();
 
         // Security activity feed is queried per-user in reverse-chronological order
         // (e.g. "recent activity for user X"), so the index is composite rather than on UserId alone.

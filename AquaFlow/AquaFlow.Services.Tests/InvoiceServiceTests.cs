@@ -27,26 +27,11 @@ public class InvoiceServiceTests
         Assert.Equal("Amina", first.CustomerFirstName);
         Assert.Equal("Amidzic", first.CustomerLastName);
         Assert.Equal("WM-1", first.WaterMeterSerialNumber);
-        Assert.Equal(1, first.BillingCycleId);
 
         var second = Assert.Single(page.Items, i => i.InvoiceNumber == "INV-2026-0002");
         Assert.Equal("Haris", second.CustomerFirstName);
         Assert.Equal("Hodzic", second.CustomerLastName);
         Assert.Equal("WM-2", second.WaterMeterSerialNumber);
-        Assert.Equal(2, second.BillingCycleId);
-    }
-
-    [Fact]
-    public async Task GetAllAsync_FilterByBillingCycleId_ReturnsOnlyThatCyclesInvoices()
-    {
-        await using var context = CreateContext();
-        SeedTwoInvoicesInDifferentBillingCycles(context);
-        var service = CreateService(context);
-
-        var page = await service.GetAllAsync(new InvoiceSearchObject { BillingCycleId = 1 });
-
-        var item = Assert.Single(page.Items);
-        Assert.Equal("INV-2026-0001", item.InvoiceNumber);
     }
 
     private static AquaFlowDbContext CreateContext()
@@ -75,25 +60,20 @@ public class InvoiceServiceTests
         context.WaterMeters.Add(new WaterMeter { Id = 1, SerialNumber = "WM-1", CustomerId = 1, SettlementId = 1, Status = "Active", InitialReading = 0, LastReading = 10 });
         context.WaterMeters.Add(new WaterMeter { Id = 2, SerialNumber = "WM-2", CustomerId = 2, SettlementId = 1, Status = "Active", InitialReading = 0, LastReading = 20 });
 
-        context.BillingCycles.Add(new BillingCycle { Id = 1, Name = "Juli 2026", PeriodFrom = new DateTime(2026, 7, 1), PeriodTo = new DateTime(2026, 7, 31), Status = "Open" });
-        context.BillingCycles.Add(new BillingCycle { Id = 2, Name = "Juni 2026", PeriodFrom = new DateTime(2026, 6, 1), PeriodTo = new DateTime(2026, 6, 30), Status = "Closed" });
-
         context.Invoices.Add(new Invoice
         {
             Id = 1,
             InvoiceNumber = "INV-2026-0001",
             CustomerId = 1,
             WaterMeterId = 1,
-            BillingCycleId = 1,
             BillingPeriodFrom = new DateTime(2026, 7, 1),
             BillingPeriodTo = new DateTime(2026, 7, 31),
             PreviousReading = 0,
             CurrentReading = 10,
             ConsumptionM3 = 10,
             Subtotal = 50,
-            Tax = 0,
             TotalAmount = 50,
-            Status = InvoiceStatus.Draft,
+            Status = InvoiceStatus.Issued,
             CreatedById = 1
         });
         context.Invoices.Add(new Invoice
@@ -102,16 +82,14 @@ public class InvoiceServiceTests
             InvoiceNumber = "INV-2026-0002",
             CustomerId = 2,
             WaterMeterId = 2,
-            BillingCycleId = 2,
             BillingPeriodFrom = new DateTime(2026, 6, 1),
             BillingPeriodTo = new DateTime(2026, 6, 30),
             PreviousReading = 0,
             CurrentReading = 20,
             ConsumptionM3 = 20,
             Subtotal = 75,
-            Tax = 0,
             TotalAmount = 75,
-            Status = InvoiceStatus.Draft,
+            Status = InvoiceStatus.Issued,
             CreatedById = 2
         });
 

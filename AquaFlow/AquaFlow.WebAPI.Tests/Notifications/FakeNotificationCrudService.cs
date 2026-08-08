@@ -47,9 +47,7 @@ public class FakeNotificationCrudService
             Body = request.Body,
             Type = request.Type,
             Audience = request.Audience,
-            SettlementId = request.SettlementId,
-            CreatedById = request.CreatedById,
-            ValidUntil = request.ValidUntil
+            CreatedById = request.CreatedById
         };
         _rows.Add(row);
         return Task.FromResult(row);
@@ -62,9 +60,7 @@ public class FakeNotificationCrudService
         row.Body = request.Body;
         row.Type = request.Type;
         row.Audience = request.Audience;
-        row.SettlementId = request.SettlementId;
         row.CreatedById = request.CreatedById;
-        row.ValidUntil = request.ValidUntil;
         return Task.FromResult(row);
     }
 
@@ -75,9 +71,7 @@ public class FakeNotificationCrudService
         if (request.Body is not null) row.Body = request.Body;
         if (request.Type is not null) row.Type = request.Type;
         if (request.Audience is not null) row.Audience = request.Audience;
-        if (request.SettlementId is not null) row.SettlementId = request.SettlementId;
         if (request.CreatedById is not null) row.CreatedById = request.CreatedById.Value;
-        if (request.ValidUntil is not null) row.ValidUntil = request.ValidUntil;
 
         return Task.FromResult(row);
     }

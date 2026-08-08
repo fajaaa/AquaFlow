@@ -96,11 +96,6 @@ public class SettlementService
             blockers.Add("collector profiles");
         }
 
-        if (await _dbContext.Notifications.AnyAsync(notification => notification.SettlementId == id))
-        {
-            blockers.Add("notifications");
-        }
-
         if (blockers.Count > 0)
         {
             throw new ClientException(

@@ -34,7 +34,7 @@ class TariffLookupService {
       queryParameters: {
         'IsActive': 'true',
         'PageSize': '200',
-        'SortBy': 'Name',
+        'SortBy': 'Id',
       },
     );
 

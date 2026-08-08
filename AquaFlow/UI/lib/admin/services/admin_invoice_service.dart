@@ -5,7 +5,6 @@ import 'dart:io' show SocketException;
 import 'package:http/http.dart' as http;
 
 import 'package:aquaflow_desktop/admin/models/admin_invoice.dart';
-import 'package:aquaflow_desktop/admin/models/admin_invoice_billing_cycle_option.dart';
 import 'package:aquaflow_desktop/admin/models/admin_invoice_page.dart';
 import 'package:aquaflow_desktop/admin/services/admin_invoice_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
@@ -29,7 +28,7 @@ class AdminInvoiceService {
     required int pageSize,
     String? invoiceNumber,
     String? status,
-    int? billingCycleId,
+    DateTime? billingPeriodFrom,
   }) async {
     final token = await _requireToken();
     final query = <String, String>{
@@ -47,8 +46,8 @@ class AdminInvoiceService {
     if (status != null && status.isNotEmpty) {
       query['Status'] = status;
     }
-    if (billingCycleId != null) {
-      query['BillingCycleId'] = '$billingCycleId';
+    if (billingPeriodFrom != null) {
+      query['BillingPeriodFrom'] = billingPeriodFrom.toIso8601String();
     }
 
     final uri = Uri.parse(
@@ -86,41 +85,6 @@ class AdminInvoiceService {
     );
   }
 
-  Future<List<AdminInvoiceBillingCycleOption>> fetchBillingCycles() async {
-    final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/BillingCycles').replace(
-      queryParameters: {
-        'PageSize': '200',
-        'SortBy': 'PeriodFrom',
-        'SortDescending': 'true',
-      },
-    );
-
-    final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
-    );
-
-    if (response.statusCode != 200) {
-      throw AdminInvoiceException(
-        _messageFor(response, 'Ciklusi obračuna nisu dostupni'),
-      );
-    }
-
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic> || decoded['items'] is! List) {
-      throw const AdminInvoiceException(
-        'Lista ciklusa obračuna je neispravna.',
-      );
-    }
-
-    return (decoded['items'] as List)
-        .whereType<Map<String, dynamic>>()
-        .map(AdminInvoiceBillingCycleOption.fromJson)
-        .toList();
-  }
-
-  Future<AdminInvoice> issue(int id) => _postAction(id, 'issue');
-
   Future<AdminInvoice> recordPayment(int id, double amount) async {
     final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices/$id/payments');
@@ -146,8 +110,6 @@ class AdminInvoiceService {
   }
 
   Future<AdminInvoice> cancel(int id) => _postAction(id, 'cancel');
-
-  Future<AdminInvoice> markOverdue(int id) => _postAction(id, 'mark-overdue');
 
   Future<AdminInvoice> _postAction(int id, String action) async {
     final token = await _requireToken();

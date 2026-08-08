@@ -9,8 +9,6 @@ public class InvoiceItem : EntityBase
     public Invoice? Invoice { get; set; }
     public int TariffId { get; set; }
     public Tariff? Tariff { get; set; }
-    public int? TaxRateId { get; set; }
-    public TaxRate? TaxRate { get; set; }
     [MaxLength(200)]
     public string Description { get; set; } = string.Empty;
     [Column(TypeName = "decimal(18,2)")]

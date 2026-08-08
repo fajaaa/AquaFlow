@@ -4,6 +4,7 @@ using AquaFlow.Services.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AquaFlow.Services.Migrations
 {
     [DbContext(typeof(AquaFlowDbContext))]
-    partial class AquaFlowDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260807192438_SimplifyInvoicing")]
+    partial class SimplifyInvoicing
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1118,6 +1121,9 @@ namespace AquaFlow.Services.Migrations
                     b.Property<int>("CreatedById")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SettlementId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -1131,9 +1137,14 @@ namespace AquaFlow.Services.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("ValidUntil")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedById");
+
+                    b.HasIndex("SettlementId");
 
                     b.ToTable("Notifications");
 
@@ -1141,12 +1152,14 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 1,
-                            Audience = "All",
-                            Body = "Planirani radovi na mrezi.",
+                            Audience = "Settlement",
+                            Body = "Planirani radovi na mrezi u naselju Centar.",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CreatedById = 1,
+                            SettlementId = 1,
                             Title = "Planirani radovi",
-                            Type = "Info"
+                            Type = "PlannedWorks",
+                            ValidUntil = new DateTime(2026, 6, 30, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });
 
@@ -2298,8 +2311,7 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasIndex("NotificationId");
 
-                    b.HasIndex("UserId", "NotificationId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("UserNotifications");
 
@@ -3172,7 +3184,14 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AquaFlow.Services.Database.Settlement", "Settlement")
+                        .WithMany("Notifications")
+                        .HasForeignKey("SettlementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("CreatedBy");
+
+                    b.Navigation("Settlement");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Payment", b =>
@@ -3558,6 +3577,8 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("CustomerProfiles");
 
                     b.Navigation("FaultReports");
+
+                    b.Navigation("Notifications");
 
                     b.Navigation("WaterMeters");
                 });

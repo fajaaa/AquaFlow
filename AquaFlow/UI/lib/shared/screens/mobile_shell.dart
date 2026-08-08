@@ -38,15 +38,9 @@ class MobileTab {
 ///
 /// Tab bodies render no Scaffold/AppBar of their own; this shell provides them.
 class MobileShell extends StatefulWidget {
-  const MobileShell({super.key, required this.tabs, this.onTabChanged});
+  const MobileShell({super.key, required this.tabs});
 
   final List<MobileTab> tabs;
-
-  /// Called with the newly-selected tab index whenever the user switches
-  /// tabs, in addition to the shell's own selection state. Lets a role shell
-  /// react to a specific tab being opened (e.g. refreshing the "Obavijesti"
-  /// unread badge).
-  final ValueChanged<int>? onTabChanged;
 
   @override
   State<MobileShell> createState() => _MobileShellState();
@@ -74,7 +68,6 @@ class _MobileShellState extends State<MobileShell> {
 
   void _onTabSelected(int index) {
     setState(() => _selectedIndex = index);
-    widget.onTabChanged?.call(index);
   }
 
   /// Fetches `GET /Account/preferences` just to have a base object (language/

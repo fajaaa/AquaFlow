@@ -29,10 +29,10 @@ public class InvoiceService
         _stateResolver = stateResolver;
     }
 
-    // New invoices always start in Draft; every later status change goes through the state machine.
+    // Auto-generated invoices from meter readings start in Issued state.
     protected override Task BeforeInsertAsync(InvoiceInsertRequest request)
     {
-        request.Status = InvoiceStatus.Draft;
+        request.Status = InvoiceStatus.Issued;
         return Task.CompletedTask;
     }
 
@@ -45,12 +45,6 @@ public class InvoiceService
         await DbContext.Entry(entity).Reference(i => i.WaterMeter).LoadAsync();
     }
 
-    public async Task<InvoiceResponse> IssueAsync(int id, int changedById)
-    {
-        var invoice = await LoadInvoiceAsync(id);
-        return await _stateResolver.Resolve(invoice.Status).IssueAsync(invoice, changedById);
-    }
-
     public async Task<InvoiceResponse> RecordPaymentAsync(int id, decimal amount, int changedById)
     {
         var invoice = await LoadInvoiceAsync(id);
@@ -61,12 +55,6 @@ public class InvoiceService
     {
         var invoice = await LoadInvoiceAsync(id);
         return await _stateResolver.Resolve(invoice.Status).CancelAsync(invoice, changedById);
-    }
-
-    public async Task<InvoiceResponse> MarkOverdueAsync(int id, int changedById)
-    {
-        var invoice = await LoadInvoiceAsync(id);
-        return await _stateResolver.Resolve(invoice.Status).MarkOverdueAsync(invoice, changedById);
     }
 
     public async Task<List<string>> GetAllowedActionsAsync(int id)

@@ -130,14 +130,6 @@ public class InvoicesController : BaseCRUDController<InvoiceResponse, InvoiceSea
         => base.Delete(id);
 
     [RequirePermission("Invoices.Manage")]
-    [HttpPost("{id:int}/issue")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public Task<ActionResult<InvoiceResponse>> Issue(int id)
-        => RunStateActionAsync(() => Service.IssueAsync(id, ResolveChangedById()));
-
-    [RequirePermission("Invoices.Manage")]
     [HttpPost("{id:int}/payments")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -152,14 +144,6 @@ public class InvoicesController : BaseCRUDController<InvoiceResponse, InvoiceSea
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public Task<ActionResult<InvoiceResponse>> Cancel(int id)
         => RunStateActionAsync(() => Service.CancelAsync(id, ResolveChangedById()));
-
-    [RequirePermission("Invoices.Manage")]
-    [HttpPost("{id:int}/mark-overdue")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public Task<ActionResult<InvoiceResponse>> MarkOverdue(int id)
-        => RunStateActionAsync(() => Service.MarkOverdueAsync(id, ResolveChangedById()));
 
     [RequirePermission("Invoices.Manage")]
     [HttpGet("{id:int}/allowed-actions")]

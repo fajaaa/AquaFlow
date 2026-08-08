@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,9 +9,9 @@ import '../services/notification_exception.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 
-/// Icon + accent color + human label for a notification `type`. The five
-/// backend type strings (`Info`/`PlannedWorks`/`Billing`/`Warning`/`Outage`)
-/// map here; anything unknown falls back to [_infoMeta].
+/// Icon + accent color + human label for a notification `type`. The three
+/// backend type strings (`Info`/`PlannedWorks`/`Warning`) map here; anything
+/// unknown falls back to [_infoMeta].
 class _TypeMeta {
   const _TypeMeta(this.label, this.icon, this.color);
 
@@ -47,16 +49,29 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   final NotificationService _service = NotificationService();
   late UserNotificationItem _item;
 
+  /// Tracks the in-flight [_markAsRead] call (if any) so [dispose] can wait
+  /// for it before closing [_service] - `http.Client.close()` force-closes
+  /// active connections, and closing it while the PATCH is still in flight
+  /// (e.g. the user backs out of this screen quickly) silently aborts the
+  /// read receipt, which is why "mark as read" could appear to do nothing.
+  Future<void>? _markAsReadFuture;
+
   @override
   void initState() {
     super.initState();
     _item = widget.item;
     if (!_item.isRead) {
-      _markAsRead();
+      _markAsReadFuture = _markAsRead();
     }
   }
 
   Future<void> _markAsRead() async {
+    // Captured up front so they still fire even if this screen is popped
+    // (and thus unmounted) before the PATCH resolves - only the local
+    // setState below actually needs `mounted`.
+    final onMarkedRead = widget.onMarkedRead;
+    final badgeProvider = context.read<NotificationBadgeProvider>();
+
     try {
       await _service.markAsRead(_item.id);
     } on NotificationException {
@@ -65,16 +80,20 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       return;
     }
 
-    if (!mounted) return;
     final updated = _item.copyWith(readAt: DateTime.now().toUtc());
-    setState(() => _item = updated);
-    context.read<NotificationBadgeProvider>().decrement();
-    widget.onMarkedRead?.call(updated);
+    if (mounted) setState(() => _item = updated);
+    badgeProvider.decrement();
+    onMarkedRead?.call(updated);
   }
 
   @override
   void dispose() {
-    _service.dispose();
+    final pending = _markAsReadFuture;
+    if (pending != null) {
+      unawaited(pending.whenComplete(_service.dispose));
+    } else {
+      _service.dispose();
+    }
     super.dispose();
   }
 
@@ -258,23 +277,11 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
           Icons.build_outlined,
           AppColors.success,
         );
-      case 'billing':
-        return const _TypeMeta(
-          'Računi',
-          Icons.receipt_long_outlined,
-          AppColors.primary,
-        );
       case 'warning':
         return const _TypeMeta(
           'Upozorenje',
           Icons.warning_amber_rounded,
           AppColors.warning,
-        );
-      case 'outage':
-        return const _TypeMeta(
-          'Prekid usluge',
-          Icons.block_outlined,
-          AppColors.textDark,
         );
       case 'info':
       default:
@@ -282,9 +289,8 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     }
   }
 
-  /// The brand palette has two very dark accents (navy for `Billing`, dark
-  /// gray for `Outage`). On the dark theme those blend into the background and
-  /// read as illegible text, so lift them toward white. Light theme and the
+  /// On the dark theme an accent dark enough to blend into the background
+  /// reads as illegible text, so lift it toward white. Light theme and the
   /// already-bright accents (blue/green/orange) are returned unchanged.
   static Color _readableAccent(Color base, Brightness brightness) {
     if (brightness == Brightness.dark && base.computeLuminance() < 0.2) {

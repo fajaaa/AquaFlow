@@ -11,7 +11,6 @@ public class InvoicePatchRequest
     public decimal? CurrentReading { get; set; }
     public decimal? ConsumptionM3 { get; set; }
     public decimal? Subtotal { get; set; }
-    public decimal? Tax { get; set; }
     public decimal? TotalAmount { get; set; }
     public string? Status { get; set; }
     public int? CreatedById { get; set; }

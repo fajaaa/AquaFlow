@@ -52,83 +52,6 @@ public class NotificationServiceTests
     }
 
     [Fact]
-    public async Task InsertAsync_SettlementAudience_CreatesInboxRowsForSettlementCustomersAndCollectors()
-    {
-        var options = BuildOptions();
-        await using var context = new AquaFlowDbContext(options);
-        SeedUsersAndLocations(context);
-
-        var service = CreateNotificationService(context);
-        var response = await service.InsertAsync(new NotificationInsertRequest
-        {
-            Title = "Radovi u naselju",
-            Body = "Planirani radovi na mrezi.",
-            Type = "PlannedWorks",
-            Audience = "Settlement",
-            SettlementId = 10,
-            CreatedById = AdminUserId
-        });
-
-        var userIds = await context.UserNotifications
-            .Where(userNotification => userNotification.NotificationId == response.Id)
-            .Select(userNotification => userNotification.UserId)
-            .OrderBy(userId => userId)
-            .ToListAsync();
-
-        Assert.Equal(new[] { CollectorUserId, CustomerUserId }, userIds);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_NarrowsAudienceToSettlement_RemovesInboxRowsForUsersOutsideNewAudience()
-    {
-        var options = BuildOptions();
-        await using var context = new AquaFlowDbContext(options);
-        SeedUsersAndLocations(context);
-
-        var service = CreateNotificationService(context);
-        var response = await service.InsertAsync(new NotificationInsertRequest
-        {
-            Title = "Nova obavijest",
-            Body = "Sadrzaj obavijesti",
-            Type = "Info",
-            Audience = "All",
-            CreatedById = AdminUserId
-        });
-
-        var initialUserIds = await context.UserNotifications
-            .Where(userNotification => userNotification.NotificationId == response.Id)
-            .Select(userNotification => userNotification.UserId)
-            .OrderBy(userId => userId)
-            .ToListAsync();
-        Assert.Equal(
-            new[] { AdminUserId, CollectorUserId, CustomerUserId, OtherCustomerUserId, OtherCollectorUserId },
-            initialUserIds);
-
-        await service.UpdateAsync(response.Id, new NotificationUpdateRequest
-        {
-            Title = "Nova obavijest",
-            Body = "Osjetljiv sadrzaj samo za naselje 20",
-            Type = "Info",
-            Audience = "Settlement",
-            SettlementId = 20,
-            CreatedById = AdminUserId
-        });
-
-        var userIdsAfterUpdate = await context.UserNotifications
-            .Where(userNotification => userNotification.NotificationId == response.Id)
-            .Select(userNotification => userNotification.UserId)
-            .OrderBy(userId => userId)
-            .ToListAsync();
-
-        // Settlement 20 covers OtherCustomerUserId (CustomerProfile SettlementId=20) and
-        // OtherCollectorUserId (CollectorProfile AssignedAreaId=20) only.
-        Assert.Equal(new[] { OtherCustomerUserId, OtherCollectorUserId }.OrderBy(id => id), userIdsAfterUpdate);
-        Assert.DoesNotContain(AdminUserId, userIdsAfterUpdate);
-        Assert.DoesNotContain(CollectorUserId, userIdsAfterUpdate);
-        Assert.DoesNotContain(CustomerUserId, userIdsAfterUpdate);
-    }
-
-    [Fact]
     public async Task GetAllAsync_ForUser_BackfillsMissingInboxRowsForVisibleNotifications()
     {
         var options = BuildOptions();
@@ -229,17 +152,6 @@ public class NotificationServiceTests
                 Audience = "Collectors",
                 CreatedById = AdminUserId,
                 CreatedAt = DateTime.UtcNow
-            },
-            new Notification
-            {
-                Id = 902,
-                Title = "Radovi u naselju",
-                Body = "Planirani radovi na mrezi.",
-                Type = "PlannedWorks",
-                Audience = "Settlement",
-                SettlementId = 10,
-                CreatedById = AdminUserId,
-                CreatedAt = DateTime.UtcNow
             });
         await context.SaveChangesAsync();
 
@@ -252,9 +164,9 @@ public class NotificationServiceTests
             IncludeTotalCount = true
         });
 
-        Assert.Equal(3, page.TotalCount);
+        Assert.Equal(2, page.TotalCount);
         var notificationIds = page.Items.Select(item => item.NotificationId).OrderBy(id => id);
-        Assert.Equal(new[] { 900, 901, 902 }, notificationIds);
+        Assert.Equal(new[] { 900, 901 }, notificationIds);
     }
 
     [Fact]
@@ -358,35 +270,6 @@ public class NotificationServiceTests
 
         var call = Assert.Single(pushSender.Calls);
         Assert.Equal(expectedTokens.OrderBy(token => token), call.Tokens.OrderBy(token => token));
-    }
-
-    [Fact]
-    public async Task InsertAsync_SettlementAudience_SendsPushOnlyToSettlementRecipients()
-    {
-        var options = BuildOptions();
-        await using var context = new AquaFlowDbContext(options);
-        SeedUsersAndLocations(context);
-        SeedDeviceTokens(context);
-
-        var pushSender = new FakePushNotificationSender();
-        var service = CreateNotificationService(context, pushSender);
-
-        await service.InsertAsync(new NotificationInsertRequest
-        {
-            Title = "Radovi u naselju",
-            Body = "Planirani radovi na mrezi.",
-            Type = "PlannedWorks",
-            Audience = "Settlement",
-            SettlementId = 10,
-            CreatedById = AdminUserId
-        });
-
-        // Settlement 10 covers CollectorUserId and CustomerUserId only (see the
-        // InsertAsync_SettlementAudience_CreatesInboxRowsForSettlementCustomersAndCollectors test above).
-        var call = Assert.Single(pushSender.Calls);
-        Assert.Equal(
-            new[] { "token-collector", "token-customer" }.OrderBy(token => token),
-            call.Tokens.OrderBy(token => token));
     }
 
     [Fact]

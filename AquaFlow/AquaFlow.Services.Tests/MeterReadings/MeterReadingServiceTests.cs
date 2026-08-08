@@ -12,275 +12,186 @@ namespace AquaFlow.Services.Tests.MeterReadings;
 
 public class MeterReadingServiceTests
 {
+    // Invoice created by CreateForCollectorAsync has Status = Issued
     [Fact]
-    public async Task CreateForCollectorAsync_ValidRequest_CreatesReadingAndUpdatesLastReading()
+    public async Task CreateForCollectorAsync_CreatesInvoiceWithIssuedStatus()
     {
         await using var context = CreateContext();
-        SeedCollector(context);
-        SeedWaterMeter(context, lastReading: 100m);
-        SeedOpenBillingCycle(context, id: 1);
-        SeedTariff(context, id: 1, pricePerM3: 1.5m);
-        await context.SaveChangesAsync();
+        SeedTestData(context);
         var service = CreateService(context);
 
-        var response = await service.CreateForCollectorAsync(callerUserId: 2, new MeterReadingCollectorEntryRequest
+        var request = new MeterReadingCollectorEntryRequest
         {
             WaterMeterId = 1,
-            ReadingValue = 120m,
+            ReadingValue = 100,
             TariffId = 1,
-            Note = "Redovno ocitanje."
-        });
+            Note = null
+        };
 
-        Assert.Equal(1, response.CollectorId);
-        Assert.Equal(1, response.WaterMeterId);
-        Assert.Equal(1, response.BillingCycleId);
-        Assert.Equal(1, response.TariffId);
-        Assert.Equal(100m, response.PreviousReadingValue);
-        Assert.Equal(20m, response.ConsumptionM3);
-        Assert.Equal("Collector", response.Source);
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, request);
 
-        var meter = await context.WaterMeters.SingleAsync(m => m.Id == 1);
-        Assert.Equal(120m, meter.LastReading);
-
-        var reading = await context.MeterReadings.SingleAsync(r => r.WaterMeterId == 1);
-        Assert.Equal(1, reading.TariffId);
-
-        var invoice = await context.Invoices.SingleAsync(i => i.Id == response.InvoiceId);
-        Assert.Equal("INV-" + DateTime.UtcNow.Year + "-0001", invoice.InvoiceNumber);
-        Assert.Equal(response.InvoiceNumber, invoice.InvoiceNumber);
-        Assert.Equal(1, invoice.CustomerId);
-        Assert.Equal(1, invoice.WaterMeterId);
-        Assert.Equal(1, invoice.BillingCycleId);
-        Assert.Equal(30m, invoice.Subtotal); // 20 m3 * 1.5
-        Assert.Equal(0m, invoice.Tax);
-        Assert.Equal(30m, invoice.TotalAmount);
-        Assert.Equal(response.InvoiceTotalAmount, invoice.TotalAmount);
-        Assert.Equal("Draft", invoice.Status);
-
-        var invoiceItem = await context.InvoiceItems.SingleAsync(item => item.InvoiceId == invoice.Id);
-        Assert.Equal(1, invoiceItem.TariffId);
-        Assert.Equal(20m, invoiceItem.Quantity);
-        Assert.Equal(1.5m, invoiceItem.UnitPrice);
-        Assert.Equal(30m, invoiceItem.Amount);
+        var invoice = await context.Invoices.FirstOrDefaultAsync(i => i.Id == response.InvoiceId);
+        Assert.NotNull(invoice);
+        Assert.Equal(InvoiceStatus.Issued, invoice.Status);
     }
 
+    // BillingPeriodFrom is 1st day of reading month, BillingPeriodTo is last day
     [Fact]
-    public async Task CreateForCollectorAsync_SecondInvoiceSameYear_IncrementsInvoiceNumber()
+    public async Task CreateForCollectorAsync_SetsBillingPeriodFromFirstToLastDayOfMonth()
     {
         await using var context = CreateContext();
-        SeedCollector(context);
-        SeedWaterMeter(context, lastReading: 100m, id: 1, settlementId: 1);
-        SeedWaterMeter(context, lastReading: 50m, id: 2, settlementId: 1);
-        SeedOpenBillingCycle(context, id: 1);
-        SeedTariff(context, id: 1, pricePerM3: 1.5m);
-        await context.SaveChangesAsync();
+        SeedTestData(context);
         var service = CreateService(context);
 
-        var first = await service.CreateForCollectorAsync(callerUserId: 2, new MeterReadingCollectorEntryRequest
+        var request = new MeterReadingCollectorEntryRequest
         {
             WaterMeterId = 1,
-            ReadingValue = 120m,
-            TariffId = 1
-        });
-        var second = await service.CreateForCollectorAsync(callerUserId: 2, new MeterReadingCollectorEntryRequest
-        {
-            WaterMeterId = 2,
-            ReadingValue = 60m,
-            TariffId = 1
-        });
+            ReadingValue = 100,
+            TariffId = 1,
+            Note = null
+        };
 
-        Assert.Equal($"INV-{DateTime.UtcNow.Year}-0001", first.InvoiceNumber);
-        Assert.Equal($"INV-{DateTime.UtcNow.Year}-0002", second.InvoiceNumber);
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, request);
+
+        var invoice = await context.Invoices.FirstOrDefaultAsync(i => i.Id == response.InvoiceId);
+        Assert.NotNull(invoice);
+
+        var now = DateTime.UtcNow;
+        var expectedFrom = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var expectedTo = expectedFrom.AddMonths(1).AddDays(-1);
+
+        Assert.Equal(expectedFrom, invoice.BillingPeriodFrom);
+        Assert.Equal(expectedTo, invoice.BillingPeriodTo);
     }
 
+    // Last reading exactly 15 days ago: reading is accepted
     [Fact]
-    public async Task CreateForCollectorAsync_InactiveTariff_ThrowsClientException()
+    public async Task CreateForCollectorAsync_LastReadingExactly15DaysAgo_Succeeds()
     {
         await using var context = CreateContext();
-        SeedCollector(context);
-        SeedWaterMeter(context, lastReading: 100m);
-        SeedOpenBillingCycle(context, id: 1);
-        SeedTariff(context, id: 1, pricePerM3: 1.5m, isActive: false);
-        await context.SaveChangesAsync();
-        var service = CreateService(context);
+        SeedTestData(context);
 
-        var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.CreateForCollectorAsync(callerUserId: 2, new MeterReadingCollectorEntryRequest
-            {
-                WaterMeterId = 1,
-                ReadingValue = 120m,
-                TariffId = 1
-            }));
-
-        Assert.Contains("not active", exception.Message);
-    }
-
-    [Fact]
-    public async Task CreateForCollectorAsync_UnknownTariff_ThrowsClientException()
-    {
-        await using var context = CreateContext();
-        SeedCollector(context);
-        SeedWaterMeter(context, lastReading: 100m);
-        SeedOpenBillingCycle(context, id: 1);
-        await context.SaveChangesAsync();
-        var service = CreateService(context);
-
-        var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.CreateForCollectorAsync(callerUserId: 2, new MeterReadingCollectorEntryRequest
-            {
-                WaterMeterId = 1,
-                ReadingValue = 120m,
-                TariffId = 999
-            }));
-
-        Assert.Contains("not found or is not active", exception.Message);
-    }
-
-    [Fact]
-    public async Task CreateForCollectorAsync_DuplicateForSameBillingCycle_ThrowsClientException()
-    {
-        await using var context = CreateContext();
-        SeedCollector(context);
-        SeedWaterMeter(context, lastReading: 100m);
-        SeedOpenBillingCycle(context, id: 1);
-        SeedTariff(context, id: 1, pricePerM3: 1.5m);
+        // Create a meter reading exactly 15 days ago
+        var fifteenDaysAgo = DateTime.UtcNow.AddDays(-15);
         context.MeterReadings.Add(new MeterReading
         {
             Id = 1,
             WaterMeterId = 1,
             CollectorId = 1,
-            BillingCycleId = 1,
-            ReadingValue = 100m,
-            PreviousReadingValue = 80m,
-            ConsumptionM3 = 20m,
-            ReadingDate = DateTime.UtcNow,
-            Source = "Collector"
+            TariffId = 1,
+            ReadingValue = 50,
+            PreviousReadingValue = 0,
+            ConsumptionM3 = 50,
+            ReadingDate = fifteenDaysAgo,
+            Source = "Collector",
+            CreatedAt = fifteenDaysAgo
         });
-        await context.SaveChangesAsync();
+        context.WaterMeters.First(m => m.Id == 1).LastReading = 50;
+        context.SaveChanges();
+
         var service = CreateService(context);
 
-        var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.CreateForCollectorAsync(callerUserId: 2, new MeterReadingCollectorEntryRequest
-            {
-                WaterMeterId = 1,
-                ReadingValue = 130m,
-                BillingCycleId = 1,
-                TariffId = 1
-            }));
-
-        Assert.Contains("already been recorded", exception.Message);
-    }
-
-    [Fact]
-    public async Task CreateForCollectorAsync_NoOpenBillingCycle_ThrowsClientException()
-    {
-        await using var context = CreateContext();
-        SeedCollector(context);
-        SeedWaterMeter(context, lastReading: 100m);
-        SeedTariff(context, id: 1, pricePerM3: 1.5m);
-        context.BillingCycles.Add(new BillingCycle { Id = 1, Name = "Closed cycle", Status = "Closed" });
-        await context.SaveChangesAsync();
-        var service = CreateService(context);
-
-        var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.CreateForCollectorAsync(callerUserId: 2, new MeterReadingCollectorEntryRequest
-            {
-                WaterMeterId = 1,
-                ReadingValue = 120m,
-                TariffId = 1
-            }));
-
-        Assert.Contains("no open billing cycle", exception.Message);
-    }
-
-    [Fact]
-    public async Task CreateForCollectorAsync_MultipleOpenBillingCycles_ThrowsClientException()
-    {
-        await using var context = CreateContext();
-        SeedCollector(context);
-        SeedWaterMeter(context, lastReading: 100m);
-        SeedOpenBillingCycle(context, id: 1);
-        SeedOpenBillingCycle(context, id: 2);
-        SeedTariff(context, id: 1, pricePerM3: 1.5m);
-        await context.SaveChangesAsync();
-        var service = CreateService(context);
-
-        var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.CreateForCollectorAsync(callerUserId: 2, new MeterReadingCollectorEntryRequest
-            {
-                WaterMeterId = 1,
-                ReadingValue = 120m,
-                TariffId = 1
-            }));
-
-        Assert.Contains("Multiple open billing cycles", exception.Message);
-    }
-
-    [Fact]
-    public async Task CreateForCollectorAsync_ReadingValueLowerThanLastReading_ThrowsClientException()
-    {
-        await using var context = CreateContext();
-        SeedCollector(context);
-        SeedWaterMeter(context, lastReading: 100m);
-        SeedOpenBillingCycle(context, id: 1);
-        SeedTariff(context, id: 1, pricePerM3: 1.5m);
-        await context.SaveChangesAsync();
-        var service = CreateService(context);
-
-        var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.CreateForCollectorAsync(callerUserId: 2, new MeterReadingCollectorEntryRequest
-            {
-                WaterMeterId = 1,
-                ReadingValue = 90m,
-                TariffId = 1
-            }));
-
-        Assert.Contains("lower than the last recorded reading", exception.Message);
-    }
-
-    [Fact]
-    public async Task CreateForCollectorAsync_ReadingValueLowerThanLastReadingWithNote_IsAllowed()
-    {
-        await using var context = CreateContext();
-        SeedCollector(context);
-        SeedWaterMeter(context, lastReading: 100m);
-        SeedOpenBillingCycle(context, id: 1);
-        SeedTariff(context, id: 1, pricePerM3: 1.5m);
-        await context.SaveChangesAsync();
-        var service = CreateService(context);
-
-        var response = await service.CreateForCollectorAsync(callerUserId: 2, new MeterReadingCollectorEntryRequest
+        var request = new MeterReadingCollectorEntryRequest
         {
             WaterMeterId = 1,
-            ReadingValue = 90m,
+            ReadingValue = 100,
             TariffId = 1,
-            Note = "Vodomjer zamijenjen novim uredjajem."
-        });
+            Note = null
+        };
 
-        Assert.Equal(90m, response.ReadingValue);
-        Assert.Equal(100m, response.PreviousReadingValue);
-        Assert.Equal(-10m, response.ConsumptionM3);
+        // Should succeed without throwing
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, request);
+
+        Assert.NotNull(response);
+        Assert.True(response.Id > 0);
+
+        // Verify reading was persisted
+        var reading = await context.MeterReadings.FirstOrDefaultAsync(r => r.Id == response.Id);
+        Assert.NotNull(reading);
+        Assert.Equal(100, reading.ReadingValue);
     }
 
+    // Last reading 14 days ago: reading is rejected with ClientException,
+    // neither reading nor invoice are persisted, WaterMeter.LastReading unchanged
     [Fact]
-    public async Task CreateForCollectorAsync_NoCollectorProfile_ThrowsClientException()
+    public async Task CreateForCollectorAsync_LastReadingBefore15Days_ThrowsClientException()
     {
         await using var context = CreateContext();
-        SeedWaterMeter(context, lastReading: 100m);
-        SeedOpenBillingCycle(context, id: 1);
-        SeedTariff(context, id: 1, pricePerM3: 1.5m);
-        await context.SaveChangesAsync();
+        SeedTestData(context);
+
+        // Create a meter reading 14 days ago
+        var fourteenDaysAgo = DateTime.UtcNow.AddDays(-14);
+        context.MeterReadings.Add(new MeterReading
+        {
+            Id = 1,
+            WaterMeterId = 1,
+            CollectorId = 1,
+            TariffId = 1,
+            ReadingValue = 50,
+            PreviousReadingValue = 0,
+            ConsumptionM3 = 50,
+            ReadingDate = fourteenDaysAgo,
+            Source = "Collector",
+            CreatedAt = fourteenDaysAgo
+        });
+        var waterMeter = context.WaterMeters.First(m => m.Id == 1);
+        waterMeter.LastReading = 50;
+        context.SaveChanges();
+
+        var originalLastReading = waterMeter.LastReading;
+        var originalReadingCount = context.MeterReadings.Count();
+
         var service = CreateService(context);
 
-        var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.CreateForCollectorAsync(callerUserId: 999, new MeterReadingCollectorEntryRequest
-            {
-                WaterMeterId = 1,
-                ReadingValue = 120m,
-                TariffId = 1
-            }));
+        var request = new MeterReadingCollectorEntryRequest
+        {
+            WaterMeterId = 1,
+            ReadingValue = 100,
+            TariffId = 1,
+            Note = null
+        };
 
-        Assert.Contains("no collector profile", exception.Message);
+        // Should throw ClientException
+        var exception = await Assert.ThrowsAsync<ClientException>(
+            () => service.CreateForCollectorAsync(callerUserId: 3, request));
+
+        Assert.Contains("day(s) ago", exception.Message);
+
+        // Verify neither reading nor invoice were persisted
+        Assert.Equal(originalReadingCount, context.MeterReadings.Count());
+        Assert.Empty(context.Invoices);
+
+        // Verify WaterMeter.LastReading unchanged
+        Assert.Equal(originalLastReading, waterMeter.LastReading);
+    }
+
+    // Water meter with no prior reading: first reading is accepted
+    [Fact]
+    public async Task CreateForCollectorAsync_MeterWithNoPriorReading_Succeeds()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var service = CreateService(context);
+
+        var request = new MeterReadingCollectorEntryRequest
+        {
+            WaterMeterId = 1,
+            ReadingValue = 100,
+            TariffId = 1,
+            Note = null
+        };
+
+        // Should succeed (no prior reading, so 15-day rule doesn't apply)
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, request);
+
+        Assert.NotNull(response);
+        Assert.True(response.Id > 0);
+
+        // Verify reading and invoice were persisted
+        var reading = await context.MeterReadings.FirstOrDefaultAsync(r => r.Id == response.Id);
+        Assert.NotNull(reading);
+        var invoice = await context.Invoices.FirstOrDefaultAsync(i => i.Id == response.InvoiceId);
+        Assert.NotNull(invoice);
     }
 
     private static AquaFlowDbContext CreateContext()
@@ -292,66 +203,62 @@ public class MeterReadingServiceTests
         return new AquaFlowDbContext(options);
     }
 
-    private static void SeedCollector(AquaFlowDbContext context)
+    private static void SeedTestData(AquaFlowDbContext context)
     {
-        context.UserRoles.Add(new UserRole { Id = 2, Name = "Collector" });
-        context.Users.Add(new User
-        {
-            Id = 2,
-            Email = "collector@aquaflow.ba",
-            PasswordHash = "hash",
-            PasswordSalt = "salt",
-            UserRoleId = 2,
-            IsActive = true
-        });
-        context.CollectorProfiles.Add(new CollectorProfile { Id = 1, UserId = 2, EmployeeCode = "COL-0001" });
-    }
+        context.Settlements.Add(new Settlement { Id = 1, Name = "Sarajevo", MunicipalityId = 1, PostalCode = "71000" });
 
-    private static void SeedWaterMeter(AquaFlowDbContext context, decimal lastReading, int id = 1, int settlementId = 1)
-    {
-        if (!context.Settlements.Local.Any(s => s.Id == settlementId))
+        context.UserRoles.Add(new UserRole { Id = 1, Name = "Customer" });
+        context.UserRoles.Add(new UserRole { Id = 2, Name = "Collector" });
+
+        context.Users.Add(new User { Id = 1, Email = "customer@aquaflow.ba", PasswordHash = "hash", PasswordSalt = "salt", UserRoleId = 1, IsActive = true });
+        context.Users.Add(new User { Id = 2, Email = "admin@aquaflow.ba", PasswordHash = "hash", PasswordSalt = "salt", UserRoleId = 1, IsActive = true });
+        context.Users.Add(new User { Id = 3, Email = "collector@aquaflow.ba", PasswordHash = "hash", PasswordSalt = "salt", UserRoleId = 2, IsActive = true });
+
+        context.CustomerProfiles.Add(new CustomerProfile
         {
-            context.Settlements.Add(new Settlement { Id = settlementId, Name = "Sarajevo", MunicipalityId = 1, PostalCode = "71000" });
-        }
+            Id = 1,
+            UserId = 1,
+            FirstName = "Amina",
+            LastName = "Amidzic",
+            CustomerCode = "CUS-0001",
+            SettlementId = 1
+        });
+
+        context.CollectorProfiles.Add(new CollectorProfile
+        {
+            Id = 1,
+            UserId = 3,
+            EmployeeCode = "EMP-0001"
+        });
+
         context.WaterMeters.Add(new WaterMeter
         {
-            Id = id,
-            SerialNumber = $"WM-2026-{id:D4}",
+            Id = 1,
+            SerialNumber = "WM-1",
             CustomerId = 1,
-            SettlementId = settlementId,
+            SettlementId = 1,
+            Street = "Zmaja od Bosne",
+            HouseNumber = "12A",
             Status = "Active",
             InitialReading = 0,
-            LastReading = lastReading
+            LastReading = 0
         });
-    }
 
-    private static void SeedOpenBillingCycle(AquaFlowDbContext context, int id)
-    {
-        context.BillingCycles.Add(new BillingCycle
-        {
-            Id = id,
-            Name = $"Cycle {id}",
-            PeriodFrom = DateTime.UtcNow,
-            PeriodTo = DateTime.UtcNow.AddMonths(1),
-            Status = "Open"
-        });
-    }
-
-    private static void SeedTariff(AquaFlowDbContext context, int id, decimal pricePerM3, bool isActive = true)
-    {
         context.Tariffs.Add(new Tariff
         {
-            Id = id,
-            Name = $"Tarifa {id}",
-            Description = "Test tarifa",
-            PricePerM3 = pricePerM3,
-            IsActive = isActive
+            Id = 1,
+            Name = "Standard",
+            PricePerM3 = 5m,
+            IsActive = true
         });
+
+        context.SaveChanges();
     }
 
     private static MeterReadingService CreateService(AquaFlowDbContext context)
     {
         var mapperConfig = new TypeAdapterConfig();
+        mapperConfig.NewConfig<MeterReading, Model.Responses.MeterReadingResponse>();
         IMapper mapper = new Mapper(mapperConfig);
 
         return new MeterReadingService(

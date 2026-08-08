@@ -54,13 +54,20 @@ public class MeterReadingService
             throw new ClientException($"Tariff with id {request.TariffId} was not found or is not active.");
         }
 
-        var billingCycle = await ResolveBillingCycleAsync(request.BillingCycleId);
+        const int MinimumDaysBetweenReadings = 15;
+        var lastReading = await _dbContext.MeterReadings
+            .AsNoTracking()
+            .Where(reading => reading.WaterMeterId == request.WaterMeterId)
+            .OrderByDescending(reading => reading.ReadingDate)
+            .Select(reading => (DateTime?)reading.ReadingDate)
+            .FirstOrDefaultAsync();
 
-        var isDuplicate = await _dbContext.MeterReadings.AnyAsync(reading =>
-            reading.WaterMeterId == request.WaterMeterId && reading.BillingCycleId == billingCycle.Id);
-        if (isDuplicate)
+        if (lastReading.HasValue && (DateTime.UtcNow - lastReading.Value).TotalDays < MinimumDaysBetweenReadings)
         {
-            throw new ClientException("A meter reading has already been recorded for this water meter in the selected billing cycle.");
+            var nextAllowedDate = lastReading.Value.AddDays(MinimumDaysBetweenReadings);
+            throw new ClientException(
+                $"A meter reading was recorded {(int)(DateTime.UtcNow - lastReading.Value).TotalDays} day(s) ago. " +
+                $"The next reading is allowed from {nextAllowedDate:yyyy-MM-dd}.");
         }
 
         var previousReading = waterMeter.LastReading;
@@ -71,28 +78,31 @@ public class MeterReadingService
                 "If this is expected (e.g. the meter was replaced or reset), resubmit with a Note explaining it.");
         }
 
+        var readingDate = DateTime.UtcNow;
+        var periodFrom = new DateTime(readingDate.Year, readingDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var periodTo = periodFrom.AddMonths(1).AddDays(-1);
+
         var entity = new MeterReading
         {
             WaterMeterId = request.WaterMeterId,
             CollectorId = collectorId.Value,
-            BillingCycleId = billingCycle.Id,
             TariffId = tariff.Id,
             ReadingValue = request.ReadingValue,
             PreviousReadingValue = previousReading,
             ConsumptionM3 = request.ReadingValue - previousReading,
-            ReadingDate = DateTime.UtcNow,
+            ReadingDate = readingDate,
             Source = "Collector",
             PhotoUrl = request.PhotoUrl,
             Note = request.Note,
             ClientUuid = request.ClientUuid,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = readingDate
         };
 
         DbSet.Add(entity);
         waterMeter.LastReading = entity.ReadingValue;
         waterMeter.UpdatedAt = DateTime.UtcNow;
 
-        // Auto-generate a Draft invoice priced from this reading's consumption and the collector's
+        // Auto-generate an Issued invoice priced from this reading's consumption and the collector's
         // chosen tariff, so the customer's bill for the period is created in the same step as the
         // reading itself - no separate manual invoicing pass is needed for the collector-entry flow.
         var subtotal = Math.Round(entity.ConsumptionM3 * tariff.PricePerM3, 2);
@@ -101,22 +111,20 @@ public class MeterReadingService
             InvoiceNumber = await GenerateInvoiceNumberAsync(),
             CustomerId = waterMeter.CustomerId,
             WaterMeterId = waterMeter.Id,
-            BillingCycleId = billingCycle.Id,
-            BillingPeriodFrom = billingCycle.PeriodFrom,
-            BillingPeriodTo = billingCycle.PeriodTo,
+            BillingPeriodFrom = periodFrom,
+            BillingPeriodTo = periodTo,
             PreviousReading = entity.PreviousReadingValue,
             CurrentReading = entity.ReadingValue,
             ConsumptionM3 = entity.ConsumptionM3,
             Subtotal = subtotal,
-            Tax = 0m,
             TotalAmount = subtotal,
-            Status = InvoiceStatus.Draft,
+            Status = InvoiceStatus.Issued,
             CreatedById = callerUserId
         };
         invoice.InvoiceItems.Add(new InvoiceItem
         {
             TariffId = tariff.Id,
-            Description = $"Potrošnja vode - {billingCycle.Name}",
+            Description = $"Potrošnja vode - {periodFrom:MM/yyyy}",
             Quantity = entity.ConsumptionM3,
             UnitPrice = tariff.PricePerM3,
             Amount = subtotal
@@ -130,44 +138,6 @@ public class MeterReadingService
         response.InvoiceNumber = invoice.InvoiceNumber;
         response.InvoiceTotalAmount = invoice.TotalAmount;
         return response;
-    }
-
-    // Resolves the target billing cycle: an explicit BillingCycleId must exist and be Open, otherwise
-    // the single Open cycle is used - zero or more than one Open cycle is a ClientException, since the
-    // caller then must disambiguate explicitly. Returns the full entity (not just the id) since the
-    // caller also needs Name/PeriodFrom/PeriodTo to build the auto-generated invoice.
-    private async Task<BillingCycle> ResolveBillingCycleAsync(int? requestedBillingCycleId)
-    {
-        if (requestedBillingCycleId is not null)
-        {
-            var billingCycle = await _dbContext.BillingCycles
-                .FirstOrDefaultAsync(cycle => cycle.Id == requestedBillingCycleId.Value);
-            if (billingCycle == null)
-            {
-                throw new ClientException($"Billing cycle with id {requestedBillingCycleId.Value} was not found.");
-            }
-            if (billingCycle.Status != "Open")
-            {
-                throw new ClientException($"Billing cycle {billingCycle.Id} is not open.");
-            }
-
-            return billingCycle;
-        }
-
-        var openCycles = await _dbContext.BillingCycles
-            .Where(cycle => cycle.Status == "Open")
-            .ToListAsync();
-
-        if (openCycles.Count == 0)
-        {
-            throw new ClientException("There is no open billing cycle to record the reading against.");
-        }
-        if (openCycles.Count > 1)
-        {
-            throw new ClientException("Multiple open billing cycles exist; specify BillingCycleId explicitly.");
-        }
-
-        return openCycles[0];
     }
 
     // Year-scoped sequential number, e.g. "INV-2026-0001", resetting every calendar year. Mirrors
