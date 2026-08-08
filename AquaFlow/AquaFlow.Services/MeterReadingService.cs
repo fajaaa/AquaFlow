@@ -76,12 +76,34 @@ public class MeterReadingService
                 $"The next reading is allowed from {nextAllowedDate:yyyy-MM-dd}.");
         }
 
-        var previousReading = waterMeter.LastReading;
-        if (request.ReadingValue < previousReading && string.IsNullOrWhiteSpace(request.Note))
+        // IsMeterReplacement is the only way a ReadingValue below the water meter's last recorded
+        // reading is ever accepted - without it this is ALWAYS a ClientException, no matter what the
+        // Note says. A physically replaced meter starts counting from 0 again, so the baseline is
+        // forced to 0 instead of WaterMeter.LastReading (MeterReadingCollectorEntryValidator requires
+        // a non-empty Note in this branch as the audit trail for the reset).
+        decimal previousReading;
+        if (request.IsMeterReplacement)
         {
-            throw new ClientException(
-                $"Reading value {request.ReadingValue} is lower than the last recorded reading {previousReading} for this water meter. " +
-                "If this is expected (e.g. the meter was replaced or reset), resubmit with a Note explaining it.");
+            previousReading = 0m;
+        }
+        else
+        {
+            previousReading = waterMeter.LastReading;
+            if (request.ReadingValue < previousReading)
+            {
+                throw new ClientException(
+                    $"Reading value {request.ReadingValue} is lower than the last recorded reading {previousReading} for this water meter. " +
+                    "If the meter was physically replaced, resubmit with IsMeterReplacement set.");
+            }
+        }
+
+        var consumption = request.ReadingValue - previousReading;
+        if (consumption < 0)
+        {
+            // Unreachable given the branches above (replacement always baselines at 0, and the
+            // non-replacement path already rejects a lower reading) - kept as a hard backstop so a
+            // negative-consumption invoice can never be priced, whatever future changes land here.
+            throw new ClientException("Computed consumption cannot be negative.");
         }
 
         var readingDate = DateTime.UtcNow;
@@ -95,12 +117,13 @@ public class MeterReadingService
             TariffId = tariff.Id,
             ReadingValue = request.ReadingValue,
             PreviousReadingValue = previousReading,
-            ConsumptionM3 = request.ReadingValue - previousReading,
+            ConsumptionM3 = consumption,
             ReadingDate = readingDate,
             Source = "Collector",
             PhotoUrl = request.PhotoUrl,
             Note = request.Note,
             ClientUuid = request.ClientUuid,
+            ReplacedMeterFinalReading = request.IsMeterReplacement ? request.ReplacedMeterFinalReading : null,
             CreatedAt = readingDate
         };
 
@@ -108,42 +131,59 @@ public class MeterReadingService
         waterMeter.LastReading = entity.ReadingValue;
         waterMeter.UpdatedAt = DateTime.UtcNow;
 
-        // Auto-generate an Issued invoice priced from this reading's consumption and the collector's
-        // chosen tariff, so the customer's bill for the period is created in the same step as the
-        // reading itself - no separate manual invoicing pass is needed for the collector-entry flow.
-        var subtotal = Math.Round(entity.ConsumptionM3 * tariff.PricePerM3, 2);
-        var invoice = new Invoice
+        MeterReadingCollectorEntryResponse response;
+        if (consumption > 0)
         {
-            InvoiceNumber = await GenerateInvoiceNumberAsync(),
-            CustomerId = waterMeter.CustomerId,
-            WaterMeterId = waterMeter.Id,
-            BillingPeriodFrom = periodFrom,
-            BillingPeriodTo = periodTo,
-            PreviousReading = entity.PreviousReadingValue,
-            CurrentReading = entity.ReadingValue,
-            ConsumptionM3 = entity.ConsumptionM3,
-            Subtotal = subtotal,
-            TotalAmount = subtotal,
-            Status = InvoiceStatus.Issued,
-            CreatedById = callerUserId
-        };
-        invoice.InvoiceItems.Add(new InvoiceItem
+            // Auto-generate an Issued invoice priced from this reading's consumption and the collector's
+            // chosen tariff, so the customer's bill for the period is created in the same step as the
+            // reading itself - no separate manual invoicing pass is needed for the collector-entry flow.
+            var subtotal = Math.Round(consumption * tariff.PricePerM3, 2);
+            var invoice = new Invoice
+            {
+                InvoiceNumber = await GenerateInvoiceNumberAsync(),
+                CustomerId = waterMeter.CustomerId,
+                WaterMeterId = waterMeter.Id,
+                BillingPeriodFrom = periodFrom,
+                BillingPeriodTo = periodTo,
+                PreviousReading = entity.PreviousReadingValue,
+                CurrentReading = entity.ReadingValue,
+                ConsumptionM3 = entity.ConsumptionM3,
+                Subtotal = subtotal,
+                TotalAmount = subtotal,
+                Status = InvoiceStatus.Issued,
+                CreatedById = callerUserId
+            };
+            invoice.InvoiceItems.Add(new InvoiceItem
+            {
+                TariffId = tariff.Id,
+                Description = $"Potrošnja vode - {periodFrom:MM/yyyy}",
+                Quantity = entity.ConsumptionM3,
+                UnitPrice = tariff.PricePerM3,
+                Amount = subtotal
+            });
+            _dbContext.Invoices.Add(invoice);
+            entity.Invoice = invoice;
+
+            await _dbContext.SaveChangesAsync();
+
+            response = Mapper.Map<MeterReadingCollectorEntryResponse>(entity);
+            response.InvoiceId = invoice.Id;
+            response.InvoiceNumber = invoice.InvoiceNumber;
+            response.InvoiceTotalAmount = invoice.TotalAmount;
+        }
+        else
         {
-            TariffId = tariff.Id,
-            Description = $"Potrošnja vode - {periodFrom:MM/yyyy}",
-            Quantity = entity.ConsumptionM3,
-            UnitPrice = tariff.PricePerM3,
-            Amount = subtotal
-        });
-        _dbContext.Invoices.Add(invoice);
-        entity.Invoice = invoice;
+            // Zero consumption (e.g. a freshly replaced meter re-read at 0, or a genuinely unchanged
+            // reading): an Issued invoice for 0.00 KM would be just as permanently stuck as a negative
+            // one (RecordPaymentInternalAsync rejects amount <= 0), so no invoice is created at all.
+            await _dbContext.SaveChangesAsync();
 
-        await _dbContext.SaveChangesAsync();
+            response = Mapper.Map<MeterReadingCollectorEntryResponse>(entity);
+            response.InvoiceId = null;
+            response.InvoiceNumber = null;
+            response.InvoiceTotalAmount = null;
+        }
 
-        var response = Mapper.Map<MeterReadingCollectorEntryResponse>(entity);
-        response.InvoiceId = invoice.Id;
-        response.InvoiceNumber = invoice.InvoiceNumber;
-        response.InvoiceTotalAmount = invoice.TotalAmount;
         return response;
     }
 

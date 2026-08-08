@@ -15,10 +15,16 @@ import 'package:aquaflow_desktop/shared/services/tariff_lookup_service.dart';
 /// (`CollectorMeterReadingService.submit`) - the server resolves the
 /// collector and previous reading itself, so this form only collects the new
 /// reading value, the tariff to bill it under (required - picked from the
-/// active tariff list), an optional note (required when the value is lower
-/// than the meter's last reading, e.g. a meter replacement/reset) and an
-/// optional photo URL. The server auto-generates a Draft invoice from the
-/// reading and the chosen tariff, so the success message shows its number/total.
+/// active tariff list), the "Zamjena vodomjera" (meter replacement) toggle,
+/// an optional note (mandatory here on the client - and enforced again by
+/// the server - when the toggle is on, since it's the audit trail for why
+/// the baseline was reset) and an optional photo URL. A reading below the
+/// meter's last recorded value is ONLY ever accepted when the replacement
+/// toggle is on; the server rejects it outright otherwise, regardless of any
+/// note. The server auto-generates an Issued invoice from the reading and
+/// the chosen tariff, so the success message shows its number/total - unless
+/// consumption came out to zero, in which case the server creates no invoice
+/// at all and the summary just confirms the reading was recorded.
 /// On open it fetches the last reading to suggest a tariff and check that
 /// at least 15 days have passed since the previous reading.
 class CollectorMeterReadingEntryScreen extends StatefulWidget {
@@ -39,9 +45,11 @@ class _CollectorMeterReadingEntryScreenState
   final _readingCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final _photoUrlCtrl = TextEditingController();
+  final _replacedMeterFinalReadingCtrl = TextEditingController();
 
   bool _submitting = false;
   String? _error;
+  bool _isMeterReplacement = false;
 
   bool _loadingTariffs = true;
   List<TariffLookup> _tariffs = [];
@@ -62,6 +70,7 @@ class _CollectorMeterReadingEntryScreenState
     _readingCtrl.dispose();
     _noteCtrl.dispose();
     _photoUrlCtrl.dispose();
+    _replacedMeterFinalReadingCtrl.dispose();
     _service.dispose();
     _tariffService.dispose();
     super.dispose();
@@ -128,10 +137,16 @@ class _CollectorMeterReadingEntryScreenState
     });
 
     try {
+      final replacedMeterFinalReadingText = _replacedMeterFinalReadingCtrl.text
+          .trim();
       final result = await _service.submit(
         waterMeterId: widget.meter.id,
         readingValue: double.parse(_readingCtrl.text.trim().replaceAll(',', '.')),
         tariffId: _selectedTariffId!,
+        isMeterReplacement: _isMeterReplacement,
+        replacedMeterFinalReading: _isMeterReplacement && replacedMeterFinalReadingText.isNotEmpty
+            ? double.parse(replacedMeterFinalReadingText.replaceAll(',', '.'))
+            : null,
         note: _noteCtrl.text,
         photoUrl: _photoUrlCtrl.text,
       );
@@ -140,10 +155,14 @@ class _CollectorMeterReadingEntryScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Očitanje je snimljeno. Potrošnja: '
-            '${_formatReading(result.consumptionM3)} m³. '
-            'Račun ${result.invoiceNumber}: '
-            '${_formatReading(result.invoiceTotalAmount)} BAM.',
+            result.hasInvoice
+                ? 'Očitanje je snimljeno. Potrošnja: '
+                      '${_formatReading(result.consumptionM3)} m³. '
+                      'Račun ${result.invoiceNumber}: '
+                      '${_formatReading(result.invoiceTotalAmount!)} BAM.'
+                : 'Očitanje je snimljeno. Potrošnja: '
+                      '${_formatReading(result.consumptionM3)} m³. '
+                      'Račun nije kreiran (potrošnja je 0).',
           ),
         ),
       );
@@ -159,6 +178,23 @@ class _CollectorMeterReadingEntryScreenState
   String? _readingValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return 'Obavezno polje.';
+    final parsed = double.tryParse(text.replaceAll(',', '.'));
+    if (parsed == null || parsed < 0) return 'Unesite pozitivan broj.';
+    return null;
+  }
+
+  // A lower reading is only ever accepted server-side when IsMeterReplacement is set, and even then
+  // only with a Note explaining it - so the Note is required client-side exactly under that toggle.
+  String? _noteValidator(String? value) {
+    if (!_isMeterReplacement) return null;
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Napomena je obavezna kod zamjene vodomjera.';
+    return null;
+  }
+
+  String? _replacedMeterFinalReadingValidator(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
     final parsed = double.tryParse(text.replaceAll(',', '.'));
     if (parsed == null || parsed < 0) return 'Unesite pozitivan broj.';
     return null;
@@ -301,13 +337,52 @@ class _CollectorMeterReadingEntryScreenState
                         ? (value) => setState(() => _selectedTariffId = value)
                         : null,
                   ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _isMeterReplacement,
+                    onChanged: (value) {
+                      setState(() {
+                        _isMeterReplacement = value;
+                        if (!value) {
+                          _replacedMeterFinalReadingCtrl.clear();
+                        }
+                      });
+                      _formKey.currentState?.validate();
+                    },
+                    title: const Text('Zamjena vodomjera'),
+                    subtitle: const Text(
+                      'Uključite ako je fizički vodomjer zamijenjen novim. Novo '
+                      'stanje se tada računa od 0, a napomena postaje obavezna.',
+                    ),
+                  ),
+                  if (_isMeterReplacement) ...[
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: _replacedMeterFinalReadingCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                      ],
+                      validator: _replacedMeterFinalReadingValidator,
+                      decoration: const InputDecoration(
+                        labelText: 'Staro stanje vodomjera (opcionalno)',
+                        prefixIcon: Icon(Icons.history_outlined),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _noteCtrl,
                     maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Napomena (obavezno ako je stanje niže)',
-                      prefixIcon: Icon(Icons.notes_outlined),
+                    validator: _noteValidator,
+                    decoration: InputDecoration(
+                      labelText: _isMeterReplacement
+                          ? 'Napomena (obavezno - razlog zamjene)'
+                          : 'Napomena (opcionalno)',
+                      prefixIcon: const Icon(Icons.notes_outlined),
                     ),
                   ),
                   const SizedBox(height: 14),

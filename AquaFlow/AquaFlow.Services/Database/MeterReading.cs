@@ -17,6 +17,11 @@ public class MeterReading : EntityBase
     public decimal PreviousReadingValue { get; set; }
     [Column(TypeName = "decimal(18,2)")]
     public decimal ConsumptionM3 { get; set; }
+    // The old meter's final displayed value before it was physically swapped out, captured only when
+    // the reading was submitted with IsMeterReplacement (MeterReadingCollectorEntryRequest). Audit
+    // trail only - it plays no part in computing this or any later reading's consumption.
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal? ReplacedMeterFinalReading { get; set; }
     public DateTime ReadingDate { get; set; } = DateTime.UtcNow;
     [MaxLength(30)]
     public string Source { get; set; } = "Collector";

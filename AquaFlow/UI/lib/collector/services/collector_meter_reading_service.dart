@@ -33,6 +33,8 @@ class CollectorMeterReadingService {
     required int waterMeterId,
     required double readingValue,
     required int tariffId,
+    bool isMeterReplacement = false,
+    double? replacedMeterFinalReading,
     String? note,
     String? photoUrl,
   }) async {
@@ -50,6 +52,8 @@ class CollectorMeterReadingService {
           'waterMeterId': waterMeterId,
           'readingValue': readingValue,
           'tariffId': tariffId,
+          'isMeterReplacement': isMeterReplacement,
+          'replacedMeterFinalReading': ?replacedMeterFinalReading,
           if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
           if (photoUrl != null && photoUrl.trim().isNotEmpty)
             'photoUrl': photoUrl.trim(),
