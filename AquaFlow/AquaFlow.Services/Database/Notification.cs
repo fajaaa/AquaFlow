@@ -12,10 +12,7 @@ public class Notification : EntityBase
     public string Type { get; set; } = "Info";
     [MaxLength(40)]
     public string Audience { get; set; } = "All";
-    public int? SettlementId { get; set; }
-    public Settlement? Settlement { get; set; }
     public int CreatedById { get; set; }
     public User? CreatedBy { get; set; }
-    public DateTime? ValidUntil { get; set; }
     public ICollection<UserNotification> UserNotifications { get; set; } = new List<UserNotification>();
 }

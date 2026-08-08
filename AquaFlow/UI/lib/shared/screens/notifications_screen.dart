@@ -273,7 +273,7 @@ class _NotificationCard extends StatelessWidget {
     final title = rawTitle == null || rawTitle.isEmpty
         ? 'Obavijest #${item.notificationId}'
         : rawTitle;
-    final body = notification?.body.trim() ?? '';
+    final body = _truncate(notification?.body.trim() ?? '', 50);
 
     return Material(
       color: Colors.transparent,
@@ -384,7 +384,7 @@ class _NotificationCard extends StatelessWidget {
                           const SizedBox(height: 3),
                           Text(
                             body,
-                            maxLines: 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 12.5,
@@ -445,12 +445,8 @@ class _NotificationCard extends StatelessWidget {
     switch (type.toLowerCase()) {
       case 'plannedworks':
         return Icons.build_outlined;
-      case 'billing':
-        return Icons.receipt_long_outlined;
       case 'warning':
         return Icons.warning_amber_rounded;
-      case 'outage':
-        return Icons.block_outlined;
       default:
         return Icons.info_outline;
     }
@@ -462,21 +458,16 @@ class _NotificationCard extends StatelessWidget {
     switch (type.toLowerCase()) {
       case 'plannedworks':
         return AppColors.success;
-      case 'billing':
-        return AppColors.primary;
       case 'warning':
         return AppColors.warning;
-      case 'outage':
-        return AppColors.textDark;
       default:
         return AppColors.secondary;
     }
   }
 
-  /// Mirrors `_readableAccent` in notification_detail_screen.dart: the navy
-  /// (`billing`) and dark-gray (`outage`) accents blend into the dark theme's
-  /// background, so lift them toward white there. Light theme and the brighter
-  /// accents are returned unchanged.
+  /// Mirrors `_readableAccent` in notification_detail_screen.dart: any accent
+  /// dark enough to blend into the dark theme's background is lifted toward
+  /// white there. Light theme and the brighter accents are returned unchanged.
   static Color _readableAccent(Color base, Brightness brightness) {
     if (brightness == Brightness.dark && base.computeLuminance() < 0.2) {
       return Color.lerp(base, Colors.white, 0.6)!;
@@ -488,12 +479,8 @@ class _NotificationCard extends StatelessWidget {
     switch (type.toLowerCase()) {
       case 'plannedworks':
         return 'Planirani radovi';
-      case 'billing':
-        return 'Računi';
       case 'warning':
         return 'Upozorenje';
-      case 'outage':
-        return 'Prekid usluge';
       default:
         return type.isEmpty ? 'Obavijest' : type;
     }
@@ -504,6 +491,11 @@ class _NotificationCard extends StatelessWidget {
     String two(int value) => value.toString().padLeft(2, '0');
     return '${two(date.day)}.${two(date.month)}.${date.year}. '
         '${two(date.hour)}:${two(date.minute)}';
+  }
+
+  static String _truncate(String text, int maxLength) {
+    if (text.length <= maxLength) return text;
+    return '${text.substring(0, maxLength).trimRight()}...';
   }
 
   /// Tints [c] toward white for a positive [percent] or toward black for a
@@ -609,7 +601,5 @@ class _SelectOption {
 const List<_SelectOption> _notificationTypeOptions = [
   _SelectOption(value: 'Info', label: 'Info'),
   _SelectOption(value: 'PlannedWorks', label: 'Planirani radovi'),
-  _SelectOption(value: 'Billing', label: 'Računi'),
   _SelectOption(value: 'Warning', label: 'Upozorenje'),
-  _SelectOption(value: 'Outage', label: 'Prekid usluge'),
 ];

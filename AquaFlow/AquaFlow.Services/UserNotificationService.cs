@@ -127,6 +127,17 @@ public class UserNotificationService
             });
 
         DbContext.UserNotifications.AddRange(missingUserNotifications);
-        await DbContext.SaveChangesAsync();
+
+        try
+        {
+            await DbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.IsDuplicateKeyViolation())
+        {
+            // Another concurrent call for the same user (e.g. the mobile shells' badge-count
+            // fetch and list fetch firing at once on login) already backfilled the same
+            // row(s) - the unique index on (UserId, NotificationId) is what caught it. Nothing
+            // left to do: that other call's insert already gave this user the inbox row.
+        }
     }
 }

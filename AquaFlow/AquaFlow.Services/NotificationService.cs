@@ -97,7 +97,7 @@ public class NotificationService
         await DbContext.SaveChangesAsync();
 
         await SyncRecipientsAsync(entity);
-        await DbContext.SaveChangesAsync();
+        await SaveRecipientChangesAsync();
 
         await transaction.CommitAsync();
         await LoadReferencesAsync(entity);
@@ -123,7 +123,7 @@ public class NotificationService
         await DbContext.SaveChangesAsync();
 
         await SyncRecipientsAsync(entity);
-        await DbContext.SaveChangesAsync();
+        await SaveRecipientChangesAsync();
 
         await transaction.CommitAsync();
         await LoadReferencesAsync(entity);
@@ -240,6 +240,22 @@ public class NotificationService
 
         await AddMissingUserNotificationsAsync(notification, recipientUserIds);
         await RemoveStaleUserNotificationsAsync(notification, recipientUserIds);
+    }
+
+    // Two concurrent UpdateAsync/PatchAsync calls for the same notification (e.g. a
+    // double-submitted admin edit) can both compute the same "missing" recipient rows before
+    // either commits; the unique index on UserNotification(UserId, NotificationId) then rejects
+    // the second insert. That race is harmless here - the first call's insert already gave the
+    // recipient their inbox row - so it's caught and ignored rather than surfaced as a 500.
+    private async Task SaveRecipientChangesAsync()
+    {
+        try
+        {
+            await DbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.IsDuplicateKeyViolation())
+        {
+        }
     }
 
     private async Task RemoveStaleUserNotificationsAsync(Notification notification, List<int> recipientUserIds)

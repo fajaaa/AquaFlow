@@ -27,7 +27,6 @@ class AdminNotificationsScreen extends StatefulWidget {
 class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     with PagedListController<AppNotification, AdminNotificationsScreen> {
   final AdminNotificationService _service = AdminNotificationService();
-  final TextEditingController _settlementFilterCtrl = TextEditingController();
 
   String? _typeFilter;
   String? _audienceFilter;
@@ -46,7 +45,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       search: searchController.text,
       type: _typeFilter,
       audience: _audienceFilter,
-      settlementId: _settlementFilterId,
     );
     return (items: pageData.items, totalCount: pageData.totalCount);
   }
@@ -56,13 +54,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     return error is NotificationException
         ? error.message
         : 'Došlo je do neočekivane greške.';
-  }
-
-  int? get _settlementFilterId {
-    final text = _settlementFilterCtrl.text.trim();
-    if (text.isEmpty) return null;
-    final id = int.tryParse(text);
-    return id == null || id <= 0 ? null : id;
   }
 
   void _setTypeFilter(String value) {
@@ -76,17 +67,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     final selected = value.isEmpty ? null : value;
     if (selected == _audienceFilter) return;
     setState(() => _audienceFilter = selected);
-    load(resetPage: true);
-  }
-
-  void _applySettlementFilter(String _) {
-    load(resetPage: true);
-  }
-
-  void _clearSettlementFilter() {
-    if (_settlementFilterCtrl.text.isEmpty) return;
-    _settlementFilterCtrl.clear();
-    setState(() {});
     load(resetPage: true);
   }
 
@@ -172,7 +152,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
   @override
   void dispose() {
     disposeController();
-    _settlementFilterCtrl.dispose();
     _service.dispose();
     super.dispose();
   }
@@ -231,7 +210,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
 
   Widget _buildFilters() {
     final hasSearch = searchController.text.trim().isNotEmpty;
-    final hasSettlement = _settlementFilterCtrl.text.trim().isNotEmpty;
 
     return Wrap(
       spacing: 12,
@@ -301,29 +279,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                 : (value) => _setAudienceFilter(value ?? ''),
           ),
         ),
-        SizedBox(
-          width: 180,
-          child: TextField(
-            controller: _settlementFilterCtrl,
-            enabled: !loading && !mutating,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            textInputAction: TextInputAction.search,
-            onChanged: (_) => setState(() {}),
-            onSubmitted: _applySettlementFilter,
-            decoration: InputDecoration(
-              labelText: 'ID naselja',
-              prefixIcon: const Icon(Icons.location_city_outlined),
-              suffixIcon: hasSettlement
-                  ? IconButton(
-                      tooltip: 'Očisti filter naselja',
-                      onPressed: _clearSettlementFilter,
-                      icon: const Icon(Icons.clear),
-                    )
-                  : null,
-            ),
-          ),
-        ),
         IconButton.filledTonal(
           tooltip: 'Primijeni filtere',
           onPressed: loading || mutating ? null : () => load(resetPage: true),
@@ -375,14 +330,12 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    dataRowMinHeight: 72,
-                    dataRowMaxHeight: 84,
+                    dataRowMinHeight: 64,
+                    dataRowMaxHeight: 72,
                     columns: [
                       const DataColumn(label: Text('Obavijest')),
                       const DataColumn(label: Text('Tip')),
                       if (!isSmallScreen) const DataColumn(label: Text('Publika')),
-                      if (!isSmallScreen) const DataColumn(label: Text('Naselje')),
-                      if (!isSmallScreen) const DataColumn(label: Text('Važi do')),
                       if (!isSmallScreen) const DataColumn(label: Text('Kreirano')),
                       const DataColumn(label: Text('Akcije')),
                     ],
@@ -404,12 +357,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                             ),
                             if (!isSmallScreen)
                               DataCell(Text(_audienceLabel(item.audience))),
-                            if (!isSmallScreen)
-                              DataCell(
-                                Text(item.settlementId?.toString() ?? '-'),
-                              ),
-                            if (!isSmallScreen)
-                              DataCell(Text(_formatDate(item.validUntil))),
                             if (!isSmallScreen)
                               DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
@@ -435,8 +382,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
   bool get _hasFilters =>
       searchController.text.trim().isNotEmpty ||
       _typeFilter != null ||
-      _audienceFilter != null ||
-      _settlementFilterCtrl.text.trim().isNotEmpty;
+      _audienceFilter != null;
 }
 
 class _NotificationTitleCell extends StatelessWidget {
@@ -450,6 +396,7 @@ class _NotificationTitleCell extends StatelessWidget {
     final title = item.title.trim().isEmpty
         ? 'Obavijest #${item.id}'
         : item.title.trim();
+    final body = _truncate(item.body.trim(), 50);
 
     return SizedBox(
       width: 340,
@@ -465,15 +412,17 @@ class _NotificationTitleCell extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            item.body,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          if (body.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              body,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -540,11 +489,9 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
-  final _settlementCtrl = TextEditingController();
 
   late String _type;
   late String _audience;
-  DateTime? _validUntil;
 
   bool get _isEdit => widget.notification != null;
 
@@ -554,59 +501,24 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
     final notification = widget.notification;
     _titleCtrl.text = notification?.title ?? '';
     _bodyCtrl.text = notification?.body ?? '';
-    _settlementCtrl.text = notification?.settlementId?.toString() ?? '';
     _type = notification?.type.trim().isNotEmpty == true
         ? notification!.type
         : 'Info';
     _audience = notification?.audience.trim().isNotEmpty == true
         ? notification!.audience
         : 'All';
-    _validUntil = notification?.validUntil;
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
     _bodyCtrl.dispose();
-    _settlementCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickValidUntil() async {
-    final now = DateTime.now();
-    final initial = _validUntil ?? now.add(const Duration(days: 7));
-    final date = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 5),
-    );
-    if (!mounted || date == null) return;
-
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(initial),
-    );
-    if (!mounted || time == null) return;
-
-    setState(() {
-      _validUntil = DateTime(
-        date.year,
-        date.month,
-        date.day,
-        time.hour,
-        time.minute,
-      );
-    });
   }
 
   void _save() {
     final form = _formKey.currentState;
     if (form == null || !form.validate()) return;
-
-    final settlementId = _audience.toLowerCase() == 'settlement'
-        ? int.tryParse(_settlementCtrl.text.trim())
-        : null;
 
     Navigator.of(context).pop(
       AdminNotificationDraft(
@@ -614,9 +526,7 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
         body: _bodyCtrl.text.trim(),
         type: _type,
         audience: _audience,
-        settlementId: settlementId,
         createdById: widget.createdById,
-        validUntil: _validUntil,
       ),
     );
   }
@@ -625,7 +535,6 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
   Widget build(BuildContext context) {
     final typeOptions = _optionsWithCurrent(_notificationTypeOptions, _type);
     final audienceOptions = _optionsWithCurrent(_audienceOptions, _audience);
-    final isSettlementAudience = _audience.toLowerCase() == 'settlement';
 
     return AlertDialog(
       title: Text(_isEdit ? 'Uredi obavijest' : 'Nova obavijest'),
@@ -700,38 +609,11 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                         ],
                         onChanged: (value) {
                           if (value == null) return;
-                          setState(() {
-                            _audience = value;
-                            if (value.toLowerCase() != 'settlement') {
-                              _settlementCtrl.clear();
-                            }
-                          });
+                          setState(() => _audience = value);
                         },
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _settlementCtrl,
-                  enabled: isSettlementAudience,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: _settlementValidator,
-                  decoration: InputDecoration(
-                    labelText: isSettlementAudience
-                        ? 'ID naselja'
-                        : 'ID naselja (samo za publiku Naselje)',
-                    prefixIcon: const Icon(Icons.location_city_outlined),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _ValidUntilField(
-                  value: _validUntil,
-                  onPick: _pickValidUntil,
-                  onClear: _validUntil == null
-                      ? null
-                      : () => setState(() => _validUntil = null),
                 ),
               ],
             ),
@@ -755,78 +637,6 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
   String? _required(String? value) {
     return value == null || value.trim().isEmpty ? 'Obavezno polje.' : null;
   }
-
-  String? _settlementValidator(String? value) {
-    if (_audience.toLowerCase() != 'settlement') return null;
-    final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Unesite ID naselja.';
-    final id = int.tryParse(text);
-    if (id == null || id <= 0) return 'Unesite pozitivan broj.';
-    return null;
-  }
-}
-
-class _ValidUntilField extends StatelessWidget {
-  const _ValidUntilField({
-    required this.value,
-    required this.onPick,
-    required this.onClear,
-  });
-
-  final DateTime? value;
-  final VoidCallback onPick;
-  final VoidCallback? onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: theme.inputDecorationTheme.fillColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFDCE6ED)),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.event_available_outlined,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Važi do',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value == null ? 'Nije postavljeno' : _formatDate(value),
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Odaberi datum',
-            onPressed: onPick,
-            icon: const Icon(Icons.calendar_month_outlined),
-          ),
-          IconButton(
-            tooltip: 'Ukloni datum',
-            onPressed: onClear,
-            icon: const Icon(Icons.clear),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _SelectOption {
@@ -839,14 +649,11 @@ class _SelectOption {
 const List<_SelectOption> _notificationTypeOptions = [
   _SelectOption(value: 'Info', label: 'Info'),
   _SelectOption(value: 'PlannedWorks', label: 'Planirani radovi'),
-  _SelectOption(value: 'Billing', label: 'Računi'),
   _SelectOption(value: 'Warning', label: 'Upozorenje'),
-  _SelectOption(value: 'Outage', label: 'Prekid usluge'),
 ];
 
 const List<_SelectOption> _audienceOptions = [
   _SelectOption(value: 'All', label: 'Svi korisnici'),
-  _SelectOption(value: 'Settlement', label: 'Naselje'),
   _SelectOption(value: 'Customers', label: 'Korisnici'),
   _SelectOption(value: 'Collectors', label: 'Inkasanti'),
 ];
@@ -869,10 +676,7 @@ IconData _typeIcon(String type) {
   switch (type.toLowerCase()) {
     case 'plannedworks':
       return Icons.construction_outlined;
-    case 'billing':
-      return Icons.receipt_long_outlined;
     case 'warning':
-    case 'outage':
       return Icons.warning_amber_outlined;
     default:
       return Icons.notifications_outlined;
@@ -883,10 +687,7 @@ Color _typeColor(String type, ColorScheme colorScheme) {
   switch (type.toLowerCase()) {
     case 'plannedworks':
       return const Color(0xFF0277BD);
-    case 'billing':
-      return const Color(0xFF2E7D32);
     case 'warning':
-    case 'outage':
       return const Color(0xFFF9A825);
     default:
       return colorScheme.primary;
@@ -897,12 +698,8 @@ String _typeLabel(String type) {
   switch (type.toLowerCase()) {
     case 'plannedworks':
       return 'Planirani radovi';
-    case 'billing':
-      return 'Računi';
     case 'warning':
       return 'Upozorenje';
-    case 'outage':
-      return 'Prekid usluge';
     default:
       return type.isEmpty ? 'Obavijest' : type;
   }
@@ -930,4 +727,9 @@ String _formatDate(DateTime? date) {
   String two(int value) => value.toString().padLeft(2, '0');
   return '${two(date.day)}.${two(date.month)}.${date.year}. '
       '${two(date.hour)}:${two(date.minute)}';
+}
+
+String _truncate(String text, int maxLength) {
+  if (text.length <= maxLength) return text;
+  return '${text.substring(0, maxLength).trimRight()}...';
 }

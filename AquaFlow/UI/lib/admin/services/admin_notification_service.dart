@@ -30,7 +30,6 @@ class AdminNotificationService {
     String? search,
     String? type,
     String? audience,
-    int? settlementId,
   }) async {
     final token = await _requireToken();
     final query = <String, String>{
@@ -52,9 +51,6 @@ class AdminNotificationService {
     final selectedAudience = audience?.trim();
     if (selectedAudience != null && selectedAudience.isNotEmpty) {
       query['Audience'] = selectedAudience;
-    }
-    if (settlementId != null) {
-      query['SettlementId'] = '$settlementId';
     }
 
     final uri = Uri.parse(

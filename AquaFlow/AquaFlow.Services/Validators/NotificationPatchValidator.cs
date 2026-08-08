@@ -12,6 +12,5 @@ public class NotificationPatchValidator : AbstractValidator<NotificationPatchReq
         RuleFor(x => x.Type).NotEmpty().MaximumLength(40).When(x => x.Type != null);
         RuleFor(x => x.Audience).NotEmpty().MaximumLength(40).When(x => x.Audience != null);
         RuleFor(x => x.CreatedById).GreaterThan(0).When(x => x.CreatedById.HasValue);
-        RuleFor(x => x.SettlementId).GreaterThan(0).When(x => x.SettlementId.HasValue);
     }
 }

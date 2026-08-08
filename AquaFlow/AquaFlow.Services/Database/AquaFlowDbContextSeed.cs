@@ -811,12 +811,10 @@ public partial class AquaFlowDbContext
             {
                 Id = 1,
                 Title = "Planirani radovi",
-                Body = "Planirani radovi na mrezi u naselju Centar.",
-                Type = "PlannedWorks",
-                Audience = "Settlement",
-                SettlementId = (int?)1,
+                Body = "Planirani radovi na mrezi.",
+                Type = "Info",
+                Audience = "All",
                 CreatedById = 1,
-                ValidUntil = (DateTime?)new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc),
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });

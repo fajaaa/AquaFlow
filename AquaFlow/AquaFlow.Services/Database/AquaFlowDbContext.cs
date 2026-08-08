@@ -151,6 +151,15 @@ public partial class AquaFlowDbContext : DbContext
             .HasForeignKey(photo => photo.SupportTicketMessageId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Backstop against duplicate inbox rows: UserNotificationService.EnsureInboxRowsAsync does a
+        // check-then-insert with no locking, so two concurrent GET /UserNotifications/mine requests for
+        // the same user (e.g. the mobile shells' badge-count fetch and list fetch firing at once) can
+        // both decide a notification is "missing" and both insert it. The resulting DbUpdateException
+        // is caught and ignored at both call sites (see DbUpdateExceptionExtensions.IsDuplicateKeyViolation).
+        modelBuilder.Entity<UserNotification>()
+            .HasIndex(userNotification => new { userNotification.UserId, userNotification.NotificationId })
+            .IsUnique();
+
         // Security activity feed is queried per-user in reverse-chronological order
         // (e.g. "recent activity for user X"), so the index is composite rather than on UserId alone.
         modelBuilder.Entity<ActivityLog>()
