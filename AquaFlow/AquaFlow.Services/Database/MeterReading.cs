@@ -27,4 +27,6 @@ public class MeterReading : EntityBase
     [MaxLength(30)]
     public string SyncStatus { get; set; } = "Synced";
     public DateTime? SyncedAt { get; set; }
+    public int? InvoiceId { get; set; }
+    public Invoice? Invoice { get; set; }
 }

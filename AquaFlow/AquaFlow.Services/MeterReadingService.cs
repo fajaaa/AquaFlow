@@ -130,6 +130,7 @@ public class MeterReadingService
             Amount = subtotal
         });
         _dbContext.Invoices.Add(invoice);
+        entity.Invoice = invoice;
 
         await _dbContext.SaveChangesAsync();
 

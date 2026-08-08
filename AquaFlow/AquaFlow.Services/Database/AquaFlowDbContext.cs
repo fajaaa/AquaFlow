@@ -126,6 +126,14 @@ public partial class AquaFlowDbContext : DbContext
             .Property(invoice => invoice.RowVersion)
             .IsRowVersion();
 
+        // Invoice rows are never hard-deleted (only status-transitioned - see the state machine
+        // note above), so this FK is safe to leave at the default Restrict rather than Cascade.
+        modelBuilder.Entity<MeterReading>()
+            .HasOne(reading => reading.Invoice)
+            .WithMany()
+            .HasForeignKey(reading => reading.InvoiceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Photos have no independent lifecycle outside their report (unlike
         // WorkOrder/FaultStatusHistory rows, which stay Restrict so a report can't be
         // deleted while still referenced elsewhere) - deleting a FaultReport deletes its photos too.
