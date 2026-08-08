@@ -268,7 +268,12 @@ builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, RejectedWaterMeterRe
 builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, CancelledWaterMeterRequestState>(WaterMeterRequestStatus.Cancelled);
 builder.Services.AddScoped<IWaterMeterRequestStateResolver, WaterMeterRequestStateResolver>();
 AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
+// PaymentsController is read-only (see its own comment): every Payment row is written
+// either by the invoice state machine or the payment provider confirmation path, never
+// through a generic CRUD surface, so only the IBaseReadService<...> alias is exposed to it.
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
+builder.Services.AddScoped<IBaseReadService<PaymentResponse, PaymentSearchObject>>(
+    serviceProvider => serviceProvider.GetRequiredService<IBaseCRUDService<PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>>());
 // FaultReport mirrors the Invoice/WaterMeterRequest registrations above: the state machine service
 // is registered by hand, the generic IBaseCRUDService alias resolves to the same instance, and each
 // report state is a keyed scoped BaseFaultReportState (status string as key) that

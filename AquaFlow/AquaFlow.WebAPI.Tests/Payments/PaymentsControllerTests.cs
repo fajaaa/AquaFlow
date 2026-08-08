@@ -15,31 +15,37 @@ public class PaymentsControllerTests
     private const string ManagePermission = "Invoices.Manage";
     private const string ReadPermission = "Payments.Read";
 
-    // Enforcement runs in the MVC authorization filter pipeline, which a direct method
-    // call bypasses (see AquaFlow.WebAPI.Tests remarks in AGENTS.md), so this pins the
-    // declarative gate itself: if [RequirePermission] is ever dropped from one of these
-    // write actions, this test fails instead of silently reopening unauthorized writes.
-    // Payments normally arise through POST /Invoices/{id}/payments; this generic write
-    // path stays only for administrative backfill.
+    // /Payments is read-only (see the class comment on PaymentsController): every Payment
+    // row is written either by the invoice state machine (POST /Invoices/{id}/payments) or
+    // the payment provider confirmation path, never through a generic CRUD surface. Pins
+    // that the write actions were removed rather than merely gated - if any of them
+    // reappear on the controller (e.g. from a bad merge), this fails instead of silently
+    // reopening an unauthenticated bypass of the invoice state machine.
     [Theory]
-    [InlineData(nameof(PaymentsController.Create))]
-    [InlineData(nameof(PaymentsController.Update))]
-    [InlineData(nameof(PaymentsController.Patch))]
-    [InlineData(nameof(PaymentsController.Delete))]
-    public void WriteAction_RequiresInvoicesManagePermission(string methodName)
+    [InlineData("Create")]
+    [InlineData("Update")]
+    [InlineData("Patch")]
+    [InlineData("Delete")]
+    public void WriteAction_DoesNotExistOnController(string methodName)
     {
         var method = typeof(PaymentsController)
             .GetMethods()
-            .Single(m => m.Name == methodName && m.DeclaringType == typeof(PaymentsController));
+            .SingleOrDefault(m => m.Name == methodName && m.DeclaringType == typeof(PaymentsController));
 
-        var attribute = method
-            .GetCustomAttributes(typeof(RequirePermissionAttribute), inherit: false)
-            .Cast<RequirePermissionAttribute>()
-            .SingleOrDefault();
+        Assert.Null(method);
+    }
 
-        Assert.NotNull(attribute);
-        var codes = Assert.IsType<string[]>(attribute!.Arguments![0]);
-        Assert.Contains(ManagePermission, codes);
+    // PaymentsController must derive directly from BaseReadController, not
+    // BaseCRUDController, so the write routes (POST/PUT/PATCH/DELETE) don't exist at the
+    // routing level at all - not merely 405 from missing handlers.
+    [Fact]
+    public void PaymentsController_DerivesDirectlyFromBaseReadController()
+    {
+        var baseType = typeof(PaymentsController).BaseType;
+
+        Assert.NotNull(baseType);
+        Assert.True(baseType!.IsGenericType);
+        Assert.Equal(typeof(BaseReadController<,,>), baseType.GetGenericTypeDefinition());
     }
 
     // GetAll/GetById accept either code (Payments.Read is enough - Invoices.Manage also
@@ -193,7 +199,7 @@ public class PaymentsControllerTests
         IEnumerable<CustomerProfileResponse> profiles,
         IEnumerable<PaymentResponse> payments)
     {
-        var service = new FakePaymentCrudService(payments);
+        var service = new FakePaymentReadService(payments);
         var profileService = new FakeCustomerProfileCrudService(profiles);
         return new PaymentsController(service, profileService)
         {
