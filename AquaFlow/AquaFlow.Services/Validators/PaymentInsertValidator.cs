@@ -12,5 +12,7 @@ public class PaymentInsertValidator : AbstractValidator<PaymentInsertRequest>
         RuleFor(x => x.Amount).GreaterThan(0);
         RuleFor(x => x.PaymentMethod).NotEmpty().MaximumLength(40);
         RuleFor(x => x.Status).NotEmpty().MaximumLength(30);
+        RuleFor(x => x.Provider).NotEmpty().MaximumLength(40);
+        RuleFor(x => x.ProviderTransactionId).MaximumLength(200);
     }
 }

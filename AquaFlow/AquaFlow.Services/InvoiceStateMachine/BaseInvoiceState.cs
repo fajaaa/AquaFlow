@@ -97,6 +97,7 @@ public abstract class BaseInvoiceState
             CustomerId = invoice.CustomerId,
             Amount = amount,
             PaymentMethod = PaymentMethod.Manual,
+            Provider = PaymentProvider.Manual,
             Status = CompletedPaymentStatus,
             PaidAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow

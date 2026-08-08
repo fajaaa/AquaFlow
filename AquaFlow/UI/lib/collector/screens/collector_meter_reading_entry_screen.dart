@@ -56,7 +56,6 @@ class _CollectorMeterReadingEntryScreenState
   int? _selectedTariffId;
   String? _tariffError;
 
-  CollectorMeterReading? _lastReading;
   String? _nextReadingAllowedDate;
 
   @override
@@ -105,7 +104,6 @@ class _CollectorMeterReadingEntryScreenState
       if (!mounted) return;
       setState(() {
         _tariffs = tariffs;
-        _lastReading = lastReading;
         _nextReadingAllowedDate = nextReadingAllowedDate;
         _selectedTariffId = tariffs.any((t) => t.id == lastReading?.tariffId)
             ? lastReading!.tariffId

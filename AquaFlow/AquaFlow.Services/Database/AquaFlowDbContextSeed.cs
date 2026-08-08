@@ -776,7 +776,8 @@ public partial class AquaFlowDbContext
                 PaymentMethod = "BankTransfer",
                 Status = "Completed",
                 PaidAt = (DateTime?)new DateTime(2026, 6, 2, 0, 0, 0, DateTimeKind.Utc),
-                TransactionReference = "BT-2026-0001",
+                Provider = PaymentProvider.Manual,
+                ProviderTransactionId = "BT-2026-0001",
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });

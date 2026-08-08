@@ -11,7 +11,8 @@ class AdminPayment {
     required this.paymentMethod,
     required this.status,
     required this.paidAt,
-    required this.transactionReference,
+    required this.provider,
+    required this.providerTransactionId,
     required this.createdAt,
   });
 
@@ -22,7 +23,8 @@ class AdminPayment {
   final String paymentMethod;
   final String status;
   final DateTime? paidAt;
-  final String? transactionReference;
+  final String provider;
+  final String? providerTransactionId;
   final DateTime? createdAt;
 
   factory AdminPayment.fromJson(Map<String, dynamic> json) {
@@ -34,7 +36,8 @@ class AdminPayment {
       paymentMethod: (json['paymentMethod'] ?? '') as String,
       status: (json['status'] ?? '') as String,
       paidAt: _date(json['paidAt']),
-      transactionReference: json['transactionReference'] as String?,
+      provider: (json['provider'] ?? '') as String,
+      providerTransactionId: json['providerTransactionId'] as String?,
       createdAt: _date(json['createdAt']),
     );
   }

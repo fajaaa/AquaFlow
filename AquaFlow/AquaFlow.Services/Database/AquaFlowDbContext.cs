@@ -31,9 +31,7 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<NotificationImage> NotificationImages => Set<NotificationImage>();
     public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
     public DbSet<Payment> Payments => Set<Payment>();
-    public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
     public DbSet<PaymentSettings> PaymentSettings => Set<PaymentSettings>();
-    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<Recommendation> Recommendations => Set<Recommendation>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -118,6 +116,17 @@ public partial class AquaFlowDbContext : DbContext
         modelBuilder.Entity<Tariff>()
             .HasIndex(tariff => tariff.Name)
             .IsUnique();
+
+        // Idempotency key for provider payments: a retried webhook delivery for the same
+        // (Provider, ProviderTransactionId) must be a no-op, not a second Payment row that
+        // double-credits the invoice. Filtered so manual payments (ProviderTransactionId
+        // always null) can coexist freely - SQL Server unique indexes already treat multiple
+        // NULLs as distinct, but the filter documents that intent and keeps InMemory/SQL
+        // Server behaviour aligned.
+        modelBuilder.Entity<Payment>()
+            .HasIndex(payment => new { payment.Provider, payment.ProviderTransactionId })
+            .IsUnique()
+            .HasFilter("[ProviderTransactionId] IS NOT NULL");
 
         // Optimistic concurrency for invoice status transitions: every UPDATE carries the
         // loaded RowVersion in its WHERE clause, so a stale transition affects 0 rows and

@@ -8,5 +8,6 @@ public class PaymentPatchRequest
     public string? PaymentMethod { get; set; }
     public string? Status { get; set; }
     public DateTime? PaidAt { get; set; }
-    public string? TransactionReference { get; set; }
+    public string? Provider { get; set; }
+    public string? ProviderTransactionId { get; set; }
 }
