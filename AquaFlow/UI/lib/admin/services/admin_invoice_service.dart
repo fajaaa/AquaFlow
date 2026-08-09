@@ -85,29 +85,7 @@ class AdminInvoiceService {
     );
   }
 
-  Future<AdminInvoice> recordPayment(int id, double amount) async {
-    final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices/$id/payments');
-
-    final response = await _send(
-      () => _client.post(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'amount': amount}),
-      ),
-    );
-
-    if (response.statusCode != 200) {
-      throw AdminInvoiceException(
-        _messageFor(response, 'Uplatu nije moguće evidentirati'),
-      );
-    }
-
-    return _decodeInvoice(response.body);
-  }
+  Future<AdminInvoice> recordPayment(int id) => _postAction(id, 'payments');
 
   Future<AdminInvoice> cancel(int id) => _postAction(id, 'cancel');
 

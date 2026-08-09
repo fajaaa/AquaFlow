@@ -1,7 +1,4 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:aquaflow_desktop/admin/models/admin_invoice.dart';
 import 'package:aquaflow_desktop/admin/services/admin_invoice_exception.dart';
@@ -88,16 +85,32 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
   }
 
   Future<void> _recordPayment(AdminInvoice invoice) async {
-    final amount = await showDialog<double>(
+    final confirmed = await showDialog<bool>(
       context: context,
-      barrierDismissible: false,
-      builder: (_) => _PaymentDialog(invoice: invoice),
+      builder: (context) => AlertDialog(
+        title: const Text('Označi kao plaćeno'),
+        content: Text(
+          'Da li želite označiti račun "${invoice.invoiceNumber}" kao '
+          'plaćen (${formatMoney(invoice.remainingAmount)} KM)?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Odustani'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(context).pop(true),
+            icon: const Icon(Icons.payments_outlined),
+            label: const Text('Označi kao plaćeno'),
+          ),
+        ],
+      ),
     );
-    if (!mounted || amount == null) return;
+    if (!mounted || confirmed != true) return;
 
     await runMutation(() async {
-      await _service.recordPayment(invoice.id, amount);
-    }, 'Uplata je evidentirana.');
+      await _service.recordPayment(invoice.id);
+    }, 'Račun je označen kao plaćen.');
   }
 
   Future<void> _cancel(AdminInvoice invoice) async {
@@ -376,7 +389,7 @@ class _RowActions extends StatelessWidget {
     if (invoice.status == 'Issued') {
       buttons.add(
         IconButton(
-          tooltip: 'Evidentiraj uplatu',
+          tooltip: 'Označi kao plaćeno',
           onPressed: disabled ? null : onRecordPayment,
           icon: const Icon(Icons.payments_outlined),
         ),
@@ -447,81 +460,6 @@ class _InvoiceStatusPill extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _PaymentDialog extends StatefulWidget {
-  const _PaymentDialog({required this.invoice});
-
-  final AdminInvoice invoice;
-
-  @override
-  State<_PaymentDialog> createState() => _PaymentDialogState();
-}
-
-class _PaymentDialogState extends State<_PaymentDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _amountCtrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _amountCtrl.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    final form = _formKey.currentState;
-    final formValid = form != null && form.validate();
-    if (!formValid) return;
-
-    Navigator.of(context).pop(parseDecimal(_amountCtrl.text));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Evidentiraj uplatu — ${widget.invoice.invoiceNumber}'),
-      content: SizedBox(
-        width: math.min(420, MediaQuery.sizeOf(context).width - 48),
-        child: Form(
-          key: _formKey,
-          child: TextFormField(
-            controller: _amountCtrl,
-            autofocus: true,
-            textInputAction: TextInputAction.done,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-            ],
-            validator: _amountValidator,
-            onFieldSubmitted: (_) => _save(),
-            decoration: const InputDecoration(
-              labelText: 'Iznos',
-              prefixIcon: Icon(Icons.payments_outlined),
-              suffixText: 'KM',
-            ),
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
-        ),
-        FilledButton.icon(
-          onPressed: _save,
-          icon: const Icon(Icons.save_outlined),
-          label: const Text('Sačuvaj'),
-        ),
-      ],
-    );
-  }
-
-  String? _amountValidator(String? value) {
-    final parsed = parseDecimal(value ?? '');
-    if (parsed == null) return 'Unesite ispravan broj.';
-    if (parsed <= 0) return 'Iznos mora biti veći od 0.';
-    return null;
   }
 }
 
