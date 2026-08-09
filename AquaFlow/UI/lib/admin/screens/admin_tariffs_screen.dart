@@ -308,7 +308,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
                                 ),
                               ),
                             ),
-                            DataCell(Text('${formatMoney(item.pricePerM3)} KM/m³')),
+                            DataCell(Text('${formatMoney(item.pricePerM3)} BAM/m³')),
                             DataCell(_TariffStatusPill(tariff: item)),
                             DataCell(
                               TableRowActions(

@@ -276,12 +276,12 @@ class _AmountCard extends StatelessWidget {
           const SizedBox(height: 10),
           _KeyValueRow(
             label: 'Osnovica',
-            value: '${_formatMoney(invoice.subtotal)} KM',
+            value: '${_formatMoney(invoice.subtotal)} BAM',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
             label: 'Ukupno',
-            value: '${_formatMoney(invoice.totalAmount)} KM',
+            value: '${_formatMoney(invoice.totalAmount)} BAM',
             emphasize: true,
           ),
         ],
@@ -332,12 +332,12 @@ class _PaymentsCard extends StatelessWidget {
           const Divider(height: 24),
           _KeyValueRow(
             label: 'Plaćeno ukupno',
-            value: '${_formatMoney(totalPaid)} KM',
+            value: '${_formatMoney(totalPaid)} BAM',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
             label: 'Preostalo za platiti',
-            value: '${_formatMoney(remaining < 0 ? 0 : remaining)} KM',
+            value: '${_formatMoney(remaining < 0 ? 0 : remaining)} BAM',
             emphasize: true,
           ),
         ],
@@ -369,7 +369,7 @@ class _PaymentRow extends StatelessWidget {
           ),
         ),
         Text(
-          '${_formatMoney(payment.amount)} KM',
+          '${_formatMoney(payment.amount)} BAM',
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),

@@ -285,7 +285,7 @@ class _InvoiceCard extends StatelessWidget {
               const SizedBox(height: 6),
               _InfoRow(
                 icon: Icons.payments_outlined,
-                label: '${_formatMoney(invoice.totalAmount)} KM',
+                label: '${_formatMoney(invoice.totalAmount)} BAM',
               ),
             ],
           ),

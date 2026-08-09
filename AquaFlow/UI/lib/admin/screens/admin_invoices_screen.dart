@@ -91,7 +91,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
         title: const Text('Označi kao plaćeno'),
         content: Text(
           'Da li želite označiti račun "${invoice.invoiceNumber}" kao '
-          'plaćen (${formatMoney(invoice.remainingAmount)} KM)?',
+          'plaćen (${formatMoney(invoice.remainingAmount)} BAM)?',
         ),
         actions: [
           TextButton(
@@ -340,7 +340,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
                               ),
                             ),
                             DataCell(Text(formatMoney(item.consumptionM3))),
-                            DataCell(Text('${formatMoney(item.totalAmount)} KM')),
+                            DataCell(Text('${formatMoney(item.totalAmount)} BAM')),
                             DataCell(_InvoiceStatusPill(status: item.status)),
                             DataCell(
                               _RowActions(

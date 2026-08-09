@@ -232,7 +232,7 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
                             DataCell(Text(_formatDate(item.paidAt ?? item.createdAt))),
                             DataCell(Text('#${item.invoiceId}')),
                             DataCell(Text('#${item.customerId}')),
-                            DataCell(Text('${formatMoney(item.amount)} KM')),
+                            DataCell(Text('${formatMoney(item.amount)} BAM')),
                             DataCell(Text(_paymentMethodLabel(item.paymentMethod))),
                             DataCell(_PaymentStatusPill(status: item.status)),
                           ],

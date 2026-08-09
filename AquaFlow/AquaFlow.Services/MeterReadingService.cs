@@ -140,7 +140,7 @@ public class MeterReadingService
             // Auto-generate an Issued invoice priced from this reading's consumption and the collector's
             // chosen tariff, so the customer's bill for the period is created in the same step as the
             // reading itself - no separate manual invoicing pass is needed for the collector-entry flow.
-            var subtotal = Math.Round(consumption * tariff.PricePerM3, 2);
+            var subtotal = Math.Round(consumption * tariff.PricePerM3, 2, MidpointRounding.AwayFromZero);
             var invoice = new Invoice
             {
                 InvoiceNumber = await GenerateInvoiceNumberAsync(),
