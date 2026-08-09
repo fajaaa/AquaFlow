@@ -202,7 +202,10 @@ public abstract class BaseReadService<TEntity, TResponse, TSearch> : IBaseReadSe
                 return null;
             }
 
-            body = Expression.Call(member, StringContainsMethod, Expression.Constant(text, typeof(string)));
+            var constant = Expression.Constant(text, typeof(string));
+            body = string.Equals(entityProperty.Name, "Status", StringComparison.OrdinalIgnoreCase)
+                ? Expression.Equal(member, constant)
+                : Expression.Call(member, StringContainsMethod, constant);
         }
         else
         {

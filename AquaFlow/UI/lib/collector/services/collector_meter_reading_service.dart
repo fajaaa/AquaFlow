@@ -33,6 +33,7 @@ class CollectorMeterReadingService {
     required int waterMeterId,
     required double readingValue,
     required int tariffId,
+    required String clientUuid,
     bool isMeterReplacement = false,
     double? replacedMeterFinalReading,
     String? note,
@@ -54,6 +55,7 @@ class CollectorMeterReadingService {
           'tariffId': tariffId,
           'isMeterReplacement': isMeterReplacement,
           'replacedMeterFinalReading': ?replacedMeterFinalReading,
+          'clientUuid': clientUuid,
           if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
           if (photoUrl != null && photoUrl.trim().isNotEmpty)
             'photoUrl': photoUrl.trim(),
@@ -76,17 +78,17 @@ class CollectorMeterReadingService {
     return CollectorMeterReadingResult.fromJson(decoded);
   }
 
-  /// Last reading of this meter — source of tariff suggestion and spacing check.
+  /// Last reading of this meter that still counts towards billing — source of
+  /// tariff suggestion and spacing check. Uses the dedicated
+  /// `/MeterReadings/last-counting` route rather than the generic listing so a
+  /// voided reading or one whose invoice was cancelled is never mistaken for
+  /// the current last reading (which would otherwise block a new reading the
+  /// server would actually accept).
   Future<CollectorMeterReading?> fetchLastReading(int waterMeterId) async {
     final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/MeterReadings').replace(
-      queryParameters: {
-        'WaterMeterId': '$waterMeterId',
-        'PageSize': '1',
-        'SortBy': 'ReadingDate',
-        'SortDescending': 'true',
-      },
-    );
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/MeterReadings/last-counting',
+    ).replace(queryParameters: {'waterMeterId': '$waterMeterId'});
 
     final response = await _send(
       () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
@@ -99,13 +101,10 @@ class CollectorMeterReadingService {
     }
 
     final decoded = jsonDecode(response.body);
-    final itemsJson = decoded is Map<String, dynamic> ? decoded['items'] : null;
-    if (itemsJson is! List || itemsJson.isEmpty) {
+    if (decoded is! Map<String, dynamic>) {
       return null;
     }
-    return CollectorMeterReading.fromJson(
-      itemsJson.first as Map<String, dynamic>,
-    );
+    return CollectorMeterReading.fromJson(decoded);
   }
 
   Future<String> _requireToken() async {

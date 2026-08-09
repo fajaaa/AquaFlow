@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:aquaflow_desktop/collector/models/collector_meter_reading.dart';
 import 'package:aquaflow_desktop/collector/models/collector_water_meter.dart';
@@ -58,9 +59,16 @@ class _CollectorMeterReadingEntryScreenState
 
   String? _nextReadingAllowedDate;
 
+  // Generated once per form open and reused for every retry (timeout/network error) of the same
+  // submission, so the server can recognize a resubmit as the same request instead of creating a
+  // second reading/invoice (see MeterReadingService.CreateForCollectorAsync). A fresh UUID is only
+  // generated the next time this screen is opened.
+  late final String _clientUuid;
+
   @override
   void initState() {
     super.initState();
+    _clientUuid = const Uuid().v4();
     _loadData();
   }
 
@@ -141,6 +149,7 @@ class _CollectorMeterReadingEntryScreenState
         waterMeterId: widget.meter.id,
         readingValue: double.parse(_readingCtrl.text.trim().replaceAll(',', '.')),
         tariffId: _selectedTariffId!,
+        clientUuid: _clientUuid,
         isMeterReplacement: _isMeterReplacement,
         replacedMeterFinalReading: _isMeterReplacement && replacedMeterFinalReadingText.isNotEmpty
             ? double.parse(replacedMeterFinalReadingText.replaceAll(',', '.'))

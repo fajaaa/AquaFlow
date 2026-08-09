@@ -48,10 +48,37 @@ public class MeterReadingService
             throw new ClientException($"Water meter with id {request.WaterMeterId} was not found.");
         }
 
+        if (string.Equals(waterMeter.Status, WaterMeterStatus.Removed, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(waterMeter.Status, WaterMeterStatus.Inactive, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ClientException($"Water meter with id {request.WaterMeterId} has status '{waterMeter.Status}' and cannot receive new readings.");
+        }
+
         var tariff = await _dbContext.Tariffs.FirstOrDefaultAsync(t => t.Id == request.TariffId);
         if (tariff == null || !tariff.IsActive)
         {
             throw new ClientException($"Tariff with id {request.TariffId} was not found or is not active.");
+        }
+
+        // Idempotent replay: the collector app sends one ClientUuid per form open and resends the same
+        // one on a retry after a timeout/network error, so a request that actually landed but whose
+        // response was lost never produces a second row or a second invoice - it just replays the first
+        // response. The (WaterMeterId, ClientUuid) unique index (see AquaFlowDbContext.OnModelCreating)
+        // backs this up at the DB level for genuinely concurrent retries.
+        if (!string.IsNullOrWhiteSpace(request.ClientUuid))
+        {
+            var existingReading = await _dbContext.MeterReadings
+                .AsNoTracking()
+                .Include(reading => reading.Invoice)
+                .FirstOrDefaultAsync(reading => reading.WaterMeterId == request.WaterMeterId && reading.ClientUuid == request.ClientUuid);
+            if (existingReading != null)
+            {
+                var replayResponse = Mapper.Map<MeterReadingCollectorEntryResponse>(existingReading);
+                replayResponse.InvoiceId = existingReading.Invoice?.Id;
+                replayResponse.InvoiceNumber = existingReading.Invoice?.InvoiceNumber;
+                replayResponse.InvoiceTotalAmount = existingReading.Invoice?.TotalAmount;
+                return replayResponse;
+            }
         }
 
         const int MinimumDaysBetweenReadings = 15;
@@ -192,11 +219,28 @@ public class MeterReadingService
 
     // Shared definition of "a reading that still counts towards this meter's billing history" - used to
     // pick both the 15-day cooldown reference and the consumption baseline, so the two can never drift
-    // apart (see the callers in CreateForCollectorAsync). A reading stops counting once it is voided or
-    // its invoice was cancelled.
+    // apart (see the callers in CreateForCollectorAsync), and reused below by GetLastCountingReadingAsync
+    // so the collector app's own cooldown lookup agrees with what a new collector-entry would actually
+    // accept. A reading stops counting once it is voided or its invoice was cancelled.
     private static IQueryable<MeterReading> CountingReadings(IQueryable<MeterReading> readings)
         => readings.Where(reading => reading.VoidedAt == null
             && (reading.InvoiceId == null || reading.Invoice!.Status != InvoiceStatus.Cancelled));
+
+    // Backs GET /MeterReadings/last-counting - the collector app used to derive its cooldown/tariff
+    // suggestion from the generic GET /MeterReadings?WaterMeterId=..&SortDescending=true listing, which
+    // returns the raw last row regardless of VoidedAt/cancelled-invoice status. That could block a new
+    // reading the server would actually accept (the cooldown check here is CountingReadings-filtered).
+    // The generic listing itself is left untouched - admin/backfill still needs to see voided/cancelled
+    // rows for audit purposes.
+    public async Task<MeterReadingResponse?> GetLastCountingReadingAsync(int waterMeterId)
+    {
+        var entity = await CountingReadings(_dbContext.MeterReadings.AsNoTracking())
+            .Where(reading => reading.WaterMeterId == waterMeterId)
+            .OrderByDescending(reading => reading.ReadingDate)
+            .FirstOrDefaultAsync();
+
+        return entity == null ? null : Mapper.Map<MeterReadingResponse>(entity);
+    }
 
     // Year-scoped sequential number, e.g. "INV-2026-0001", resetting every calendar year. Mirrors
     // CustomerProfileService.GenerateCustomerCodeAsync/CollectorProfileService.GenerateEmployeeCodeAsync.

@@ -138,6 +138,51 @@ public class InvoiceServiceTests
         Assert.Equal(75m, invoiceTwo.RemainingAmount);
     }
 
+    // BaseReadService.BuildFilterPredicate special-cases Status to use exact match instead of Contains,
+    // since substring matching on status would let e.g. "Issued" also match "Reissued". InvoiceNumber
+    // has no such special case and must keep matching as a substring search.
+    [Fact]
+    public async Task GetAllAsync_StatusFilter_UsesExactMatchNotSubstring()
+    {
+        await using var context = CreateContext();
+        SeedTwoInvoicesInDifferentBillingCycles(context);
+        context.Invoices.Add(new Invoice
+        {
+            Id = 3,
+            InvoiceNumber = "INV-2026-0003",
+            CustomerId = 1,
+            WaterMeterId = 1,
+            BillingPeriodFrom = new DateTime(2026, 5, 1),
+            BillingPeriodTo = new DateTime(2026, 5, 31),
+            PreviousReading = 0,
+            CurrentReading = 5,
+            ConsumptionM3 = 5,
+            Subtotal = 25,
+            TotalAmount = 25,
+            Status = "Reissued",
+            CreatedById = 1
+        });
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var page = await service.GetAllAsync(new InvoiceSearchObject { Status = "Issued", IncludeTotalCount = true });
+
+        Assert.All(page.Items, i => Assert.Equal("Issued", i.Status));
+        Assert.DoesNotContain(page.Items, i => i.InvoiceNumber == "INV-2026-0003");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_InvoiceNumberFilter_StillMatchesAsSubstring()
+    {
+        await using var context = CreateContext();
+        SeedTwoInvoicesInDifferentBillingCycles(context);
+        var service = CreateService(context);
+
+        var page = await service.GetAllAsync(new InvoiceSearchObject { InvoiceNumber = "2026-000", IncludeTotalCount = true });
+
+        Assert.Equal(2, page.Items.Count);
+    }
+
     private static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()

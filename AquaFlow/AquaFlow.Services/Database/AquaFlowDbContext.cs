@@ -143,6 +143,16 @@ public partial class AquaFlowDbContext : DbContext
             .HasForeignKey(reading => reading.InvoiceId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Idempotency key for collector-entry retries: MeterReadingService.CreateForCollectorAsync
+        // pre-checks (WaterMeterId, ClientUuid) before inserting, but that check-then-insert has a race
+        // window under genuinely concurrent retries - this index is the DB-level backstop, same pattern
+        // as the Payment (Provider, ProviderTransactionId) index above. Filtered so backfilled/admin rows
+        // (ClientUuid always null) can coexist freely.
+        modelBuilder.Entity<MeterReading>()
+            .HasIndex(reading => new { reading.WaterMeterId, reading.ClientUuid })
+            .IsUnique()
+            .HasFilter("[ClientUuid] IS NOT NULL");
+
         // Photos have no independent lifecycle outside their report (unlike
         // WorkOrder/FaultStatusHistory rows, which stay Restrict so a report can't be
         // deleted while still referenced elsewhere) - deleting a FaultReport deletes its photos too.

@@ -47,6 +47,21 @@ public class MeterReadingsController : BaseCRUDController<MeterReadingResponse, 
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
+    // The collector app's cooldown/tariff-suggestion lookup: unlike the generic GET /MeterReadings
+    // listing (which stays available, unfiltered, for admin/backfill audit of voided/cancelled rows),
+    // this returns the last reading that still counts towards billing, so the client-side cooldown
+    // display agrees with what a new POST /MeterReadings/collector-entry would actually accept.
+    // The [RequirePermission] below is redundant with the class-level gate; kept deliberately, same
+    // reasoning as CreateForCollector above.
+    [HttpGet("last-counting")]
+    [RequirePermission(ManagePermission)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<MeterReadingResponse?>> GetLastCounting([FromQuery] int waterMeterId)
+    {
+        var result = await Service.GetLastCountingReadingAsync(waterMeterId);
+        return Ok(result);
+    }
+
     private bool TryGetCurrentUserId(out int userId)
     {
         var claimValue = User.FindFirst(ClaimNames.Id)?.Value;
