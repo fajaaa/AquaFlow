@@ -27,6 +27,12 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
 
+// Loads a developer-local .env file (gitignored, see .env.example) into process environment
+// variables before configuration is built, so Payments__Stripe__* follow the same env-var
+// double-underscore convention IConfiguration already reads ConnectionStrings__DefaultConnection
+// through. Must run before WebApplication.CreateBuilder(args) so those variables are visible to it.
+DotNetEnv.Env.Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpContextAccessor();
@@ -247,13 +253,32 @@ builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, 
 // CheckoutSessionResponse. Adding a real provider (e.g. Stripe) later means adding one case here plus
 // a new IPaymentProvider implementation class - nothing in InvoiceService/InvoicesController changes.
 builder.Services.Configure<PaymentsOptions>(builder.Configuration.GetSection("Payments"));
+builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection("Payments:Stripe"));
 var configuredPaymentProvider = builder.Configuration["Payments:Provider"];
+var providerName = string.IsNullOrWhiteSpace(configuredPaymentProvider) ? PaymentProvider.Manual : configuredPaymentProvider;
+if (providerName == PaymentProvider.Stripe)
+{
+    var stripeSecretKey = builder.Configuration["Payments:Stripe:SecretKey"];
+    var stripeWebhookSecret = builder.Configuration["Payments:Stripe:WebhookSecret"];
+    if (string.IsNullOrWhiteSpace(stripeSecretKey) || string.IsNullOrWhiteSpace(stripeWebhookSecret))
+    {
+        throw new InvalidOperationException(
+            "Stripe configuration is required because Payments:Provider is set to 'Stripe'. " +
+            "Set Payments__Stripe__SecretKey and Payments__Stripe__WebhookSecret with environment variables, a local .env file, or user secrets.");
+    }
+
+    // StripeConfiguration.ApiKey is a static, process-wide setting read by every Stripe.net service
+    // call - set it once at startup rather than per-request. Fully qualified (no "using Stripe;") to
+    // avoid colliding with this file's own Invoice/InvoiceService/InvoiceItem/File types.
+    Stripe.StripeConfiguration.ApiKey = stripeSecretKey;
+}
+
 builder.Services.AddScoped<IPaymentProvider>(_ =>
 {
-    var providerName = string.IsNullOrWhiteSpace(configuredPaymentProvider) ? PaymentProvider.Manual : configuredPaymentProvider;
     return providerName switch
     {
         PaymentProvider.Manual => new ManualPaymentProvider(),
+        PaymentProvider.Stripe => new StripePaymentProvider(),
         _ => throw new InvalidOperationException(
             $"Unknown payment provider '{providerName}'. Configure Payments:Provider to a supported value.")
     };

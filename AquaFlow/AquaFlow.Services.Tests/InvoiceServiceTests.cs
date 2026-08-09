@@ -264,7 +264,8 @@ public class InvoiceServiceTests
             new IValidator<Model.Requests.InvoicePatchRequest>[] { new InvoicePatchValidator() },
             new NotSupportedInvoiceStateResolver(),
             new NotSupportedPaymentProvider(),
-            Options.Create(new PaymentsOptions()));
+            Options.Create(new PaymentsOptions()),
+            Options.Create(new StripeOptions()));
     }
 
     // GetAllAsync never touches the state resolver, so a minimal stub that throws if it were ever

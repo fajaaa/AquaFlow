@@ -210,7 +210,8 @@ public class InvoiceCheckoutTests
             new IValidator<Model.Requests.InvoicePatchRequest>[] { new InvoicePatchValidator() },
             stateResolver,
             new ManualPaymentProvider(),
-            Options.Create(new PaymentsOptions()));
+            Options.Create(new PaymentsOptions()),
+            Options.Create(new StripeOptions()));
     }
 
     // InvoiceStateResolver resolves states through IServiceProvider.GetRequiredKeyedService (which

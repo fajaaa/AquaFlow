@@ -20,6 +20,7 @@ public class InvoiceService
     private readonly IInvoiceStateResolver _stateResolver;
     private readonly IPaymentProvider _paymentProvider;
     private readonly PaymentsOptions _paymentsOptions;
+    private readonly StripeOptions _stripeOptions;
 
     public InvoiceService(
         AquaFlowDbContext dbContext,
@@ -29,13 +30,15 @@ public class InvoiceService
         IEnumerable<IValidator<InvoicePatchRequest>> patchValidators,
         IInvoiceStateResolver stateResolver,
         IPaymentProvider paymentProvider,
-        IOptions<PaymentsOptions> paymentsOptions)
+        IOptions<PaymentsOptions> paymentsOptions,
+        IOptions<StripeOptions> stripeOptions)
         : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _dbContext = dbContext;
         _stateResolver = stateResolver;
         _paymentProvider = paymentProvider;
         _paymentsOptions = paymentsOptions.Value;
+        _stripeOptions = stripeOptions.Value;
     }
 
     // Auto-generated invoices from meter readings start in Issued state.
@@ -127,7 +130,7 @@ public class InvoiceService
 
         if (existingPending != null)
         {
-            return ToCheckoutSessionResponse(existingPending, redirectUrl: null);
+            return ToCheckoutSessionResponse(existingPending, redirectUrl: null, clientSecret: null);
         }
 
         var checkoutResult = await _paymentProvider.CreateCheckoutAsync(
@@ -148,7 +151,7 @@ public class InvoiceService
         _dbContext.Payments.Add(payment);
         await _dbContext.SaveChangesAsync();
 
-        return ToCheckoutSessionResponse(payment, checkoutResult.RedirectUrl);
+        return ToCheckoutSessionResponse(payment, checkoutResult.RedirectUrl, checkoutResult.ClientSecret);
     }
 
     public async Task<PaymentResponse> ConfirmPaymentAsync(string provider, string providerTransactionId, bool succeeded)
@@ -187,7 +190,7 @@ public class InvoiceService
         return Mapper.Map<PaymentResponse>(payment);
     }
 
-    private CheckoutSessionResponse ToCheckoutSessionResponse(Payment payment, string? redirectUrl)
+    private CheckoutSessionResponse ToCheckoutSessionResponse(Payment payment, string? redirectUrl, string? clientSecret)
     {
         return new CheckoutSessionResponse
         {
@@ -198,6 +201,8 @@ public class InvoiceService
             Provider = payment.Provider,
             ProviderTransactionId = payment.ProviderTransactionId ?? string.Empty,
             RedirectUrl = redirectUrl,
+            ClientSecret = clientSecret,
+            PublishableKey = payment.Provider == PaymentProvider.Stripe ? _stripeOptions.PublishableKey : null,
             Status = payment.Status
         };
     }

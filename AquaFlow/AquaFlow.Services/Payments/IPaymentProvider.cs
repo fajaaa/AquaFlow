@@ -25,5 +25,7 @@ public sealed record PaymentCheckoutContext(
     string? IdempotencyKey);
 
 // RedirectUrl is null for a provider with no hosted checkout page (e.g. the manual stub); a real
-// provider would return the URL the client should send the customer to.
-public sealed record PaymentCheckoutResult(string ProviderTransactionId, string? RedirectUrl);
+// provider would return the URL the client should send the customer to. ClientSecret is null for a
+// provider with no hosted/PaymentSheet flow (e.g. the manual stub); Stripe returns its PaymentIntent
+// client secret here for the mobile app's PaymentSheet.
+public sealed record PaymentCheckoutResult(string ProviderTransactionId, string? RedirectUrl, string? ClientSecret = null);
