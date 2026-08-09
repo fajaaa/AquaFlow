@@ -13,9 +13,9 @@ namespace AquaFlow.Services.Tests.MeterReadings;
 // Covers the negative-consumption hole: a ReadingValue below the water meter's last recorded
 // reading used to be let through by a bare Note, computing a negative ConsumptionM3 and pricing a
 // negative-total Issued invoice that RecordPaymentInternalAsync (BaseInvoiceState.cs) can never
-// mark Paid (it rejects amount <= 0). IsMeterReplacement is now the only way a lower reading is
-// ever accepted, and a zero-consumption reading must not create an invoice either, for the same
-// unpayable-invoice reason.
+// mark Paid (its remaining balance is never > 0). IsMeterReplacement is now the only way a lower
+// reading is ever accepted, and a zero-consumption reading must not create an invoice either, for
+// the same unpayable-invoice reason.
 public class MeterReadingServiceMeterReplacementTests
 {
     // Without IsMeterReplacement, a lower reading is ALWAYS rejected - a Note alone (the old bypass)

@@ -172,8 +172,8 @@ public class InvoicesController : BaseCRUDController<InvoiceResponse, InvoiceSea
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public Task<ActionResult<InvoiceResponse>> RecordPayment(int id, [FromBody] InvoicePaymentRequest request)
-        => RunStateActionAsync(() => Service.RecordPaymentAsync(id, request.Amount, ResolveChangedById()));
+    public Task<ActionResult<InvoiceResponse>> RecordPayment(int id)
+        => RunStateActionAsync(() => Service.RecordPaymentAsync(id, ResolveChangedById()));
 
     [RequirePermission("Invoices.Manage")]
     [HttpPost("{id:int}/cancel")]

@@ -34,7 +34,7 @@ public abstract class BaseInvoiceState
     // entity in, so a state never re-reads the invoice for a plain transition. The id of the user
     // performing the transition is passed through each action call so that TransitionToAsync can stamp
     // the InvoiceStatusHistory row with who made the change.
-    public virtual Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, decimal amount, int changedById) => throw NotAllowed("Record payment");
+    public virtual Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, int changedById) => throw NotAllowed("Record payment");
 
     public virtual Task<InvoiceResponse> CancelAsync(Invoice invoice, int changedById) => throw NotAllowed("Cancel");
 
@@ -64,16 +64,17 @@ public abstract class BaseInvoiceState
         return await InvoicePaymentAmounts.ToResponseAsync(DbContext, Mapper, invoice);
     }
 
-    // Records a brand-new manual/admin payment (Status=Completed from the start) against the invoice.
-    // Shares its balance-check/transition guarantees with ConfirmPendingPaymentAsync below via
-    // CreditInvoiceAsync - see that method for the transaction/overpay-guard reasoning.
-    protected Task<InvoiceResponse> RecordPaymentInternalAsync(Invoice invoice, decimal amount, int changedById)
+    // Records a brand-new manual/admin payment (Status=Completed from the start) against the invoice,
+    // always for the invoice's full remaining balance - partial payments are no longer supported.
+    // Shares its balance-computation/transition guarantees with ConfirmPendingPaymentAsync below via
+    // CreditInvoiceAsync - see that method for the transaction/remaining-balance reasoning.
+    protected Task<InvoiceResponse> RecordPaymentInternalAsync(Invoice invoice, int changedById)
     {
-        return CreditInvoiceAsync(invoice, amount, changedById, () => DbContext.Payments.Add(new Payment
+        return CreditInvoiceAsync(invoice, changedById, remaining => DbContext.Payments.Add(new Payment
         {
             InvoiceId = invoice.Id,
             CustomerId = invoice.CustomerId,
-            Amount = amount,
+            Amount = remaining,
             PaymentMethod = PaymentMethod.Manual,
             Provider = PaymentProvider.Manual,
             Status = CompletedPaymentStatus,
@@ -84,13 +85,22 @@ public abstract class BaseInvoiceState
 
     // Flips an existing Pending provider payment (created by InvoiceService.CheckoutAsync) to
     // Completed and credits the invoice through the exact same path RecordPaymentInternalAsync uses -
-    // a provider payment must never bypass the overpay guard or the Paid transition a manual payment
-    // gets. The caller (InvoiceService.ConfirmPaymentAsync) has already checked payment.Status is
+    // a provider payment must never bypass the Paid transition a manual payment gets. payment.Amount
+    // was fixed when the checkout was created; if the invoice's remaining balance has since changed
+    // (e.g. another payment landed in the meantime) that fixed amount no longer pays the invoice off
+    // in full, so the callback below rejects the confirmation instead of silently accepting a stale
+    // amount. The caller (InvoiceService.ConfirmPaymentAsync) has already checked payment.Status is
     // still Pending, so a retried confirmation never reaches here a second time.
     protected Task<InvoiceResponse> ConfirmPendingPaymentAsync(Invoice invoice, Payment payment, int changedById)
     {
-        return CreditInvoiceAsync(invoice, payment.Amount, changedById, () =>
+        return CreditInvoiceAsync(invoice, changedById, remaining =>
         {
+            if (payment.Amount != remaining)
+            {
+                throw new ClientException(
+                    $"Payment amount {payment.Amount:0.00} no longer matches the invoice's remaining balance {remaining:0.00}.");
+            }
+
             payment.Status = CompletedPaymentStatus;
             payment.PaidAt = DateTime.UtcNow;
         });
@@ -98,27 +108,27 @@ public abstract class BaseInvoiceState
 
     // Shared by RecordPaymentInternalAsync (stages a brand-new Completed payment) and
     // ConfirmPendingPaymentAsync (flips an already-staged Pending payment to Completed): the
-    // Serializable transaction, overpay guard, and Paid transition must be identical for both, so a
-    // provider payment gets the same guarantees a manually recorded one does.
+    // Serializable transaction and Paid transition must be identical for both, so a provider payment
+    // gets the same guarantees a manually recorded one does.
     //
-    // The whole "sum existing payments -> check the balance -> stage the payment" sequence runs
+    // Partial payments are not supported: every successful call pays off the invoice's full remaining
+    // balance and transitions it straight to Paid. The remaining amount is computed here, inside the
+    // transaction, and handed to stagePayment so the caller can write it onto Payment.Amount.
+    //
+    // The whole "sum existing payments -> compute remaining -> stage the payment" sequence runs
     // inside a Serializable transaction. Without it two concurrent payments can both read the same
-    // paid total, both pass the balance check, and overpay the invoice. Serializable range locks the
-    // rows the balance is computed from, so a second concurrent payment waits for this one to commit.
+    // paid total and both try to pay off the same balance. Serializable range locks the rows the
+    // balance is computed from, so a second concurrent payment waits for this one to commit and then
+    // sees remaining <= 0.
     //
     // InvoiceService loads the invoice before this transaction opens (to resolve the state), so that
     // first read is not covered by the Serializable lock. We re-read the invoice row here, inside the
-    // transaction, so the balance is computed from a locked snapshot and the overpay guarantee holds.
+    // transaction, so the balance is computed from a locked snapshot.
     //
-    // stagePayment is invoked only after the overpay guard passes, so a rejected payment is never
-    // marked Completed even in memory.
-    private async Task<InvoiceResponse> CreditInvoiceAsync(Invoice invoice, decimal amount, int changedById, Action stagePayment)
+    // stagePayment is invoked only after the remaining-balance guard passes, so a rejected payment is
+    // never marked Completed even in memory.
+    private async Task<InvoiceResponse> CreditInvoiceAsync(Invoice invoice, int changedById, Action<decimal> stagePayment)
     {
-        if (amount <= 0)
-        {
-            throw new ClientException("Payment amount must be greater than zero.");
-        }
-
         await using var transaction = await DbContext.Database
             .BeginTransactionAsync(IsolationLevel.Serializable);
 
@@ -130,21 +140,14 @@ public abstract class BaseInvoiceState
             .SumAsync(payment => (decimal?)payment.Amount) ?? 0m;
         var remaining = invoice.TotalAmount - alreadyPaid;
 
-        if (amount > remaining)
+        if (remaining <= 0m)
         {
-            throw new ClientException($"Payment amount {amount:0.00} exceeds the remaining balance {remaining:0.00}.");
+            throw new ClientException("This invoice has no remaining balance to pay.");
         }
 
-        stagePayment();
+        stagePayment(remaining);
 
-        if (remaining - amount <= 0m)
-        {
-            await TransitionToAsync(invoice, InvoiceStatus.Paid, changedById, $"Uplata {amount:0.00}; račun plaćen.");
-        }
-        else
-        {
-            await DbContext.SaveChangesAsync();
-        }
+        await TransitionToAsync(invoice, InvoiceStatus.Paid, changedById, $"Uplata {remaining:0.00}; račun plaćen.");
 
         await transaction.CommitAsync();
         return await InvoicePaymentAmounts.ToResponseAsync(DbContext, Mapper, invoice);

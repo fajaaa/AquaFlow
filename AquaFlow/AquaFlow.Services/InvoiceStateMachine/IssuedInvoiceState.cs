@@ -15,8 +15,8 @@ public class IssuedInvoiceState : BaseInvoiceState
 
     public override string Status => InvoiceStatus.Issued;
 
-    public override Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, decimal amount, int changedById)
-        => RecordPaymentInternalAsync(invoice, amount, changedById);
+    public override Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, int changedById)
+        => RecordPaymentInternalAsync(invoice, changedById);
 
     public override Task<InvoiceResponse> ConfirmPaymentAsync(Invoice invoice, Payment payment, int changedById)
         => ConfirmPendingPaymentAsync(invoice, payment, changedById);

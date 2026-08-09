@@ -76,7 +76,7 @@ public class FakeInvoiceService : IInvoiceService
     public Task<InvoiceResponse> IssueAsync(int id, int changedById)
         => throw new NotSupportedException();
 
-    public Task<InvoiceResponse> RecordPaymentAsync(int id, decimal amount, int changedById)
+    public Task<InvoiceResponse> RecordPaymentAsync(int id, int changedById)
         => throw new NotSupportedException();
 
     public Task<InvoiceResponse> CancelAsync(int id, int changedById)

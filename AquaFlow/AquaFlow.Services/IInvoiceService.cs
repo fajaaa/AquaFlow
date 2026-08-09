@@ -7,7 +7,7 @@ namespace AquaFlow.Services;
 public interface IInvoiceService
     : IBaseCRUDService<InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>
 {
-    Task<InvoiceResponse> RecordPaymentAsync(int id, decimal amount, int changedById);
+    Task<InvoiceResponse> RecordPaymentAsync(int id, int changedById);
     Task<InvoiceResponse> CancelAsync(int id, int changedById);
     Task<List<string>> GetAllowedActionsAsync(int id);
 

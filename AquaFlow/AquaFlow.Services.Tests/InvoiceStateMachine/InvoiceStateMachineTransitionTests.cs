@@ -12,67 +12,63 @@ namespace AquaFlow.Services.Tests.InvoiceStateMachine;
 
 public class InvoiceStateMachineTransitionTests
 {
-    // Partial payment: Payment row is recorded, but invoice status remains Issued
+    // RecordPaymentAsync no longer takes a caller-supplied amount: it always pays off the invoice's
+    // full remaining balance and transitions it straight to Paid.
     [Fact]
-    public async Task IssuedInvoiceState_PartialPayment_RecordsPaymentWithoutChangingStatus()
-    {
-        await using var context = CreateContext();
-        SeedTestData(context);
-        var invoice = context.Invoices.First();
-        var originalStatus = invoice.Status;
-
-        var state = new IssuedInvoiceState(context, CreateMapper());
-        var response = await state.RecordPaymentAsync(invoice, 10m, changedById: 1);
-
-        // Status should remain Issued (not change to Paid for partial payment)
-        Assert.Equal(InvoiceStatus.Issued, response.Status);
-        Assert.Equal(originalStatus, invoice.Status);
-
-        // The response returned directly from RecordPaymentAsync must already carry the updated
-        // PaidAmount/RemainingAmount - this is the state-machine mapping path (BaseInvoiceState maps
-        // the entity directly), which must not silently return PaidAmount 0.
-        Assert.Equal(10m, response.PaidAmount);
-        Assert.Equal(40m, response.RemainingAmount);
-
-        // Payment should be recorded in the database
-        var payments = await context.Payments.Where(p => p.InvoiceId == invoice.Id).ToListAsync();
-        Assert.Single(payments);
-        Assert.Equal(10m, payments[0].Amount);
-        Assert.Equal(PaymentStatus.Completed, payments[0].Status);
-
-        // No InvoiceStatusHistory should exist (status didn't change)
-        var histories = await context.InvoiceStatusHistories.Where(h => h.InvoiceId == invoice.Id).ToListAsync();
-        Assert.Empty(histories);
-    }
-
-    // Full payment: Payment recorded and status changes to Paid
-    [Fact]
-    public async Task IssuedInvoiceState_FullPayment_RecordsPaymentAndTransitionsToPaid()
+    public async Task IssuedInvoiceState_RecordPayment_PaysFullRemainingBalanceAndTransitionsToPaid()
     {
         await using var context = CreateContext();
         SeedTestData(context);
         var invoice = context.Invoices.First();
 
         var state = new IssuedInvoiceState(context, CreateMapper());
-        var response = await state.RecordPaymentAsync(invoice, 50m, changedById: 1);
+        var response = await state.RecordPaymentAsync(invoice, changedById: 1);
 
         // Status should change to Paid
         Assert.Equal(InvoiceStatus.Paid, response.Status);
 
-        // Fully paid: PaidAmount matches the payment and RemainingAmount is floored at 0.
+        // Fully paid: PaidAmount matches the invoice total and RemainingAmount is floored at 0.
         Assert.Equal(50m, response.PaidAmount);
         Assert.Equal(0m, response.RemainingAmount);
 
-        // Payment should be recorded
+        // Payment should be recorded for the full remaining balance
         var payment = await context.Payments.FirstOrDefaultAsync(p => p.InvoiceId == invoice.Id);
         Assert.NotNull(payment);
         Assert.Equal(50m, payment.Amount);
+        Assert.Equal(PaymentStatus.Completed, payment.Status);
 
         // InvoiceStatusHistory should exist
         var history = await context.InvoiceStatusHistories.FirstOrDefaultAsync(h => h.InvoiceId == invoice.Id);
         Assert.NotNull(history);
         Assert.Equal(InvoiceStatus.Issued, history.OldStatus);
         Assert.Equal(InvoiceStatus.Paid, history.NewStatus);
+    }
+
+    // An invoice with no remaining balance (e.g. already fully paid) has nothing left to charge, so
+    // RecordPaymentAsync must reject it instead of staging a zero/negative payment.
+    [Fact]
+    public async Task IssuedInvoiceState_RecordPayment_WhenNoRemainingBalance_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var invoice = context.Invoices.First();
+
+        context.Payments.Add(new Payment
+        {
+            InvoiceId = invoice.Id,
+            CustomerId = invoice.CustomerId,
+            Amount = invoice.TotalAmount,
+            PaymentMethod = PaymentMethod.Manual,
+            Provider = PaymentProvider.Manual,
+            Status = PaymentStatus.Completed,
+            PaidAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
+        });
+        context.SaveChanges();
+
+        var state = new IssuedInvoiceState(context, CreateMapper());
+
+        await Assert.ThrowsAsync<ClientException>(() => state.RecordPaymentAsync(invoice, changedById: 1));
     }
 
     private static AquaFlowDbContext CreateContext()

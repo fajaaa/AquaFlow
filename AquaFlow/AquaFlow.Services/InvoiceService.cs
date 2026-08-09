@@ -76,10 +76,10 @@ public class InvoiceService
         return InvoicePaymentAmounts.ToResponse(Mapper, row.Invoice, row.PaidAmount);
     }
 
-    public async Task<InvoiceResponse> RecordPaymentAsync(int id, decimal amount, int changedById)
+    public async Task<InvoiceResponse> RecordPaymentAsync(int id, int changedById)
     {
         var invoice = await LoadInvoiceAsync(id);
-        return await _stateResolver.Resolve(invoice.Status).RecordPaymentAsync(invoice, amount, changedById);
+        return await _stateResolver.Resolve(invoice.Status).RecordPaymentAsync(invoice, changedById);
     }
 
     public async Task<InvoiceResponse> CancelAsync(int id, int changedById)
