@@ -186,6 +186,26 @@ class NotificationService {
     }
   }
 
+  /// Marks every unread inbox row for the signed-in user as read in one
+  /// request via `POST /UserNotifications/mark-all-read`, instead of one
+  /// `PATCH` per row.
+  Future<void> markAllAsRead() async {
+    final token = await _requireToken();
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/UserNotifications/mark-all-read',
+    );
+
+    final response = await _send(
+      () => _client.post(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 204) {
+      throw NotificationException(
+        _messageFor(response, 'Obavijesti nije moguće označiti kao pročitane'),
+      );
+    }
+  }
+
   /// Metadata for every image attached to [notificationId] (never raw bytes -
   /// see `fetchImageBytes`). Reaches `/Notifications/{id}/images` directly
   /// (a different controller than `/UserNotifications/...`) - readable by any
@@ -209,7 +229,9 @@ class NotificationService {
 
     final decoded = jsonDecode(response.body);
     if (decoded is! List) {
-      throw const NotificationException('Lista slika je u neispravnom formatu.');
+      throw const NotificationException(
+        'Lista slika je u neispravnom formatu.',
+      );
     }
 
     return decoded

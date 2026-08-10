@@ -3,7 +3,7 @@
          also request this permission at runtime (see UI/README.md - Push notifications). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
-        android:label="aquaflow_collector"
+        android:label="AquaFlow for Collectors"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

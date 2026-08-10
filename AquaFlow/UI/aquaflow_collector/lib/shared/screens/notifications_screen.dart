@@ -25,6 +25,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   NotificationPage? _pageData;
   bool _loading = true;
+  bool _markingAll = false;
   String? _error;
   String? _typeFilter;
   int _page = 1;
@@ -73,6 +74,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _loading = false;
         _error = e.message;
       });
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    setState(() => _markingAll = true);
+    try {
+      await _service.markAllAsRead();
+      if (!mounted) return;
+      context.read<NotificationBadgeProvider>().markSeen();
+      await _load(resetPage: true);
+    } on NotificationException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _markingAll = false);
     }
   }
 
@@ -157,6 +175,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildFilters() {
+    // Badge provider's count reflects the tab icon (zeroed by `markSeen` the
+    // moment this screen's list loads), so it can't drive this button -
+    // whether individual rows are still unread is read straight from the
+    // loaded page instead.
+    final hasUnread = (_pageData?.items ?? const <UserNotificationItem>[]).any(
+      (item) => !item.isRead,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -170,6 +196,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
+            if (hasUnread)
+              IconButton(
+                tooltip: 'Označi sve kao pročitano',
+                onPressed: (_loading || _markingAll) ? null : _markAllAsRead,
+                icon: _markingAll
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.done_all),
+              ),
             IconButton(
               tooltip: 'Osvježi',
               onPressed: _loading ? null : () => _load(),

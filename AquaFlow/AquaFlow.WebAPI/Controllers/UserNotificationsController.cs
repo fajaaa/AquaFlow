@@ -2,19 +2,18 @@ using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
+using AquaFlow.Services;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Mvc;
 
-using UserNotificationCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.UserNotificationResponse, AquaFlow.Model.SearchObjects.UserNotificationSearchObject, AquaFlow.Model.Requests.UserNotificationInsertRequest, AquaFlow.Model.Requests.UserNotificationUpdateRequest, AquaFlow.Model.Requests.UserNotificationPatchRequest>;
-
 namespace AquaFlow.WebAPI.Controllers;
 
-public class UserNotificationsController : BaseCRUDController<UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest, UserNotificationCrudService>
+public class UserNotificationsController : BaseCRUDController<UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest, IUserNotificationService>
 {
     private const string ManagePermission = "Notifications.Manage";
 
-    public UserNotificationsController(UserNotificationCrudService service) : base(service)
+    public UserNotificationsController(IUserNotificationService service) : base(service)
     {
     }
 
@@ -32,6 +31,18 @@ public class UserNotificationsController : BaseCRUDController<UserNotificationRe
 
         var result = await Service.GetAllAsync(search);
         return Ok(result);
+    }
+
+    [HttpPost("mark-all-read")]
+    public async Task<ActionResult> MarkAllAsRead()
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        await Service.MarkAllAsReadAsync(userId);
+        return NoContent();
     }
 
     // Non-admin callers only ever see their own inbox rows: the search is pinned to
