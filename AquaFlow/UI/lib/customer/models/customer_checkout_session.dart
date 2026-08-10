@@ -10,6 +10,7 @@ class CustomerCheckoutSession {
     required this.provider,
     required this.providerTransactionId,
     required this.redirectUrl,
+    required this.clientSecret,
     required this.status,
   });
 
@@ -20,6 +21,9 @@ class CustomerCheckoutSession {
   final String provider;
   final String providerTransactionId;
   final String? redirectUrl;
+  // Stripe PaymentIntent client secret, needed to drive the mobile PaymentSheet; null for
+  // providers with no such flow (e.g. the Manual stub always returns null).
+  final String? clientSecret;
   final String status;
 
   factory CustomerCheckoutSession.fromJson(Map<String, dynamic> json) {
@@ -31,6 +35,7 @@ class CustomerCheckoutSession {
       provider: (json['provider'] ?? '') as String,
       providerTransactionId: (json['providerTransactionId'] ?? '') as String,
       redirectUrl: json['redirectUrl'] as String?,
+      clientSecret: json['clientSecret'] as String?,
       status: (json['status'] ?? '') as String,
     );
   }

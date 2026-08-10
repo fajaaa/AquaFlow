@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/app/platform_gate.dart';
@@ -10,6 +11,7 @@ import 'package:aquaflow_desktop/shared/providers/notification_badge_provider.da
 import 'package:aquaflow_desktop/shared/providers/theme_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/welcome_screen.dart';
 import 'package:aquaflow_desktop/shared/services/push_message_handler.dart';
+import 'package:aquaflow_desktop/shared/services/stripe_config_service.dart';
 import 'package:aquaflow_desktop/shared/theme/app_theme.dart';
 
 /// Root navigator/messenger keys, needed so [PushMessageHandler] can push a
@@ -48,7 +50,21 @@ Future<void> main() async {
       scaffoldMessengerKey: _scaffoldMessengerKey,
       onForegroundMessage: _notificationBadgeProvider.increment,
     ).init();
+    await _initStripe();
   }
+}
+
+/// Configures the Stripe SDK once at startup, well before the customer can
+/// reach `CustomerInvoiceDetailScreen`'s "Plati" button. A null config (no
+/// network, or the active provider isn't Stripe - see
+/// [StripeConfigService.fetch]) just leaves the SDK unconfigured; checkout
+/// still works via the pre-Stripe SnackBar fallback in that case.
+Future<void> _initStripe() async {
+  final config = await StripeConfigService().fetch();
+  if (config == null) return;
+
+  Stripe.publishableKey = config.publishableKey;
+  await Stripe.instance.applySettings();
 }
 
 class AquaFlowApp extends StatelessWidget {

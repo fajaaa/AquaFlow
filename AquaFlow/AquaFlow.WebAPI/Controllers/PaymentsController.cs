@@ -1,8 +1,11 @@
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
+using AquaFlow.Services.Payments;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 using CustomerProfileCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.CustomerProfileResponse, AquaFlow.Model.SearchObjects.CustomerProfileSearchObject, AquaFlow.Model.Requests.CustomerProfileInsertRequest, AquaFlow.Model.Requests.CustomerProfileUpdateRequest, AquaFlow.Model.Requests.CustomerProfilePatchRequest>;
 using PaymentReadService = AquaFlow.Services.IBaseReadService<AquaFlow.Model.Responses.PaymentResponse, AquaFlow.Model.SearchObjects.PaymentSearchObject>;
@@ -19,10 +22,35 @@ public class PaymentsController : BaseReadController<PaymentResponse, PaymentSea
     private const string ManagePermission = "Invoices.Manage";
 
     private readonly CustomerProfileCrudService _customerProfileService;
+    private readonly StripeOptions _stripeOptions;
+    private readonly PaymentsOptions _paymentsOptions;
 
-    public PaymentsController(PaymentReadService service, CustomerProfileCrudService customerProfileService) : base(service)
+    public PaymentsController(
+        PaymentReadService service,
+        CustomerProfileCrudService customerProfileService,
+        IOptions<StripeOptions> stripeOptions,
+        IOptions<PaymentsOptions> paymentsOptions) : base(service)
     {
         _customerProfileService = customerProfileService;
+        _stripeOptions = stripeOptions.Value;
+        _paymentsOptions = paymentsOptions.Value;
+    }
+
+    // [AllowAnonymous] override of the class-level [Authorize]: the mobile app calls this once at
+    // startup, before the first payment screen and before any login, to configure the Stripe SDK
+    // (Stripe.publishableKey + Stripe.instance.applySettings()). PublishableKey is not a secret -
+    // it is meant to ship inside a client, unlike Payments:Stripe:SecretKey/WebhookSecret. Empty
+    // when the active provider isn't Stripe (e.g. the default Manual provider), same as
+    // CheckoutSessionResponse.PublishableKey.
+    [HttpGet("stripe-config")]
+    [AllowAnonymous]
+    public ActionResult<StripeConfigResponse> GetStripeConfig()
+    {
+        return Ok(new StripeConfigResponse
+        {
+            PublishableKey = _stripeOptions.PublishableKey,
+            Currency = _paymentsOptions.Currency
+        });
     }
 
     // A caller holding Invoices.Manage (currently Admin only) sees every payment

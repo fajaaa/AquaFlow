@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
+using AquaFlow.Services.Payments;
 using AquaFlow.WebAPI.Controllers;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace AquaFlow.WebAPI.Tests.Payments;
@@ -201,7 +203,11 @@ public class PaymentsControllerTests
     {
         var service = new FakePaymentReadService(payments);
         var profileService = new FakeCustomerProfileCrudService(profiles);
-        return new PaymentsController(service, profileService)
+        return new PaymentsController(
+            service,
+            profileService,
+            Options.Create(new StripeOptions()),
+            Options.Create(new PaymentsOptions()))
         {
             ControllerContext = new ControllerContext
             {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' as stripe;
 
 import 'package:aquaflow_desktop/customer/models/customer_invoice.dart';
 import 'package:aquaflow_desktop/customer/models/customer_payment.dart';
@@ -111,28 +112,70 @@ class _CustomerInvoiceDetailScreenState
     );
   }
 
-  // There is no real payment provider behind this yet (see AGENTS.md) - the
-  // checkout only opens a Pending payment session, it does not complete the
-  // payment, so the confirmation must never claim the invoice is paid.
+  // Checkout only opens a payment session - it never completes the payment
+  // itself, so nothing along this path may claim the invoice is paid. For the
+  // Stripe provider, presentPaymentSheet() returning success only means the
+  // customer finished entering card details; the actual charge is confirmed
+  // asynchronously by Payments/webhook/stripe (see AGENTS.md), so
+  // _refreshInvoiceWithRetry polls for the Paid status for a few seconds
+  // instead of assuming it landed immediately.
   Future<void> _payInvoice(CustomerInvoice invoice) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Potvrda plaćanja'),
+        content: Text(
+          'Da li ste sigurni da želite platiti '
+          '${_formatMoney(invoice.remainingAmount)} BAM?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Otkaži'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Plati'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
     setState(() => _paying = true);
 
     try {
       final session = await _service.checkout(invoice.id);
       if (!mounted) return;
 
-      final amount = _formatMoney(session.amount);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Plaćanje pokrenuto: $amount ${session.currency} '
-            '(status: ${_statusLabel(session.status)}).',
+      final clientSecret = session.clientSecret;
+      if (clientSecret != null && clientSecret.isNotEmpty) {
+        final presented = await _presentStripePaymentSheet(clientSecret);
+        if (presented) {
+          await _refreshInvoiceWithRetry();
+        } else {
+          // Cancelled or failed in the sheet itself - still refresh once in
+          // case an earlier attempt on this invoice already completed.
+          await _refreshInvoice();
+          await _load();
+        }
+      } else {
+        // No provider client secret (e.g. the Manual provider is active) -
+        // the pre-Stripe placeholder flow: nothing to present, just report
+        // that a Pending session was opened.
+        final amount = _formatMoney(session.amount);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Plaćanje pokrenuto: $amount ${session.currency} '
+              '(status: ${_statusLabel(session.status)}).',
+            ),
           ),
-        ),
-      );
+        );
 
-      await _refreshInvoice();
-      await _load();
+        await _refreshInvoice();
+        await _load();
+      }
     } on CustomerInvoiceException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -145,6 +188,43 @@ class _CustomerInvoiceDetailScreenState
     }
   }
 
+  // Returns true once presentPaymentSheet() completes without the customer
+  // cancelling or the sheet reporting an error - never true-because-paid,
+  // just true-because-the-sheet-finished (see the _payInvoice comment above
+  // for why that distinction matters).
+  Future<bool> _presentStripePaymentSheet(String clientSecret) async {
+    try {
+      await stripe.Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: stripe.SetupPaymentSheetParameters(
+          paymentIntentClientSecret: clientSecret,
+          merchantDisplayName: 'AquaFlow',
+        ),
+      );
+      await stripe.Stripe.instance.presentPaymentSheet();
+
+      if (!mounted) return true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Plaćanje u obradi.')),
+      );
+      return true;
+    } on stripe.StripeException catch (e) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_stripeErrorMessage(e))));
+      return false;
+    }
+  }
+
+  String _stripeErrorMessage(stripe.StripeException e) {
+    if (e.error.code == stripe.FailureCode.Canceled) {
+      return 'Plaćanje je otkazano.';
+    }
+    return e.error.localizedMessage ??
+        e.error.message ??
+        'Plaćanje nije uspjelo.';
+  }
+
   Future<void> _refreshInvoice() async {
     try {
       final refreshed = await _service.fetchById(_invoice.id);
@@ -153,6 +233,28 @@ class _CustomerInvoiceDetailScreenState
     } on CustomerInvoiceException {
       // Non-fatal: the checkout itself already succeeded and was reported above,
       // so a failed refresh just leaves the previously shown invoice state.
+    }
+  }
+
+  // The webhook confirming a Stripe payment arrives asynchronously, some time
+  // after presentPaymentSheet() already returned control to the app, so the
+  // first refresh right after can easily still show Issued. A few spaced
+  // retries give the webhook a realistic chance to land before giving up and
+  // showing whatever the last refresh returned (still not wrong - just not
+  // yet caught up).
+  Future<void> _refreshInvoiceWithRetry() async {
+    const attempts = 3;
+    const delay = Duration(seconds: 2);
+
+    for (var attempt = 1; attempt <= attempts; attempt++) {
+      await _refreshInvoice();
+      await _load();
+      if (!mounted) return;
+      if (_invoice.status.toLowerCase() == 'paid') return;
+      if (attempt < attempts) {
+        await Future.delayed(delay);
+        if (!mounted) return;
+      }
     }
   }
 
