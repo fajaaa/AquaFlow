@@ -12,5 +12,7 @@ public class PaymentPatchValidator : AbstractValidator<PaymentPatchRequest>
         RuleFor(x => x.Amount).GreaterThan(0).When(x => x.Amount.HasValue);
         RuleFor(x => x.PaymentMethod).NotEmpty().MaximumLength(40).When(x => x.PaymentMethod != null);
         RuleFor(x => x.Status).NotEmpty().MaximumLength(30).When(x => x.Status != null);
+        RuleFor(x => x.Provider).NotEmpty().MaximumLength(40).When(x => x.Provider != null);
+        RuleFor(x => x.ProviderTransactionId).MaximumLength(200).When(x => x.ProviderTransactionId != null);
     }
 }

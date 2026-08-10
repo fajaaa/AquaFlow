@@ -32,7 +32,8 @@ public class MeterReadingsControllerTests
         nameof(MeterReadingsController.Update),
         nameof(MeterReadingsController.Patch),
         nameof(MeterReadingsController.Delete),
-        nameof(MeterReadingsController.CreateForCollector)
+        nameof(MeterReadingsController.CreateForCollector),
+        nameof(MeterReadingsController.GetLastCounting)
     ];
 
     // CollectorId must never come from the request body (the DTO does not even carry it) - it is
@@ -96,6 +97,49 @@ public class MeterReadingsControllerTests
         Assert.NotNull(attribute);
         var codes = Assert.IsType<string[]>(attribute!.Arguments![0]);
         Assert.Contains(ManagePermission, codes);
+    }
+
+    // Same reasoning as CreateForCollector_RequiresMeterReadingsManagePermission above: this pins the
+    // per-action gate on GetLastCounting independently of the class-level one.
+    [Fact]
+    public void GetLastCounting_RequiresMeterReadingsManagePermission()
+    {
+        var method = typeof(MeterReadingsController)
+            .GetMethods()
+            .Single(m => m.Name == nameof(MeterReadingsController.GetLastCounting));
+
+        var attribute = method
+            .GetCustomAttributes(typeof(RequirePermissionAttribute), inherit: false)
+            .Cast<RequirePermissionAttribute>()
+            .SingleOrDefault();
+
+        Assert.NotNull(attribute);
+        var codes = Assert.IsType<string[]>(attribute!.Arguments![0]);
+        Assert.Contains(ManagePermission, codes);
+    }
+
+    // GetLastCounting must return the CountingReadings-filtered last row, not the raw last row - this
+    // pins that the controller passes the query param through to the service unmodified and returns
+    // whatever the service resolves (the filtering itself is exercised in
+    // AquaFlow.Services.Tests/MeterReadingServiceTests).
+    [Fact]
+    public async Task GetLastCounting_ReturnsServiceResult()
+    {
+        var existing = new MeterReadingResponse
+        {
+            Id = 7,
+            WaterMeterId = 1,
+            ReadingValue = 80,
+            ReadingDate = DateTime.UtcNow
+        };
+        var service = new FakeMeterReadingCrudService([existing]);
+        var controller = CreateController(service, BuildUser(userId: 5, role: CollectorRole, permissions: [ManagePermission]));
+
+        var result = await controller.GetLastCounting(waterMeterId: 1);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<MeterReadingResponse>(ok.Value);
+        Assert.Equal(7, response.Id);
     }
 
     // The generic CRUD actions inherited from BaseCRUDController used to be ungated, so any

@@ -8,5 +8,6 @@ public class PaymentResponse : AuditableResponse
     public string PaymentMethod { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public DateTime? PaidAt { get; set; }
-    public string? TransactionReference { get; set; }
+    public string Provider { get; set; } = string.Empty;
+    public string? ProviderTransactionId { get; set; }
 }

@@ -17,6 +17,11 @@ public class MeterReading : EntityBase
     public decimal PreviousReadingValue { get; set; }
     [Column(TypeName = "decimal(18,2)")]
     public decimal ConsumptionM3 { get; set; }
+    // The old meter's final displayed value before it was physically swapped out, captured only when
+    // the reading was submitted with IsMeterReplacement (MeterReadingCollectorEntryRequest). Audit
+    // trail only - it plays no part in computing this or any later reading's consumption.
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal? ReplacedMeterFinalReading { get; set; }
     public DateTime ReadingDate { get; set; } = DateTime.UtcNow;
     [MaxLength(30)]
     public string Source { get; set; } = "Collector";
@@ -27,4 +32,11 @@ public class MeterReading : EntityBase
     [MaxLength(30)]
     public string SyncStatus { get; set; } = "Synced";
     public DateTime? SyncedAt { get; set; }
+    public int? InvoiceId { get; set; }
+    public Invoice? Invoice { get; set; }
+    // Set when the invoice this reading billed gets cancelled (IssuedInvoiceState.CancelAsync), so the
+    // reading no longer represents a real billing event. A voided reading is excluded from both the
+    // 15-day cooldown check and the consumption baseline in MeterReadingService, even if WaterMeter.LastReading
+    // could not be reverted (a newer reading landed in the meantime).
+    public DateTime? VoidedAt { get; set; }
 }

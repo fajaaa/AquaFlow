@@ -16,7 +16,8 @@ public class Payment : EntityBase
     [MaxLength(30)]
     public string Status { get; set; } = "Pending";
     public DateTime? PaidAt { get; set; }
-    [MaxLength(120)]
-    public string? TransactionReference { get; set; }
-    public ICollection<PaymentTransaction> Transactions { get; set; } = new List<PaymentTransaction>();
+    [MaxLength(40)]
+    public string Provider { get; set; } = string.Empty;
+    [MaxLength(200)]
+    public string? ProviderTransactionId { get; set; }
 }

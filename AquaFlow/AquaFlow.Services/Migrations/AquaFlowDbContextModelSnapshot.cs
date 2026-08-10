@@ -869,6 +869,9 @@ namespace AquaFlow.Services.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("InvoiceId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
@@ -882,6 +885,9 @@ namespace AquaFlow.Services.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("ReadingValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("ReplacedMeterFinalReading")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Source")
@@ -903,6 +909,9 @@ namespace AquaFlow.Services.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("VoidedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("WaterMeterId")
                         .HasColumnType("int");
 
@@ -910,9 +919,13 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasIndex("CollectorId");
 
+                    b.HasIndex("InvoiceId");
+
                     b.HasIndex("TariffId");
 
-                    b.HasIndex("WaterMeterId");
+                    b.HasIndex("WaterMeterId", "ClientUuid")
+                        .IsUnique()
+                        .HasFilter("[ClientUuid] IS NOT NULL");
 
                     b.ToTable("MeterReadings");
 
@@ -1150,6 +1163,47 @@ namespace AquaFlow.Services.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.NotificationImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<int>("NotificationId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotificationId");
+
+                    b.ToTable("NotificationImages");
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.NotificationTemplate", b =>
                 {
                     b.Property<int>("Id")
@@ -1218,14 +1272,19 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
 
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("ProviderTransactionId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("TransactionReference")
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1235,6 +1294,10 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("InvoiceId");
+
+                    b.HasIndex("Provider", "ProviderTransactionId")
+                        .IsUnique()
+                        .HasFilter("[ProviderTransactionId] IS NOT NULL");
 
                     b.ToTable("Payments");
 
@@ -1248,59 +1311,10 @@ namespace AquaFlow.Services.Migrations
                             InvoiceId = 1,
                             PaidAt = new DateTime(2026, 6, 2, 0, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "BankTransfer",
-                            Status = "Completed",
-                            TransactionReference = "BT-2026-0001"
+                            Provider = "Manual",
+                            ProviderTransactionId = "BT-2026-0001",
+                            Status = "Completed"
                         });
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.PaymentMethod", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CardBrand")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ExpiresMonth")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ExpiresYear")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Last4")
-                        .HasMaxLength(4)
-                        .HasColumnType("nvarchar(4)");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CustomerId");
-
-                    b.ToTable("PaymentMethods");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.PaymentSettings", b =>
@@ -1359,54 +1373,6 @@ namespace AquaFlow.Services.Migrations
                             UpdatedAt = new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Utc),
                             UpdatedById = 1
                         });
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.PaymentTransaction", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("PaymentId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.Property<string>("ProviderTransactionId")
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<string>("ResponseCode")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("ResponseMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PaymentId");
-
-                    b.ToTable("PaymentTransactions");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Permission", b =>
@@ -1640,6 +1606,16 @@ namespace AquaFlow.Services.Migrations
                             IsActive = true,
                             Module = "WaterMeters",
                             Name = "Manage water meters"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            Code = "Invoices.Pay",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows a customer to check out and pay their own issued invoices.",
+                            IsActive = true,
+                            Module = "Invoices",
+                            Name = "Pay own invoices"
                         });
                 });
 
@@ -2594,6 +2570,13 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 20,
                             UserRoleId = 1
+                        },
+                        new
+                        {
+                            Id = 25,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 21,
+                            UserRoleId = 3
                         });
                 });
 
@@ -3108,6 +3091,11 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AquaFlow.Services.Database.Invoice", "Invoice")
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("AquaFlow.Services.Database.Tariff", "Tariff")
                         .WithMany()
                         .HasForeignKey("TariffId")
@@ -3120,6 +3108,8 @@ namespace AquaFlow.Services.Migrations
                         .IsRequired();
 
                     b.Navigation("Collector");
+
+                    b.Navigation("Invoice");
 
                     b.Navigation("Tariff");
 
@@ -3175,6 +3165,17 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("CreatedBy");
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.NotificationImage", b =>
+                {
+                    b.HasOne("AquaFlow.Services.Database.Notification", "Notification")
+                        .WithMany("Images")
+                        .HasForeignKey("NotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Notification");
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.Payment", b =>
                 {
                     b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
@@ -3194,17 +3195,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Invoice");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.PaymentMethod", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
-                        .WithMany("PaymentMethods")
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Customer");
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.PaymentSettings", b =>
                 {
                     b.HasOne("AquaFlow.Services.Database.User", "UpdatedBy")
@@ -3214,17 +3204,6 @@ namespace AquaFlow.Services.Migrations
                         .IsRequired();
 
                     b.Navigation("UpdatedBy");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.PaymentTransaction", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.Payment", "Payment")
-                        .WithMany("Transactions")
-                        .HasForeignKey("PaymentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Recommendation", b =>
@@ -3502,8 +3481,6 @@ namespace AquaFlow.Services.Migrations
                 {
                     b.Navigation("Invoices");
 
-                    b.Navigation("PaymentMethods");
-
                     b.Navigation("Payments");
 
                     b.Navigation("Recommendations");
@@ -3538,12 +3515,9 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.Notification", b =>
                 {
-                    b.Navigation("UserNotifications");
-                });
+                    b.Navigation("Images");
 
-            modelBuilder.Entity("AquaFlow.Services.Database.Payment", b =>
-                {
-                    b.Navigation("Transactions");
+                    b.Navigation("UserNotifications");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Permission", b =>

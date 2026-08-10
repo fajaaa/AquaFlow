@@ -274,6 +274,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 21,
+                Code = "Invoices.Pay",
+                Name = "Pay own invoices",
+                Module = "Invoices",
+                Description = "Allows a customer to check out and pay their own issued invoices.",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -457,6 +468,17 @@ public partial class AquaFlowDbContext
                 Id = 24,
                 UserRoleId = 1,
                 PermissionId = 20,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                // Invoices.Pay is Customer-only (UserRoleId 3) - unlike every other Invoices.*/
+                // Payments.* permission above, Admin does not hold this one: admin payments still
+                // go through RecordPaymentAsync (Invoices.Manage), not the self-service checkout.
+                Id = 25,
+                UserRoleId = 3,
+                PermissionId = 21,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
@@ -776,7 +798,8 @@ public partial class AquaFlowDbContext
                 PaymentMethod = "BankTransfer",
                 Status = "Completed",
                 PaidAt = (DateTime?)new DateTime(2026, 6, 2, 0, 0, 0, DateTimeKind.Utc),
-                TransactionReference = "BT-2026-0001",
+                Provider = PaymentProvider.Manual,
+                ProviderTransactionId = "BT-2026-0001",
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });

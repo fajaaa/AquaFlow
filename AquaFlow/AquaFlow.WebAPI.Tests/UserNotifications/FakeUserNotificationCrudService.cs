@@ -24,6 +24,10 @@ public class FakeUserNotificationCrudService
         {
             items = items.Where(row => row.UserId == search.UserId);
         }
+        if (search?.NotificationId is > 0)
+        {
+            items = items.Where(row => row.NotificationId == search.NotificationId);
+        }
 
         var list = items.ToList();
         return Task.FromResult(new PageResult<UserNotificationResponse>

@@ -28,11 +28,10 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<MeterReplacement> MeterReplacements => Set<MeterReplacement>();
     public DbSet<Municipality> Municipalities => Set<Municipality>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationImage> NotificationImages => Set<NotificationImage>();
     public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
     public DbSet<Payment> Payments => Set<Payment>();
-    public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
     public DbSet<PaymentSettings> PaymentSettings => Set<PaymentSettings>();
-    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<Recommendation> Recommendations => Set<Recommendation>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -118,12 +117,41 @@ public partial class AquaFlowDbContext : DbContext
             .HasIndex(tariff => tariff.Name)
             .IsUnique();
 
+        // Idempotency key for provider payments: a retried webhook delivery for the same
+        // (Provider, ProviderTransactionId) must be a no-op, not a second Payment row that
+        // double-credits the invoice. Filtered so manual payments (ProviderTransactionId
+        // always null) can coexist freely - SQL Server unique indexes already treat multiple
+        // NULLs as distinct, but the filter documents that intent and keeps InMemory/SQL
+        // Server behaviour aligned.
+        modelBuilder.Entity<Payment>()
+            .HasIndex(payment => new { payment.Provider, payment.ProviderTransactionId })
+            .IsUnique()
+            .HasFilter("[ProviderTransactionId] IS NOT NULL");
+
         // Optimistic concurrency for invoice status transitions: every UPDATE carries the
         // loaded RowVersion in its WHERE clause, so a stale transition affects 0 rows and
         // surfaces as DbUpdateConcurrencyException instead of silently overwriting.
         modelBuilder.Entity<Invoice>()
             .Property(invoice => invoice.RowVersion)
             .IsRowVersion();
+
+        // Invoice rows are never hard-deleted (only status-transitioned - see the state machine
+        // note above), so this FK is safe to leave at the default Restrict rather than Cascade.
+        modelBuilder.Entity<MeterReading>()
+            .HasOne(reading => reading.Invoice)
+            .WithMany()
+            .HasForeignKey(reading => reading.InvoiceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Idempotency key for collector-entry retries: MeterReadingService.CreateForCollectorAsync
+        // pre-checks (WaterMeterId, ClientUuid) before inserting, but that check-then-insert has a race
+        // window under genuinely concurrent retries - this index is the DB-level backstop, same pattern
+        // as the Payment (Provider, ProviderTransactionId) index above. Filtered so backfilled/admin rows
+        // (ClientUuid always null) can coexist freely.
+        modelBuilder.Entity<MeterReading>()
+            .HasIndex(reading => new { reading.WaterMeterId, reading.ClientUuid })
+            .IsUnique()
+            .HasFilter("[ClientUuid] IS NOT NULL");
 
         // Photos have no independent lifecycle outside their report (unlike
         // WorkOrder/FaultStatusHistory rows, which stay Restrict so a report can't be
@@ -149,6 +177,18 @@ public partial class AquaFlowDbContext : DbContext
             .HasOne(photo => photo.SupportTicketMessage)
             .WithMany(message => message.Photos)
             .HasForeignKey(photo => photo.SupportTicketMessageId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Same reasoning as FaultReportPhoto/SupportTicketMessagePhoto above: an image has no
+        // lifecycle independent of the notification it's attached to. Deleting a notification
+        // deletes its images too - SQL Server enforces this FK cascade itself, so
+        // NotificationService.DeleteAsync needs no matching manual cleanup for images (unlike
+        // its manual UserNotifications.ExecuteDeleteAsync() call, which exists precisely
+        // because UserNotification -> Notification is left at the default Restrict below).
+        modelBuilder.Entity<NotificationImage>()
+            .HasOne(image => image.Notification)
+            .WithMany(notification => notification.Images)
+            .HasForeignKey(image => image.NotificationId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // Backstop against duplicate inbox rows: UserNotificationService.EnsureInboxRowsAsync does a

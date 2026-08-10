@@ -45,6 +45,15 @@ public class FakeMeterReadingCrudService : IMeterReadingService
         return Task.FromResult(row);
     }
 
+    public Task<MeterReadingResponse?> GetLastCountingReadingAsync(int waterMeterId)
+    {
+        var row = _rows
+            .Where(row => row.WaterMeterId == waterMeterId)
+            .OrderByDescending(row => row.ReadingDate)
+            .FirstOrDefault();
+        return Task.FromResult(row);
+    }
+
     public Task<PageResult<MeterReadingResponse>> GetAllAsync(MeterReadingSearchObject? search = null)
     {
         var list = _rows.ToList();

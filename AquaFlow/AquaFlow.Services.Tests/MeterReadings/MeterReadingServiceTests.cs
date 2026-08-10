@@ -194,6 +194,266 @@ public class MeterReadingServiceTests
         Assert.NotNull(invoice);
     }
 
+    // Water meter with Status = Removed: reading is rejected with ClientException, nothing persisted
+    [Theory]
+    [InlineData("Removed")]
+    [InlineData("removed")]
+    [InlineData("Inactive")]
+    [InlineData("INACTIVE")]
+    public async Task CreateForCollectorAsync_MeterNotActive_ThrowsClientException(string status)
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        context.WaterMeters.First(m => m.Id == 1).Status = status;
+        context.SaveChanges();
+
+        var service = CreateService(context);
+
+        var request = new MeterReadingCollectorEntryRequest
+        {
+            WaterMeterId = 1,
+            ReadingValue = 100,
+            TariffId = 1,
+            Note = null
+        };
+
+        var exception = await Assert.ThrowsAsync<ClientException>(
+            () => service.CreateForCollectorAsync(callerUserId: 3, request));
+
+        Assert.Contains("status", exception.Message);
+        Assert.Empty(context.MeterReadings);
+        Assert.Empty(context.Invoices);
+    }
+
+    // Water meter with Status = Active: reading is accepted
+    [Fact]
+    public async Task CreateForCollectorAsync_MeterActive_Succeeds()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        context.WaterMeters.First(m => m.Id == 1).Status = WaterMeterStatus.Active;
+        context.SaveChanges();
+
+        var service = CreateService(context);
+
+        var request = new MeterReadingCollectorEntryRequest
+        {
+            WaterMeterId = 1,
+            ReadingValue = 100,
+            TariffId = 1,
+            Note = null
+        };
+
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, request);
+
+        Assert.NotNull(response);
+        Assert.True(response.Id > 0);
+    }
+
+    // A retry with the same ClientUuid as an already-persisted reading replays that reading's response
+    // (including its invoice) instead of creating a second row/invoice - even though the cooldown would
+    // otherwise reject it (the replayed reading is only 1 day old).
+    [Fact]
+    public async Task CreateForCollectorAsync_RetryWithSameClientUuid_ReturnsExistingReadingWithoutCreatingDuplicate()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var service = CreateService(context);
+
+        var request = new MeterReadingCollectorEntryRequest
+        {
+            WaterMeterId = 1,
+            ReadingValue = 100,
+            TariffId = 1,
+            Note = null,
+            ClientUuid = "11111111-1111-1111-1111-111111111111"
+        };
+
+        var firstResponse = await service.CreateForCollectorAsync(callerUserId: 3, request);
+        var retryResponse = await service.CreateForCollectorAsync(callerUserId: 3, request);
+
+        Assert.Equal(firstResponse.Id, retryResponse.Id);
+        Assert.Equal(firstResponse.InvoiceId, retryResponse.InvoiceId);
+        Assert.Equal(firstResponse.InvoiceNumber, retryResponse.InvoiceNumber);
+        Assert.Equal(firstResponse.InvoiceTotalAmount, retryResponse.InvoiceTotalAmount);
+        Assert.Single(context.MeterReadings);
+        Assert.Single(context.Invoices);
+    }
+
+    // A different ClientUuid (or none) on the same meter is not a replay - the 15-day cooldown from the
+    // first reading still applies normally.
+    [Fact]
+    public async Task CreateForCollectorAsync_DifferentClientUuid_IsNotTreatedAsReplay()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var service = CreateService(context);
+
+        var firstRequest = new MeterReadingCollectorEntryRequest
+        {
+            WaterMeterId = 1,
+            ReadingValue = 100,
+            TariffId = 1,
+            Note = null,
+            ClientUuid = "11111111-1111-1111-1111-111111111111"
+        };
+        await service.CreateForCollectorAsync(callerUserId: 3, firstRequest);
+
+        var secondRequest = new MeterReadingCollectorEntryRequest
+        {
+            WaterMeterId = 1,
+            ReadingValue = 120,
+            TariffId = 1,
+            Note = null,
+            ClientUuid = "22222222-2222-2222-2222-222222222222"
+        };
+
+        await Assert.ThrowsAsync<ClientException>(
+            () => service.CreateForCollectorAsync(callerUserId: 3, secondRequest));
+
+        Assert.Single(context.MeterReadings);
+    }
+
+    // No readings at all for the meter: null, not an exception - mirrors a freshly registered meter.
+    [Fact]
+    public async Task GetLastCountingReadingAsync_NoReadings_ReturnsNull()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var service = CreateService(context);
+
+        var result = await service.GetLastCountingReadingAsync(waterMeterId: 1);
+
+        Assert.Null(result);
+    }
+
+    // Two counting readings on the meter: the most recent by ReadingDate wins.
+    [Fact]
+    public async Task GetLastCountingReadingAsync_ReturnsMostRecentByReadingDate()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        context.MeterReadings.Add(new MeterReading
+        {
+            Id = 1,
+            WaterMeterId = 1,
+            CollectorId = 1,
+            TariffId = 1,
+            ReadingValue = 50,
+            PreviousReadingValue = 0,
+            ConsumptionM3 = 50,
+            ReadingDate = DateTime.UtcNow.AddDays(-30),
+            Source = "Collector"
+        });
+        context.MeterReadings.Add(new MeterReading
+        {
+            Id = 2,
+            WaterMeterId = 1,
+            CollectorId = 1,
+            TariffId = 1,
+            ReadingValue = 80,
+            PreviousReadingValue = 50,
+            ConsumptionM3 = 30,
+            ReadingDate = DateTime.UtcNow.AddDays(-2),
+            Source = "Collector"
+        });
+        context.SaveChanges();
+
+        var service = CreateService(context);
+        var result = await service.GetLastCountingReadingAsync(waterMeterId: 1);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result!.Id);
+        Assert.Equal(80, result.ReadingValue);
+    }
+
+    // The most recent reading was voided (its invoice was cancelled): it no longer counts, so the
+    // still-counting earlier reading is returned instead of the voided one - this is the bug the
+    // collector app used to hit via the generic GET /MeterReadings listing (it returned the raw last
+    // row and blocked a new reading the server would have accepted).
+    [Fact]
+    public async Task GetLastCountingReadingAsync_SkipsVoidedReading()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        context.MeterReadings.Add(new MeterReading
+        {
+            Id = 1,
+            WaterMeterId = 1,
+            CollectorId = 1,
+            TariffId = 1,
+            ReadingValue = 50,
+            PreviousReadingValue = 0,
+            ConsumptionM3 = 50,
+            ReadingDate = DateTime.UtcNow.AddDays(-30),
+            Source = "Collector"
+        });
+        context.MeterReadings.Add(new MeterReading
+        {
+            Id = 2,
+            WaterMeterId = 1,
+            CollectorId = 1,
+            TariffId = 1,
+            ReadingValue = 80,
+            PreviousReadingValue = 50,
+            ConsumptionM3 = 30,
+            ReadingDate = DateTime.UtcNow.AddDays(-2),
+            Source = "Collector",
+            VoidedAt = DateTime.UtcNow.AddDays(-1)
+        });
+        context.SaveChanges();
+
+        var service = CreateService(context);
+        var result = await service.GetLastCountingReadingAsync(waterMeterId: 1);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result!.Id);
+    }
+
+    // The most recent reading's invoice was cancelled outright (no VoidedAt stamp - covers rows voided
+    // before that column existed): it must be excluded the same way a VoidedAt-stamped row is.
+    [Fact]
+    public async Task GetLastCountingReadingAsync_SkipsReadingWithCancelledInvoice_ReturnsNullWhenNoneOlder()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        context.Invoices.Add(new Invoice
+        {
+            Id = 1,
+            InvoiceNumber = "INV-2026-0001",
+            CustomerId = 1,
+            WaterMeterId = 1,
+            BillingPeriodFrom = new DateTime(2026, 7, 1),
+            BillingPeriodTo = new DateTime(2026, 7, 31),
+            PreviousReading = 0,
+            CurrentReading = 50,
+            ConsumptionM3 = 50,
+            Subtotal = 250,
+            TotalAmount = 250,
+            Status = InvoiceStatus.Cancelled,
+            CreatedById = 3
+        });
+        context.MeterReadings.Add(new MeterReading
+        {
+            Id = 1,
+            WaterMeterId = 1,
+            CollectorId = 1,
+            TariffId = 1,
+            ReadingValue = 50,
+            PreviousReadingValue = 0,
+            ConsumptionM3 = 50,
+            ReadingDate = DateTime.UtcNow.AddDays(-2),
+            Source = "Collector",
+            InvoiceId = 1
+        });
+        context.SaveChanges();
+
+        var service = CreateService(context);
+        var result = await service.GetLastCountingReadingAsync(waterMeterId: 1);
+
+        Assert.Null(result);
+    }
+
     private static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
@@ -239,7 +499,7 @@ public class MeterReadingServiceTests
             SettlementId = 1,
             Street = "Zmaja od Bosne",
             HouseNumber = "12A",
-            Status = "Active",
+            Status = WaterMeterStatus.Active,
             InitialReading = 0,
             LastReading = 0
         });

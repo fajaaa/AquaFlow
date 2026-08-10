@@ -4,4 +4,7 @@ namespace AquaFlow.Services;
 public static class PaymentMethod
 {
     public const string Manual = "Manual";
+    // A payment started through a checkout session (IPaymentProvider), as opposed to one an admin
+    // types in directly against RecordPaymentAsync.
+    public const string Online = "Online";
 }

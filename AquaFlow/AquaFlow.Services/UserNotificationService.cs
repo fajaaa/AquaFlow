@@ -9,7 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AquaFlow.Services;
 
 public class UserNotificationService
-    : EfCrudService<UserNotification, UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>
+    : EfCrudService<UserNotification, UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>,
+        IUserNotificationService
 {
     private readonly NotificationRecipientService _recipientService;
 
@@ -87,6 +88,18 @@ public class UserNotificationService
         }
 
         return query;
+    }
+
+    // Bulk update rather than loading/patching each row individually - a user can
+    // have a large unread backlog and this only needs a single round trip.
+    public async Task<int> MarkAllAsReadAsync(int userId)
+    {
+        await EnsureInboxRowsAsync(userId);
+
+        var now = DateTime.UtcNow;
+        return await DbContext.UserNotifications
+            .Where(userNotification => userNotification.UserId == userId && userNotification.ReadAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(userNotification => userNotification.ReadAt, now));
     }
 
     private async Task EnsureInboxRowsAsync(int userId)

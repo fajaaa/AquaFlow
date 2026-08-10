@@ -48,34 +48,92 @@ public class MeterReadingService
             throw new ClientException($"Water meter with id {request.WaterMeterId} was not found.");
         }
 
+        if (string.Equals(waterMeter.Status, WaterMeterStatus.Removed, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(waterMeter.Status, WaterMeterStatus.Inactive, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ClientException($"Water meter with id {request.WaterMeterId} has status '{waterMeter.Status}' and cannot receive new readings.");
+        }
+
         var tariff = await _dbContext.Tariffs.FirstOrDefaultAsync(t => t.Id == request.TariffId);
         if (tariff == null || !tariff.IsActive)
         {
             throw new ClientException($"Tariff with id {request.TariffId} was not found or is not active.");
         }
 
+        // Idempotent replay: the collector app sends one ClientUuid per form open and resends the same
+        // one on a retry after a timeout/network error, so a request that actually landed but whose
+        // response was lost never produces a second row or a second invoice - it just replays the first
+        // response. The (WaterMeterId, ClientUuid) unique index (see AquaFlowDbContext.OnModelCreating)
+        // backs this up at the DB level for genuinely concurrent retries.
+        if (!string.IsNullOrWhiteSpace(request.ClientUuid))
+        {
+            var existingReading = await _dbContext.MeterReadings
+                .AsNoTracking()
+                .Include(reading => reading.Invoice)
+                .FirstOrDefaultAsync(reading => reading.WaterMeterId == request.WaterMeterId && reading.ClientUuid == request.ClientUuid);
+            if (existingReading != null)
+            {
+                var replayResponse = Mapper.Map<MeterReadingCollectorEntryResponse>(existingReading);
+                replayResponse.InvoiceId = existingReading.Invoice?.Id;
+                replayResponse.InvoiceNumber = existingReading.Invoice?.InvoiceNumber;
+                replayResponse.InvoiceTotalAmount = existingReading.Invoice?.TotalAmount;
+                return replayResponse;
+            }
+        }
+
         const int MinimumDaysBetweenReadings = 15;
-        var lastReading = await _dbContext.MeterReadings
-            .AsNoTracking()
+        // The single query below drives both the cooldown check and the consumption baseline, so the
+        // two "does this reading still count" definitions can never drift apart (CountingReadings). A
+        // reading stops counting once it is voided (IssuedInvoiceState.CancelAsync, invoice cancelled)
+        // or its invoice is Cancelled outright (covers rows voided before the VoidedAt column existed) -
+        // in both cases it no longer represents a real billing event.
+        var lastCountingReading = await CountingReadings(_dbContext.MeterReadings.AsNoTracking())
             .Where(reading => reading.WaterMeterId == request.WaterMeterId)
             .OrderByDescending(reading => reading.ReadingDate)
-            .Select(reading => (DateTime?)reading.ReadingDate)
+            .Select(reading => new { reading.ReadingDate, reading.ReadingValue })
             .FirstOrDefaultAsync();
 
-        if (lastReading.HasValue && (DateTime.UtcNow - lastReading.Value).TotalDays < MinimumDaysBetweenReadings)
+        if (lastCountingReading != null
+            && (DateTime.UtcNow - lastCountingReading.ReadingDate).TotalDays < MinimumDaysBetweenReadings)
         {
-            var nextAllowedDate = lastReading.Value.AddDays(MinimumDaysBetweenReadings);
+            var nextAllowedDate = lastCountingReading.ReadingDate.AddDays(MinimumDaysBetweenReadings);
             throw new ClientException(
-                $"A meter reading was recorded {(int)(DateTime.UtcNow - lastReading.Value).TotalDays} day(s) ago. " +
+                $"A meter reading was recorded {(int)(DateTime.UtcNow - lastCountingReading.ReadingDate).TotalDays} day(s) ago. " +
                 $"The next reading is allowed from {nextAllowedDate:yyyy-MM-dd}.");
         }
 
-        var previousReading = waterMeter.LastReading;
-        if (request.ReadingValue < previousReading && string.IsNullOrWhiteSpace(request.Note))
+        // IsMeterReplacement is the only way a ReadingValue below the last counting reading is ever
+        // accepted - without it this is ALWAYS a ClientException, no matter what the Note says. A
+        // physically replaced meter starts counting from 0 again, so the baseline is forced to 0
+        // instead (MeterReadingCollectorEntryValidator requires a non-empty Note in this branch as the
+        // audit trail for the reset).
+        decimal previousReading;
+        if (request.IsMeterReplacement)
         {
-            throw new ClientException(
-                $"Reading value {request.ReadingValue} is lower than the last recorded reading {previousReading} for this water meter. " +
-                "If this is expected (e.g. the meter was replaced or reset), resubmit with a Note explaining it.");
+            previousReading = 0m;
+        }
+        else
+        {
+            // Baseline comes from the most recent counting reading, not straight off WaterMeter.LastReading:
+            // that field is reverted on cancel only when nothing newer has landed (belt and braces - see
+            // IssuedInvoiceState.CancelAsync), so it can lag behind reality. It is still the right fallback
+            // when the meter has no readings at all (e.g. a freshly seeded meter with only InitialReading).
+            previousReading = lastCountingReading?.ReadingValue ?? waterMeter.LastReading;
+            if (request.ReadingValue < previousReading)
+            {
+                throw new ClientException(
+                    $"Reading value {request.ReadingValue} is lower than the last recorded reading {previousReading} for this water meter. " +
+                    "If the meter was physically replaced, resubmit with IsMeterReplacement set.");
+            }
+        }
+
+        var consumption = request.ReadingValue - previousReading;
+        if (consumption < 0)
+        {
+            // Unreachable given the branches above (replacement always baselines at 0, and the
+            // non-replacement path already rejects a lower reading) - kept as a hard backstop so a
+            // negative-consumption invoice can never be priced, whatever future changes land here.
+            throw new ClientException("Computed consumption cannot be negative.");
         }
 
         var readingDate = DateTime.UtcNow;
@@ -89,12 +147,13 @@ public class MeterReadingService
             TariffId = tariff.Id,
             ReadingValue = request.ReadingValue,
             PreviousReadingValue = previousReading,
-            ConsumptionM3 = request.ReadingValue - previousReading,
+            ConsumptionM3 = consumption,
             ReadingDate = readingDate,
             Source = "Collector",
             PhotoUrl = request.PhotoUrl,
             Note = request.Note,
             ClientUuid = request.ClientUuid,
+            ReplacedMeterFinalReading = request.IsMeterReplacement ? request.ReplacedMeterFinalReading : null,
             CreatedAt = readingDate
         };
 
@@ -102,42 +161,85 @@ public class MeterReadingService
         waterMeter.LastReading = entity.ReadingValue;
         waterMeter.UpdatedAt = DateTime.UtcNow;
 
-        // Auto-generate an Issued invoice priced from this reading's consumption and the collector's
-        // chosen tariff, so the customer's bill for the period is created in the same step as the
-        // reading itself - no separate manual invoicing pass is needed for the collector-entry flow.
-        var subtotal = Math.Round(entity.ConsumptionM3 * tariff.PricePerM3, 2);
-        var invoice = new Invoice
+        MeterReadingCollectorEntryResponse response;
+        if (consumption > 0)
         {
-            InvoiceNumber = await GenerateInvoiceNumberAsync(),
-            CustomerId = waterMeter.CustomerId,
-            WaterMeterId = waterMeter.Id,
-            BillingPeriodFrom = periodFrom,
-            BillingPeriodTo = periodTo,
-            PreviousReading = entity.PreviousReadingValue,
-            CurrentReading = entity.ReadingValue,
-            ConsumptionM3 = entity.ConsumptionM3,
-            Subtotal = subtotal,
-            TotalAmount = subtotal,
-            Status = InvoiceStatus.Issued,
-            CreatedById = callerUserId
-        };
-        invoice.InvoiceItems.Add(new InvoiceItem
+            // Auto-generate an Issued invoice priced from this reading's consumption and the collector's
+            // chosen tariff, so the customer's bill for the period is created in the same step as the
+            // reading itself - no separate manual invoicing pass is needed for the collector-entry flow.
+            var subtotal = Math.Round(consumption * tariff.PricePerM3, 2, MidpointRounding.AwayFromZero);
+            var invoice = new Invoice
+            {
+                InvoiceNumber = await GenerateInvoiceNumberAsync(),
+                CustomerId = waterMeter.CustomerId,
+                WaterMeterId = waterMeter.Id,
+                BillingPeriodFrom = periodFrom,
+                BillingPeriodTo = periodTo,
+                PreviousReading = entity.PreviousReadingValue,
+                CurrentReading = entity.ReadingValue,
+                ConsumptionM3 = entity.ConsumptionM3,
+                Subtotal = subtotal,
+                TotalAmount = subtotal,
+                Status = InvoiceStatus.Issued,
+                CreatedById = callerUserId
+            };
+            invoice.InvoiceItems.Add(new InvoiceItem
+            {
+                TariffId = tariff.Id,
+                Description = $"Potrošnja vode - {periodFrom:MM/yyyy}",
+                Quantity = entity.ConsumptionM3,
+                UnitPrice = tariff.PricePerM3,
+                Amount = subtotal
+            });
+            _dbContext.Invoices.Add(invoice);
+            entity.Invoice = invoice;
+
+            await _dbContext.SaveChangesAsync();
+
+            response = Mapper.Map<MeterReadingCollectorEntryResponse>(entity);
+            response.InvoiceId = invoice.Id;
+            response.InvoiceNumber = invoice.InvoiceNumber;
+            response.InvoiceTotalAmount = invoice.TotalAmount;
+        }
+        else
         {
-            TariffId = tariff.Id,
-            Description = $"Potrošnja vode - {periodFrom:MM/yyyy}",
-            Quantity = entity.ConsumptionM3,
-            UnitPrice = tariff.PricePerM3,
-            Amount = subtotal
-        });
-        _dbContext.Invoices.Add(invoice);
+            // Zero consumption (e.g. a freshly replaced meter re-read at 0, or a genuinely unchanged
+            // reading): an Issued invoice for 0.00 KM would be just as permanently stuck as a negative
+            // one (RecordPaymentInternalAsync rejects amount <= 0), so no invoice is created at all.
+            await _dbContext.SaveChangesAsync();
 
-        await _dbContext.SaveChangesAsync();
+            response = Mapper.Map<MeterReadingCollectorEntryResponse>(entity);
+            response.InvoiceId = null;
+            response.InvoiceNumber = null;
+            response.InvoiceTotalAmount = null;
+        }
 
-        var response = Mapper.Map<MeterReadingCollectorEntryResponse>(entity);
-        response.InvoiceId = invoice.Id;
-        response.InvoiceNumber = invoice.InvoiceNumber;
-        response.InvoiceTotalAmount = invoice.TotalAmount;
         return response;
+    }
+
+    // Shared definition of "a reading that still counts towards this meter's billing history" - used to
+    // pick both the 15-day cooldown reference and the consumption baseline, so the two can never drift
+    // apart (see the callers in CreateForCollectorAsync), and reused below by GetLastCountingReadingAsync
+    // so the collector app's own cooldown lookup agrees with what a new collector-entry would actually
+    // accept. A reading stops counting once it is voided or its invoice was cancelled.
+    private static IQueryable<MeterReading> CountingReadings(IQueryable<MeterReading> readings)
+        => readings.Where(reading => reading.VoidedAt == null
+            && (reading.InvoiceId == null || reading.Invoice!.Status != InvoiceStatus.Cancelled));
+
+    // Backs GET /MeterReadings/last-counting - the collector app used to derive its cooldown/tariff
+    // suggestion from the generic GET /MeterReadings?WaterMeterId=..&SortDescending=true listing, which
+    // returns the raw last row regardless of VoidedAt/cancelled-invoice status. That could block a new
+    // reading the server would actually accept (the cooldown check here is CountingReadings-filtered).
+    // The generic listing itself is left untouched - admin/backfill still needs to see voided/cancelled
+    // rows for audit purposes.
+    public async Task<MeterReadingResponse?> GetLastCountingReadingAsync(int waterMeterId)
+    {
+        var entity = await CountingReadings(_dbContext.MeterReadings.AsNoTracking())
+            .Where(reading => reading.WaterMeterId == waterMeterId)
+            .OrderByDescending(reading => reading.ReadingDate)
+            .FirstOrDefaultAsync();
+
+        return entity == null ? null : Mapper.Map<MeterReadingResponse>(entity);
     }
 
     // Year-scoped sequential number, e.g. "INV-2026-0001", resetting every calendar year. Mirrors

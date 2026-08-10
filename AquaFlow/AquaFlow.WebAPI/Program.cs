@@ -9,6 +9,7 @@ using AquaFlow.Services;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.FaultReportStateMachine;
 using AquaFlow.Services.InvoiceStateMachine;
+using AquaFlow.Services.Payments;
 using AquaFlow.Services.Validators;
 using AquaFlow.Services.WaterMeterRequestStateMachine;
 using AquaFlow.WebAPI.Filters;
@@ -25,6 +26,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
+
+// Loads a developer-local .env file (gitignored, see .env.example) into process environment
+// variables before configuration is built, so Payments__Stripe__* follow the same env-var
+// double-underscore convention IConfiguration already reads ConnectionStrings__DefaultConnection
+// through. Must run before WebApplication.CreateBuilder(args) so those variables are visible to it.
+DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -241,6 +248,41 @@ builder.Services.AddScoped<IBaseCRUDService<MeterReadingResponse, MeterReadingSe
     serviceProvider => serviceProvider.GetRequiredService<IMeterReadingService>());
 AddPatchMapping<TariffPatchRequest, Tariff>();
 builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>, TariffService>();
+// Payments:Provider selects which IPaymentProvider is registered (today only "Manual" exists);
+// Payments:Currency has no column to persist against and is only surfaced in
+// CheckoutSessionResponse. Adding a real provider (e.g. Stripe) later means adding one case here plus
+// a new IPaymentProvider implementation class - nothing in InvoiceService/InvoicesController changes.
+builder.Services.Configure<PaymentsOptions>(builder.Configuration.GetSection("Payments"));
+builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection("Payments:Stripe"));
+var configuredPaymentProvider = builder.Configuration["Payments:Provider"];
+var providerName = string.IsNullOrWhiteSpace(configuredPaymentProvider) ? PaymentProvider.Manual : configuredPaymentProvider;
+if (providerName == PaymentProvider.Stripe)
+{
+    var stripeSecretKey = builder.Configuration["Payments:Stripe:SecretKey"];
+    var stripeWebhookSecret = builder.Configuration["Payments:Stripe:WebhookSecret"];
+    if (string.IsNullOrWhiteSpace(stripeSecretKey) || string.IsNullOrWhiteSpace(stripeWebhookSecret))
+    {
+        throw new InvalidOperationException(
+            "Stripe configuration is required because Payments:Provider is set to 'Stripe'. " +
+            "Set Payments__Stripe__SecretKey and Payments__Stripe__WebhookSecret with environment variables, a local .env file, or user secrets.");
+    }
+
+    // StripeConfiguration.ApiKey is a static, process-wide setting read by every Stripe.net service
+    // call - set it once at startup rather than per-request. Fully qualified (no "using Stripe;") to
+    // avoid colliding with this file's own Invoice/InvoiceService/InvoiceItem/File types.
+    Stripe.StripeConfiguration.ApiKey = stripeSecretKey;
+}
+
+builder.Services.AddScoped<IPaymentProvider>(_ =>
+{
+    return providerName switch
+    {
+        PaymentProvider.Manual => new ManualPaymentProvider(),
+        PaymentProvider.Stripe => new StripePaymentProvider(),
+        _ => throw new InvalidOperationException(
+            $"Unknown payment provider '{providerName}'. Configure Payments:Provider to a supported value.")
+    };
+});
 // Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
 // it by hand: the patch mapping, IInvoiceService, and the generic IBaseCRUDService alias resolving
 // to the same InvoiceService. Each invoice state is a keyed scoped BaseInvoiceState (status string as
@@ -268,7 +310,12 @@ builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, RejectedWaterMeterRe
 builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, CancelledWaterMeterRequestState>(WaterMeterRequestStatus.Cancelled);
 builder.Services.AddScoped<IWaterMeterRequestStateResolver, WaterMeterRequestStateResolver>();
 AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
+// PaymentsController is read-only (see its own comment): every Payment row is written
+// either by the invoice state machine or the payment provider confirmation path, never
+// through a generic CRUD surface, so only the IBaseReadService<...> alias is exposed to it.
 AddCrud<Payment, PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>();
+builder.Services.AddScoped<IBaseReadService<PaymentResponse, PaymentSearchObject>>(
+    serviceProvider => serviceProvider.GetRequiredService<IBaseCRUDService<PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest>>());
 // FaultReport mirrors the Invoice/WaterMeterRequest registrations above: the state machine service
 // is registered by hand, the generic IBaseCRUDService alias resolves to the same instance, and each
 // report state is a keyed scoped BaseFaultReportState (status string as key) that
@@ -285,8 +332,11 @@ builder.Services.AddScoped<IFaultReportStateResolver, FaultReportStateResolver>(
 builder.Services.AddScoped<IFaultReportPhotoService, FaultReportPhotoService>();
 AddPatchMapping<NotificationPatchRequest, Notification>();
 builder.Services.AddScoped<IBaseCRUDService<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>, NotificationService>();
+builder.Services.AddScoped<INotificationImageService, NotificationImageService>();
 AddPatchMapping<UserNotificationPatchRequest, UserNotification>();
-builder.Services.AddScoped<IBaseCRUDService<UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>, UserNotificationService>();
+builder.Services.AddScoped<IUserNotificationService, UserNotificationService>();
+builder.Services.AddScoped<IBaseCRUDService<UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IUserNotificationService>());
 AddCrud<CompanySettings, CompanySettingsResponse, CompanySettingsSearchObject, CompanySettingsInsertRequest, CompanySettingsUpdateRequest, CompanySettingsPatchRequest>();
 AddCrud<PaymentSettings, PaymentSettingsResponse, PaymentSettingsSearchObject, PaymentSettingsInsertRequest, PaymentSettingsUpdateRequest, PaymentSettingsPatchRequest>();
 

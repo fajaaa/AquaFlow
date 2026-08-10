@@ -13,4 +13,11 @@ public interface IMeterReadingService
     // meter's LastReading is updated to match. Also auto-creates a Draft Invoice + InvoiceItem priced
     // from the request's TariffId, so the response carries the resulting invoice's id/number/total.
     Task<MeterReadingCollectorEntryResponse> CreateForCollectorAsync(int callerUserId, MeterReadingCollectorEntryRequest request);
+
+    // The most recent reading for a water meter that still counts towards its billing history (same
+    // VoidedAt/cancelled-invoice filter as the collector-entry cooldown check) - null when the meter has
+    // no such reading. Backs GET /MeterReadings/last-counting, the collector app's cooldown/tariff
+    // suggestion lookup; unlike the generic GET /MeterReadings listing, this never surfaces a voided or
+    // invoice-cancelled row as "the last reading".
+    Task<MeterReadingResponse?> GetLastCountingReadingAsync(int waterMeterId);
 }

@@ -29,7 +29,6 @@ public class CustomerProfile : EntityBase
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     public ICollection<Recommendation> Recommendations { get; set; } = new List<Recommendation>();
-    public ICollection<PaymentMethod> PaymentMethods { get; set; } = new List<PaymentMethod>();
     public ICollection<WaterConsumptionAlert> WaterConsumptionAlerts { get; set; } = new List<WaterConsumptionAlert>();
     public ICollection<SupportTicket> SupportTickets { get; set; } = new List<SupportTicket>();
 }

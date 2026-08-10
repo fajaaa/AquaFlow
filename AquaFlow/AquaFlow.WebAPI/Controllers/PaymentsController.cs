@@ -1,26 +1,56 @@
-using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
+using AquaFlow.Services.Payments;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 using CustomerProfileCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.CustomerProfileResponse, AquaFlow.Model.SearchObjects.CustomerProfileSearchObject, AquaFlow.Model.Requests.CustomerProfileInsertRequest, AquaFlow.Model.Requests.CustomerProfileUpdateRequest, AquaFlow.Model.Requests.CustomerProfilePatchRequest>;
-using PaymentCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.PaymentResponse, AquaFlow.Model.SearchObjects.PaymentSearchObject, AquaFlow.Model.Requests.PaymentInsertRequest, AquaFlow.Model.Requests.PaymentUpdateRequest, AquaFlow.Model.Requests.PaymentPatchRequest>;
+using PaymentReadService = AquaFlow.Services.IBaseReadService<AquaFlow.Model.Responses.PaymentResponse, AquaFlow.Model.SearchObjects.PaymentSearchObject>;
 
 namespace AquaFlow.WebAPI.Controllers;
 
-// Payments normally arise through POST /Invoices/{id}/payments (InvoicesController.RecordPayment);
-// the generic write path here stays only for administrative backfill.
-public class PaymentsController : BaseCRUDController<PaymentResponse, PaymentSearchObject, PaymentInsertRequest, PaymentUpdateRequest, PaymentPatchRequest, PaymentCrudService>
+// /Payments is read-only. Every Payment row is created either by the invoice state
+// machine (POST /Invoices/{id}/payments, InvoicesController.RecordPayment) or by the
+// payment provider confirmation path once one is wired up - nothing else writes to
+// Payments, so this controller derives from BaseReadController rather than
+// BaseCRUDController and exposes no Create/Update/Patch/Delete routes at all.
+public class PaymentsController : BaseReadController<PaymentResponse, PaymentSearchObject, PaymentReadService>
 {
     private const string ManagePermission = "Invoices.Manage";
 
     private readonly CustomerProfileCrudService _customerProfileService;
+    private readonly StripeOptions _stripeOptions;
+    private readonly PaymentsOptions _paymentsOptions;
 
-    public PaymentsController(PaymentCrudService service, CustomerProfileCrudService customerProfileService) : base(service)
+    public PaymentsController(
+        PaymentReadService service,
+        CustomerProfileCrudService customerProfileService,
+        IOptions<StripeOptions> stripeOptions,
+        IOptions<PaymentsOptions> paymentsOptions) : base(service)
     {
         _customerProfileService = customerProfileService;
+        _stripeOptions = stripeOptions.Value;
+        _paymentsOptions = paymentsOptions.Value;
+    }
+
+    // [AllowAnonymous] override of the class-level [Authorize]: the mobile app calls this once at
+    // startup, before the first payment screen and before any login, to configure the Stripe SDK
+    // (Stripe.publishableKey + Stripe.instance.applySettings()). PublishableKey is not a secret -
+    // it is meant to ship inside a client, unlike Payments:Stripe:SecretKey/WebhookSecret. Empty
+    // when the active provider isn't Stripe (e.g. the default Manual provider), same as
+    // CheckoutSessionResponse.PublishableKey.
+    [HttpGet("stripe-config")]
+    [AllowAnonymous]
+    public ActionResult<StripeConfigResponse> GetStripeConfig()
+    {
+        return Ok(new StripeConfigResponse
+        {
+            PublishableKey = _stripeOptions.PublishableKey,
+            Currency = _paymentsOptions.Currency
+        });
     }
 
     // A caller holding Invoices.Manage (currently Admin only) sees every payment
@@ -113,20 +143,4 @@ public class PaymentsController : BaseCRUDController<PaymentResponse, PaymentSea
         var claimValue = User.FindFirst(ClaimNames.Id)?.Value;
         return int.TryParse(claimValue, out userId);
     }
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<ActionResult<PaymentResponse>> Create([FromBody] PaymentInsertRequest request)
-        => base.Create(request);
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<ActionResult<PaymentResponse>> Update(int id, [FromBody] PaymentUpdateRequest request)
-        => base.Update(id, request);
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<ActionResult<PaymentResponse>> Patch(int id, [FromBody] PaymentPatchRequest request)
-        => base.Patch(id, request);
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<IActionResult> Delete(int id)
-        => base.Delete(id);
 }

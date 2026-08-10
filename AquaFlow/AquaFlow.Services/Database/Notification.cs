@@ -15,4 +15,5 @@ public class Notification : EntityBase
     public int CreatedById { get; set; }
     public User? CreatedBy { get; set; }
     public ICollection<UserNotification> UserNotifications { get; set; } = new List<UserNotification>();
+    public ICollection<NotificationImage> Images { get; set; } = new List<NotificationImage>();
 }
