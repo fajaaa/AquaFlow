@@ -6,12 +6,21 @@ import 'package:aquaflow_desktop/customer/screens/customer_requests_screen.dart'
 import 'package:aquaflow_desktop/customer/services/customer_water_meter_exception.dart';
 import 'package:aquaflow_desktop/customer/services/customer_water_meter_service.dart';
 import 'package:aquaflow_desktop/customer/widgets/new_water_meter_request_dialog.dart';
+import 'package:aquaflow_desktop/customer/widgets/water_meter_status_pill.dart';
 import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
+import 'package:aquaflow_desktop/shared/widgets/async_state_view.dart';
+import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
+import 'package:aquaflow_desktop/shared/widgets/list_skeleton.dart';
 
 /// "Vodomjeri" tab body: lists the signed-in customer's own water meters and
 /// lets them file a new-meter request (the "+" action) or open the full
 /// [CustomerRequestsScreen] (the "Zahtjevi" action). The requests themselves no
 /// longer render inline here - they live on their own screen.
+///
+/// Card styling mirrors `NotificationsScreen`/`CustomerInvoicesScreen`: a
+/// branded gradient bar keyed to the meter's status, an accent-tinted status
+/// pill, and the same loading/empty/error scaffolding
+/// (`AsyncStateView`/`ListSkeleton`/`EmptyStateView`).
 ///
 /// Rendered inside [MobileShell], so it has no Scaffold/AppBar of its own.
 class CustomerWaterMetersScreen extends StatefulWidget {
@@ -121,49 +130,68 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
               ],
             ),
           ),
-          Expanded(child: _buildContent()),
+          if (_loading && _meters.isNotEmpty)
+            const LinearProgressIndicator(minHeight: 2),
+          Expanded(child: _buildBody()),
         ],
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final error = _error;
-    if (error != null) {
-      return _ErrorRetry(message: error, onRetry: _load);
-    }
-
-    if (_meters.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
-          children: [
-            SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-            const _EmptyState(),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        itemCount: _meters.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (context, index) =>
-            _WaterMeterCard(meter: _meters[index]),
+  Widget _buildBody() {
+    return AsyncStateView(
+      loading: _loading && _meters.isEmpty,
+      error: _error,
+      onRetry: _load,
+      loadingBuilder: (context) => ListSkeleton(
+        itemBuilder: (context, index) => _WaterMeterCard(meter: _skeletonMeter),
       ),
+      builder: (context) {
+        if (_meters.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: _load,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(24),
+              children: [
+                SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
+                const EmptyStateView(
+                  icon: Icons.water_drop_outlined,
+                  message: 'Trenutno nemate evidentiranih vodomjera.',
+                ),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: _load,
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            itemCount: _meters.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (context, index) =>
+                _WaterMeterCard(meter: _meters[index]),
+          ),
+        );
+      },
     );
   }
 }
+
+final _skeletonMeter = CustomerWaterMeter(
+  id: 0,
+  serialNumber: 'SN-0000000',
+  settlementId: 0,
+  settlementName: 'Naselje',
+  street: 'Ulica',
+  houseNumber: '1',
+  installedAt: null,
+  status: 'Active',
+  initialReading: 0,
+  lastReading: 0,
+);
 
 class _WaterMeterCard extends StatelessWidget {
   const _WaterMeterCard({required this.meter});
@@ -173,166 +201,175 @@ class _WaterMeterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final address = meter.address;
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.30)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    meter.serialNumber,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                _StatusPill(status: meter.status),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _InfoRow(
-              icon: Icons.location_on_outlined,
-              label: meter.settlementName.isEmpty ? '-' : meter.settlementName,
-            ),
-            const SizedBox(height: 6),
-            _InfoRow(
-              icon: Icons.home_outlined,
-              label: address.isEmpty ? '-' : address,
-            ),
-            const SizedBox(height: 6),
-            _InfoRow(
-              icon: Icons.speed_outlined,
-              label:
-                  'Zadnje očitanje: ${meter.lastReading.toStringAsFixed(2)} m³',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+    final meta = WaterMeterStatusMeta.of(meter.status);
+    final accent = _readableAccent(meta.color, theme.brightness);
+    // Inactive is the meter's "needs attention" state, same role
+    // `isPayable` plays for an invoice card / `!isRead` plays for a
+    // notification card.
+    final needsAttention = meter.status.toLowerCase() == 'inactive';
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: 8),
-        Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
-      ],
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final normalized = status.toLowerCase();
-    final isActive = normalized == 'active' || normalized == 'aktivan';
-    final color = isActive ? const Color(0xFF2E7D32) : const Color(0xFF64748B);
-    final icon = isActive ? Icons.check_circle_outline : Icons.cancel_outlined;
+    final subtitle = [meter.settlementName, meter.address]
+        .where((part) => part.trim().isNotEmpty)
+        .join(', ');
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(8),
+        color: isLight ? Colors.white : colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: needsAttention
+              ? accent.withValues(alpha: 0.35)
+              : (isLight
+                    ? const Color(0x121F2937)
+                    : colorScheme.outlineVariant.withValues(alpha: 0.5)),
+          width: needsAttention ? 1.5 : 1,
+        ),
+        boxShadow: isLight
+            ? const [
+                BoxShadow(
+                  color: Color(0x14062845),
+                  blurRadius: 24,
+                  offset: Offset(0, 10),
+                ),
+              ]
+            : null,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: color),
-          const SizedBox(width: 5),
-          Text(
-            status.isEmpty ? '-' : status,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.water_drop_outlined,
-            size: 56,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Trenutno nemate evidentiranih vodomjera.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorRetry extends StatelessWidget {
-  const _ErrorRetry({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      // A ListView gives each row unbounded height, so a bare stretched
+      // Row would force an infinite-height constraint on its children and
+      // crash. IntrinsicHeight bounds the row to its tallest child, letting
+      // the color bar stretch to the card's height.
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+            // Colored status bar - branded gradient with a white glyph.
+            Container(
+              width: 58,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    _shade(meta.color, 0.16),
+                    _shade(meta.color, -0.20),
+                  ],
+                ),
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(18),
+                ),
+              ),
+              child: Center(
+                child: Icon(meta.icon, color: Colors.white, size: 20),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            meter.serialNumber,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: needsAttention
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        if (needsAttention) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: accent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle.isEmpty ? '-' : subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        height: 1.4,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            meta.label,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: accent,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Zadnje očitanje: ${meter.lastReading.toStringAsFixed(2)} m³',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Mirrors `_readableAccent` in notifications_screen.dart: any accent dark
+  /// enough to blend into the dark theme's background is lifted toward white
+  /// there. Light theme and the brighter accents are returned unchanged.
+  static Color _readableAccent(Color base, Brightness brightness) {
+    if (brightness == Brightness.dark && base.computeLuminance() < 0.2) {
+      return Color.lerp(base, Colors.white, 0.6)!;
+    }
+    return base;
+  }
+
+  /// Tints [c] toward white for a positive [percent] or toward black for a
+  /// negative one - used to build the two-stop gradient on the status bar.
+  static Color _shade(Color c, double percent) {
+    if (percent >= 0) return Color.lerp(c, Colors.white, percent)!;
+    return Color.lerp(c, Colors.black, -percent)!;
   }
 }

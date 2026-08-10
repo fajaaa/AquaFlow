@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 
 import 'package:aquaflow_desktop/customer/models/customer_invoice.dart';
+import 'package:aquaflow_desktop/customer/models/customer_invoice_page.dart';
 import 'package:aquaflow_desktop/customer/screens/customer_invoice_detail_screen.dart';
 import 'package:aquaflow_desktop/customer/services/customer_invoice_exception.dart';
 import 'package:aquaflow_desktop/customer/services/customer_invoice_service.dart';
 import 'package:aquaflow_desktop/customer/widgets/invoice_status_pill.dart';
 import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_desktop/shared/widgets/async_state_view.dart';
+import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/list_skeleton.dart';
 
 /// "Računi" tab body: lists the signed-in customer's own invoices, every
 /// status, newest first. Real server-side pagination via
 /// `CustomerInvoiceService.fetchPage` (backend pins `CustomerId` to the
-/// caller): infinite scroll loads the next page near the bottom and stops
-/// when a short page arrives or the total count is reached, and
-/// pull-to-refresh resets to page 1 - same template as
-/// `CustomerRequestsScreen`. Tapping a card pushes
+/// caller) - page-number pagination bar at the bottom, same template as
+/// `NotificationsScreen`. Tapping a card pushes
 /// [CustomerInvoiceDetailScreen].
 ///
 /// Rendered inside [MobileShell], so it has no Scaffold/AppBar of its own.
@@ -28,91 +28,65 @@ class CustomerInvoicesScreen extends StatefulWidget {
 }
 
 class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen> {
-  static const int _pageSize = 20;
-
   final CustomerInvoiceService _service = CustomerInvoiceService();
-  final ScrollController _scrollController = ScrollController();
 
+  CustomerInvoicePage? _pageData;
   bool _loading = true;
-  bool _loadingMore = false;
-  bool _hasMore = false;
   String? _error;
-  int _nextPage = 1;
-  List<CustomerInvoice> _items = const [];
+  int _page = 1;
+  int _pageSize = 10;
+  int _requestSerial = 0;
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
-    _loadFirstPage();
+    _load();
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
     _service.dispose();
     super.dispose();
   }
 
-  void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    final position = _scrollController.position;
-    if (position.pixels >= position.maxScrollExtent - 300) {
-      _loadMore();
-    }
-  }
-
-  Future<void> _loadFirstPage() async {
+  Future<void> _load({bool resetPage = false}) async {
+    final requestId = ++_requestSerial;
     setState(() {
+      if (resetPage) _page = 1;
       _loading = true;
       _error = null;
     });
 
     try {
-      final result = await _service.fetchPage(page: 1, pageSize: _pageSize);
-      if (!mounted) return;
+      final pageData = await _service.fetchPage(page: _page, pageSize: _pageSize);
+      if (!mounted || requestId != _requestSerial) return;
       setState(() {
-        _items = result.items;
-        _nextPage = 2;
-        _hasMore = result.items.length >= _pageSize &&
-            _items.length < result.totalCount;
+        _pageData = pageData;
         _loading = false;
       });
     } on CustomerInvoiceException catch (e) {
-      if (!mounted) return;
+      if (!mounted || requestId != _requestSerial) return;
       setState(() {
-        _error = e.message;
+        _pageData = null;
         _loading = false;
+        _error = e.message;
       });
     }
   }
 
-  Future<void> _loadMore() async {
-    if (_loadingMore || !_hasMore || _loading) return;
-    setState(() => _loadingMore = true);
+  void _setPageSize(int? value) {
+    if (value == null || value == _pageSize || _loading) return;
+    setState(() {
+      _pageSize = value;
+      _page = 1;
+    });
+    _load();
+  }
 
-    try {
-      final result = await _service.fetchPage(
-        page: _nextPage,
-        pageSize: _pageSize,
-      );
-      if (!mounted) return;
-      setState(() {
-        _items = [..._items, ...result.items];
-        _nextPage += 1;
-        final reachedEnd = result.items.length < _pageSize ||
-            _items.length >= result.totalCount;
-        _hasMore = !reachedEnd;
-        _loadingMore = false;
-      });
-    } on CustomerInvoiceException catch (e) {
-      if (!mounted) return;
-      setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
-    }
+  void _goToPage(int page) {
+    if (page == _page || _loading) return;
+    setState(() => _page = page);
+    _load();
   }
 
   Future<void> _openDetail(CustomerInvoice invoice) async {
@@ -121,6 +95,9 @@ class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pageData = _pageData;
+    final totalPages = _totalPages(pageData?.totalCount ?? 0);
+
     return SafeArea(
       child: Column(
         children: [
@@ -138,13 +115,25 @@ class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen> {
                 ),
                 IconButton(
                   tooltip: 'Osvježi',
-                  onPressed: _loading ? null : _loadFirstPage,
+                  onPressed: _loading ? null : () => _load(),
                   icon: const Icon(Icons.refresh),
                 ),
               ],
             ),
           ),
+          if (_loading && pageData != null)
+            const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildBody()),
+          if (pageData != null && _error == null)
+            _PaginationBar(
+              page: _page,
+              totalPages: totalPages,
+              totalCount: pageData.totalCount,
+              pageSize: _pageSize,
+              loading: _loading,
+              onPageChanged: _goToPage,
+              onPageSizeChanged: _setPageSize,
+            ),
         ],
       ),
     );
@@ -152,9 +141,9 @@ class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen> {
 
   Widget _buildBody() {
     return AsyncStateView(
-      loading: _loading,
+      loading: _loading && _pageData == null,
       error: _error,
-      onRetry: _loadFirstPage,
+      onRetry: () => _load(),
       loadingBuilder: (context) => ListSkeleton(
         itemBuilder: (context, index) => _InvoiceCard(
           invoice: _skeletonInvoice,
@@ -162,36 +151,33 @@ class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen> {
         ),
       ),
       builder: (context) {
-        if (_items.isEmpty) {
+        final items = _pageData?.items ?? const <CustomerInvoice>[];
+        if (items.isEmpty) {
           return RefreshIndicator(
-            onRefresh: _loadFirstPage,
+            onRefresh: () => _load(),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(24),
               children: [
                 SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-                const _EmptyState(),
+                const EmptyStateView(
+                  icon: Icons.receipt_long_outlined,
+                  message: 'Trenutno nemate evidentiranih računa.',
+                ),
               ],
             ),
           );
         }
 
         return RefreshIndicator(
-          onRefresh: _loadFirstPage,
+          onRefresh: () => _load(),
           child: ListView.separated(
-            controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            itemCount: _items.length + (_hasMore ? 1 : 0),
+            itemCount: items.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
-              if (index >= _items.length) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              final invoice = _items[index];
+              final invoice = items[index];
               return _InvoiceCard(
                 invoice: invoice,
                 onTap: () => _openDetail(invoice),
@@ -201,6 +187,11 @@ class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen> {
         );
       },
     );
+  }
+
+  int _totalPages(int totalCount) {
+    if (totalCount <= 0) return 1;
+    return ((totalCount + _pageSize - 1) / _pageSize).floor();
   }
 }
 
@@ -229,114 +220,275 @@ class _InvoiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.30)),
-      ),
-      clipBehavior: Clip.antiAlias,
+    final meta = InvoiceStatusMeta.of(invoice.status);
+    final accent = _readableAccent(meta.color, theme.brightness);
+    // Issued (still unpaid) is the invoice's "needs attention" state, same
+    // role `!isRead` plays for a notification card.
+    final needsAttention = invoice.isPayable;
+
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.receipt_long_outlined,
-                    size: 18,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      invoice.invoiceNumber,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isLight ? Colors.white : colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: needsAttention
+                  ? accent.withValues(alpha: 0.35)
+                  : (isLight
+                        ? const Color(0x121F2937)
+                        : colorScheme.outlineVariant.withValues(alpha: 0.5)),
+              width: needsAttention ? 1.5 : 1,
+            ),
+            boxShadow: isLight
+                ? const [
+                    BoxShadow(
+                      color: Color(0x14062845),
+                      blurRadius: 24,
+                      offset: Offset(0, 10),
+                    ),
+                  ]
+                : null,
+          ),
+          // A ListView gives each row unbounded height, so a bare stretched
+          // Row would force an infinite-height constraint on its children and
+          // crash. IntrinsicHeight bounds the row to its tallest child, letting
+          // the color bar stretch to the card's height.
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Colored status bar - branded gradient with a white glyph.
+                Container(
+                  width: 58,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        _shade(meta.color, 0.16),
+                        _shade(meta.color, -0.20),
+                      ],
+                    ),
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(18),
                     ),
                   ),
-                  InvoiceStatusPill(status: invoice.status),
-                ],
-              ),
-              const SizedBox(height: 10),
-              _InfoRow(
-                icon: Icons.date_range_outlined,
-                label:
-                    '${_formatDate(invoice.billingPeriodFrom)} - ${_formatDate(invoice.billingPeriodTo)}',
-              ),
-              const SizedBox(height: 6),
-              _InfoRow(
-                icon: Icons.speed_outlined,
-                label: invoice.waterMeterSerialNumber.isEmpty
-                    ? '-'
-                    : invoice.waterMeterSerialNumber,
-              ),
-              const SizedBox(height: 6),
-              _InfoRow(
-                icon: Icons.water_drop_outlined,
-                label: '${_formatMoney(invoice.consumptionM3)} m³',
-              ),
-              const SizedBox(height: 6),
-              _InfoRow(
-                icon: Icons.payments_outlined,
-                label: '${_formatMoney(invoice.totalAmount)} BAM',
-              ),
-            ],
+                  child: Center(
+                    child: Icon(meta.icon, color: Colors.white, size: 20),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      invoice.invoiceNumber,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: needsAttention
+                                            ? FontWeight.w800
+                                            : FontWeight.w600,
+                                        color: colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                  if (needsAttention) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: accent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.chevron_right,
+                              size: 18,
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.55,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${_formatDate(invoice.billingPeriodFrom)} - ${_formatDate(invoice.billingPeriodTo)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            height: 1.4,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 9),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                meta.label,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: accent,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${_formatMoney(invoice.totalAmount)} BAM',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-}
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label});
+  /// Mirrors `_readableAccent` in notifications_screen.dart: any accent dark
+  /// enough to blend into the dark theme's background is lifted toward white
+  /// there. Light theme and the brighter accents are returned unchanged.
+  static Color _readableAccent(Color base, Brightness brightness) {
+    if (brightness == Brightness.dark && base.computeLuminance() < 0.2) {
+      return Color.lerp(base, Colors.white, 0.6)!;
+    }
+    return base;
+  }
 
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: 8),
-        Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
-      ],
-    );
+  /// Tints [c] toward white for a positive [percent] or toward black for a
+  /// negative one - used to build the two-stop gradient on the status bar.
+  static Color _shade(Color c, double percent) {
+    if (percent >= 0) return Color.lerp(c, Colors.white, percent)!;
+    return Color.lerp(c, Colors.black, -percent)!;
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+class _PaginationBar extends StatelessWidget {
+  const _PaginationBar({
+    required this.page,
+    required this.totalPages,
+    required this.totalCount,
+    required this.pageSize,
+    required this.loading,
+    required this.onPageChanged,
+    required this.onPageSizeChanged,
+  });
+
+  final int page;
+  final int totalPages;
+  final int totalCount;
+  final int pageSize;
+  final bool loading;
+  final ValueChanged<int> onPageChanged;
+  final ValueChanged<int?> onPageSizeChanged;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.receipt_long_outlined,
-            size: 56,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Trenutno nemate evidentiranih računa.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
-          ),
-        ],
+    final canGoBack = page > 1 && !loading;
+    final canGoForward = page < totalPages && !loading;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: 'Prethodna stranica',
+              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
+              icon: const Icon(Icons.chevron_left),
+            ),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Stranica $page od $totalPages',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge,
+                  ),
+                  Text(
+                    '$totalCount ukupno',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'Sljedeća stranica',
+              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
+              icon: const Icon(Icons.chevron_right),
+            ),
+            DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: pageSize,
+                onChanged: loading ? null : onPageSizeChanged,
+                items: const [
+                  DropdownMenuItem(value: 5, child: Text('5')),
+                  DropdownMenuItem(value: 10, child: Text('10')),
+                  DropdownMenuItem(value: 20, child: Text('20')),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

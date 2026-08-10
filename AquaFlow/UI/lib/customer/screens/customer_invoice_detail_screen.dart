@@ -6,6 +6,7 @@ import 'package:aquaflow_desktop/customer/models/customer_payment.dart';
 import 'package:aquaflow_desktop/customer/services/customer_invoice_exception.dart';
 import 'package:aquaflow_desktop/customer/services/customer_invoice_service.dart';
 import 'package:aquaflow_desktop/customer/widgets/invoice_status_pill.dart';
+import 'package:aquaflow_desktop/shared/theme/app_theme.dart';
 
 /// Detail view of a single invoice belonging to the signed-in customer,
 /// pushed from `CustomerInvoicesScreen` as its own Scaffold+AppBar route
@@ -76,40 +77,125 @@ class _CustomerInvoiceDetailScreenState
   @override
   Widget build(BuildContext context) {
     final invoice = _invoice;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final meta = InvoiceStatusMeta.of(invoice.status);
+    final accent = _readableAccent(meta.color, theme.brightness);
+    final onAccent =
+        ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
+        ? Colors.white
+        : AppColors.textDark;
+
     return Scaffold(
       appBar: AppBar(title: Text(invoice.invoiceNumber)),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _HeaderCard(invoice: invoice),
-            const SizedBox(height: 12),
-            _ReadingsCard(invoice: invoice),
-            const SizedBox(height: 12),
-            _AmountCard(invoice: invoice),
-            const SizedBox(height: 12),
-            _buildPaymentsSection(invoice),
-            if (invoice.isPayable) ...[
-              const SizedBox(height: 16),
-              SizedBox(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Status banner - full-width strip across the top, same
+              // treatment as the type banner on NotificationDetailScreen.
+              Container(
                 width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _paying ? null : () => _payInvoice(invoice),
-                  icon: _paying
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.payment_outlined),
-                  label: const Text('Plati'),
+                color: accent.withValues(alpha: 0.10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(meta.icon, color: onAccent, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'STATUS RAČUNA',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          meta.label,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: accent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Center(
+                child: SizedBox(
+                  width: MediaQuery.sizeOf(context).width * 0.9,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _HeaderCard(invoice: invoice, accent: accent),
+                        const SizedBox(height: 16),
+                        _ReadingsCard(invoice: invoice, accent: accent),
+                        const SizedBox(height: 16),
+                        _AmountCard(invoice: invoice, accent: accent),
+                        const SizedBox(height: 16),
+                        _buildPaymentsSection(invoice, accent),
+                        if (invoice.isPayable) ...[
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: _paying
+                                  ? null
+                                  : () => _payInvoice(invoice),
+                              icon: _paying
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.payment_outlined),
+                              label: const Text('Plati'),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  /// Mirrors `_readableAccent` in notification_detail_screen.dart: any
+  /// accent dark enough to blend into the dark theme's background is lifted
+  /// toward white there. Light theme and the brighter accents are returned
+  /// unchanged.
+  static Color _readableAccent(Color base, Brightness brightness) {
+    if (brightness == Brightness.dark && base.computeLuminance() < 0.2) {
+      return Color.lerp(base, Colors.white, 0.6)!;
+    }
+    return base;
   }
 
   // Checkout only opens a payment session - it never completes the payment
@@ -271,7 +357,7 @@ class _CustomerInvoiceDetailScreenState
     }
   }
 
-  Widget _buildPaymentsSection(CustomerInvoice invoice) {
+  Widget _buildPaymentsSection(CustomerInvoice invoice, Color accent) {
     if (_loading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
@@ -288,46 +374,37 @@ class _CustomerInvoiceDetailScreenState
       payments: _payments,
       totalPaid: _totalPaid,
       remaining: invoice.remainingAmount,
+      accent: accent,
     );
   }
 }
 
 class _HeaderCard extends StatelessWidget {
-  const _HeaderCard({required this.invoice});
+  const _HeaderCard({required this.invoice, required this.accent});
 
   final CustomerInvoice invoice;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return _SectionCard(
-      child: Row(
-        children: [
-          Icon(
-            Icons.receipt_long_outlined,
-            size: 22,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              invoice.invoiceNumber,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          InvoiceStatusPill(status: invoice.status),
-        ],
+      child: Text(
+        invoice.invoiceNumber,
+        style: theme.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+          color: accent,
+        ),
       ),
     );
   }
 }
 
 class _ReadingsCard extends StatelessWidget {
-  const _ReadingsCard({required this.invoice});
+  const _ReadingsCard({required this.invoice, required this.accent});
 
   final CustomerInvoice invoice;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +412,7 @@ class _ReadingsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionTitle('Očitanja'),
+          _SectionHeading('Očitanja', icon: Icons.speed_outlined, color: accent),
           const SizedBox(height: 10),
           _KeyValueRow(
             label: 'Period',
@@ -364,9 +441,10 @@ class _ReadingsCard extends StatelessWidget {
 }
 
 class _AmountCard extends StatelessWidget {
-  const _AmountCard({required this.invoice});
+  const _AmountCard({required this.invoice, required this.accent});
 
   final CustomerInvoice invoice;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
@@ -374,7 +452,7 @@ class _AmountCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionTitle('Iznos'),
+          _SectionHeading('Iznos', icon: Icons.payments_outlined, color: accent),
           const SizedBox(height: 10),
           _KeyValueRow(
             label: 'Osnovica',
@@ -397,11 +475,13 @@ class _PaymentsCard extends StatelessWidget {
     required this.payments,
     required this.totalPaid,
     required this.remaining,
+    required this.accent,
   });
 
   final List<CustomerPayment> payments;
   final double totalPaid;
   final double remaining;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
@@ -410,7 +490,7 @@ class _PaymentsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionTitle('Uplate'),
+          _SectionHeading('Uplate', icon: Icons.receipt_long_outlined, color: accent),
           const SizedBox(height: 10),
           if (payments.isEmpty)
             Padding(
@@ -481,6 +561,8 @@ class _PaymentRow extends StatelessWidget {
   }
 }
 
+/// Mirrors `_Card` in notification_detail_screen.dart so invoice sections
+/// use the same rounded/bordered/shadowed card as a notification's.
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.child});
 
@@ -489,30 +571,61 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.30)),
+    final isLight = theme.brightness == Brightness.light;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isLight
+            ? Colors.white
+            : theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isLight
+              ? const Color(0xFFE1EDF7)
+              : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+        boxShadow: isLight
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
-      child: Padding(padding: const EdgeInsets.all(16), child: child),
+      child: child,
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
+/// Mirrors `_SectionHeading` in notification_detail_screen.dart, plus a
+/// small leading icon so each invoice section carries its own glyph.
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading(this.text, {required this.icon, required this.color});
 
   final String text;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: Theme.of(
-        context,
-      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 6),
+        Text(
+          text.toUpperCase(),
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 }

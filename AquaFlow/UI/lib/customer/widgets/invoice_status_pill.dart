@@ -1,47 +1,39 @@
 import 'package:flutter/material.dart';
 
-/// Coloured status pill for a customer's invoice, covering every backend
-/// `InvoiceStatus` (Issued/Paid/Cancelled). Same colour tokens as the admin
-/// `_InvoiceStatusPill`. Shared by the invoice cards on
-/// `CustomerInvoicesScreen` and the header of `CustomerInvoiceDetailScreen`.
-class InvoiceStatusPill extends StatelessWidget {
-  const InvoiceStatusPill({super.key, required this.status});
+import 'package:aquaflow_desktop/shared/theme/app_theme.dart';
 
-  final String status;
+/// Icon + accent color + label for a customer invoice `status`, covering
+/// every backend `InvoiceStatus` (Issued/Paid/Cancelled). Single source of
+/// truth shared by the invoice list card and the invoice detail screen's
+/// status banner, so both stay in sync - same role as `_metaFor`/
+/// `_typeColor` play for notifications. Issued (still unpaid) uses the
+/// warning accent to flag it as needing the customer's attention, same
+/// semantic as a Warning-type notification.
+class InvoiceStatusMeta {
+  const InvoiceStatusMeta(this.label, this.color, this.icon);
 
-  @override
-  Widget build(BuildContext context) {
-    final (label, color, icon) = switch (status.toLowerCase()) {
-      'issued' => ('Izdat', const Color(0xFF1D4ED8), Icons.send_outlined),
-      'paid' => ('Plaćen', const Color(0xFF2E7D32), Icons.check_circle_outline),
-      'cancelled' => (
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  static InvoiceStatusMeta of(String status) {
+    return switch (status.toLowerCase()) {
+      'issued' => const InvoiceStatusMeta(
+        'Izdat',
+        AppColors.warning,
+        Icons.send_outlined,
+      ),
+      'paid' => const InvoiceStatusMeta(
+        'Plaćen',
+        AppColors.success,
+        Icons.check_circle_outline,
+      ),
+      'cancelled' => const InvoiceStatusMeta(
         'Storniran',
-        const Color(0xFF64748B),
+        Color(0xFF64748B),
         Icons.block_outlined,
       ),
-      _ => (status, const Color(0xFF64748B), Icons.help_outline),
+      _ => InvoiceStatusMeta(status, const Color(0xFF64748B), Icons.help_outline),
     };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: color),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
