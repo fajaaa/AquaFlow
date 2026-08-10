@@ -1,334 +1,449 @@
-# AquaFlow 💧
+# AquaFlow
 
-AquaFlow is a full-stack management platform for a **water utility company**. It keeps
-track of customers, their water meters, meter readings, tariffs, invoices, payments,
-new-connection requests, and problems they report — and gives the company's admins,
-field collectors, and customers each their own tailored app to work with that data.
+AquaFlow is a management platform for a water utility company. It covers the operational
+cycle end to end — customers and their water meters, field meter readings, tariff-based
+invoicing, payments, new-connection requests, fault reports and customer support — through a
+single ASP.NET Core Web API and three role-specific Flutter clients.
 
-The project has two halves:
-
-- **Backend** — a web API written in **C# / ASP.NET Core (.NET 9)** that owns all the
-  data and business logic.
-- **Frontend** — a single **Flutter** codebase (`AquaFlow/UI`) that ships three different
-  experiences from one app: an **admin desktop** console, a **customer mobile** app, and
-  a **collector (meter reader) mobile** app.
-
-> **What is a "web API"?** It's a program with no buttons or screens of its own. Other
-> programs (a website, a mobile app, or a testing tool) talk to it over the internet by
-> sending requests like "give me the list of users" and it sends back answers as data.
-
-This README is the **for-dummies** guide: it assumes you've never touched this project
-and walks you from zero to a running system.
+| Role | Client | Platforms | Scope |
+| --- | --- | --- | --- |
+| Admin | `aquaflow_desktop` | Windows / macOS / Linux | Users, tariffs, invoices, payments, location codebook, requests, fault reports, support tickets, notifications, company settings |
+| Collector | `aquaflow_collector` | Android / iOS | Meter lookup, reading entry, assigned connection requests and fault reports |
+| Customer | `aquaflow_customer` | Android / iOS | Own meters and invoices, invoice payment, new-connection requests, fault reports, support tickets, notification inbox |
 
 ---
 
-## ✨ What it does
+## Table of contents
 
-- **Accounts & access control** — users belong to a role (Admin / Collector / Customer)
-  and roles are granted fine-grained permissions (e.g. `Invoices.Manage`), not a
-  hard-coded role check. Login issues a JWT access token + refresh token.
-- **Location codebook** — a City → Municipality → Settlement hierarchy backs every
-  address in the system (customer addresses, meters, fault reports, requests).
-- **Water meters & readings** — collectors search for a customer's meter on-site and
-  submit a reading against the current open billing cycle; the reading is validated
-  (no duplicates per cycle, no lower-than-last-reading without an explicit note) and
-  automatically generates a draft invoice priced against the chosen tariff.
-- **New-meter requests** — a customer requests service at an address; an admin assigns
-  it to a collector, who registers the physical meter on-site. The whole request moves
-  through a **Pending → Assigned → Registered / Rejected / Cancelled** state machine.
-- **Tariffs & billing cycles** — admins manage price-per-m³ tariffs and open/close the
-  billing period that meter readings and invoices are tied to.
-- **Invoices & payments** — invoices move through a **Draft → Issued → PartiallyPaid /
-  Overdue → Paid / Cancelled** state machine (`/Invoices/{id}/issue`, `/payments`,
-  `/cancel`, `/mark-overdue`), with full/partial payments recorded against them.
-- **Fault reports** — customers report problems (leaks, no water, etc.) against their
-  own account; staff triage and manage them.
-- **Notifications** — admins broadcast notifications (to everyone, all customers, all
-  collectors, or a specific settlement); recipients see them in an in-app inbox and get
-  a **push notification** on their phone (Firebase Cloud Messaging).
-- **Company & payment settings** — a single admin-managed record for company details
-  (name, contact info, tax number, bank account) and payment gateway configuration.
-- **User preferences** — each user has a persisted theme (`light`/`dark`), language, and
-  notification toggles (`GET`/`PUT /Account/preferences`); the Flutter app applies the
-  saved theme app-wide and lets users switch it from account settings (and pick it at
-  registration).
+- [Features](#features)
+- [Architecture](#architecture)
+- [Technology stack](#technology-stack)
+- [Prerequisites](#prerequisites)
+- [Getting started](#getting-started)
+- [Configuration](#configuration)
+- [Security model](#security-model)
+- [Hardening checklist before a non-local deployment](#hardening-checklist-before-a-non-local-deployment)
+- [API overview](#api-overview)
+- [Tests](#tests)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-## 🧱 Tech stack
+## Features
+
+**Identity and access control**
+Users belong to a role (Admin, Collector, Customer); roles are granted fine-grained
+permissions (for example `Invoices.Manage`, `MeterReadings.Manage`, `ActivityLogs.Read`)
+rather than being checked by hard-coded role names. Authentication issues a short-lived JWT
+access token plus a rotating refresh token. Self-registration always creates a Customer.
+
+**Location codebook**
+A City → Municipality → Settlement hierarchy backs every address in the system: customer
+profiles, water meters, connection requests and fault reports.
+
+**Water meters and readings**
+Collectors search the meter register on site and submit a reading through a dedicated entry
+endpoint. The server validates the reading (minimum 15-day spacing from the last billable
+reading, no lower value than the previous one unless the meter was physically replaced,
+retry-safe through a client-supplied idempotency key) and, when consumption is greater than
+zero, generates the priced invoice in the same transaction.
+
+**New-connection requests**
+A customer requests service at an address, an administrator assigns it to a collector, and the
+collector registers the physical meter on site. The request moves through
+`Pending → Assigned → Registered | Rejected | Cancelled`.
+
+**Tariffs and invoicing**
+Administrators maintain price-per-m³ tariffs (several may be active at once, e.g. household
+versus commercial). Invoices carry a year-scoped sequential number and move through
+`Issued → Paid | Cancelled`; a partial payment keeps the invoice `Issued`. Cancelling an
+invoice voids the reading it billed, so the consumption is re-billed by the next reading
+instead of being silently lost.
+
+**Payments**
+A pluggable payment provider abstraction ships with a manual provider (payments recorded by
+staff) and an optional Stripe provider that creates a PaymentIntent for the mobile
+PaymentSheet flow and confirms the payment through a signed webhook.
+
+**Fault reports and support tickets**
+Customers report faults against their own account (with photo attachments) and staff triage
+them through `New → Assigned → InProgress → Resolved`. Support tickets are threaded
+conversations between a customer and staff, with photo attachments per message and an
+`Open`/`Closed` lifecycle.
+
+**Notifications**
+Administrators publish notifications to an audience (everyone, all customers, all collectors,
+or one settlement), optionally with images. Recipients get an in-app inbox with per-item read
+state and an unread badge, plus a push notification on mobile via Firebase Cloud Messaging.
+
+**Audit trail**
+Security-relevant events (sign-in success and failure, token refresh, registration, password
+and account changes, and administrative changes to another user's account) are written to an
+activity log with a fixed retention window. Users can read their own history; the unfiltered
+listing requires a dedicated permission.
+
+**Company and payment settings, user preferences**
+A single administrator-managed record holds company details and payment gateway
+configuration. Each user has a persisted theme, language and notification preferences that the
+clients apply on start-up.
+
+---
+
+## Architecture
+
+Everything lives under the `AquaFlow/` directory.
+
+### Backend — `AquaFlow/AquaFlow.sln`
+
+| Project | Responsibility |
+| --- | --- |
+| [AquaFlow.WebAPI](AquaFlow/AquaFlow.WebAPI/) | HTTP host: controllers, JWT wiring, authorization filters, exception filter, rate limiting, OpenAPI |
+| [AquaFlow.Services](AquaFlow/AquaFlow.Services/) | Business logic, validators, EF Core `DbContext`, entities, migrations, state machines, payment providers |
+| [AquaFlow.Model](AquaFlow/AquaFlow.Model/) | Request/response DTOs, search objects, shared constants and exceptions |
+| [AquaFlow.Common.Services](AquaFlow/AquaFlow.Common.Services/) | Cross-cutting services: password hashing, push notification delivery |
+| [AquaFlow.Services.Tests](AquaFlow/AquaFlow.Services.Tests/) | xUnit tests for the business logic layer |
+| [AquaFlow.WebAPI.Tests](AquaFlow/AquaFlow.WebAPI.Tests/) | xUnit tests for controller authorization and ownership rules |
+
+Controllers derive from a generic read/CRUD base, so each resource inherits paging, filtering
+and sorting, and adds only the authorization and ownership rules specific to it.
+
+### Clients — `AquaFlow/UI`
+
+Three independent Flutter projects, one per role, each with its own `pubspec.yaml` and its own
+copy of the cross-cutting code (`lib/shared/`): there is intentionally no shared package
+between them, so a change to shared logic must be applied in each project. See
+[AquaFlow/UI/README.md](AquaFlow/UI/README.md) for the per-client run instructions, host
+selection per platform, and Firebase setup.
+
+---
+
+## Technology stack
 
 | Layer | Technology |
 | --- | --- |
-| Backend API | C# / ASP.NET Core (.NET 9), EF Core, SQL Server |
-| Auth | JWT bearer tokens + refresh tokens, permission-based authorization |
-| Validation & mapping | FluentValidation, Mapster |
-| API docs | Scalar (interactive OpenAPI UI) |
-| Push notifications | Firebase Admin SDK (server) / `firebase_messaging` (client) |
-| Frontend | Flutter (Dart `^3.12`) — one codebase for desktop, Android, and iOS |
-| State management | `provider` |
-| Backend tests | xUnit (`AquaFlow.Services.Tests`, `AquaFlow.WebAPI.Tests`) |
-| Frontend tests | `flutter test` / `flutter analyze` |
+| API | C# / ASP.NET Core (.NET 9) |
+| Persistence | EF Core 9 + SQL Server (migrations, no in-memory store) |
+| Authentication | JWT bearer tokens, rotating refresh tokens, permission-based authorization |
+| Validation / mapping | FluentValidation, Mapster |
+| API documentation | OpenAPI + Scalar interactive reference |
+| Payments | Provider abstraction; Stripe.NET for the Stripe provider |
+| Push notifications | Firebase Admin SDK (server), `firebase_messaging` (clients) |
+| Clients | Flutter (Dart `^3.12`), `provider` for state, `flutter_secure_storage` for tokens |
+| Tests | xUnit (backend), `flutter test` / `flutter analyze` (clients) |
 
 ---
 
-## 🗂️ How the project is organized
+## Prerequisites
 
-Everything lives inside the `AquaFlow/` folder.
-
-### Backend — `AquaFlow/*.csproj`
-
-The code is split into small projects, each with one job:
-
-| Project | Plain-English job |
-| --- | --- |
-| `AquaFlow.WebAPI` | The front door. Receives web requests, checks logins, hands work to the services. |
-| `AquaFlow.Services` | The workers. All the real logic, plus the database setup and data models. |
-| `AquaFlow.Model` | The shapes of the data sent in and out (the "forms" and "receipts"). |
-| `AquaFlow.Common.Services` | Shared helpers, e.g. password scrambling (`CryptoService`) and push notification sending. |
-| `AquaFlow.Services.Tests` | Automated tests for the business logic. |
-| `AquaFlow.WebAPI.Tests` | Automated tests for controller authorization/ownership rules. |
-
-`AquaFlow.sln` is the **solution file** — it just bundles all these projects together so
-one command can build them all.
-
-### Frontend — `AquaFlow/UI`
-
-One Flutter codebase, organized by feature and by role:
-
-| Folder | What's in it |
-| --- | --- |
-| `lib/app/` | Routing: platform gate (desktop vs. mobile) and role router. |
-| `lib/shared/` | Cross-cutting code every role uses: config, theme, models, services, providers. |
-| `lib/admin/` | Desktop admin console (users, tariffs, invoices, payments, codebook, requests, notifications, settings). |
-| `lib/customer/` | Mobile app for customers (meters, invoices, requests, notifications, account). |
-| `lib/collector/` | Mobile app for field collectors (meter search, reading entry, assigned requests, notifications). |
-
-See [`AquaFlow/UI/README.md`](AquaFlow/UI/README.md) for Flutter-specific run instructions
-and local-network notes (talking to the backend from an emulator or a physical phone).
-
----
-
-## 🧰 What you need installed first
-
-You need three things on your computer before anything works:
-
-| Tool | What it's for | How to check it's installed |
+| Tool | Purpose | Verify |
 | --- | --- | --- |
-| [.NET 9 SDK](https://dotnet.microsoft.com/download) | Builds and runs the C# code | `dotnet --version` |
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Runs the database in a container | `docker --version` |
-| A code editor | Visual Studio, VS Code, or Rider | — |
+| [.NET 9 SDK](https://dotnet.microsoft.com/download) | Build and run the API | `dotnet --version` |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Local SQL Server instance | `docker --version` |
+| [`dotnet-ef`](https://learn.microsoft.com/ef/core/cli/dotnet) | Apply migrations | `dotnet ef --version` |
+| [Flutter SDK](https://docs.flutter.dev/get-started/install) | Build and run the clients (optional for backend-only work) | `flutter --version` |
 
-Run the two commands above in a terminal. If each prints a version number, you're good.
-If it says "command not found", that tool isn't installed yet.
+Install the EF Core tools once if missing:
 
-To also run the Flutter client, add the [Flutter SDK](https://docs.flutter.dev/get-started/install)
-(`flutter --version`) — see [`AquaFlow/UI/README.md`](AquaFlow/UI/README.md) for that half.
+```powershell
+dotnet tool install --global dotnet-ef
+```
+
+An external SQL Server instance can be used instead of Docker; only the connection string
+changes.
 
 ---
 
-## 🚀 Getting the backend running (step by step)
+## Getting started
 
-Do these in order. All commands are for **PowerShell** on Windows, run from the repo root
-(the folder that contains this README).
+All commands are PowerShell, run from the repository root.
 
-### Step 1 — Start the database
-
-The database (SQL Server) runs inside Docker so you don't have to install it yourself.
+### 1. Start the database
 
 ```powershell
-cd .\AquaFlow
-docker compose up -d
+docker compose --file .\AquaFlow\docker-compose.yml up -d
 ```
 
-This starts a database and makes it reachable at `localhost,1435`. (`-d` means "in the
-background".) Leave it running.
+This provisions a local-only SQL Server container reachable at `localhost,1435` (host port
+`1435` maps to the container's `1433`, so it does not collide with a locally installed SQL
+Server on `1433`). The container credentials are development placeholders defined in
+[docker-compose.yml](AquaFlow/docker-compose.yml); they are not intended for any shared or
+hosted environment.
 
-### Step 2 — (Optional) settings are already filled in
+### 2. Configure the API
 
-The app needs a **database address** and some **login/token settings** to start. Good news:
-because this is a test project, [`appsettings.json`](AquaFlow/AquaFlow.WebAPI/appsettings.json)
-already contains dev-only defaults for all of them, so **you can skip straight to Step 3.**
+The API requires a connection string and JWT settings, and fails fast at start-up if either is
+missing. The repository ships placeholder development values in
+[appsettings.json](AquaFlow/AquaFlow.WebAPI/appsettings.json) so a fresh clone runs without
+extra setup — treat them as non-secret sample data and override them everywhere else.
 
-You only need to do something here if you want to point at a **different database** or use
-your **own secret**. To do that, set environment variables (they override `appsettings.json`)
-in the **same PowerShell window** you'll run the app from:
+See [Configuration](#configuration) for the full key reference and the supported override
+mechanisms. To run against your own database or signing key, set the values in the same shell
+you will start the API from:
 
 ```powershell
-$env:ConnectionStrings__DefaultConnection='Server=localhost,1435;Database=AquaFlow;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False'
-$env:JwtToken__SecretKey='your-own-secret-at-least-32-chars'
-$env:ASPNETCORE_ENVIRONMENT='Development'
+$env:ConnectionStrings__DefaultConnection = 'Server=localhost,1435;Database=AquaFlow;User Id=<db-user>;Password=<db-password>;TrustServerCertificate=True;Encrypt=False'
+$env:JwtToken__SecretKey = '<random-value-at-least-32-characters>'
+$env:ASPNETCORE_ENVIRONMENT = 'Development'
 ```
 
-> ⚠️ The values shipped in `appsettings.json` are **only for local testing**. Never point
-> them at a real database or reuse that `SecretKey` in production — override it with
-> environment variables or user secrets there. The `SecretKey` must be at least 32
-> characters long.
+`TrustServerCertificate=True` and `Encrypt=False` are appropriate only for a local container;
+use an encrypted, certificate-validated connection anywhere else.
 
-Push notifications are optional too: `appsettings.json` ships an empty `Firebase` section,
-so the backend falls back to a no-op sender and everything else keeps working without it.
-To enable real pushes, set `Firebase__ServiceAccountJson` (or `...JsonPath`) and
-`Firebase__ProjectId`.
+### 3. Apply migrations
 
-### Step 3 — Create the database tables
-
-The database is empty at first. This command builds all the tables and fills them with some
-starter data (demo users, cities/municipalities/settlements, tariffs, etc.):
+The schema and its reference data (roles, permissions, location codebook, tariffs, and demo
+records for local testing) are created by the migrations:
 
 ```powershell
 dotnet ef database update --project .\AquaFlow\AquaFlow.Services --startup-project .\AquaFlow\AquaFlow.WebAPI
 ```
 
-> Don't have the `dotnet ef` command? Install it once with:
-> `dotnet tool install --global dotnet-ef`
-
-### Step 4 — Run the API
+### 4. Run the API
 
 ```powershell
 dotnet run --project .\AquaFlow\AquaFlow.WebAPI\AquaFlow.WebAPI.csproj --launch-profile http
 ```
 
-The API is now live at **`http://localhost:5161`**. 🎉
+The API listens on `http://localhost:5161` (bound to all interfaces so a phone or tablet on the
+same network can reach it for testing). The `https` profile additionally listens on
+`https://localhost:7286`.
 
----
+### 5. Verify
 
-## 🧪 Is it actually working?
+Open the interactive API reference (served in the `Development` environment only):
 
-Open your browser and go to:
+```
+http://localhost:5161/scalar/v1
+```
 
-**`http://localhost:5161/scalar/v1`**
+It lists every endpoint, its request and response shapes, and allows authenticated calls with a
+bearer token.
 
-This is the **API reference** — a clickable page that lists every command the API
-understands and lets you try them out. If you see it, everything works.
-
----
-
-## 📱 Running the Flutter client
-
-Once the backend is running:
+### 6. Run a client
 
 ```powershell
-cd AquaFlow\UI
+cd .\AquaFlow\UI\aquaflow_desktop      # or aquaflow_customer / aquaflow_collector
 flutter pub get
 flutter run
 ```
 
-- On **desktop** (Windows/macOS/Linux), the app only serves the **Admin** role.
-- On **Android/iOS**, it routes **Customer** and **Collector** roles to their own mobile
-  experience (an Admin signed in on a phone reuses the Collector shell).
-- Web is intentionally blocked — this is a desktop/mobile app, not a web app.
-
-See [`AquaFlow/UI/README.md`](AquaFlow/UI/README.md) for the local-network host settings
-needed to reach the backend from an emulator or a physical device, and for the optional
-Firebase push-notification setup.
+Sign in with an account whose role matches the client; a role mismatch is rejected with an
+"unavailable" screen. The migrations seed one account per role for local testing — the
+credentials are deliberately not reproduced in this document; read them from
+[AquaFlowDbContextSeed.cs](AquaFlow/AquaFlow.Services/Database/AquaFlowDbContextSeed.cs) or
+create your own account through `POST /Access/register`.
 
 ---
 
-## 🔑 Logging in (why most things say "401 Unauthorized")
+## Configuration
 
-Almost every command needs you to **log in first**. Logging in gives you a temporary pass
-called a **token** (technically a JWT). You attach that token to every other request.
+Configuration is resolved by the standard ASP.NET Core provider chain. Later sources win:
 
-There are three ready-made demo accounts (local test database only):
+1. `appsettings.json` — placeholder development values, committed.
+2. `appsettings.Development.json` — machine-local, git-ignored.
+3. `AquaFlow.WebAPI/.env` — machine-local, git-ignored; loaded at start-up using the same
+   `Section__Key` double-underscore convention as environment variables. Copy
+   [.env.example](AquaFlow/AquaFlow.WebAPI/.env.example) and fill in your own values. A missing
+   `.env` file is a silent no-op.
+4. User secrets — `dotnet user-secrets set "JwtToken:SecretKey" "<value>" --project .\AquaFlow\AquaFlow.WebAPI`
+5. Environment variables / the hosting platform's secret store.
 
-| Email | Role | Password |
+| Key | Required | Notes |
 | --- | --- | --- |
-| `admin@aquaflow.ba` | Admin | `AquaFlow123!` |
-| `collector@aquaflow.ba` | Collector (meter reader) | `AquaFlow123!` |
-| `customer@aquaflow.ba` | Customer | `AquaFlow123!` |
+| `ConnectionStrings__DefaultConnection` | Yes | SQL Server connection string. Start-up fails if absent. |
+| `JwtToken__Issuer`, `JwtToken__Audience` | Yes | Token issuer and audience. |
+| `JwtToken__SecretKey` | Yes | Signing key, minimum 32 characters. Use a random, per-environment value. |
+| `JwtToken__DurationInMinutes` | No | Access token lifetime, default `60`. |
+| `Payments__Provider` | No | `Manual` (default) or `Stripe`. |
+| `Payments__Currency` | No | Currency code used for checkout amounts. |
+| `Payments__Stripe__SecretKey` | If Stripe | Secret API key. Start-up fails if the provider is `Stripe` and this is blank. |
+| `Payments__Stripe__WebhookSecret` | If Stripe | Webhook signing secret used to verify incoming events. |
+| `Payments__Stripe__PublishableKey` | If Stripe | Served to the mobile client to initialise the payment sheet. |
+| `Firebase__ServiceAccountJson` / `Firebase__ServiceAccountJsonPath` | No | Service account credential, inline or by path. |
+| `Firebase__ProjectId` | No | Firebase project id. |
 
-**How to log in (via the API directly):**
+Push notifications are optional: with no Firebase credential configured, the API registers a
+no-op sender and every other feature keeps working.
 
-1. Send a `POST` request to `http://localhost:5161/Access/login` with this body:
+Never commit real values for any of the keys above — in particular the JWT signing key, the
+database password, Stripe keys, and the Firebase service account JSON. `.env` files are
+git-ignored for exactly this reason.
 
-   ```json
-   { "email": "admin@aquaflow.ba", "password": "AquaFlow123!" }
-   ```
-
-2. The response contains an `accessToken`. Copy it.
-3. On every other request, add a header:
-   `Authorization: Bearer <paste-the-accessToken-here>`
-
-That's it — now protected commands like `GET /Users` will work instead of returning `401`.
-(The Flutter app does all of this for you through its own login screen.)
-
----
-
-## 📚 What can the API do?
-
-Each "resource" below supports the standard set of actions: **list them, get one, create,
-update, and delete** (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`), unless noted otherwise.
-
-- **People & access:** `/Users`, `/UserRoles`, `/Permissions`, `/UserRolePermissions`,
-  `/CustomerProfiles`, `/CollectorProfiles`, `/Account` (edit your own profile),
-  `/Account/preferences` (`GET`/`PUT` your theme, language, notification toggles),
-  `/DeviceTokens` (push notification registration)
-- **Places:** `/Cities`, `/Municipalities`, `/Settlements`
-- **Meters & billing:** `/WaterMeters`, `/WaterMeterRequests`, `/MeterReadings`,
-  `/BillingCycles`, `/Tariffs`
-- **Money:** `/Invoices`, `/InvoiceItems`, `/Payments`
-- **Support & messages:** `/FaultReports`, `/Notifications`, `/UserNotifications`
-- **Configuration:** `/CompanySettings`, `/PaymentSettings`
-
-**Some resources move through a state machine instead of a free-form status edit:**
-
-- **Invoices**: `POST /Invoices/{id}/issue`, `/payments`, `/cancel`, `/mark-overdue`, and
-  `GET /Invoices/{id}/allowed-actions` to ask what's allowed next.
-- **Water meter requests**: `POST /WaterMeterRequests/{id}/assign`, `/reject`, `/cancel`,
-  `/register`, and `GET /WaterMeterRequests/{id}/allowed-actions`.
-- **Meter readings**: collectors submit through the dedicated
-  `POST /MeterReadings/collector-entry`, which also auto-generates the invoice for that
-  reading in the same transaction.
-
-**Who can see what is enforced server-side, not just hidden in the UI.** A Customer only
-ever sees their own meters/invoices/requests/reports; a Collector sees the requests
-assigned to them; write actions on shared/admin resources require a specific permission
-(e.g. `Invoices.Manage`, `CompanySettings.Manage`) on top of just being logged in.
-
-**Lists come in pages.** A list request returns `{ "items": [...], "totalCount": ... }`. You
-can add options to the URL like `?Page=2&PageSize=20&IncludeTotalCount=true&SortBy=Email`.
-
----
-
-## ✅ Running the tests
-
-To check that the core business logic still behaves:
+Generate a signing key:
 
 ```powershell
+$bytes = New-Object byte[] 48
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+[Convert]::ToBase64String($bytes)
+```
+
+---
+
+## Security model
+
+Authorization is enforced server-side, not by hiding actions in the user interface.
+
+- **Authentication.** Every controller that derives from the read/CRUD base requires a valid
+  bearer token; unauthenticated calls return `401`. Only `/Access/login`, `/Access/refresh`,
+  `/Access/register` and the payment webhook are anonymous.
+- **Permissions.** A `RequirePermission` authorization filter gates actions on permission codes
+  carried as JWT claims (`403` when the caller is authenticated but not entitled). Codes are
+  granted per role and stored in the database, so entitlements change without a code change.
+- **Ownership pinning.** Self-service endpoints derive the acting user from the token's `Id`
+  claim and ignore any client-supplied identity: a customer only ever sees their own profile,
+  meters, invoices, requests, reports and tickets; a collector sees the work assigned to them.
+  Write requests that carry an owner field have it forced back to the caller's own value, which
+  blocks mass-assignment attempts.
+- **Non-disclosure responses.** Reads outside the caller's scope return `404` rather than `403`,
+  so a response never confirms that another user's record exists.
+- **Password storage.** Passwords are hashed with PBKDF2 (SHA-256, per-user salt); plaintext is
+  never stored. Changing a password requires the current one, so a stolen access token alone
+  cannot take over an account.
+- **Refresh tokens.** Only SHA-256 hashes are persisted; the raw token is returned to the client
+  once. Refreshing rotates the token, expired tokens are purged, and a soft-deleted user's
+  tokens are removed so the account can neither sign in nor refresh.
+- **Rate limiting.** `/Access/login` and `/Access/refresh` are limited to 5 requests per minute
+  per client IP; every other endpoint is covered by a global 300 requests per minute limit
+  partitioned per authenticated user (or per IP when anonymous). Exceeded limits return `429`.
+- **Enumeration resistance.** Failed sign-ins are logged only once a real user has been
+  resolved, so an unknown email leaves no distinguishing trail, and unregister-style endpoints
+  respond identically whether or not the target belongs to the caller.
+- **File uploads.** Images are size-capped, count-capped per record, restricted to a format
+  whitelist, and validated by magic-byte sniffing rather than by the client-supplied content
+  type.
+- **Audit trail.** Security events are recorded with the acting user, event type, IP address and
+  timestamp. Log descriptions never contain passwords or tokens. Logging failures are swallowed
+  so they cannot break the operation being audited.
+- **Privilege escalation.** Role and active state are not self-editable through any endpoint;
+  changing them requires the user-management permission and is written to the audit trail
+  against the affected account.
+
+## Hardening checklist before a non-local deployment
+
+The defaults in this repository optimise for a zero-setup local run. Before deploying to any
+shared or public environment:
+
+1. Replace every placeholder value from [Configuration](#configuration) with a per-environment
+   secret supplied by the platform's secret store — at minimum the connection string, the JWT
+   signing key, and the Stripe keys.
+2. Remove or reset the seeded demo accounts and any seeded credential.
+3. Serve the API over HTTPS only, and remove the clients' development cleartext-HTTP
+   exceptions (see [AquaFlow/UI/README.md](AquaFlow/UI/README.md)).
+4. Replace the wildcard `AllowedHosts` with the real host list.
+5. Confirm `ASPNETCORE_ENVIRONMENT` is not `Development` in the deployed environment: the
+   permissive local-development CORS policy, the OpenAPI document and the interactive API
+   reference are registered only for that environment, and must stay that way.
+6. Use a least-privilege database account instead of a server administrator account, over an
+   encrypted connection with certificate validation.
+7. Review the retention window of the activity log against the applicable data-protection
+   requirements.
+
+---
+
+## API overview
+
+### Authenticating a request
+
+1. `POST /Access/login` with `{ "email": "<email>", "password": "<password>" }`.
+2. Read `accessToken` from the response.
+3. Send `Authorization: Bearer <accessToken>` on every subsequent request.
+4. When the access token expires, exchange the refresh token at `POST /Access/refresh`; both
+   tokens are rotated.
+
+The Flutter clients do this automatically and keep tokens in the platform secure store.
+
+### Resources
+
+| Area | Endpoints |
+| --- | --- |
+| Access & account | `/Access/login`, `/Access/refresh`, `/Access/register`, `/Account/me`, `/Account/me/password`, `/Account/preferences` |
+| Users & roles | `/Users`, `/UserRoles`, `/Permissions`, `/UserRolePermissions`, `/CustomerProfiles`, `/CollectorProfiles` |
+| Locations | `/Cities`, `/Municipalities`, `/Settlements` |
+| Meters & readings | `/WaterMeters`, `/WaterMeterRequests`, `/MeterReadings`, `/Tariffs` |
+| Billing | `/Invoices`, `/InvoiceItems`, `/Payments`, `/Payments/stripe-config`, `/Payments/webhook/stripe` |
+| Support | `/FaultReports`, `/SupportTickets` |
+| Messaging | `/Notifications`, `/UserNotifications`, `/DeviceTokens` |
+| Operations | `/ActivityLogs`, `/CompanySettings`, `/PaymentSettings` |
+
+Unless stated otherwise, a resource supports `GET` (list), `GET /{id}`, `POST`, `PUT /{id}`,
+`PATCH /{id}` and `DELETE /{id}`. `/Payments` and `/ActivityLogs` are read-only — their rows are
+written by the flows that produce them.
+
+### Workflow endpoints
+
+Records with a lifecycle are advanced through explicit transitions rather than a free-form
+status edit, and each exposes `GET /{id}/allowed-actions` so a client can ask what is currently
+permitted:
+
+| Record | Transitions |
+| --- | --- |
+| Invoice | `POST /Invoices/{id}/checkout`, `/payments`, `/cancel` |
+| Connection request | `POST /WaterMeterRequests/{id}/assign`, `/reject`, `/cancel`, `/register` |
+| Fault report | `POST /FaultReports/{id}/assign`, `/start`, `/resolve` |
+| Support ticket | `POST /SupportTickets/{id}/close`, `/reopen` |
+
+Meter readings have their own entry points: `POST /MeterReadings/collector-entry` (validated
+field entry, auto-invoicing, idempotent on retry) and `GET /MeterReadings/last-counting` (the
+most recent reading that still counts towards billing). The generic `/MeterReadings` CRUD
+surface remains available for administrative backfill.
+
+### Paging, filtering and sorting
+
+List endpoints return `{ "items": [ ... ], "totalCount": <int> }` and accept query parameters:
+
+```
+GET /Users?Page=2&PageSize=20&IncludeTotalCount=true&SortBy=Email&SortDescending=false
+```
+
+Each resource adds its own filters (for example `GET /WaterMeters?Term=<free-text>`,
+`GET /Invoices?Status=Issued`, `GET /UserNotifications/mine?IsRead=false`).
+
+### Status codes
+
+| Code | Meaning |
+| --- | --- |
+| `400` | Validation error or business rule violation |
+| `401` | Missing, expired or invalid token |
+| `403` | Authenticated, but lacking the required permission |
+| `404` | Not found, or outside the caller's scope |
+| `429` | Rate limit exceeded |
+
+---
+
+## Tests
+
+```powershell
+# Business logic
 dotnet test .\AquaFlow\AquaFlow.Services.Tests\AquaFlow.Services.Tests.csproj
-```
 
-To check controller-level authorization/ownership rules:
-
-```powershell
+# Controller authorization and ownership rules
 dotnet test .\AquaFlow\AquaFlow.WebAPI.Tests\AquaFlow.WebAPI.Tests.csproj
-```
 
-To just make sure everything compiles:
-
-```powershell
+# Compile everything
 dotnet build .\AquaFlow\AquaFlow.sln
 ```
 
-For the Flutter client, from `AquaFlow/UI`: `flutter analyze` and `flutter test`.
+Backend tests run against the EF Core in-memory provider and need no database or HTTP host.
+For a client, from its own project folder:
+
+```powershell
+flutter analyze
+flutter test
+```
 
 ---
 
-## 🆘 Common problems
+## Troubleshooting
 
-| Symptom | Likely cause & fix |
+| Symptom | Cause and resolution |
 | --- | --- |
-| App crashes on startup complaining about a connection string or JWT | The defaults in `appsettings.json` were removed or emptied. Put them back, or set the `$env:` variables from **Step 2**. |
-| Everything returns `401 Unauthorized` | You're not logged in. Do the **login** steps and send the `Authorization: Bearer` header. |
-| A request returns `403 Forbidden` | You're logged in, but your role/permission doesn't allow that action (e.g. a Customer calling an Admin-only endpoint). |
-| `database update` fails on port 1433 | Another SQL Server is using that port. Our Docker one is on **1435** on purpose — make sure your connection string says `localhost,1435`. |
-| Build or migration fails saying a file is "locked" | The API is still running. Stop it (`Ctrl+C`), or stop the stray `AquaFlow.WebAPI` process, and try again. |
-| `dotnet ef` is "not recognized" | Install it: `dotnet tool install --global dotnet-ef` |
-| Flutter app can't reach the backend from a phone/emulator | See the local-network notes in [`AquaFlow/UI/README.md`](AquaFlow/UI/README.md) (host overrides, cleartext HTTP, firewall). |
-
----
-
-## 📖 Want the deep dive?
-
-This README covers the basics. Deeper architecture notes and coding conventions are kept
-in a local, untracked `AGENTS.md` file for AI-assisted development — it isn't part of the
-repository, so a fresh clone won't include it.
+| Start-up throws about the connection string or JWT configuration | A required key is missing. Set it through one of the mechanisms in [Configuration](#configuration). |
+| Start-up throws about Stripe keys | `Payments__Provider` is `Stripe` but the secret or webhook key is blank. Supply both, or switch back to `Manual`. |
+| Every request returns `401` | No or expired bearer token. Sign in again and send the `Authorization` header. |
+| A request returns `403` | The account's role lacks the required permission. Grant the permission code, then sign in again — permissions are read from the token, so an existing session does not pick up a new grant. |
+| A request returns `404` for a record you know exists | The record is outside the caller's scope; this is intentional non-disclosure. Use an account entitled to it. |
+| `429 Too Many Requests` | A rate limit was hit — 5/minute on the authentication endpoints, 300/minute elsewhere. |
+| `database update` fails against port `1433` | Another SQL Server occupies the default port. The container is published on `1435`; make sure the connection string says `localhost,1435`. |
+| Build or migration fails with a locked file | The API is still running. Stop it (`Ctrl+C`) or terminate the stray `AquaFlow.WebAPI` process. |
+| `dotnet ef` is not recognised | `dotnet tool install --global dotnet-ef` |
+| A client cannot reach the API from a phone or emulator | See the host selection and local-network notes in [AquaFlow/UI/README.md](AquaFlow/UI/README.md). |
