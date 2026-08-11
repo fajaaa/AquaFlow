@@ -191,95 +191,86 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                   ],
                 ),
               ),
-              Center(
-                child: SizedBox(
-                  width: MediaQuery.sizeOf(context).width * 0.9,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header card - title, published date, read status.
-                        _Card(
-                          child: Column(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header card - title, published date, read status.
+                    _Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      title,
-                                      style: theme.textTheme.titleLarge
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w800,
-                                            color: accent,
-                                          ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  _StatusPill(
-                                    isRead: _item.isRead,
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
                                     color: accent,
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Body card - the notification text.
-                        _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeading('Opis', color: accent),
-                              const SizedBox(height: 10),
-                              Text(
-                                body.isEmpty ? 'Nema dodatnog sadržaja.' : body,
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  height: 1.55,
-                                  color: body.isEmpty
-                                      ? colorScheme.onSurfaceVariant
-                                      : colorScheme.onSurface.withValues(
-                                          alpha: 0.85,
-                                        ),
                                 ),
                               ),
+                              const SizedBox(width: 12),
+                              _StatusPill(isRead: _item.isRead, color: accent),
                             ],
                           ),
-                        ),
-                        if (!_imagesLoading && _images.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          _buildImagesSection(accent),
                         ],
-                        const SizedBox(height: 16),
-                        // Details card - type, dates, status.
-                        _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeading('Detalji', color: accent),
-                              const SizedBox(height: 14),
-                              _DetailRow(
-                                icon: meta.icon,
-                                iconColor: accent,
-                                label: 'Tip obavijesti',
-                                value: meta.label,
-                              ),
-                              const SizedBox(height: 14),
-                              _DetailRow(
-                                icon: Icons.calendar_today_outlined,
-                                iconColor: accent,
-                                label: 'Datum kreiranja',
-                                value: _formatDate(createdAt),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    // Body card - the notification text.
+                    _Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionHeading('Opis', color: accent),
+                          const SizedBox(height: 10),
+                          Text(
+                            body.isEmpty ? 'Nema dodatnog sadržaja.' : body,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              height: 1.55,
+                              color: body.isEmpty
+                                  ? colorScheme.onSurfaceVariant
+                                  : colorScheme.onSurface.withValues(
+                                      alpha: 0.85,
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!_imagesLoading && _images.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _buildImagesSection(accent),
+                    ],
+                    const SizedBox(height: 16),
+                    // Details card - type, dates, status.
+                    _Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionHeading('Detalji', color: accent),
+                          const SizedBox(height: 14),
+                          _DetailRow(
+                            icon: meta.icon,
+                            iconColor: accent,
+                            label: 'Tip obavijesti',
+                            value: meta.label,
+                          ),
+                          const SizedBox(height: 14),
+                          _DetailRow(
+                            icon: Icons.calendar_today_outlined,
+                            iconColor: accent,
+                            label: 'Datum kreiranja',
+                            value: _formatDate(createdAt),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -601,8 +592,7 @@ class _FullscreenImageScreen extends StatefulWidget {
   final Future<Uint8List> Function(NotificationImage image) fetcherFor;
 
   @override
-  State<_FullscreenImageScreen> createState() =>
-      _FullscreenImageScreenState();
+  State<_FullscreenImageScreen> createState() => _FullscreenImageScreenState();
 }
 
 class _FullscreenImageScreenState extends State<_FullscreenImageScreen> {

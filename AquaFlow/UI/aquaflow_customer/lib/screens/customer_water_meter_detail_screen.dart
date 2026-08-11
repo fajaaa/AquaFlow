@@ -166,31 +166,23 @@ class _CustomerWaterMeterDetailScreenState
                         ],
                       ),
                     ),
-                    Center(
-                      child: SizedBox(
-                        width: MediaQuery.sizeOf(context).width * 0.9,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _MeterInfoCard(meter: meter, accent: accent),
-                              const SizedBox(height: 16),
-                              _StatsCard(stats: stats, accent: accent),
-                              const SizedBox(height: 16),
-                              _ConsumptionChartCard(
-                                stats: stats,
-                                accent: accent,
-                              ),
-                              const SizedBox(height: 16),
-                              _InvoicesSection(
-                                invoices: _invoices,
-                                accent: accent,
-                                onOpenInvoice: _openInvoice,
-                              ),
-                            ],
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _MeterInfoCard(meter: meter, accent: accent),
+                          const SizedBox(height: 16),
+                          _StatsCard(stats: stats, accent: accent),
+                          const SizedBox(height: 16),
+                          _ConsumptionChartCard(stats: stats, accent: accent),
+                          const SizedBox(height: 16),
+                          _InvoicesSection(
+                            invoices: _invoices,
+                            accent: accent,
+                            onOpenInvoice: _openInvoice,
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ],
@@ -336,7 +328,8 @@ class _ConsumptionChartCard extends StatelessWidget {
     final items = stats.recentForChart;
     final maxConsumption = items.fold<double>(
       0,
-      (max, invoice) => invoice.consumptionM3 > max ? invoice.consumptionM3 : max,
+      (max, invoice) =>
+          invoice.consumptionM3 > max ? invoice.consumptionM3 : max,
     );
 
     return _SectionCard(
@@ -399,9 +392,9 @@ class _ConsumptionChartCard extends StatelessWidget {
                             child: Align(
                               alignment: Alignment.bottomCenter,
                               child: FractionallySizedBox(
-                                heightFactor: (invoice.consumptionM3 /
-                                        maxConsumption)
-                                    .clamp(0.02, 1.0),
+                                heightFactor:
+                                    (invoice.consumptionM3 / maxConsumption)
+                                        .clamp(0.02, 1.0),
                                 child: Container(
                                   width: double.infinity,
                                   decoration: BoxDecoration(
@@ -648,7 +641,11 @@ class _SkeletonCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          _SectionHeading('Učitavanje', icon: Icons.info_outline, color: Colors.grey),
+          _SectionHeading(
+            'Učitavanje',
+            icon: Icons.info_outline,
+            color: Colors.grey,
+          ),
           SizedBox(height: 10),
           _KeyValueRow(label: 'Naselje', value: 'Naselje Primjer'),
           SizedBox(height: 6),

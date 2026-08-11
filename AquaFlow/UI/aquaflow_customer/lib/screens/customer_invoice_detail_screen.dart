@@ -140,45 +140,40 @@ class _CustomerInvoiceDetailScreenState
                   ],
                 ),
               ),
-              Center(
-                child: SizedBox(
-                  width: MediaQuery.sizeOf(context).width * 0.9,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _HeaderCard(invoice: invoice, accent: accent),
-                        const SizedBox(height: 16),
-                        _ReadingsCard(invoice: invoice, accent: accent),
-                        const SizedBox(height: 16),
-                        _AmountCard(invoice: invoice, accent: accent),
-                        const SizedBox(height: 16),
-                        _buildPaymentsSection(invoice, accent),
-                        if (invoice.isPayable) ...[
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              onPressed: _paying
-                                  ? null
-                                  : () => _payInvoice(invoice),
-                              icon: _paying
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.payment_outlined),
-                              label: const Text('Plati'),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _HeaderCard(invoice: invoice, accent: accent),
+                    const SizedBox(height: 16),
+                    _ReadingsCard(invoice: invoice, accent: accent),
+                    const SizedBox(height: 16),
+                    _AmountCard(invoice: invoice, accent: accent),
+                    const SizedBox(height: 16),
+                    _buildPaymentsSection(invoice, accent),
+                    if (invoice.isPayable) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _paying
+                              ? null
+                              : () => _payInvoice(invoice),
+                          icon: _paying
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.payment_outlined),
+                          label: const Text('Plati'),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
