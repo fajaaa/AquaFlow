@@ -7,8 +7,8 @@ import 'package:aquaflow_customer/widgets/invoice_status_pill.dart';
 
 /// Reusable invoice card: branded gradient status bar (colored via
 /// `InvoiceStatusMeta.of(invoice.status)`), invoice number, billing period,
-/// and status pill - shared by `CustomerInvoicesScreen`'s "Računi" tab list
-/// and `CustomerWaterMeterDetailScreen`'s per-meter "Računi" section. The
+/// and status pill - shared by `CustomerWaterMeterDetailScreen`'s per-meter
+/// "Računi" section. The
 /// amount row is where a payable (Issued) invoice diverges from a settled
 /// one: Issued shows its outstanding `remainingAmount` in the warning accent
 /// so it reads as "needs attention", while Paid/Cancelled show the flat

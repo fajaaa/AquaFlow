@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
 import 'package:aquaflow_customer/screens/customer_fault_reports_screen.dart';
 import 'package:aquaflow_customer/screens/customer_requests_screen.dart';
+import 'package:aquaflow_customer/screens/customer_water_meter_detail_screen.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_exception.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_service.dart';
 import 'package:aquaflow_customer/widgets/new_water_meter_request_dialog.dart';
@@ -17,10 +18,12 @@ import 'package:aquaflow_customer/shared/widgets/list_skeleton.dart';
 /// [CustomerRequestsScreen] (the "Zahtjevi" action). The requests themselves no
 /// longer render inline here - they live on their own screen.
 ///
-/// Card styling mirrors `NotificationsScreen`/`CustomerInvoicesScreen`: a
-/// branded gradient bar keyed to the meter's status, an accent-tinted status
-/// pill, and the same loading/empty/error scaffolding
-/// (`AsyncStateView`/`ListSkeleton`/`EmptyStateView`).
+/// Card styling mirrors `NotificationsScreen`: a branded gradient bar keyed
+/// to the meter's status, an accent-tinted status pill, and the same
+/// loading/empty/error scaffolding (`AsyncStateView`/`ListSkeleton`/
+/// `EmptyStateView`). Cards are tappable, pushing
+/// [CustomerWaterMeterDetailScreen] and reloading on return so the status/
+/// last-reading reflect anything that changed there (e.g. a payment).
 ///
 /// Rendered inside [MobileShell], so it has no Scaffold/AppBar of its own.
 class CustomerWaterMetersScreen extends StatefulWidget {
@@ -82,6 +85,12 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
 
   Future<void> _openFaultReports() async {
     await context.pushScreen(const CustomerFaultReportsScreen());
+  }
+
+  Future<void> _openMeterDetail(CustomerWaterMeter meter) async {
+    await context.pushScreen(CustomerWaterMeterDetailScreen(meter: meter));
+    if (!mounted) return;
+    await _load();
   }
 
   @override
@@ -171,8 +180,10 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             itemCount: _meters.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) =>
-                _WaterMeterCard(meter: _meters[index]),
+            itemBuilder: (context, index) => _WaterMeterCard(
+              meter: _meters[index],
+              onTap: () => _openMeterDetail(_meters[index]),
+            ),
           ),
         );
       },
@@ -194,9 +205,12 @@ final _skeletonMeter = CustomerWaterMeter(
 );
 
 class _WaterMeterCard extends StatelessWidget {
-  const _WaterMeterCard({required this.meter});
+  const _WaterMeterCard({required this.meter, this.onTap});
 
   final CustomerWaterMeter meter;
+
+  /// Null for the skeleton placeholder card, which isn't tappable.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -211,146 +225,155 @@ class _WaterMeterCard extends StatelessWidget {
     // notification card.
     final needsAttention = meter.status.toLowerCase() == 'inactive';
 
-    final subtitle = [meter.settlementName, meter.address]
-        .where((part) => part.trim().isNotEmpty)
-        .join(', ');
+    final subtitle = [
+      meter.settlementName,
+      meter.address,
+    ].where((part) => part.trim().isNotEmpty).join(', ');
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isLight ? Colors.white : colorScheme.surfaceContainerHighest,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: needsAttention
-              ? accent.withValues(alpha: 0.35)
-              : (isLight
-                    ? const Color(0x121F2937)
-                    : colorScheme.outlineVariant.withValues(alpha: 0.5)),
-          width: needsAttention ? 1.5 : 1,
-        ),
-        boxShadow: isLight
-            ? const [
-                BoxShadow(
-                  color: Color(0x14062845),
-                  blurRadius: 24,
-                  offset: Offset(0, 10),
-                ),
-              ]
-            : null,
-      ),
-      // A ListView gives each row unbounded height, so a bare stretched
-      // Row would force an infinite-height constraint on its children and
-      // crash. IntrinsicHeight bounds the row to its tallest child, letting
-      // the color bar stretch to the card's height.
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Colored status bar - branded gradient with a white glyph.
-            Container(
-              width: 58,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    _shade(meta.color, 0.16),
-                    _shade(meta.color, -0.20),
-                  ],
-                ),
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(18),
-                ),
-              ),
-              child: Center(
-                child: Icon(meta.icon, color: Colors.white, size: 20),
-              ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isLight ? Colors.white : colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: needsAttention
+                  ? accent.withValues(alpha: 0.35)
+                  : (isLight
+                        ? const Color(0x121F2937)
+                        : colorScheme.outlineVariant.withValues(alpha: 0.5)),
+              width: needsAttention ? 1.5 : 1,
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            meter.serialNumber,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: needsAttention
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                              color: colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        if (needsAttention) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: accent,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ],
+            boxShadow: isLight
+                ? const [
+                    BoxShadow(
+                      color: Color(0x14062845),
+                      blurRadius: 24,
+                      offset: Offset(0, 10),
+                    ),
+                  ]
+                : null,
+          ),
+          // A ListView gives each row unbounded height, so a bare stretched
+          // Row would force an infinite-height constraint on its children and
+          // crash. IntrinsicHeight bounds the row to its tallest child, letting
+          // the color bar stretch to the card's height.
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Colored status bar - branded gradient with a white glyph.
+                Container(
+                  width: 58,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        _shade(meta.color, 0.16),
+                        _shade(meta.color, -0.20),
                       ],
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle.isEmpty ? '-' : subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        height: 1.4,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(18),
                     ),
-                    const SizedBox(height: 9),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
+                  ),
+                  child: Center(
+                    child: Icon(meta.icon, color: Colors.white, size: 20),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            meta.label,
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: accent,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                meter.serialNumber,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: needsAttention
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (needsAttention) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: accent,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
+                        const SizedBox(height: 3),
                         Text(
-                          'Zadnje očitanje: ${meter.lastReading.toStringAsFixed(2)} m³',
+                          subtitle.isEmpty ? '-' : subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 12.5,
+                            height: 1.4,
                             color: colorScheme.onSurfaceVariant,
                           ),
                         ),
+                        const SizedBox(height: 9),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                meta.label,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: accent,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              'Zadnje očitanje: ${meter.lastReading.toStringAsFixed(2)} m³',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:aquaflow_customer/screens/customer_invoices_screen.dart';
+import 'package:aquaflow_customer/screens/customer_coming_soon_screen.dart';
 import 'package:aquaflow_customer/screens/customer_support_tickets_screen.dart';
 import 'package:aquaflow_customer/screens/customer_water_meters_screen.dart';
 import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
@@ -12,8 +12,10 @@ import 'package:aquaflow_customer/shared/screens/notifications_screen.dart';
 
 /// Mobile home for the `customer` (Kupac) role.
 ///
-/// Configures the shared [MobileShell] with the customer-facing tabs. The
-/// last tab is the shared [AccountScreen] ("Nalog").
+/// Configures the shared [MobileShell] with the customer-facing tabs, in
+/// order: "Obavijesti" ([NotificationsScreen]), "Vodomjeri"
+/// ([CustomerWaterMetersScreen]), "Uskoro" ([CustomerComingSoonScreen], a
+/// reserved placeholder tab), and "Nalog" (the shared [AccountScreen]).
 ///
 /// The "Obavijesti" tab is always index 0, i.e. [MobileShell] builds it
 /// immediately on mount regardless of which tab the user later selects, so
@@ -40,16 +42,16 @@ class CustomerShell extends StatelessWidget {
           body: const NotificationsScreen(),
         ),
         const MobileTab(
-          icon: Icons.receipt_long_outlined,
-          selectedIcon: Icons.receipt_long,
-          label: 'Računi',
-          body: CustomerInvoicesScreen(),
-        ),
-        const MobileTab(
           icon: Icons.water_drop_outlined,
           selectedIcon: Icons.water_drop,
           label: 'Vodomjeri',
           body: CustomerWaterMetersScreen(),
+        ),
+        const MobileTab(
+          icon: Icons.more_horiz_outlined,
+          selectedIcon: Icons.more_horiz,
+          label: 'Uskoro',
+          body: CustomerComingSoonScreen(),
         ),
         MobileTab(
           icon: Icons.person_outline,
@@ -61,9 +63,8 @@ class CustomerShell extends StatelessWidget {
                 icon: Icons.support_agent_outlined,
                 title: 'Podrška',
                 subtitle: 'Vaši tiketi i poruke podršci',
-                onTap: (context) => context.pushScreen(
-                  const CustomerSupportTicketsScreen(),
-                ),
+                onTap: (context) =>
+                    context.pushScreen(const CustomerSupportTicketsScreen()),
               ),
             ],
           ),

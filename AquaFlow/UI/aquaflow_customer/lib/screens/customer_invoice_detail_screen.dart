@@ -9,8 +9,9 @@ import 'package:aquaflow_customer/widgets/invoice_status_pill.dart';
 import 'package:aquaflow_customer/shared/theme/app_theme.dart';
 
 /// Detail view of a single invoice belonging to the signed-in customer,
-/// pushed from `CustomerInvoicesScreen` as its own Scaffold+AppBar route
-/// (same push pattern as `CustomerRequestsScreen`). Shows the readings,
+/// pushed from `CustomerWaterMeterDetailScreen`'s per-meter "Računi" section
+/// as its own Scaffold+AppBar route (same push pattern as
+/// `CustomerRequestsScreen`). Shows the readings,
 /// amount breakdown, and the Completed payments recorded against it
 /// (`CustomerInvoiceService.fetchPayments`, backend pins `CustomerId` to the
 /// caller). The "Plaćeno ukupno" total is summed from that payments list;
@@ -289,9 +290,9 @@ class _CustomerInvoiceDetailScreenState
       await stripe.Stripe.instance.presentPaymentSheet();
 
       if (!mounted) return true;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Plaćanje u obradi.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Plaćanje u obradi.')));
       return true;
     } on stripe.StripeException catch (e) {
       if (!mounted) return false;
@@ -412,7 +413,11 @@ class _ReadingsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeading('Očitanja', icon: Icons.speed_outlined, color: accent),
+          _SectionHeading(
+            'Očitanja',
+            icon: Icons.speed_outlined,
+            color: accent,
+          ),
           const SizedBox(height: 10),
           _KeyValueRow(
             label: 'Period',
@@ -452,7 +457,11 @@ class _AmountCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeading('Iznos', icon: Icons.payments_outlined, color: accent),
+          _SectionHeading(
+            'Iznos',
+            icon: Icons.payments_outlined,
+            color: accent,
+          ),
           const SizedBox(height: 10),
           _KeyValueRow(
             label: 'Osnovica',
@@ -490,7 +499,11 @@ class _PaymentsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeading('Uplate', icon: Icons.receipt_long_outlined, color: accent),
+          _SectionHeading(
+            'Uplate',
+            icon: Icons.receipt_long_outlined,
+            color: accent,
+          ),
           const SizedBox(height: 10),
           if (payments.isEmpty)
             Padding(
