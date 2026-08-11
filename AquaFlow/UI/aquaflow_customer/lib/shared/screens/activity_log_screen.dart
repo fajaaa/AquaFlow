@@ -8,6 +8,7 @@ import '../services/activity_log_exception.dart';
 import '../services/activity_log_service.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/error_retry.dart';
+import '../widgets/refresh_button.dart';
 
 class ActivityLogScreen extends StatefulWidget {
   const ActivityLogScreen({super.key});
@@ -92,10 +93,12 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
       appBar: AppBar(
         title: const Text('Moje aktivnosti'),
         actions: [
-          IconButton(
-            tooltip: 'Osvježi',
-            onPressed: _loading ? null : () => _load(),
-            icon: const Icon(Icons.refresh),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: RefreshButton(
+              enabled: !_loading,
+              onRefresh: () => _load(),
+            ),
           ),
         ],
       ),
@@ -104,22 +107,26 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
           children: [
             if (_loading && pageData != null)
               const LinearProgressIndicator(minHeight: 2),
-            Expanded(child: _buildContent()),
-            if (pageData != null && _error == null)
-              _PaginationBar(
-                page: _page,
-                totalPages: totalPages,
-                totalCount: pageData.totalCount,
-                loading: _loading,
-                onPageChanged: _goToPage,
+            Expanded(
+              child: _buildContent(
+                pageData != null && _error == null
+                    ? _PaginationBar(
+                        page: _page,
+                        totalPages: totalPages,
+                        totalCount: pageData.totalCount,
+                        loading: _loading,
+                        onPageChanged: _goToPage,
+                      )
+                    : null,
               ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(Widget? pagination) {
     if (_loading && _pageData == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -142,6 +149,10 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
               icon: Icons.history_toggle_off,
               message: 'Nema zabilježenih aktivnosti.',
             ),
+            if (pagination != null) ...[
+              const SizedBox(height: 24),
+              pagination,
+            ],
           ],
         ),
       );
@@ -149,12 +160,22 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
 
     return RefreshIndicator(
       onRefresh: () => _load(),
-      child: ListView.separated(
+      child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (context, index) => _ActivityCard(item: items[index]),
+        itemCount: items.length + (pagination != null ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == items.length) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: pagination,
+            );
+          }
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _ActivityCard(item: items[index]),
+          );
+        },
       ),
     );
   }
@@ -349,9 +370,8 @@ class _PaginationBar extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.35)),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),

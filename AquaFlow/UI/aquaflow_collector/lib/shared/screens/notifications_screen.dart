@@ -11,6 +11,7 @@ import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/error_retry.dart';
+import '../widgets/refresh_button.dart';
 import 'notification_detail_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -149,6 +150,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final pageData = _pageData;
     final totalPages = _totalPages(pageData?.totalCount ?? 0);
 
+    final pagination = pageData != null && _error == null
+        ? _PaginationBar(
+            page: _page,
+            totalPages: totalPages,
+            totalCount: pageData.totalCount,
+            pageSize: _pageSize,
+            loading: _loading,
+            onPageChanged: _goToPage,
+            onPageSizeChanged: _setPageSize,
+          )
+        : null;
+
     return SafeArea(
       child: Column(
         children: [
@@ -158,17 +171,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           if (_loading && pageData != null)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent()),
-          if (pageData != null && _error == null)
-            _PaginationBar(
-              page: _page,
-              totalPages: totalPages,
-              totalCount: pageData.totalCount,
-              pageSize: _pageSize,
-              loading: _loading,
-              onPageChanged: _goToPage,
-              onPageSizeChanged: _setPageSize,
-            ),
+          Expanded(child: _buildContent(pagination)),
         ],
       ),
     );
@@ -208,10 +211,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       )
                     : const Icon(Icons.done_all),
               ),
-            IconButton(
-              tooltip: 'Osvježi',
-              onPressed: _loading ? null : () => _load(),
-              icon: const Icon(Icons.refresh),
+            if (hasUnread) const SizedBox(width: 8),
+            RefreshButton(
+              enabled: !_loading,
+              onRefresh: () => _load(),
             ),
           ],
         ),
@@ -233,7 +236,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(Widget? pagination) {
     if (_loading && _pageData == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -259,6 +262,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               filteredIcon: Icons.filter_alt_off_outlined,
               filteredMessage: 'Nema obavijesti za odabrani tip.',
             ),
+            if (pagination != null) ...[
+              const SizedBox(height: 24),
+              pagination,
+            ],
           ],
         ),
       );
@@ -266,14 +273,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return RefreshIndicator(
       onRefresh: () => _load(),
-      child: ListView.separated(
+      child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
+        itemCount: items.length + (pagination != null ? 1 : 0),
         itemBuilder: (context, index) {
+          if (index == items.length) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: pagination,
+            );
+          }
           final item = items[index];
-          return _NotificationCard(item: item, onTap: () => _openDetails(item));
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _NotificationCard(item: item, onTap: () => _openDetails(item)),
+          );
         },
       ),
     );
@@ -544,6 +559,19 @@ class _NotificationCard extends StatelessWidget {
   }
 }
 
+class _SelectOption {
+  const _SelectOption({required this.value, required this.label});
+
+  final String value;
+  final String label;
+}
+
+const List<_SelectOption> _notificationTypeOptions = [
+  _SelectOption(value: 'Info', label: 'Info'),
+  _SelectOption(value: 'PlannedWorks', label: 'Planirani radovi'),
+  _SelectOption(value: 'Warning', label: 'Upozorenje'),
+];
+
 class _PaginationBar extends StatelessWidget {
   const _PaginationBar({
     required this.page,
@@ -572,9 +600,8 @@ class _PaginationBar extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.35)),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
@@ -616,9 +643,9 @@ class _PaginationBar extends StatelessWidget {
                 value: pageSize,
                 onChanged: loading ? null : onPageSizeChanged,
                 items: const [
-                  DropdownMenuItem(value: 5, child: Text('5')),
                   DropdownMenuItem(value: 10, child: Text('10')),
                   DropdownMenuItem(value: 20, child: Text('20')),
+                  DropdownMenuItem(value: 30, child: Text('30')),
                 ],
               ),
             ),
@@ -628,16 +655,3 @@ class _PaginationBar extends StatelessWidget {
     );
   }
 }
-
-class _SelectOption {
-  const _SelectOption({required this.value, required this.label});
-
-  final String value;
-  final String label;
-}
-
-const List<_SelectOption> _notificationTypeOptions = [
-  _SelectOption(value: 'Info', label: 'Info'),
-  _SelectOption(value: 'PlannedWorks', label: 'Planirani radovi'),
-  _SelectOption(value: 'Warning', label: 'Upozorenje'),
-];

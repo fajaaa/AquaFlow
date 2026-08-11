@@ -7,6 +7,7 @@ import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
 import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 
 /// Read-only audit trail of a single user's `ActivityLog` rows, pushed from
 /// the "Aktivnosti" row action on [AdminUsersScreen] (both modes) and
@@ -87,11 +88,7 @@ class _AdminUserActivityLogsScreenState
       appBar: AppBar(
         title: Text(_title),
         actions: [
-          IconButton(
-            tooltip: 'Osvježi',
-            onPressed: loading ? null : () => load(),
-            icon: const Icon(Icons.refresh),
-          ),
+          RefreshButton(onRefresh: () => load()),
           const SizedBox(width: 8),
         ],
       ),

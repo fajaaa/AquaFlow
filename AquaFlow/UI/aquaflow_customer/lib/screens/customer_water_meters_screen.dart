@@ -12,6 +12,7 @@ import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_customer/shared/widgets/async_state_view.dart';
 import 'package:aquaflow_customer/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_customer/shared/widgets/list_skeleton.dart';
+import 'package:aquaflow_customer/shared/widgets/refresh_button.dart';
 
 /// "Vodomjeri" tab body: lists the signed-in customer's own water meters and
 /// lets them file a new-meter request (the "+" action) or open the full
@@ -131,11 +132,7 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
                   onPressed: _loading ? null : _openNewRequestDialog,
                   icon: const Icon(Icons.add),
                 ),
-                IconButton(
-                  tooltip: 'Osvježi',
-                  onPressed: _loading ? null : _load,
-                  icon: const Icon(Icons.refresh),
-                ),
+                RefreshButton(onRefresh: _load, enabled: !_loading),
               ],
             ),
           ),

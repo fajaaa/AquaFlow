@@ -9,6 +9,7 @@ import 'package:aquaflow_desktop/shared/utils/money_format.dart';
 import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 
 /// Desktop admin table over `/Payments` (`AdminPaymentService`/`AdminPayment`
@@ -90,11 +91,7 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
                       'Pregled evidentiranih uplata. Uplate se evidentiraju isključivo '
                       'putem akcije "Evidentiraj uplatu" na ekranu Računi.',
                   actions: [
-                    IconButton(
-                      tooltip: 'Osvježi',
-                      onPressed: loading ? null : () => load(),
-                      icon: const Icon(Icons.refresh),
-                    ),
+                    RefreshButton(onRefresh: () => load()),
                   ],
                 ),
                 const SizedBox(height: 18),

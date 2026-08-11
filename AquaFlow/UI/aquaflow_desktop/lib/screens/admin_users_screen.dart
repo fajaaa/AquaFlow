@@ -28,6 +28,7 @@ import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
 import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
@@ -380,15 +381,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                   title: widget.mode.title,
                   subtitle: widget.mode.subtitle,
                   actions: [
-                    IconButton(
-                      tooltip: 'Osvježi',
-                      onPressed: loading || mutating
-                          ? null
-                          : () {
-                              load();
-                              _loadRoles();
-                            },
-                      icon: const Icon(Icons.refresh),
+                    RefreshButton(
+                      onRefresh: () async {
+                        await load();
+                        await _loadRoles();
+                      },
+                      enabled: !mutating,
                     ),
                     const SizedBox(width: 8),
                     FilledButton.icon(

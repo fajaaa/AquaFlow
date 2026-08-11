@@ -7,6 +7,7 @@ import 'package:aquaflow_customer/services/customer_support_ticket_service.dart'
 import 'package:aquaflow_customer/widgets/new_support_ticket_dialog.dart';
 import 'package:aquaflow_customer/widgets/support_ticket_status_pill.dart';
 import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
+import 'package:aquaflow_customer/shared/widgets/refresh_button.dart';
 
 /// "Moji tiketi": full-screen list of ALL of the signed-in customer's support
 /// tickets, every status. Pushed as its own Scaffold+AppBar route from the
@@ -145,11 +146,7 @@ class _CustomerSupportTicketsScreenState
             onPressed: _loading ? null : _openNewTicketDialog,
             icon: const Icon(Icons.add),
           ),
-          IconButton(
-            tooltip: 'Osvježi',
-            onPressed: _loading ? null : _loadFirstPage,
-            icon: const Icon(Icons.refresh),
-          ),
+          RefreshButton(onRefresh: _loadFirstPage, enabled: !_loading),
         ],
       ),
       body: _buildBody(),

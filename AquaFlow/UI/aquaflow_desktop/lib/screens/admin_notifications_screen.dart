@@ -17,6 +17,7 @@ import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
@@ -179,11 +180,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                   subtitle:
                       'Pregled, dodavanje, uređivanje i brisanje sistemskih obavijesti.',
                   actions: [
-                    IconButton(
-                      tooltip: 'Osvježi',
-                      onPressed: loading || mutating ? null : () => load(),
-                      icon: const Icon(Icons.refresh),
-                    ),
+                    RefreshButton(onRefresh: () => load(), enabled: !mutating),
                     const SizedBox(width: 8),
                     FilledButton.icon(
                       onPressed: loading || mutating ? null : _openCreate,

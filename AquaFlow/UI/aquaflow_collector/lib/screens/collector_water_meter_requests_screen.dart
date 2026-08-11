@@ -10,6 +10,7 @@ import 'package:aquaflow_collector/shared/models/municipality_lookup.dart';
 import 'package:aquaflow_collector/shared/models/settlement_lookup.dart';
 import 'package:aquaflow_collector/shared/services/location_lookup_exception.dart';
 import 'package:aquaflow_collector/shared/services/location_lookup_service.dart';
+import 'package:aquaflow_collector/shared/widgets/refresh_button.dart';
 
 class CollectorWaterMeterRequestsScreen extends StatefulWidget {
   const CollectorWaterMeterRequestsScreen({super.key});
@@ -119,11 +120,7 @@ class _CollectorWaterMeterRequestsScreenState
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Osvježi',
-                  onPressed: _loading || _mutating ? null : _load,
-                  icon: const Icon(Icons.refresh),
-                ),
+                RefreshButton(onRefresh: _load, enabled: !(_loading || _mutating)),
               ],
             ),
           ),

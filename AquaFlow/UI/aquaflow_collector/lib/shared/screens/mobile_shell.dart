@@ -9,6 +9,7 @@ import 'package:aquaflow_collector/shared/providers/theme_provider.dart';
 import 'package:aquaflow_collector/shared/services/preferences_api_service.dart';
 import 'package:aquaflow_collector/shared/services/preferences_exception.dart';
 import 'package:aquaflow_collector/shared/theme/app_theme.dart';
+import 'package:aquaflow_collector/shared/widgets/circle_icon_button.dart';
 
 /// One entry in a [MobileShell]'s bottom navigation: the destination shown in
 /// the bar plus the body rendered when it is selected.
@@ -132,10 +133,12 @@ class _MobileShellState extends State<MobileShell> {
         centerTitle: true,
         backgroundColor: isDark ? null : AppColors.background,
         foregroundColor: isDark ? null : AppColors.primary,
-        leading: IconButton(
-          icon: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined),
-          tooltip: 'Promijeni temu',
-          onPressed: _onThemeToggle,
+        leading: Center(
+          child: CircleIconButton(
+            icon: isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+            tooltip: 'Promijeni temu',
+            onTap: _onThemeToggle,
+          ),
         ),
         title: Image.asset(
           'assets/images/logo.png',
@@ -144,10 +147,13 @@ class _MobileShellState extends State<MobileShell> {
           errorBuilder: (context, error, stackTrace) => const Text('AquaFlow'),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Odjava',
-            onPressed: () => context.read<AuthProvider>().logout(),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: CircleIconButton(
+              icon: Icons.logout,
+              tooltip: 'Odjava',
+              onTap: () => context.read<AuthProvider>().logout(),
+            ),
           ),
         ],
       ),

@@ -12,6 +12,7 @@ import 'package:aquaflow_desktop/services/admin_support_ticket_service.dart';
 import 'package:aquaflow_desktop/widgets/support_ticket_status_pill.dart';
 import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 
 const int _maxPhotosPerMessage = 5;
 
@@ -251,11 +252,7 @@ class _AdminSupportTicketDetailScreenState
                     ),
                     label: Text(ticket.isClosed ? 'Ponovo otvori' : 'Zatvori'),
                   ),
-          IconButton(
-            tooltip: 'Osvježi',
-            onPressed: _loading ? null : _load,
-            icon: const Icon(Icons.refresh),
-          ),
+          RefreshButton(onRefresh: _load, enabled: !_loading),
         ],
       ),
       body: SafeArea(child: _buildBody()),

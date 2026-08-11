@@ -14,6 +14,7 @@ import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
 import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
@@ -225,15 +226,12 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
               title: 'Inkasanti',
               subtitle: 'Pregled i uređivanje profila inkasanata za terenski rad.',
               actions: [
-                IconButton(
-                  tooltip: 'Osvježi',
-                  onPressed: loading || mutating || _lookupsLoading
-                      ? null
-                      : () {
-                          load();
-                          _loadLookups();
-                        },
-                  icon: const Icon(Icons.refresh),
+                RefreshButton(
+                  onRefresh: () async {
+                    await load();
+                    await _loadLookups();
+                  },
+                  enabled: !(mutating || _lookupsLoading),
                 ),
                 const SizedBox(width: 8),
                 FilledButton.icon(

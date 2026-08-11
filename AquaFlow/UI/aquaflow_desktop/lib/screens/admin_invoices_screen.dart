@@ -8,6 +8,7 @@ import 'package:aquaflow_desktop/shared/utils/money_format.dart';
 import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 
 /// Desktop admin table over `/Invoices` (`AdminInvoiceService`/`AdminInvoice`
@@ -166,11 +167,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
                   title: 'Računi',
                   subtitle: 'Pregled računa i upravljanje njihovim statusom.',
                   actions: [
-                    IconButton(
-                      tooltip: 'Osvježi',
-                      onPressed: loading || mutating ? null : () => load(),
-                      icon: const Icon(Icons.refresh),
-                    ),
+                    RefreshButton(onRefresh: () => load(), enabled: !mutating),
                   ],
                 ),
                 const SizedBox(height: 18),

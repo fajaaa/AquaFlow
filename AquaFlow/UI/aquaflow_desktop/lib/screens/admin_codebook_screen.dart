@@ -14,6 +14,7 @@ import 'package:aquaflow_desktop/services/admin_settlement_service.dart';
 import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
@@ -482,11 +483,7 @@ class _CitiesViewState extends State<_CitiesView>
                 title: 'Gradovi',
                 subtitle: 'Pregled, dodavanje, uređivanje i brisanje gradova.',
                 actions: [
-                  IconButton(
-                    tooltip: 'Osvježi',
-                    onPressed: loading || mutating ? null : () => load(),
-                    icon: const Icon(Icons.refresh),
-                  ),
+                  RefreshButton(onRefresh: () => load(), enabled: !mutating),
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: loading || mutating ? null : _openCreate,
@@ -850,11 +847,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
                 title: 'Općine · ${widget.city.name}',
                 subtitle: 'Pregled, dodavanje, uređivanje i brisanje općina.',
                 actions: [
-                  IconButton(
-                    tooltip: 'Osvježi',
-                    onPressed: loading || mutating ? null : () => load(),
-                    icon: const Icon(Icons.refresh),
-                  ),
+                  RefreshButton(onRefresh: () => load(), enabled: !mutating),
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: loading || mutating ? null : _openCreate,
@@ -1226,11 +1219,7 @@ class _SettlementsViewState extends State<_SettlementsView>
                 title: 'Naselja · ${widget.municipality.name}',
                 subtitle: 'Pregled, dodavanje, uređivanje i brisanje naselja.',
                 actions: [
-                  IconButton(
-                    tooltip: 'Osvježi',
-                    onPressed: loading || mutating ? null : () => load(),
-                    icon: const Icon(Icons.refresh),
-                  ),
+                  RefreshButton(onRefresh: () => load(), enabled: !mutating),
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: loading || mutating ? null : _openCreate,

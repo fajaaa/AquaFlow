@@ -9,6 +9,7 @@ import 'package:aquaflow_desktop/services/admin_support_ticket_exception.dart';
 import 'package:aquaflow_desktop/services/admin_support_ticket_service.dart';
 import 'package:aquaflow_desktop/widgets/support_ticket_status_pill.dart';
 import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 
 const Color _awaitingReplyColor = Color(0xFFF9A825);
 
@@ -335,7 +336,7 @@ class _Header extends StatelessWidget {
   const _Header({required this.loading, required this.onRefresh});
 
   final bool loading;
-  final VoidCallback onRefresh;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -361,11 +362,7 @@ class _Header extends StatelessWidget {
       ],
     );
 
-    final actions = IconButton(
-      tooltip: 'Osvježi',
-      onPressed: loading ? null : onRefresh,
-      icon: const Icon(Icons.refresh),
-    );
+    final actions = RefreshButton(onRefresh: onRefresh, enabled: !loading);
 
     return LayoutBuilder(
       builder: (context, constraints) {
