@@ -12,8 +12,8 @@ import 'package:aquaflow_customer/shared/widgets/authenticated_image.dart';
 
 /// Icon + accent color + label for a fault report `status`, covering the
 /// backend `FaultReport.Status` values (New/Assigned/InProgress/Resolved).
-/// Mirrors `FaultReportStatusPill`'s palette so the banner here and the pill
-/// on `CustomerFaultReportsScreen` stay in sync.
+/// Mirrors the status palette used by the report cards on
+/// `CustomerFaultReportsScreen` so the banner here and the list stay in sync.
 class _StatusMeta {
   const _StatusMeta(this.label, this.icon, this.color);
 

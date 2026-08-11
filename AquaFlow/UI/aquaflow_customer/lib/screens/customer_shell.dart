@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:aquaflow_customer/screens/customer_coming_soon_screen.dart';
+import 'package:aquaflow_customer/screens/customer_fault_reports_screen.dart';
 import 'package:aquaflow_customer/screens/customer_support_tickets_screen.dart';
 import 'package:aquaflow_customer/screens/customer_water_meters_screen.dart';
 import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
@@ -14,8 +14,8 @@ import 'package:aquaflow_customer/shared/screens/notifications_screen.dart';
 ///
 /// Configures the shared [MobileShell] with the customer-facing tabs, in
 /// order: "Obavijesti" ([NotificationsScreen]), "Vodomjeri"
-/// ([CustomerWaterMetersScreen]), "Uskoro" ([CustomerComingSoonScreen], a
-/// reserved placeholder tab), and "Nalog" (the shared [AccountScreen]).
+/// ([CustomerWaterMetersScreen]), "Prijave kvarova"
+/// ([CustomerFaultReportsScreen]), and "Nalog" (the shared [AccountScreen]).
 ///
 /// The "Obavijesti" tab is always index 0, i.e. [MobileShell] builds it
 /// immediately on mount regardless of which tab the user later selects, so
@@ -48,10 +48,10 @@ class CustomerShell extends StatelessWidget {
           body: CustomerWaterMetersScreen(),
         ),
         const MobileTab(
-          icon: Icons.more_horiz_outlined,
-          selectedIcon: Icons.more_horiz,
-          label: 'Uskoro',
-          body: CustomerComingSoonScreen(),
+          icon: Icons.report_problem_outlined,
+          selectedIcon: Icons.report_problem,
+          label: 'Prijave kvarova',
+          body: CustomerFaultReportsScreen(),
         ),
         MobileTab(
           icon: Icons.person_outline,

@@ -314,18 +314,34 @@ class _StatsCard extends StatelessWidget {
   }
 }
 
-class _ConsumptionChartCard extends StatelessWidget {
+class _ConsumptionChartCard extends StatefulWidget {
   const _ConsumptionChartCard({required this.stats, required this.accent});
 
   final CustomerWaterMeterStats stats;
   final Color accent;
 
+  @override
+  State<_ConsumptionChartCard> createState() => _ConsumptionChartCardState();
+}
+
+class _ConsumptionChartCardState extends State<_ConsumptionChartCard> {
   static const double _barAreaHeight = 120;
+
+  /// Cycled per bar so each month reads as a distinct color, same brand
+  /// palette used elsewhere in the app (no colors outside `AppColors`).
+  static const List<Color> _barColors = [
+    AppColors.secondary,
+    AppColors.success,
+    AppColors.warning,
+    AppColors.primary,
+  ];
+
+  int? _selectedIndex;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final items = stats.recentForChart;
+    final items = widget.stats.recentForChart;
     final maxConsumption = items.fold<double>(
       0,
       (max, invoice) =>
@@ -339,7 +355,7 @@ class _ConsumptionChartCard extends StatelessWidget {
           _SectionHeading(
             'Potrošnja po periodima',
             icon: Icons.bar_chart_outlined,
-            color: accent,
+            color: widget.accent,
           ),
           const SizedBox(height: 14),
           if (items.isEmpty || maxConsumption <= 0)
@@ -370,65 +386,122 @@ class _ConsumptionChartCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                for (final invoice in items)
+                for (var i = 0; i < items.length; i++)
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            invoice.consumptionM3.toStringAsFixed(1),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          SizedBox(
-                            height: _barAreaHeight,
-                            child: Align(
-                              alignment: Alignment.bottomCenter,
-                              child: FractionallySizedBox(
-                                heightFactor:
-                                    (invoice.consumptionM3 / maxConsumption)
-                                        .clamp(0.02, 1.0),
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        _shade(AppColors.secondary, 0.16),
-                                        _shade(AppColors.secondary, -0.20),
-                                      ],
-                                    ),
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(6),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _formatMonthYear(invoice.billingPeriodFrom),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+                      child: _ConsumptionBar(
+                        invoice: items[i],
+                        color: _barColors[i % _barColors.length],
+                        heightFactor: (items[i].consumptionM3 / maxConsumption)
+                            .clamp(0.02, 1.0),
+                        barAreaHeight: _barAreaHeight,
+                        selected: _selectedIndex == i,
+                        onTap: () => setState(
+                          () => _selectedIndex = _selectedIndex == i
+                              ? null
+                              : i,
+                        ),
                       ),
                     ),
                   ),
               ],
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A single month's bar. Tapping it toggles a tooltip-style badge above the
+/// bar showing the exact consumption for that period, mirroring the
+/// press-to-reveal-value chart the customer asked for.
+class _ConsumptionBar extends StatelessWidget {
+  const _ConsumptionBar({
+    required this.invoice,
+    required this.color,
+    required this.heightFactor,
+    required this.barAreaHeight,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final CustomerInvoice invoice;
+  final Color color;
+  final double heightFactor;
+  final double barAreaHeight;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (selected) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.inverseSurface,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${invoice.consumptionM3.toStringAsFixed(1)} m³',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onInverseSurface,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
+          SizedBox(
+            height: barAreaHeight,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: FractionallySizedBox(
+                heightFactor: heightFactor,
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [_shade(color, 0.16), _shade(color, -0.20)],
+                    ),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(6),
+                    ),
+                    border: selected
+                        ? Border.all(color: theme.colorScheme.onSurface, width: 1.5)
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _formatMonthYear(invoice.billingPeriodFrom),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+              color: selected
+                  ? theme.colorScheme.onSurface
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );

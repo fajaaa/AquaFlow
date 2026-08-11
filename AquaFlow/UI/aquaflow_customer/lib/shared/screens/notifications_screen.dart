@@ -148,12 +148,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
 
+    // Docked below the list rather than as its last scrollable item, so it
+    // stays visible at the bottom of the tab regardless of scroll position
+    // or how many notifications there are.
     final pagination = pageData != null && _error == null
         ? _PaginationBar(
             page: _page,
-            totalPages: totalPages,
+            totalPages: _totalPages(pageData.totalCount),
             totalCount: pageData.totalCount,
             pageSize: _pageSize,
             loading: _loading,
@@ -171,7 +173,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           if (_loading && pageData != null)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent(pagination)),
+          Expanded(child: _buildContent()),
+          ?pagination,
         ],
       ),
     );
@@ -236,7 +239,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _buildContent(Widget? pagination) {
+  Widget _buildContent() {
     if (_loading && _pageData == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -262,10 +265,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               filteredIcon: Icons.filter_alt_off_outlined,
               filteredMessage: 'Nema obavijesti za odabrani tip.',
             ),
-            if (pagination != null) ...[
-              const SizedBox(height: 24),
-              pagination,
-            ],
           ],
         ),
       );
@@ -273,22 +272,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return RefreshIndicator(
       onRefresh: () => _load(),
-      child: ListView.builder(
+      child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        itemCount: items.length + (pagination != null ? 1 : 0),
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
-          if (index == items.length) {
-            return Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: pagination,
-            );
-          }
           final item = items[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _NotificationCard(item: item, onTap: () => _openDetails(item)),
-          );
+          return _NotificationCard(item: item, onTap: () => _openDetails(item));
         },
       ),
     );
@@ -572,6 +563,10 @@ const List<_SelectOption> _notificationTypeOptions = [
   _SelectOption(value: 'Warning', label: 'Upozorenje'),
 ];
 
+/// Docked footer bar below the notification list (see `build` above) -
+/// unlike a floating card nested in the scrollable content, this stays
+/// pinned to the bottom of the tab no matter the scroll position or item
+/// count.
 class _PaginationBar extends StatelessWidget {
   const _PaginationBar({
     required this.page,
@@ -600,11 +595,12 @@ class _PaginationBar extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.35)),
+        border: Border(
+          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
+        ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
         child: Row(
           children: [
             IconButton(

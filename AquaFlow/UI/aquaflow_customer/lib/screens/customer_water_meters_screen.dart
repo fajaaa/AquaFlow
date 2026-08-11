@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
-import 'package:aquaflow_customer/screens/customer_fault_reports_screen.dart';
 import 'package:aquaflow_customer/screens/customer_requests_screen.dart';
 import 'package:aquaflow_customer/screens/customer_water_meter_detail_screen.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_exception.dart';
@@ -84,10 +83,6 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
     await context.pushScreen(const CustomerRequestsScreen());
   }
 
-  Future<void> _openFaultReports() async {
-    await context.pushScreen(const CustomerFaultReportsScreen());
-  }
-
   Future<void> _openMeterDetail(CustomerWaterMeter meter) async {
     await context.pushScreen(CustomerWaterMeterDetailScreen(meter: meter));
     if (!mounted) return;
@@ -121,11 +116,6 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
                   tooltip: 'Zahtjevi',
                   onPressed: _openRequests,
                   icon: const Icon(Icons.receipt_long_outlined),
-                ),
-                IconButton(
-                  tooltip: 'Prijave kvarova',
-                  onPressed: _openFaultReports,
-                  icon: const Icon(Icons.report_problem_outlined),
                 ),
                 IconButton(
                   tooltip: 'Dodaj vodomjer',
