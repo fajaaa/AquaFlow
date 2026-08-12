@@ -60,6 +60,7 @@ class _CollectorMeterReadingEntryScreenState
   String? _tariffError;
 
   String? _nextReadingAllowedDate;
+  double? _lastCountingReadingValue;
 
   // Generated once per form open and reused for every retry (timeout/network error) of the same
   // submission, so the server can recognize a resubmit as the same request instead of creating a
@@ -71,11 +72,36 @@ class _CollectorMeterReadingEntryScreenState
   void initState() {
     super.initState();
     _clientUuid = const Uuid().v4();
+    _readingCtrl.addListener(_onPricePreviewInputChanged);
     _loadData();
+  }
+
+  void _onPricePreviewInputChanged() {
+    if (mounted) setState(() {});
+  }
+
+  double? get _consumptionPreview {
+    final reading = double.tryParse(
+      _readingCtrl.text.trim().replaceAll(',', '.'),
+    );
+    if (reading == null) return null;
+    final baseline = _isMeterReplacement
+        ? 0.0
+        : (_lastCountingReadingValue ?? widget.meter.lastReading);
+    final consumption = reading - baseline;
+    return consumption >= 0 ? consumption : null;
+  }
+
+  TariffLookup? get _selectedTariff {
+    for (final tariff in _tariffs) {
+      if (tariff.id == _selectedTariffId) return tariff;
+    }
+    return null;
   }
 
   @override
   void dispose() {
+    _readingCtrl.removeListener(_onPricePreviewInputChanged);
     _readingCtrl.dispose();
     _noteCtrl.dispose();
     _photoUrlCtrl.dispose();
@@ -115,6 +141,7 @@ class _CollectorMeterReadingEntryScreenState
       setState(() {
         _tariffs = tariffs;
         _nextReadingAllowedDate = nextReadingAllowedDate;
+        _lastCountingReadingValue = lastReading?.readingValue;
         _selectedTariffId = tariffs.any((t) => t.id == lastReading?.tariffId)
             ? lastReading!.tariffId
             : tariffs.firstOrNull?.id;
@@ -286,13 +313,16 @@ class _CollectorMeterReadingEntryScreenState
                           color: accent,
                         ),
                         const SizedBox(height: 10),
-                        _InfoRow(
-                          icon: Icons.person_outline,
-                          label: meter.customerFullName.isEmpty
+                        Text(
+                          meter.customerFullName.isEmpty
                               ? '-'
                               : meter.customerFullName,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: colorScheme.onSurface,
+                          ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         _InfoRow(
                           icon: Icons.location_on_outlined,
                           label: meter.settlementName.isEmpty
@@ -304,11 +334,57 @@ class _CollectorMeterReadingEntryScreenState
                           icon: Icons.home_outlined,
                           label: meter.address.isEmpty ? '-' : meter.address,
                         ),
-                        const SizedBox(height: 8),
-                        _InfoRow(
-                          icon: Icons.speed_outlined,
-                          label:
-                              'Zadnje stanje: ${_formatReading(meter.lastReading)} m³',
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.speed_outlined,
+                                color: accent,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'ZADNJE STANJE',
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.4,
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${_formatReading(meter.lastReading)} m³',
+                                      style: theme.textTheme.titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            color: accent,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -399,6 +475,11 @@ class _CollectorMeterReadingEntryScreenState
                                       setState(() => _selectedTariffId = value)
                                 : null,
                           ),
+                          _PricePreviewCard(
+                            consumption: _consumptionPreview,
+                            tariff: _selectedTariff,
+                            accent: accent,
+                          ),
                           const SizedBox(height: 8),
                           SwitchListTile(
                             contentPadding: EdgeInsets.zero,
@@ -470,6 +551,16 @@ class _CollectorMeterReadingEntryScreenState
                           SizedBox(
                             width: double.infinity,
                             child: FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: accent,
+                                foregroundColor: onAccent,
+                                disabledBackgroundColor: accent.withValues(
+                                  alpha: 0.35,
+                                ),
+                                disabledForegroundColor: onAccent.withValues(
+                                  alpha: 0.7,
+                                ),
+                              ),
                               onPressed:
                                   (_submitting ||
                                       _tariffs.isEmpty ||
@@ -477,11 +568,12 @@ class _CollectorMeterReadingEntryScreenState
                                   ? null
                                   : _submit,
                               icon: _submitting
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 18,
                                       height: 18,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
+                                        color: onAccent,
                                       ),
                                     )
                                   : const Icon(Icons.save_outlined),
@@ -596,6 +688,131 @@ class _InfoRow extends StatelessWidget {
         Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
         const SizedBox(width: 8),
         Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+      ],
+    );
+  }
+}
+
+/// Live preview of the invoice the server will generate for this reading -
+/// consumption is the last *counting* reading (fetched via
+/// `/MeterReadings/last-counting`, same source the server itself uses as
+/// `previousReading`) subtracted from the entered reading, falling back to
+/// `meter.lastReading` only when there is no reading history at all (or 0 as
+/// the baseline when "Zamjena vodomjera" is on), matching
+/// `MeterReadingService.CreateForCollectorAsync` exactly - `meter.lastReading`
+/// alone can lag behind reality after a cancelled invoice. Multiplied by the
+/// selected tariff's [TariffLookup.pricePerM3]. Purely client-side; the
+/// server is still the source of truth for the actual invoice total.
+class _PricePreviewCard extends StatelessWidget {
+  const _PricePreviewCard({
+    required this.consumption,
+    required this.tariff,
+    required this.accent,
+  });
+
+  final double? consumption;
+  final TariffLookup? tariff;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final total = (consumption != null && tariff != null)
+        ? consumption! * tariff!.pricePerM3
+        : null;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.calculate_outlined, size: 16, color: accent),
+              const SizedBox(width: 6),
+              Text(
+                'PREGLED IZNOSA',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: accent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _PriceLine(
+            label: 'Potrošnja',
+            value: consumption != null
+                ? '${_formatReading(consumption!)} m³'
+                : '-',
+          ),
+          const SizedBox(height: 4),
+          _PriceLine(
+            label: 'Cijena po m³',
+            value: tariff != null
+                ? '${_formatReading(tariff!.pricePerM3)} BAM'
+                : '-',
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Divider(height: 1, color: accent.withValues(alpha: 0.2)),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Ukupno',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                total != null ? '${_formatReading(total)} BAM' : '-',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: accent,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceLine extends StatelessWidget {
+  const _PriceLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }
