@@ -6,7 +6,7 @@ import 'login_screen.dart';
 import 'register_screen.dart';
 
 /// First screen shown to a signed-out user, before the login form. Purely
-/// navigational - offers "Registruj se" / "Prijavi se" and pushes the
+/// navigational - offers "Prijavi se" / "Registruj se" and pushes the
 /// matching screen.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -82,19 +82,6 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    FilledButton(
-                      onPressed: () => context.pushScreen(const RegisterScreen()),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Registruj se'),
-                    ),
-                    const SizedBox(height: 12),
                     OutlinedButton(
                       onPressed: () => context.pushScreen(const LoginScreen()),
                       style: OutlinedButton.styleFrom(
@@ -106,6 +93,19 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ),
                       child: const Text('Prijavi se'),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () => context.pushScreen(const RegisterScreen()),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Registruj se'),
                     ),
                   ],
                 ),
