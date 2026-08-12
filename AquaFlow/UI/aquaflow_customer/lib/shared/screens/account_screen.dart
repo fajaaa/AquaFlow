@@ -5,9 +5,11 @@ import '../models/customer_profile.dart';
 import '../navigation/app_navigation.dart';
 import '../providers/auth_provider.dart';
 import '../services/profile_service.dart';
-import 'account_edit_screen.dart';
 import 'activity_log_screen.dart';
 import 'company_settings_screen.dart';
+import 'location_edit_screen.dart';
+import 'password_reset_screen.dart';
+import 'personal_details_edit_screen.dart';
 
 /// "Nalog" tab body: an account/about card for the signed-in user.
 ///
@@ -115,6 +117,16 @@ class _AccountScreenState extends State<AccountScreen> {
                     );
                   },
                 ),
+                if (session.email.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    session.email,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
                 // Regular customers do not show a role label; every other role
                 // (admin, collector, ...) does.
                 if (!isRegularUser) ...[
@@ -122,22 +134,21 @@ class _AccountScreenState extends State<AccountScreen> {
                   _RoleChip(visual: visual),
                 ],
                 const SizedBox(height: 28),
-                Card(
-                  elevation: 2,
-                  shadowColor: Colors.black26,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: ListTile(
-                    leading: const Icon(Icons.email_outlined),
-                    title: const Text('Email'),
-                    subtitle: Text(
-                      session.email.isEmpty ? '-' : session.email,
+                // Every user - regardless of role - can edit their own
+                // profile data from here: personal details, location and
+                // password all live on the same underlying user/profile
+                // record, so they are grouped into one "Podaci o nalogu"
+                // section/card instead of three separate top-level cards.
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Podaci o nalogu',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.primary,
                     ),
                   ),
                 ),
-                // Every user - regardless of role - can edit their own contact
-                // data (email/phone) from here.
                 const SizedBox(height: 12),
                 Card(
                   elevation: 2,
@@ -145,16 +156,47 @@ class _AccountScreenState extends State<AccountScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: ListTile(
-                    leading: const Icon(Icons.manage_accounts_outlined),
-                    title: const Text('Uredi nalog'),
-                    subtitle: const Text(
-                      'Izmjena email adrese, telefona, imena i prezimena',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.pushScreen(const AccountEditScreen()),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.manage_accounts_outlined),
+                        title: const Text('Lični podaci'),
+                        subtitle: const Text(
+                          'Ime, prezime, email, telefon i tema',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context
+                            .pushScreen(const PersonalDetailsEditScreen()),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: const Icon(Icons.location_on_outlined),
+                        title: const Text('Lokacija'),
+                        subtitle: const Text('Adresa prebivališta'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            context.pushScreen(const LocationEditScreen()),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: const Icon(Icons.lock_outline),
+                        title: const Text('Promjena lozinke'),
+                        subtitle: const Text('Ažuriranje lozinke naloga'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            context.pushScreen(const PasswordResetScreen()),
+                      ),
+                    ],
                   ),
                 ),
+                // Role-specific entries injected by the shell (e.g. the
+                // customer's "Podrška"), rendered with the same card styling,
+                // before "Moje aktivnosti".
+                for (final entry in widget.extraEntries) ...[
+                  const SizedBox(height: 12),
+                  _AccountActionCard(entry: entry),
+                ],
                 // Every user can view their own security/audit history.
                 const SizedBox(height: 12),
                 Card(
@@ -171,12 +213,6 @@ class _AccountScreenState extends State<AccountScreen> {
                     onTap: () => context.pushScreen(const ActivityLogScreen()),
                   ),
                 ),
-                // Role-specific entries injected by the shell (e.g. the
-                // customer's "Podrška"), rendered with the same card styling.
-                for (final entry in widget.extraEntries) ...[
-                  const SizedBox(height: 12),
-                  _AccountActionCard(entry: entry),
-                ],
                 // Admins can manage the company-wide settings; regular users
                 // and collectors never see this entry.
                 if (_isAdmin(session.userRole)) ...[

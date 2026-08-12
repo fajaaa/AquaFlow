@@ -11,6 +11,7 @@ import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/error_retry.dart';
+import '../widgets/paged_table_pagination_bar.dart';
 import 'notification_detail_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -142,7 +143,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent()),
           if (pageData != null && _error == null)
-            _PaginationBar(
+            PagedTablePaginationBar(
               page: _page,
               totalPages: totalPages,
               totalCount: pageData.totalCount,
@@ -503,91 +504,6 @@ class _NotificationCard extends StatelessWidget {
   static Color _shade(Color c, double percent) {
     if (percent >= 0) return Color.lerp(c, Colors.white, percent)!;
     return Color.lerp(c, Colors.black, -percent)!;
-  }
-}
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.pageSize,
-    required this.loading,
-    required this.onPageChanged,
-    required this.onPageSizeChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final int pageSize;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-  final ValueChanged<int?> onPageSizeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Prethodna stranica',
-              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Stranica $page od $totalPages',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelLarge,
-                  ),
-                  Text(
-                    '$totalCount ukupno',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: 'Sljedeća stranica',
-              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: pageSize,
-                onChanged: loading ? null : onPageSizeChanged,
-                items: const [
-                  DropdownMenuItem(value: 5, child: Text('5')),
-                  DropdownMenuItem(value: 10, child: Text('10')),
-                  DropdownMenuItem(value: 20, child: Text('20')),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

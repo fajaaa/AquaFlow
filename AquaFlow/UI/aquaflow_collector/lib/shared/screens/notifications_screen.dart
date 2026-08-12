@@ -11,6 +11,7 @@ import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/error_retry.dart';
+import '../widgets/paged_table_pagination_bar.dart';
 import '../widgets/refresh_button.dart';
 import 'notification_detail_screen.dart';
 
@@ -148,12 +149,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
 
+    // Docked below the list rather than as its last scrollable item, so it
+    // stays visible at the bottom of the tab regardless of scroll position
+    // or how many notifications there are.
     final pagination = pageData != null && _error == null
-        ? _PaginationBar(
+        ? PagedTablePaginationBar(
             page: _page,
-            totalPages: totalPages,
+            totalPages: _totalPages(pageData.totalCount),
             totalCount: pageData.totalCount,
             pageSize: _pageSize,
             loading: _loading,
@@ -171,7 +174,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           if (_loading && pageData != null)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent(pagination)),
+          Expanded(child: _buildContent()),
+          ?pagination,
         ],
       ),
     );
@@ -236,7 +240,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _buildContent(Widget? pagination) {
+  Widget _buildContent() {
     if (_loading && _pageData == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -262,10 +266,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               filteredIcon: Icons.filter_alt_off_outlined,
               filteredMessage: 'Nema obavijesti za odabrani tip.',
             ),
-            if (pagination != null) ...[
-              const SizedBox(height: 24),
-              pagination,
-            ],
           ],
         ),
       );
@@ -273,22 +273,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return RefreshIndicator(
       onRefresh: () => _load(),
-      child: ListView.builder(
+      child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        itemCount: items.length + (pagination != null ? 1 : 0),
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
-          if (index == items.length) {
-            return Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: pagination,
-            );
-          }
           final item = items[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _NotificationCard(item: item, onTap: () => _openDetails(item)),
-          );
+          return _NotificationCard(item: item, onTap: () => _openDetails(item));
         },
       ),
     );
@@ -571,87 +563,3 @@ const List<_SelectOption> _notificationTypeOptions = [
   _SelectOption(value: 'PlannedWorks', label: 'Planirani radovi'),
   _SelectOption(value: 'Warning', label: 'Upozorenje'),
 ];
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.pageSize,
-    required this.loading,
-    required this.onPageChanged,
-    required this.onPageSizeChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final int pageSize;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-  final ValueChanged<int?> onPageSizeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.35)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Prethodna stranica',
-              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Stranica $page od $totalPages',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelLarge,
-                  ),
-                  Text(
-                    '$totalCount ukupno',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: 'Sljedeća stranica',
-              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: pageSize,
-                onChanged: loading ? null : onPageSizeChanged,
-                items: const [
-                  DropdownMenuItem(value: 10, child: Text('10')),
-                  DropdownMenuItem(value: 20, child: Text('20')),
-                  DropdownMenuItem(value: 30, child: Text('30')),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

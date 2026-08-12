@@ -24,7 +24,8 @@ import 'package:aquaflow_desktop/shared/services/preferences_exception.dart';
 
 /// Admin-only "Moj nalog" screen (embedded directly in
 /// [AdminDashboardScreen], not pushed as a route - unlike the shared
-/// `AccountEditScreen` used by the mobile customer/collector "Nalog" tab).
+/// `PersonalDetailsEditScreen`/`LocationEditScreen`/`PasswordResetScreen`
+/// used by the mobile customer/collector "Nalog" tab).
 ///
 /// Edits the signed-in admin's own account with the same depth as the
 /// "Korisnici" editor dialog (email, phone, profile name/language,

@@ -8,6 +8,7 @@ import '../services/activity_log_exception.dart';
 import '../services/activity_log_service.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/error_retry.dart';
+import '../widgets/paged_table_pagination_bar.dart';
 import '../widgets/refresh_button.dart';
 
 class ActivityLogScreen extends StatefulWidget {
@@ -24,7 +25,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
   bool _loading = true;
   String? _error;
   int _page = 1;
-  final int _pageSize = 10;
+  int _pageSize = 10;
   int _requestSerial = 0;
 
   @override
@@ -67,6 +68,15 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     }
   }
 
+  void _setPageSize(int? value) {
+    if (value == null || value == _pageSize || _loading) return;
+    setState(() {
+      _pageSize = value;
+      _page = 1;
+    });
+    _load();
+  }
+
   void _goToPage(int page) {
     if (page == _page || _loading) return;
     setState(() => _page = page);
@@ -87,7 +97,21 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
   @override
   Widget build(BuildContext context) {
     final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
+
+    // Docked below the list rather than as its last scrollable item, so it
+    // stays visible at the bottom of the screen regardless of scroll
+    // position or item count - same treatment as NotificationsScreen.
+    final pagination = pageData != null && _error == null
+        ? PagedTablePaginationBar(
+            page: _page,
+            totalPages: _totalPages(pageData.totalCount),
+            totalCount: pageData.totalCount,
+            pageSize: _pageSize,
+            loading: _loading,
+            onPageChanged: _goToPage,
+            onPageSizeChanged: _setPageSize,
+          )
+        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -107,26 +131,15 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
           children: [
             if (_loading && pageData != null)
               const LinearProgressIndicator(minHeight: 2),
-            Expanded(
-              child: _buildContent(
-                pageData != null && _error == null
-                    ? _PaginationBar(
-                        page: _page,
-                        totalPages: totalPages,
-                        totalCount: pageData.totalCount,
-                        loading: _loading,
-                        onPageChanged: _goToPage,
-                      )
-                    : null,
-              ),
-            ),
+            Expanded(child: _buildContent()),
+            ?pagination,
           ],
         ),
       ),
     );
   }
 
-  Widget _buildContent(Widget? pagination) {
+  Widget _buildContent() {
     if (_loading && _pageData == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -149,10 +162,6 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
               icon: Icons.history_toggle_off,
               message: 'Nema zabilježenih aktivnosti.',
             ),
-            if (pagination != null) ...[
-              const SizedBox(height: 24),
-              pagination,
-            ],
           ],
         ),
       );
@@ -160,22 +169,12 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
 
     return RefreshIndicator(
       onRefresh: () => _load(),
-      child: ListView.builder(
+      child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        itemCount: items.length + (pagination != null ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == items.length) {
-            return Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: pagination,
-            );
-          }
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _ActivityCard(item: items[index]),
-          );
-        },
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
+        itemBuilder: (context, index) => _ActivityCard(item: items[index]),
       ),
     );
   }
@@ -343,75 +342,6 @@ class _ActivityCard extends StatelessWidget {
     String two(int value) => value.toString().padLeft(2, '0');
     return '${two(date.day)}.${two(date.month)}.${date.year}. '
         '${two(date.hour)}:${two(date.minute)}';
-  }
-}
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.loading,
-    required this.onPageChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.35)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Prethodna stranica',
-              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Stranica $page od $totalPages',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelLarge,
-                  ),
-                  Text(
-                    '$totalCount ukupno',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: 'Sljedeća stranica',
-              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

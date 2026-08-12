@@ -13,7 +13,7 @@ import 'token_storage.dart';
 
 /// Read-only City -> Municipality -> Settlement lookups for the cascading
 /// Grad -> Općina -> Naselje address pickers used outside the admin desktop
-/// (e.g. the mobile `AccountEditScreen` and the collector's request cards).
+/// (e.g. the mobile `LocationEditScreen` and the collector's request cards).
 /// `/Cities`, `/Municipalities`, `/Settlements` reads need no special
 /// permission (only their writes are gated behind `Locations.Manage`), so any
 /// authenticated role can call these. Mirrors the admin `AdminCityService` /

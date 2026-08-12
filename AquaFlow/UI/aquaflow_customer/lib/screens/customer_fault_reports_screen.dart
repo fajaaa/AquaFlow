@@ -12,6 +12,7 @@ import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_customer/shared/widgets/async_state_view.dart';
 import 'package:aquaflow_customer/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_customer/shared/widgets/list_skeleton.dart';
+import 'package:aquaflow_customer/shared/widgets/paged_table_pagination_bar.dart';
 import 'package:aquaflow_customer/shared/widgets/refresh_button.dart';
 
 /// "Prijave kvarova" tab body: paginated list of ALL of the signed-in
@@ -123,7 +124,7 @@ class _CustomerFaultReportsScreenState
     // stays visible at the bottom of the tab regardless of scroll position
     // or how many reports there are.
     final pagination = pageData != null && _error == null
-        ? _PaginationBar(
+        ? PagedTablePaginationBar(
             page: _page,
             totalPages: _totalPages(pageData.totalCount),
             totalCount: pageData.totalCount,
@@ -532,93 +533,4 @@ String _formatDate(DateTime? date) {
   String two(int value) => value.toString().padLeft(2, '0');
   return '${two(date.day)}.${two(date.month)}.${date.year}. '
       '${two(date.hour)}:${two(date.minute)}';
-}
-
-/// Docked footer bar below the report list (see `build` above) - unlike a
-/// floating card nested in the scrollable content, this stays pinned to the
-/// bottom of the tab no matter the scroll position or item count. Mirrors
-/// `_PaginationBar` in notifications_screen.dart.
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.pageSize,
-    required this.loading,
-    required this.onPageChanged,
-    required this.onPageSizeChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final int pageSize;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-  final ValueChanged<int?> onPageSizeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Prethodna stranica',
-              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Stranica $page od $totalPages',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelLarge,
-                  ),
-                  Text(
-                    '$totalCount ukupno',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: 'Sljedeća stranica',
-              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: pageSize,
-                onChanged: loading ? null : onPageSizeChanged,
-                items: const [
-                  DropdownMenuItem(value: 10, child: Text('10')),
-                  DropdownMenuItem(value: 20, child: Text('20')),
-                  DropdownMenuItem(value: 30, child: Text('30')),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
