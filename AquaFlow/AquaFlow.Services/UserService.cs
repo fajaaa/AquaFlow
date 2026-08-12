@@ -65,8 +65,9 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         if (!string.IsNullOrWhiteSpace(search.Name))
         {
             query = query.Where(u =>
-                u.CustomerProfile != null &&
-                (u.CustomerProfile.FirstName.Contains(search.Name) || u.CustomerProfile.LastName.Contains(search.Name)));
+                (u.CustomerProfile != null &&
+                 (u.CustomerProfile.FirstName.Contains(search.Name) || u.CustomerProfile.LastName.Contains(search.Name))) ||
+                u.FirstName.Contains(search.Name) || u.LastName.Contains(search.Name));
         }
 
         return query;

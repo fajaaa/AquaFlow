@@ -484,17 +484,24 @@ public partial class AquaFlowDbContext
             });
     }
 
+    // Login credentials for every seeded user (local demo DB only): password "AquaFlow123!",
+    // same PBKDF2 hash/salt pair for all six accounts since the demo intentionally shares one password.
+    private const string SeedPasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=";
+    private const string SeedPasswordSalt = "AquaFlowSalt2026==";
+
     private static void SeedUsers(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasData(
             new
             {
                 Id = 1,
-                Email = "admin@aquaflow.ba",
-                PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
-                PasswordSalt = "AquaFlowSalt2026==",
-                Phone = "+38733111222",
+                Email = "kenan.fajic@aquaflow.ba",
+                PasswordHash = SeedPasswordHash,
+                PasswordSalt = SeedPasswordSalt,
+                Phone = "+38762111000",
                 UserRoleId = 1,
+                FirstName = "Kenan",
+                LastName = "Fajic",
                 IsActive = true,
                 IsDeleted = false,
                 DeletedAt = (DateTime?)null,
@@ -505,11 +512,13 @@ public partial class AquaFlowDbContext
             new
             {
                 Id = 2,
-                Email = "collector@aquaflow.ba",
-                PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
-                PasswordSalt = "AquaFlowSalt2026==",
-                Phone = "+38761111222",
+                Email = "amel.fajic@aquaflow.ba",
+                PasswordHash = SeedPasswordHash,
+                PasswordSalt = SeedPasswordSalt,
+                Phone = "+38761111001",
                 UserRoleId = 2,
+                FirstName = "Amel",
+                LastName = "Fajic",
                 IsActive = true,
                 IsDeleted = false,
                 DeletedAt = (DateTime?)null,
@@ -520,11 +529,64 @@ public partial class AquaFlowDbContext
             new
             {
                 Id = 3,
-                Email = "customer@aquaflow.ba",
-                PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
-                PasswordSalt = "AquaFlowSalt2026==",
-                Phone = "+38762111222",
+                Email = "kemal.fajic@aquaflow.ba",
+                PasswordHash = SeedPasswordHash,
+                PasswordSalt = SeedPasswordSalt,
+                Phone = "+38761111002",
+                UserRoleId = 2,
+                FirstName = "Kemal",
+                LastName = "Fajic",
+                IsActive = true,
+                IsDeleted = false,
+                DeletedAt = (DateTime?)null,
+                LastLoginAt = (DateTime?)null,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 4,
+                Email = "denis.music@aquaflow.ba",
+                PasswordHash = SeedPasswordHash,
+                PasswordSalt = SeedPasswordSalt,
+                Phone = "+38762111004",
                 UserRoleId = 3,
+                FirstName = "",
+                LastName = "",
+                IsActive = true,
+                IsDeleted = false,
+                DeletedAt = (DateTime?)null,
+                LastLoginAt = (DateTime?)null,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 5,
+                Email = "elmir.babovic@aquaflow.ba",
+                PasswordHash = SeedPasswordHash,
+                PasswordSalt = SeedPasswordSalt,
+                Phone = "+38762111005",
+                UserRoleId = 3,
+                FirstName = "",
+                LastName = "",
+                IsActive = true,
+                IsDeleted = false,
+                DeletedAt = (DateTime?)null,
+                LastLoginAt = (DateTime?)null,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 6,
+                Email = "adil.joldic@aquaflow.ba",
+                PasswordHash = SeedPasswordHash,
+                PasswordSalt = SeedPasswordSalt,
+                Phone = "+38762111006",
+                UserRoleId = 3,
+                FirstName = "",
+                LastName = "",
                 IsActive = true,
                 IsDeleted = false,
                 DeletedAt = (DateTime?)null,
@@ -647,15 +709,45 @@ public partial class AquaFlowDbContext
             new
             {
                 Id = 1,
-                UserId = 3,
-                FirstName = "Amina",
-                LastName = "Hadziabdic",
+                UserId = 4,
+                FirstName = "Denis",
+                LastName = "Music",
                 CustomerCode = "CUS-0001",
                 DefaultLanguage = "bs",
                 Theme = "light",
-                SettlementId = (int?)1,
-                Street = (string?)"Zmaja od Bosne",
-                HouseNumber = (string?)"12",
+                SettlementId = (int?)8,
+                Street = (string?)"Ozrenska",
+                HouseNumber = (string?)"15",
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 2,
+                UserId = 5,
+                FirstName = "Elmir",
+                LastName = "Babovic",
+                CustomerCode = "CUS-0002",
+                DefaultLanguage = "bs",
+                Theme = "light",
+                SettlementId = (int?)6,
+                Street = (string?)"Dobrinjske bolnice",
+                HouseNumber = (string?)"7",
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 3,
+                UserId = 6,
+                FirstName = "Adil",
+                LastName = "Joldic",
+                CustomerCode = "CUS-0003",
+                DefaultLanguage = "bs",
+                Theme = "light",
+                SettlementId = (int?)11,
+                Street = (string?)"Saraci",
+                HouseNumber = (string?)"22",
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
@@ -669,52 +761,127 @@ public partial class AquaFlowDbContext
                 Id = 1,
                 UserId = 2,
                 EmployeeCode = "COL-0001",
-                AssignedAreaId = (int?)1,
+                AssignedAreaId = (int?)8,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 2,
+                UserId = 3,
+                EmployeeCode = "COL-0002",
+                AssignedAreaId = (int?)6,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
+    }
+
+    // Six meters across the three seeded customers (Denis: 3, Elmir: 2, Adil: 1), each with its own
+    // settlement/street/house number so every meter has an exact, distinct service address.
+    // HourlyConsumption holds one value per entry in ReadingTimestamps - a different consumption (and
+    // so a different invoice amount) every hour, instead of a flat figure. Every value is a multiple
+    // of 0.20 m3 so ConsumptionM3 * Tariff.PricePerM3 (1.35) lands on an exact 2-decimal amount for
+    // every generated invoice line - no seeded rounding drift.
+    private static readonly (int Id, string SerialNumber, int CustomerId, int SettlementId, string Street, string HouseNumber, decimal InitialReading, decimal[] HourlyConsumption, int CollectorId)[] WaterMeterPlan =
+    {
+        (1, "WM-2026-0001", 1, 8, "Ozrenska", "15", 80.00m, new[] { 12.20m, 15.80m, 10.40m, 16.60m, 14.20m }, 1),
+        (2, "WM-2026-0002", 1, 9, "Behdzeta Mutevelica", "4", 60.00m, new[] { 8.20m, 11.40m, 9.80m, 7.60m, 10.60m }, 1),
+        (3, "WM-2026-0003", 1, 1, "Mali Behar", "9", 95.00m, new[] { 13.00m, 9.40m, 12.80m, 14.60m, 10.20m }, 1),
+        (4, "WM-2026-0004", 2, 6, "Dobrinjske bolnice", "7", 70.00m, new[] { 11.80m, 14.20m, 12.60m, 15.40m, 10.00m }, 2),
+        (5, "WM-2026-0005", 2, 7, "Trg Oslobodjenja", "3", 55.00m, new[] { 9.00m, 11.60m, 8.40m, 12.20m, 10.80m }, 2),
+        (6, "WM-2026-0006", 3, 11, "Saraci", "22", 40.00m, new[] { 10.60m, 13.40m, 11.20m, 14.80m, 9.60m }, 2),
+    };
+
+    // Five hourly readings per meter, same day (2026-06-01, 08:00-12:00 UTC); billing period for a
+    // reading is always the one-hour window ending at it, so both readings and invoices run hourly.
+    private static readonly DateTime[] ReadingTimestamps =
+    {
+        new(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc),
+        new(2026, 6, 1, 9, 0, 0, DateTimeKind.Utc),
+        new(2026, 6, 1, 10, 0, 0, DateTimeKind.Utc),
+        new(2026, 6, 1, 11, 0, 0, DateTimeKind.Utc),
+        new(2026, 6, 1, 12, 0, 0, DateTimeKind.Utc),
+    };
+
+    // (WaterMeterId, ReadingTimestamps index) pairs whose invoice is left unpaid. Sized to hit the
+    // requested counts exactly: Denis 12 paid/3 unpaid (meters 1-3, last hour each), Elmir 9 paid/1
+    // unpaid (meter 4, last hour), Adil 3 paid/2 unpaid (meter 6, last two hours).
+    private static readonly HashSet<(int MeterId, int HourIndex)> UnpaidInvoices = new()
+    {
+        (1, 4), (2, 4), (3, 4), (4, 4), (6, 3), (6, 4)
+    };
+
+    private static (DateTime From, DateTime To) GetBillingPeriod(DateTime readingDate) => (readingDate.AddHours(-1), readingDate);
+
+    private static decimal GetInvoiceAmount(decimal consumptionM3) => consumptionM3 * 1.35m + 3.50m;
+
+    private static IEnumerable<(int ReadingId, int MeterId, int HourIndex, decimal PreviousReading, decimal CurrentReading, decimal Consumption)> BuildReadingPlan()
+    {
+        var readingId = 1;
+        foreach (var meter in WaterMeterPlan)
+        {
+            var previous = meter.InitialReading;
+            for (var hourIndex = 0; hourIndex < ReadingTimestamps.Length; hourIndex++)
+            {
+                var consumption = meter.HourlyConsumption[hourIndex];
+                var current = previous + consumption;
+                yield return (readingId, meter.Id, hourIndex, previous, current, consumption);
+                previous = current;
+                readingId++;
+            }
+        }
     }
 
     private static void SeedWaterMeters(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<WaterMeter>().HasData(
-            new
+            WaterMeterPlan.Select(meter => new
             {
-                Id = 1,
-                SerialNumber = "WM-2026-0001",
-                CustomerId = 1,
-                SettlementId = 1,
+                meter.Id,
+                meter.SerialNumber,
+                CustomerId = meter.CustomerId,
+                SettlementId = meter.SettlementId,
+                Street = (string?)meter.Street,
+                HouseNumber = (string?)meter.HouseNumber,
                 InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, DateTimeKind.Utc),
                 Status = "Active",
-                InitialReading = 120.50m,
-                LastReading = 168.40m,
+                InitialReading = meter.InitialReading,
+                LastReading = meter.InitialReading + meter.HourlyConsumption.Sum(),
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
-            });
+            }));
     }
 
     private static void SeedMeterReadings(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MeterReading>().HasData(
-            new
+            BuildReadingPlan().Select(reading =>
             {
-                Id = 1,
-                WaterMeterId = 1,
-                CollectorId = 1,
-                TariffId = (int?)1,
-                ReadingValue = 168.40m,
-                PreviousReadingValue = 154.20m,
-                ConsumptionM3 = 14.20m,
-                ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc),
-                Source = "Collector",
-                PhotoUrl = (string?)null,
-                Note = "Redovno mjesecno ocitanje.",
-                ClientUuid = "reading-demo-0001",
-                SyncStatus = "Synced",
-                SyncedAt = (DateTime?)new DateTime(2026, 6, 1, 8, 10, 0, DateTimeKind.Utc),
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            });
+                var meter = WaterMeterPlan.First(m => m.Id == reading.MeterId);
+                var readingDate = ReadingTimestamps[reading.HourIndex];
+                return new
+                {
+                    Id = reading.ReadingId,
+                    WaterMeterId = reading.MeterId,
+                    CollectorId = meter.CollectorId,
+                    TariffId = (int?)1,
+                    ReadingValue = reading.CurrentReading,
+                    PreviousReadingValue = reading.PreviousReading,
+                    ConsumptionM3 = reading.Consumption,
+                    ReplacedMeterFinalReading = (decimal?)null,
+                    ReadingDate = readingDate,
+                    Source = "Collector",
+                    PhotoUrl = (string?)null,
+                    Note = "Redovno satno ocitanje.",
+                    ClientUuid = $"reading-wm{reading.MeterId:0000}-h{reading.HourIndex + 1:00}",
+                    SyncStatus = "Synced",
+                    SyncedAt = (DateTime?)readingDate.AddMinutes(10),
+                    InvoiceId = (int?)reading.ReadingId,
+                    VoidedAt = (DateTime?)null,
+                    CreatedAt = SeedCreatedAt,
+                    UpdatedAt = (DateTime?)null
+                };
+            }));
     }
 
     private static void SeedTariffs(ModelBuilder modelBuilder)
@@ -735,75 +902,103 @@ public partial class AquaFlowDbContext
     private static void SeedInvoices(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Invoice>().HasData(
-            new
+            BuildReadingPlan().Select(reading =>
             {
-                Id = 1,
-                InvoiceNumber = "INV-2026-0001",
-                CustomerId = 1,
-                WaterMeterId = 1,
-                BillingPeriodFrom = new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc),
-                BillingPeriodTo = new DateTime(2026, 5, 31, 0, 0, 0, DateTimeKind.Utc),
-                PreviousReading = 154.20m,
-                CurrentReading = 168.40m,
-                ConsumptionM3 = 14.20m,
-                Subtotal = 22.67m,
-                TotalAmount = 22.67m,
-                Status = "Issued",
-                CreatedById = 1,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            });
+                var meter = WaterMeterPlan.First(m => m.Id == reading.MeterId);
+                var (billingFrom, billingTo) = GetBillingPeriod(ReadingTimestamps[reading.HourIndex]);
+                var isPaid = !UnpaidInvoices.Contains((reading.MeterId, reading.HourIndex));
+                var amount = GetInvoiceAmount(reading.Consumption);
+                return new
+                {
+                    Id = reading.ReadingId,
+                    InvoiceNumber = $"INV-2026-{reading.ReadingId:0000}",
+                    CustomerId = meter.CustomerId,
+                    WaterMeterId = reading.MeterId,
+                    BillingPeriodFrom = billingFrom,
+                    BillingPeriodTo = billingTo,
+                    PreviousReading = reading.PreviousReading,
+                    CurrentReading = reading.CurrentReading,
+                    ConsumptionM3 = reading.Consumption,
+                    Subtotal = amount,
+                    TotalAmount = amount,
+                    Status = isPaid ? InvoiceStatus.Paid : InvoiceStatus.Issued,
+                    CreatedById = 1,
+                    CreatedAt = SeedCreatedAt,
+                    UpdatedAt = (DateTime?)null
+                };
+            }));
     }
 
     private static void SeedInvoiceItems(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<InvoiceItem>().HasData(
-            new
+            BuildReadingPlan().SelectMany(reading =>
             {
-                Id = 1,
-                InvoiceId = 1,
-                TariffId = 1,
-                TaxRateId = (int?)null,
-                Description = "Potrosnja vode",
-                Quantity = 14.20m,
-                UnitPrice = 1.35m,
-                Amount = 19.17m,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
-            new
-            {
-                Id = 2,
-                InvoiceId = 1,
-                TariffId = 1,
-                TaxRateId = (int?)null,
-                Description = "Fiksna naknada",
-                Quantity = 1m,
-                UnitPrice = 3.50m,
-                Amount = 3.50m,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            });
+                var baseId = (reading.ReadingId - 1) * 2 + 1;
+                return new[]
+                {
+                    new
+                    {
+                        Id = baseId,
+                        InvoiceId = reading.ReadingId,
+                        TariffId = 1,
+                        Description = "Potrosnja vode",
+                        Quantity = reading.Consumption,
+                        UnitPrice = 1.35m,
+                        Amount = reading.Consumption * 1.35m,
+                        CreatedAt = SeedCreatedAt,
+                        UpdatedAt = (DateTime?)null
+                    },
+                    new
+                    {
+                        Id = baseId + 1,
+                        InvoiceId = reading.ReadingId,
+                        TariffId = 1,
+                        Description = "Fiksna naknada",
+                        Quantity = 1m,
+                        UnitPrice = 3.50m,
+                        Amount = 3.50m,
+                        CreatedAt = SeedCreatedAt,
+                        UpdatedAt = (DateTime?)null
+                    }
+                };
+            }));
     }
 
     private static void SeedPayments(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Payment>().HasData(
-            new
+        var paymentId = 1;
+        var payments = new List<object>();
+        foreach (var reading in BuildReadingPlan())
+        {
+            if (UnpaidInvoices.Contains((reading.MeterId, reading.HourIndex)))
             {
-                Id = 1,
-                InvoiceId = 1,
-                CustomerId = 1,
-                Amount = 26.52m,
-                PaymentMethod = "BankTransfer",
-                Status = "Completed",
-                PaidAt = (DateTime?)new DateTime(2026, 6, 2, 0, 0, 0, DateTimeKind.Utc),
+                continue;
+            }
+
+            var meter = WaterMeterPlan.First(m => m.Id == reading.MeterId);
+            var (_, billingTo) = GetBillingPeriod(ReadingTimestamps[reading.HourIndex]);
+            payments.Add(new
+            {
+                Id = paymentId,
+                InvoiceId = reading.ReadingId,
+                CustomerId = meter.CustomerId,
+                Amount = GetInvoiceAmount(reading.Consumption),
+                PaymentMethod = PaymentMethods[(paymentId - 1) % PaymentMethods.Length],
+                Status = PaymentStatus.Completed,
+                PaidAt = (DateTime?)billingTo.AddHours(2),
                 Provider = PaymentProvider.Manual,
-                ProviderTransactionId = "BT-2026-0001",
+                ProviderTransactionId = $"PAY-2026-{paymentId:0000}",
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
+            paymentId++;
+        }
+
+        modelBuilder.Entity<Payment>().HasData(payments);
     }
+
+    private static readonly string[] PaymentMethods = { "BankTransfer", "Card", "Cash" };
 
     private static void SeedFaultReports(ModelBuilder modelBuilder)
     {
@@ -811,10 +1006,10 @@ public partial class AquaFlowDbContext
             new
             {
                 Id = 1,
-                ReportedById = 3,
+                ReportedById = 4,
                 WaterMeterId = (int?)1,
                 CustomerId = (int?)1,
-                SettlementId = 1,
+                SettlementId = 8,
                 Street = (string?)null,
                 HouseNumber = (string?)null,
                 Title = "Slab pritisak vode",
@@ -849,7 +1044,7 @@ public partial class AquaFlowDbContext
             new
             {
                 Id = 1,
-                UserId = 3,
+                UserId = 4,
                 NotificationId = 1,
                 ReadAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,

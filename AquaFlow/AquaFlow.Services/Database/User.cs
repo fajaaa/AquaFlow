@@ -17,6 +17,14 @@ public class User : EntityBase
     [MaxLength(30)]
     public string Phone { get; set; } = string.Empty;
 
+    // Only meaningful for users without a CustomerProfile (admin/collector): a customer's name
+    // stays sourced from CustomerProfile, the original and still-authoritative place for it.
+    [MaxLength(80)]
+    public string FirstName { get; set; } = string.Empty;
+
+    [MaxLength(80)]
+    public string LastName { get; set; } = string.Empty;
+
     public int UserRoleId { get; set; }
     public UserRole? UserRole { get; set; }
 

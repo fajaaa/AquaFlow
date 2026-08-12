@@ -147,8 +147,8 @@ builder.Services.AddCors(options =>
 var mapperConfig = TypeAdapterConfig.GlobalSettings;
 mapperConfig.NewConfig<User, UserResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
-    .Map(destination => destination.FirstName, source => source.CustomerProfile == null ? string.Empty : source.CustomerProfile.FirstName)
-    .Map(destination => destination.LastName, source => source.CustomerProfile == null ? string.Empty : source.CustomerProfile.LastName);
+    .Map(destination => destination.FirstName, source => source.CustomerProfile == null ? source.FirstName : source.CustomerProfile.FirstName)
+    .Map(destination => destination.LastName, source => source.CustomerProfile == null ? source.LastName : source.CustomerProfile.LastName);
 mapperConfig.NewConfig<User, UserSensitiveResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name);
 mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
@@ -158,8 +158,8 @@ mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
 mapperConfig.NewConfig<CollectorProfile, CollectorProfileResponse>()
     .Map(destination => destination.AssignedAreaName, source => source.AssignedArea == null ? string.Empty : source.AssignedArea.Name)
     .Map(destination => destination.IsActive, source => source.User != null && source.User.IsActive)
-    .Map(destination => destination.FirstName, source => source.User == null || source.User.CustomerProfile == null ? string.Empty : source.User.CustomerProfile.FirstName)
-    .Map(destination => destination.LastName, source => source.User == null || source.User.CustomerProfile == null ? string.Empty : source.User.CustomerProfile.LastName)
+    .Map(destination => destination.FirstName, source => source.User == null ? string.Empty : source.User.FirstName)
+    .Map(destination => destination.LastName, source => source.User == null ? string.Empty : source.User.LastName)
     .Map(destination => destination.Email, source => source.User == null ? string.Empty : source.User.Email)
     .Map(destination => destination.Phone, source => source.User == null ? string.Empty : source.User.Phone);
 mapperConfig.NewConfig<UserNotification, UserNotificationResponse>()
