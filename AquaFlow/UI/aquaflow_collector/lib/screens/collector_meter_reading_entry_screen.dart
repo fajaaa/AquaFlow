@@ -9,6 +9,8 @@ import 'package:aquaflow_collector/services/collector_meter_reading_service.dart
 import 'package:aquaflow_collector/shared/models/tariff_lookup.dart';
 import 'package:aquaflow_collector/shared/services/tariff_lookup_exception.dart';
 import 'package:aquaflow_collector/shared/services/tariff_lookup_service.dart';
+import 'package:aquaflow_collector/shared/theme/app_theme.dart';
+import 'package:aquaflow_collector/widgets/collector_water_meter_status_pill.dart';
 
 /// Meter detail + reading entry, pushed when a collector taps a result on
 /// [CollectorWaterMetersScreen]. Submits via
@@ -147,11 +149,14 @@ class _CollectorMeterReadingEntryScreenState
           .trim();
       final result = await _service.submit(
         waterMeterId: widget.meter.id,
-        readingValue: double.parse(_readingCtrl.text.trim().replaceAll(',', '.')),
+        readingValue: double.parse(
+          _readingCtrl.text.trim().replaceAll(',', '.'),
+        ),
         tariffId: _selectedTariffId!,
         clientUuid: _clientUuid,
         isMeterReplacement: _isMeterReplacement,
-        replacedMeterFinalReading: _isMeterReplacement && replacedMeterFinalReadingText.isNotEmpty
+        replacedMeterFinalReading:
+            _isMeterReplacement && replacedMeterFinalReadingText.isNotEmpty
             ? double.parse(replacedMeterFinalReadingText.replaceAll(',', '.'))
             : null,
         note: _noteCtrl.text,
@@ -211,218 +216,280 @@ class _CollectorMeterReadingEntryScreenState
   Widget build(BuildContext context) {
     final meter = widget.meter;
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final meta = CollectorWaterMeterStatusMeta.of(meter.status);
+    final accent = _readableAccent(meta.color, theme.brightness);
+    final onAccent =
+        ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
+        ? Colors.white
+        : AppColors.textDark;
 
     return Scaffold(
       appBar: AppBar(title: Text(meter.serialNumber)),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        child: Column(
           children: [
-            Card(
-              margin: EdgeInsets.zero,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(
-                  color: theme.dividerColor.withValues(alpha: 0.30),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _InfoRow(
-                      icon: Icons.person_outline,
-                      label: meter.customerFullName.isEmpty
-                          ? '-'
-                          : meter.customerFullName,
-                    ),
-                    const SizedBox(height: 8),
-                    _InfoRow(
-                      icon: Icons.location_on_outlined,
-                      label: meter.settlementName.isEmpty
-                          ? '-'
-                          : meter.settlementName,
-                    ),
-                    const SizedBox(height: 8),
-                    _InfoRow(
-                      icon: Icons.home_outlined,
-                      label: meter.address.isEmpty ? '-' : meter.address,
-                    ),
-                    const SizedBox(height: 8),
-                    _InfoRow(
-                      icon: Icons.speed_outlined,
-                      label:
-                          'Zadnje stanje: ${_formatReading(meter.lastReading)} m³',
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
-            ),
-            if (_nextReadingAllowedDate != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.info_outlined,
-                      color: theme.colorScheme.onErrorContainer,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Sljedeće očitanje je moguće od: $_nextReadingAllowedDate',
-                        style: TextStyle(
-                          color: theme.colorScheme.onErrorContainer,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            Text(
-              'Novo očitanje',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // Status banner - full-width strip across the top, same
+            // treatment as `CustomerWaterMeterDetailScreen`.
+            Container(
+              width: double.infinity,
+              color: accent.withValues(alpha: 0.10),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
                 children: [
-                  TextFormField(
-                    controller: _readingCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: accent,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                    ],
-                    validator: _readingValidator,
-                    decoration: const InputDecoration(
-                      labelText: 'Novo stanje (m³)',
-                      prefixIcon: Icon(Icons.speed_outlined),
-                    ),
+                    child: Icon(meta.icon, color: onAccent, size: 22),
                   ),
-                  const SizedBox(height: 14),
-                  DropdownButtonFormField<int>(
-                    initialValue: _selectedTariffId,
-                    decoration: InputDecoration(
-                      labelText: 'Tarifa',
-                      prefixIcon: const Icon(Icons.sell_outlined),
-                      errorText: _tariffError,
-                    ),
-                    hint: Text(
-                      _loadingTariffs
-                          ? 'Učitavanje tarifa...'
-                          : _tariffs.isEmpty
-                          ? 'Nema aktivnih tarifa'
-                          : 'Odaberite tarifu',
-                    ),
-                    items: [
-                      for (final tariff in _tariffs)
-                        DropdownMenuItem(
-                          value: tariff.id,
-                          child: Text(tariff.name),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        meter.serialNumber,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: colorScheme.onSurface,
                         ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        meta.label,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                          color: accent,
+                        ),
+                      ),
                     ],
-                    validator: (value) =>
-                        value == null ? 'Obavezno polje.' : null,
-                    onChanged: _tariffs.isNotEmpty
-                        ? (value) => setState(() => _selectedTariffId = value)
-                        : null,
                   ),
-                  const SizedBox(height: 8),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _isMeterReplacement,
-                    onChanged: (value) {
-                      setState(() {
-                        _isMeterReplacement = value;
-                        if (!value) {
-                          _replacedMeterFinalReadingCtrl.clear();
-                        }
-                      });
-                      _formKey.currentState?.validate();
-                    },
-                    title: const Text('Zamjena vodomjera'),
-                    subtitle: const Text(
-                      'Uključite ako je fizički vodomjer zamijenjen novim. Novo '
-                      'stanje se tada računa od 0, a napomena postaje obavezna.',
-                    ),
-                  ),
-                  if (_isMeterReplacement) ...[
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _replacedMeterFinalReadingCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _SectionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SectionHeading(
+                          'Podaci o vodomjeru',
+                          icon: Icons.info_outline,
+                          color: accent,
+                        ),
+                        const SizedBox(height: 10),
+                        _InfoRow(
+                          icon: Icons.person_outline,
+                          label: meter.customerFullName.isEmpty
+                              ? '-'
+                              : meter.customerFullName,
+                        ),
+                        const SizedBox(height: 8),
+                        _InfoRow(
+                          icon: Icons.location_on_outlined,
+                          label: meter.settlementName.isEmpty
+                              ? '-'
+                              : meter.settlementName,
+                        ),
+                        const SizedBox(height: 8),
+                        _InfoRow(
+                          icon: Icons.home_outlined,
+                          label: meter.address.isEmpty ? '-' : meter.address,
+                        ),
+                        const SizedBox(height: 8),
+                        _InfoRow(
+                          icon: Icons.speed_outlined,
+                          label:
+                              'Zadnje stanje: ${_formatReading(meter.lastReading)} m³',
+                        ),
                       ],
-                      validator: _replacedMeterFinalReadingValidator,
-                      decoration: const InputDecoration(
-                        labelText: 'Staro stanje vodomjera (opcionalno)',
-                        prefixIcon: Icon(Icons.history_outlined),
+                    ),
+                  ),
+                  if (_nextReadingAllowedDate != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.info_outlined,
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Sljedeće očitanje je moguće od: $_nextReadingAllowedDate',
+                              style: TextStyle(
+                                color: theme.colorScheme.onErrorContainer,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _noteCtrl,
-                    maxLines: 2,
-                    validator: _noteValidator,
-                    decoration: InputDecoration(
-                      labelText: _isMeterReplacement
-                          ? 'Napomena (obavezno - razlog zamjene)'
-                          : 'Napomena (opcionalno)',
-                      prefixIcon: const Icon(Icons.notes_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _photoUrlCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Foto (URL, opcionalno)',
-                      prefixIcon: Icon(Icons.photo_camera_outlined),
-                    ),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 14),
-                    Text(
-                      _error!,
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed:
-                          (_submitting || _tariffs.isEmpty || _nextReadingAllowedDate != null)
-                          ? null
-                          : _submit,
-                      icon: _submitting
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save_outlined),
-                      label: const Text('Snimi očitanje'),
+                  const SizedBox(height: 16),
+                  _SectionCard(
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionHeading(
+                            'Novo očitanje',
+                            icon: Icons.edit_note_outlined,
+                            color: accent,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _readingCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[0-9.,]'),
+                              ),
+                            ],
+                            validator: _readingValidator,
+                            decoration: const InputDecoration(
+                              labelText: 'Novo stanje (m³)',
+                              prefixIcon: Icon(Icons.speed_outlined),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          DropdownButtonFormField<int>(
+                            initialValue: _selectedTariffId,
+                            decoration: InputDecoration(
+                              labelText: 'Tarifa',
+                              prefixIcon: const Icon(Icons.sell_outlined),
+                              errorText: _tariffError,
+                            ),
+                            hint: Text(
+                              _loadingTariffs
+                                  ? 'Učitavanje tarifa...'
+                                  : _tariffs.isEmpty
+                                  ? 'Nema aktivnih tarifa'
+                                  : 'Odaberite tarifu',
+                            ),
+                            items: [
+                              for (final tariff in _tariffs)
+                                DropdownMenuItem(
+                                  value: tariff.id,
+                                  child: Text(tariff.name),
+                                ),
+                            ],
+                            validator: (value) =>
+                                value == null ? 'Obavezno polje.' : null,
+                            onChanged: _tariffs.isNotEmpty
+                                ? (value) =>
+                                      setState(() => _selectedTariffId = value)
+                                : null,
+                          ),
+                          const SizedBox(height: 8),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            value: _isMeterReplacement,
+                            onChanged: (value) {
+                              setState(() {
+                                _isMeterReplacement = value;
+                                if (!value) {
+                                  _replacedMeterFinalReadingCtrl.clear();
+                                }
+                              });
+                              _formKey.currentState?.validate();
+                            },
+                            title: const Text('Zamjena vodomjera'),
+                            subtitle: const Text(
+                              'Uključite ako je fizički vodomjer zamijenjen novim. Novo '
+                              'stanje se tada računa od 0, a napomena postaje obavezna.',
+                            ),
+                          ),
+                          if (_isMeterReplacement) ...[
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: _replacedMeterFinalReadingCtrl,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'[0-9.,]'),
+                                ),
+                              ],
+                              validator: _replacedMeterFinalReadingValidator,
+                              decoration: const InputDecoration(
+                                labelText:
+                                    'Staro stanje vodomjera (opcionalno)',
+                                prefixIcon: Icon(Icons.history_outlined),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _noteCtrl,
+                            maxLines: 2,
+                            validator: _noteValidator,
+                            decoration: InputDecoration(
+                              labelText: _isMeterReplacement
+                                  ? 'Napomena (obavezno - razlog zamjene)'
+                                  : 'Napomena (opcionalno)',
+                              prefixIcon: const Icon(Icons.notes_outlined),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _photoUrlCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Foto (URL, opcionalno)',
+                              prefixIcon: Icon(Icons.photo_camera_outlined),
+                            ),
+                          ),
+                          if (_error != null) ...[
+                            const SizedBox(height: 14),
+                            Text(
+                              _error!,
+                              style: TextStyle(color: theme.colorScheme.error),
+                            ),
+                          ],
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed:
+                                  (_submitting ||
+                                      _tariffs.isEmpty ||
+                                      _nextReadingAllowedDate != null)
+                                  ? null
+                                  : _submit,
+                              icon: _submitting
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.save_outlined),
+                              label: const Text('Snimi očitanje'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -431,6 +498,85 @@ class _CollectorMeterReadingEntryScreenState
           ],
         ),
       ),
+    );
+  }
+
+  /// Mirrors `_readableAccent` in `customer_water_meter_detail_screen.dart`:
+  /// any accent dark enough to blend into the dark theme's background is
+  /// lifted toward white there. Light theme and the brighter accents are
+  /// returned unchanged.
+  static Color _readableAccent(Color base, Brightness brightness) {
+    if (brightness == Brightness.dark && base.computeLuminance() < 0.2) {
+      return Color.lerp(base, Colors.white, 0.6)!;
+    }
+    return base;
+  }
+}
+
+/// Mirrors `_SectionCard` in `customer_water_meter_detail_screen.dart` so
+/// this screen's sections use the same rounded/bordered/shadowed card.
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isLight
+            ? Colors.white
+            : theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isLight
+              ? const Color(0xFFE1EDF7)
+              : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+        boxShadow: isLight
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Mirrors `_SectionHeading` in `customer_water_meter_detail_screen.dart`.
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading(this.text, {required this.icon, required this.color});
+
+  final String text;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 6),
+        Text(
+          text.toUpperCase(),
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -459,4 +605,3 @@ String _formatReading(double value) {
   final text = value.toStringAsFixed(2);
   return text.endsWith('.00') ? text.substring(0, text.length - 3) : text;
 }
-
