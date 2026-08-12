@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/api_config.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -148,17 +146,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // DEBUG-ONLY: shows which backend host the app targets, so
-                    // connectivity issues on a device are easy to diagnose.
-                    if (kDebugMode)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          ApiConfig.baseUrl,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white70),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Dobrodošli nazad',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
+                    ),
                     const SizedBox(height: 28),
                     Card(
                       elevation: 8,
