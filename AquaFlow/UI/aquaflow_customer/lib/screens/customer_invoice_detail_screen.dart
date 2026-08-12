@@ -3,8 +3,10 @@ import 'package:flutter_stripe/flutter_stripe.dart' as stripe;
 
 import 'package:aquaflow_customer/models/customer_invoice.dart';
 import 'package:aquaflow_customer/models/customer_payment.dart';
+import 'package:aquaflow_customer/screens/customer_invoices_screen.dart';
 import 'package:aquaflow_customer/services/customer_invoice_exception.dart';
 import 'package:aquaflow_customer/services/customer_invoice_service.dart';
+import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_customer/widgets/invoice_status_pill.dart';
 import 'package:aquaflow_customer/shared/theme/app_theme.dart';
 
@@ -18,6 +20,11 @@ import 'package:aquaflow_customer/shared/theme/app_theme.dart';
 /// "Preostalo za platiti" comes straight from `invoice.remainingAmount`
 /// (`InvoiceResponse.RemainingAmount`) rather than being computed here - a
 /// payment provider's charge amount must never originate client-side.
+///
+/// The app bar's "Svi računi" action pushes `CustomerInvoicesScreen`, the
+/// paginated list of every invoice the customer has across all their water
+/// meters - separate from the "Plati" button below, which only acts on
+/// *this* invoice.
 class CustomerInvoiceDetailScreen extends StatefulWidget {
   const CustomerInvoiceDetailScreen({super.key, required this.invoice});
 
@@ -89,7 +96,17 @@ class _CustomerInvoiceDetailScreenState
         : AppColors.textDark;
 
     return Scaffold(
-      appBar: AppBar(title: Text(invoice.invoiceNumber)),
+      appBar: AppBar(
+        title: Text(invoice.invoiceNumber),
+        actions: [
+          IconButton(
+            tooltip: 'Svi računi',
+            icon: const Icon(Icons.receipt_long_outlined),
+            onPressed: () =>
+                context.pushScreen(const CustomerInvoicesScreen()),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
+import 'package:aquaflow_customer/models/customer_water_meter_page.dart';
 import 'package:aquaflow_customer/screens/customer_requests_screen.dart';
 import 'package:aquaflow_customer/screens/customer_water_meter_detail_screen.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_exception.dart';
@@ -25,6 +26,13 @@ import 'package:aquaflow_customer/shared/widgets/refresh_button.dart';
 /// [CustomerWaterMeterDetailScreen] and reloading on return so the status/
 /// last-reading reflect anything that changed there (e.g. a payment).
 ///
+/// Uses real server-side pagination
+/// (`GET /WaterMeters?Page=&PageSize=&IncludeTotalCount=true&SortBy=InstalledAt&SortDescending=true`;
+/// the backend pins the filter to the caller's CustomerProfile). Pagination
+/// is docked below the list rather than scrolled with it - same treatment as
+/// `NotificationsScreen` - so it stays reachable at the bottom of the tab on
+/// every device regardless of scroll position or item count.
+///
 /// Rendered inside [MobileShell], so it has no Scaffold/AppBar of its own.
 class CustomerWaterMetersScreen extends StatefulWidget {
   const CustomerWaterMetersScreen({super.key});
@@ -37,9 +45,12 @@ class CustomerWaterMetersScreen extends StatefulWidget {
 class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
   final CustomerWaterMeterService _service = CustomerWaterMeterService();
 
+  CustomerWaterMeterPage? _pageData;
   bool _loading = true;
   String? _error;
-  List<CustomerWaterMeter> _meters = const [];
+  int _page = 1;
+  int _pageSize = 10;
+  int _requestSerial = 0;
 
   @override
   void initState() {
@@ -47,26 +58,48 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool resetPage = false}) async {
+    final requestId = ++_requestSerial;
     setState(() {
+      if (resetPage) _page = 1;
       _loading = true;
       _error = null;
     });
 
     try {
-      final meters = await _service.fetchMine();
-      if (!mounted) return;
+      final pageData = await _service.fetchPage(page: _page, pageSize: _pageSize);
+      if (!mounted || requestId != _requestSerial) return;
       setState(() {
-        _meters = meters;
+        _pageData = pageData;
         _loading = false;
       });
     } on CustomerWaterMeterException catch (e) {
-      if (!mounted) return;
+      if (!mounted || requestId != _requestSerial) return;
       setState(() {
         _error = e.message;
         _loading = false;
       });
     }
+  }
+
+  void _setPageSize(int? value) {
+    if (value == null || value == _pageSize || _loading) return;
+    setState(() {
+      _pageSize = value;
+      _page = 1;
+    });
+    _load();
+  }
+
+  void _goToPage(int page) {
+    if (page == _page || _loading) return;
+    setState(() => _page = page);
+    _load();
+  }
+
+  int _totalPages(int totalCount) {
+    if (totalCount <= 0) return 1;
+    return ((totalCount + _pageSize - 1) / _pageSize).floor();
   }
 
   Future<void> _openNewRequestDialog() async {
@@ -75,7 +108,7 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Zahtjev za novi vodomjer je poslan.')),
       );
-      await _load();
+      await _load(resetPage: true);
     }
   }
 
@@ -97,6 +130,23 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pageData = _pageData;
+
+    // Docked below the list rather than as its last scrollable item, so it
+    // stays visible and reachable at the bottom of the tab on every device
+    // regardless of scroll position or item count.
+    final pagination = pageData != null && _error == null
+        ? _PaginationBar(
+            page: _page,
+            totalPages: _totalPages(pageData.totalCount),
+            totalCount: pageData.totalCount,
+            pageSize: _pageSize,
+            loading: _loading,
+            onPageChanged: _goToPage,
+            onPageSizeChanged: _setPageSize,
+          )
+        : null;
+
     return SafeArea(
       child: Column(
         children: [
@@ -122,13 +172,14 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
                   onPressed: _loading ? null : _openNewRequestDialog,
                   icon: const Icon(Icons.add),
                 ),
-                RefreshButton(onRefresh: _load, enabled: !_loading),
+                RefreshButton(onRefresh: () => _load(), enabled: !_loading),
               ],
             ),
           ),
-          if (_loading && _meters.isNotEmpty)
+          if (_loading && pageData != null)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildBody()),
+          ?pagination,
         ],
       ),
     );
@@ -136,16 +187,18 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
 
   Widget _buildBody() {
     return AsyncStateView(
-      loading: _loading && _meters.isEmpty,
+      loading: _loading && _pageData == null,
       error: _error,
-      onRetry: _load,
+      onRetry: () => _load(),
       loadingBuilder: (context) => ListSkeleton(
         itemBuilder: (context, index) => _WaterMeterCard(meter: _skeletonMeter),
       ),
       builder: (context) {
-        if (_meters.isEmpty) {
+        final meters = _pageData!.items;
+
+        if (meters.isEmpty) {
           return RefreshIndicator(
-            onRefresh: _load,
+            onRefresh: () => _load(),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(24),
@@ -161,15 +214,15 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
         }
 
         return RefreshIndicator(
-          onRefresh: _load,
+          onRefresh: () => _load(),
           child: ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            itemCount: _meters.length,
+            itemCount: meters.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) => _WaterMeterCard(
-              meter: _meters[index],
-              onTap: () => _openMeterDetail(_meters[index]),
+              meter: meters[index],
+              onTap: () => _openMeterDetail(meters[index]),
             ),
           ),
         );
@@ -381,5 +434,94 @@ class _WaterMeterCard extends StatelessWidget {
   static Color _shade(Color c, double percent) {
     if (percent >= 0) return Color.lerp(c, Colors.white, percent)!;
     return Color.lerp(c, Colors.black, -percent)!;
+  }
+}
+
+/// Mirrors `_PaginationBar` in notifications_screen.dart: a docked footer
+/// bar (prev/next, page/count summary, page-size dropdown) pinned below the
+/// list rather than scrolled with it, so it stays reachable on every device
+/// regardless of screen height or item count.
+class _PaginationBar extends StatelessWidget {
+  const _PaginationBar({
+    required this.page,
+    required this.totalPages,
+    required this.totalCount,
+    required this.pageSize,
+    required this.loading,
+    required this.onPageChanged,
+    required this.onPageSizeChanged,
+  });
+
+  final int page;
+  final int totalPages;
+  final int totalCount;
+  final int pageSize;
+  final bool loading;
+  final ValueChanged<int> onPageChanged;
+  final ValueChanged<int?> onPageSizeChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final canGoBack = page > 1 && !loading;
+    final canGoForward = page < totalPages && !loading;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: 'Prethodna stranica',
+              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
+              icon: const Icon(Icons.chevron_left),
+            ),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Stranica $page od $totalPages',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge,
+                  ),
+                  Text(
+                    '$totalCount ukupno',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'Sljedeća stranica',
+              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
+              icon: const Icon(Icons.chevron_right),
+            ),
+            DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: pageSize,
+                onChanged: loading ? null : onPageSizeChanged,
+                items: const [
+                  DropdownMenuItem(value: 10, child: Text('10')),
+                  DropdownMenuItem(value: 20, child: Text('20')),
+                  DropdownMenuItem(value: 30, child: Text('30')),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

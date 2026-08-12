@@ -3,16 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:aquaflow_customer/models/customer_invoice.dart';
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
 import 'package:aquaflow_customer/models/customer_water_meter_stats.dart';
-import 'package:aquaflow_customer/screens/customer_invoice_detail_screen.dart';
+import 'package:aquaflow_customer/screens/customer_invoices_screen.dart';
 import 'package:aquaflow_customer/services/customer_invoice_exception.dart';
 import 'package:aquaflow_customer/services/customer_invoice_service.dart';
 import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_customer/shared/theme/app_theme.dart';
 import 'package:aquaflow_customer/shared/utils/money_format.dart';
 import 'package:aquaflow_customer/shared/widgets/async_state_view.dart';
-import 'package:aquaflow_customer/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_customer/shared/widgets/list_skeleton.dart';
-import 'package:aquaflow_customer/widgets/invoice_summary_card.dart';
 import 'package:aquaflow_customer/widgets/water_meter_status_pill.dart';
 
 /// Detail view of a single water meter belonging to the signed-in customer,
@@ -73,12 +71,17 @@ class _CustomerWaterMeterDetailScreenState
     }
   }
 
-  // CustomerInvoiceDetailScreen never returns a result through pop (payment
-  // completion isn't signalled that way), so an unconditional reload here is
-  // the only way this screen's stats/"Neplaćeno"/card statuses pick up a
-  // payment made on the detail screen.
-  Future<void> _openInvoice(CustomerInvoice invoice) async {
-    await context.pushScreen(CustomerInvoiceDetailScreen(invoice: invoice));
+  // CustomerInvoicesScreen -> CustomerInvoiceDetailScreen never returns a
+  // result through pop (payment completion isn't signalled that way), so an
+  // unconditional reload here is the only way this screen's stats/
+  // "Neplaćeno" figures pick up a payment made from that flow.
+  Future<void> _openInvoices() async {
+    await context.pushScreen(
+      CustomerInvoicesScreen(
+        waterMeterId: widget.meter.id,
+        meterSerialNumber: widget.meter.serialNumber,
+      ),
+    );
     if (!mounted) return;
     await _load();
   }
@@ -177,10 +180,17 @@ class _CustomerWaterMeterDetailScreenState
                           const SizedBox(height: 16),
                           _ConsumptionChartCard(stats: stats, accent: accent),
                           const SizedBox(height: 16),
-                          _InvoicesSection(
-                            invoices: _invoices,
-                            accent: accent,
-                            onOpenInvoice: _openInvoice,
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: accent,
+                                foregroundColor: onAccent,
+                              ),
+                              onPressed: _openInvoices,
+                              icon: const Icon(Icons.receipt_long_outlined),
+                              label: const Text('Prikaži račune'),
+                            ),
                           ),
                         ],
                       ),
@@ -519,77 +529,6 @@ class _ConsumptionBar extends StatelessWidget {
     final month = date.month.toString().padLeft(2, '0');
     final year = (date.year % 100).toString().padLeft(2, '0');
     return '$month/$year';
-  }
-}
-
-/// This meter's own invoices, newest first (already sorted server-side by
-/// `fetchAllForMeter` - no re-sort here), every status - not just unpaid
-/// ones. Reuses the shared `InvoiceSummaryCard` rather than nesting each
-/// card inside another bordered `_SectionCard`, since the card already
-/// carries its own border/shadow/gradient treatment.
-class _InvoicesSection extends StatelessWidget {
-  const _InvoicesSection({
-    required this.invoices,
-    required this.accent,
-    required this.onOpenInvoice,
-  });
-
-  final List<CustomerInvoice> invoices;
-  final Color accent;
-  final ValueChanged<CustomerInvoice> onOpenInvoice;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Računi',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                '${invoices.length}',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: accent,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (invoices.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: EmptyStateView(
-              icon: Icons.receipt_long_outlined,
-              message: 'Za ovaj vodomjer još nema izdatih računa.',
-            ),
-          )
-        else
-          for (var i = 0; i < invoices.length; i++) ...[
-            if (i > 0) const SizedBox(height: 10),
-            InvoiceSummaryCard(
-              invoice: invoices[i],
-              onTap: () => onOpenInvoice(invoices[i]),
-            ),
-          ],
-      ],
-    );
   }
 }
 
