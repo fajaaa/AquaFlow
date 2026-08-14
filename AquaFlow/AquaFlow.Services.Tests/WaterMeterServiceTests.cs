@@ -1,3 +1,5 @@
+using AquaFlow.Model.Exceptions;
+using AquaFlow.Model.Requests;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.Validators;
@@ -11,6 +13,56 @@ namespace AquaFlow.Services.Tests;
 
 public class WaterMeterServiceTests
 {
+    [Fact]
+    public async Task MarkBrokenAsync_ActiveMeter_SetsStatusToRemoved()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var result = await service.MarkBrokenAsync(1, new WaterMeterMarkBrokenRequest { Reason = "Vodomjer ne registruje potrosnju." });
+
+        Assert.Equal(WaterMeterStatus.Removed, result.Status);
+        var waterMeter = await context.WaterMeters.FirstAsync(m => m.Id == 1);
+        Assert.Equal(WaterMeterStatus.Removed, waterMeter.Status);
+        Assert.NotNull(waterMeter.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task MarkBrokenAsync_AlreadyRemoved_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        context.WaterMeters.First(m => m.Id == 1).Status = WaterMeterStatus.Removed;
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(
+            () => service.MarkBrokenAsync(1, new WaterMeterMarkBrokenRequest { Reason = "Pokusaj ponovnog prijavljivanja." }));
+    }
+
+    [Fact]
+    public async Task MarkBrokenAsync_EmptyReason_ThrowsValidationException()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ValidationException>(
+            () => service.MarkBrokenAsync(1, new WaterMeterMarkBrokenRequest { Reason = "" }));
+    }
+
+    [Fact]
+    public async Task MarkBrokenAsync_UnknownId_ThrowsKeyNotFoundException()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => service.MarkBrokenAsync(999, new WaterMeterMarkBrokenRequest { Reason = "Vodomjer ne registruje potrosnju." }));
+    }
+
     [Fact]
     public async Task GetAllAsync_TermMatchesOwnerName_ReturnsOnlyThatMeter()
     {
@@ -171,6 +223,7 @@ public class WaterMeterServiceTests
             mapper,
             new IValidator<Model.Requests.WaterMeterInsertRequest>[] { new WaterMeterInsertValidator() },
             new IValidator<Model.Requests.WaterMeterUpdateRequest>[] { new WaterMeterUpdateValidator() },
-            new IValidator<Model.Requests.WaterMeterPatchRequest>[] { new WaterMeterPatchValidator() });
+            new IValidator<Model.Requests.WaterMeterPatchRequest>[] { new WaterMeterPatchValidator() },
+            new IValidator<Model.Requests.WaterMeterMarkBrokenRequest>[] { new WaterMeterMarkBrokenValidator() });
     }
 }

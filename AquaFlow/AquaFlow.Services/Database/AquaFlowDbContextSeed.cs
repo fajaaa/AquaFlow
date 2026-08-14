@@ -868,7 +868,6 @@ public partial class AquaFlowDbContext
                     ReadingValue = reading.CurrentReading,
                     PreviousReadingValue = reading.PreviousReading,
                     ConsumptionM3 = reading.Consumption,
-                    ReplacedMeterFinalReading = (decimal?)null,
                     ReadingDate = readingDate,
                     Source = "Collector",
                     PhotoUrl = (string?)null,

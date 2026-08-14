@@ -236,8 +236,13 @@ AddPatchMapping<MunicipalityPatchRequest, Municipality>();
 builder.Services.AddScoped<IBaseCRUDService<MunicipalityResponse, MunicipalitySearchObject, MunicipalityInsertRequest, MunicipalityUpdateRequest, MunicipalityPatchRequest>, MunicipalityService>();
 AddPatchMapping<SettlementPatchRequest, Settlement>();
 builder.Services.AddScoped<IBaseCRUDService<SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>, SettlementService>();
+// WaterMeter is registered by hand (not AddCrud<>) because MarkBrokenAsync is an extra action
+// beyond the generic EfCrudService; the generic IBaseCRUDService alias still resolves to the same
+// WaterMeterService instance, same pattern as MeterReading/WaterMeterRequest/Invoice.
 AddPatchMapping<WaterMeterPatchRequest, WaterMeter>();
-builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>, WaterMeterService>();
+builder.Services.AddScoped<IWaterMeterService, WaterMeterService>();
+builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IWaterMeterService>());
 // MeterReading is registered by hand (not AddCrud<>) because the collector data-entry flow
 // (CreateForCollectorAsync) needs billing-cycle resolution/validation and WaterMeter.LastReading
 // updates beyond the generic EfCrudService; the generic IBaseCRUDService alias still resolves to
@@ -376,6 +381,7 @@ builder.Services.AddScoped<IValidator<SettlementPatchRequest>, SettlementPatchVa
 builder.Services.AddScoped<IValidator<WaterMeterInsertRequest>, WaterMeterInsertValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterUpdateRequest>, WaterMeterUpdateValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterPatchRequest>, WaterMeterPatchValidator>();
+builder.Services.AddScoped<IValidator<WaterMeterMarkBrokenRequest>, WaterMeterMarkBrokenValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestInsertRequest>, WaterMeterRequestInsertValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestUpdateRequest>, WaterMeterRequestUpdateValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestPatchRequest>, WaterMeterRequestPatchValidator>();

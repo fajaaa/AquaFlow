@@ -6,6 +6,8 @@ import 'package:aquaflow_collector/models/collector_meter_reading.dart';
 import 'package:aquaflow_collector/models/collector_water_meter.dart';
 import 'package:aquaflow_collector/services/collector_meter_reading_exception.dart';
 import 'package:aquaflow_collector/services/collector_meter_reading_service.dart';
+import 'package:aquaflow_collector/services/collector_water_meter_exception.dart';
+import 'package:aquaflow_collector/services/collector_water_meter_service.dart';
 import 'package:aquaflow_collector/shared/models/tariff_lookup.dart';
 import 'package:aquaflow_collector/shared/services/tariff_lookup_exception.dart';
 import 'package:aquaflow_collector/shared/services/tariff_lookup_service.dart';
@@ -18,18 +20,23 @@ import 'package:aquaflow_collector/widgets/collector_water_meter_status_pill.dar
 /// (`CollectorMeterReadingService.submit`) - the server resolves the
 /// collector and previous reading itself, so this form only collects the new
 /// reading value, the tariff to bill it under (required - picked from the
-/// active tariff list), the "Zamjena vodomjera" (meter replacement) toggle,
-/// an optional note (mandatory here on the client - and enforced again by
-/// the server - when the toggle is on, since it's the audit trail for why
-/// the baseline was reset) and an optional photo URL. A reading below the
-/// meter's last recorded value is ONLY ever accepted when the replacement
-/// toggle is on; the server rejects it outright otherwise, regardless of any
-/// note. The server auto-generates an Issued invoice from the reading and
-/// the chosen tariff, so the success message shows its number/total - unless
+/// active tariff list), an optional note and an optional photo URL. A
+/// reading below the meter's last recorded value is always rejected. The
+/// server auto-generates an Issued invoice from the reading and the chosen
+/// tariff, so the success message shows its number/total - unless
 /// consumption came out to zero, in which case the server creates no invoice
 /// at all and the summary just confirms the reading was recorded.
 /// On open it fetches the last reading to suggest a tariff and check that
 /// at least 15 days have passed since the previous reading.
+///
+/// The app bar also carries a separate "mark broken" action
+/// (`CollectorWaterMeterService.markBroken`) for meters that are no longer
+/// functional: it sets the meter's status to Removed with a mandatory
+/// reason, independent of the reading form above. The collector's normal
+/// flow is to record one last real reading here (billing the final invoice
+/// through the usual path), then use that action to retire the meter. The
+/// customer requests a replacement device separately through the existing
+/// "new water meter request" flow, unrelated to this screen.
 class CollectorMeterReadingEntryScreen extends StatefulWidget {
   const CollectorMeterReadingEntryScreen({super.key, required this.meter});
 
@@ -43,16 +50,18 @@ class CollectorMeterReadingEntryScreen extends StatefulWidget {
 class _CollectorMeterReadingEntryScreenState
     extends State<CollectorMeterReadingEntryScreen> {
   final CollectorMeterReadingService _service = CollectorMeterReadingService();
+  final CollectorWaterMeterService _waterMeterService =
+      CollectorWaterMeterService();
   final TariffLookupService _tariffService = TariffLookupService();
   final _formKey = GlobalKey<FormState>();
   final _readingCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final _photoUrlCtrl = TextEditingController();
-  final _replacedMeterFinalReadingCtrl = TextEditingController();
 
   bool _submitting = false;
   String? _error;
-  bool _isMeterReplacement = false;
+  bool _markingBroken = false;
+  late String _meterStatus;
 
   bool _loadingTariffs = true;
   List<TariffLookup> _tariffs = [];
@@ -71,6 +80,7 @@ class _CollectorMeterReadingEntryScreenState
   @override
   void initState() {
     super.initState();
+    _meterStatus = widget.meter.status;
     _clientUuid = const Uuid().v4();
     _readingCtrl.addListener(_onPricePreviewInputChanged);
     _loadData();
@@ -85,9 +95,7 @@ class _CollectorMeterReadingEntryScreenState
       _readingCtrl.text.trim().replaceAll(',', '.'),
     );
     if (reading == null) return null;
-    final baseline = _isMeterReplacement
-        ? 0.0
-        : (_lastCountingReadingValue ?? widget.meter.lastReading);
+    final baseline = _lastCountingReadingValue ?? widget.meter.lastReading;
     final consumption = reading - baseline;
     return consumption >= 0 ? consumption : null;
   }
@@ -105,8 +113,8 @@ class _CollectorMeterReadingEntryScreenState
     _readingCtrl.dispose();
     _noteCtrl.dispose();
     _photoUrlCtrl.dispose();
-    _replacedMeterFinalReadingCtrl.dispose();
     _service.dispose();
+    _waterMeterService.dispose();
     _tariffService.dispose();
     super.dispose();
   }
@@ -172,8 +180,6 @@ class _CollectorMeterReadingEntryScreenState
     });
 
     try {
-      final replacedMeterFinalReadingText = _replacedMeterFinalReadingCtrl.text
-          .trim();
       final result = await _service.submit(
         waterMeterId: widget.meter.id,
         readingValue: double.parse(
@@ -181,11 +187,6 @@ class _CollectorMeterReadingEntryScreenState
         ),
         tariffId: _selectedTariffId!,
         clientUuid: _clientUuid,
-        isMeterReplacement: _isMeterReplacement,
-        replacedMeterFinalReading:
-            _isMeterReplacement && replacedMeterFinalReadingText.isNotEmpty
-            ? double.parse(replacedMeterFinalReadingText.replaceAll(',', '.'))
-            : null,
         note: _noteCtrl.text,
         photoUrl: _photoUrlCtrl.text,
       );
@@ -222,21 +223,34 @@ class _CollectorMeterReadingEntryScreenState
     return null;
   }
 
-  // A lower reading is only ever accepted server-side when IsMeterReplacement is set, and even then
-  // only with a Note explaining it - so the Note is required client-side exactly under that toggle.
-  String? _noteValidator(String? value) {
-    if (!_isMeterReplacement) return null;
-    final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Napomena je obavezna kod zamjene vodomjera.';
-    return null;
-  }
+  // Marks the meter as no longer functional (Status -> Removed), independent of the reading form
+  // above. Requires a non-empty reason, mirroring the mandatory-reason rule the backend validator
+  // enforces (WaterMeterMarkBrokenValidator).
+  Future<void> _markBroken() async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => _MarkBrokenDialog(serialNumber: widget.meter.serialNumber),
+    );
+    if (reason == null || !mounted) return;
 
-  String? _replacedMeterFinalReadingValidator(String? value) {
-    final text = value?.trim() ?? '';
-    if (text.isEmpty) return null;
-    final parsed = double.tryParse(text.replaceAll(',', '.'));
-    if (parsed == null || parsed < 0) return 'Unesite pozitivan broj.';
-    return null;
+    setState(() => _markingBroken = true);
+    try {
+      await _waterMeterService.markBroken(
+        waterMeterId: widget.meter.id,
+        reason: reason,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vodomjer je označen kao neispravan.')),
+      );
+    } on CollectorWaterMeterException catch (e) {
+      if (!mounted) return;
+      setState(() => _markingBroken = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   @override
@@ -252,8 +266,25 @@ class _CollectorMeterReadingEntryScreenState
         ? Colors.white
         : AppColors.textDark;
 
+    final isRemoved = _meterStatus.toLowerCase() == 'removed';
+
     return Scaffold(
-      appBar: AppBar(title: Text(meter.serialNumber)),
+      appBar: AppBar(
+        title: Text(meter.serialNumber),
+        actions: [
+          IconButton(
+            tooltip: 'Označi kao neispravan',
+            icon: _markingBroken
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.report_gmailerrorred_outlined),
+            onPressed: (isRemoved || _markingBroken) ? null : _markBroken,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -480,56 +511,13 @@ class _CollectorMeterReadingEntryScreenState
                             tariff: _selectedTariff,
                             accent: accent,
                           ),
-                          const SizedBox(height: 8),
-                          SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            value: _isMeterReplacement,
-                            onChanged: (value) {
-                              setState(() {
-                                _isMeterReplacement = value;
-                                if (!value) {
-                                  _replacedMeterFinalReadingCtrl.clear();
-                                }
-                              });
-                              _formKey.currentState?.validate();
-                            },
-                            title: const Text('Zamjena vodomjera'),
-                            subtitle: const Text(
-                              'Uključite ako je fizički vodomjer zamijenjen novim. Novo '
-                              'stanje se tada računa od 0, a napomena postaje obavezna.',
-                            ),
-                          ),
-                          if (_isMeterReplacement) ...[
-                            const SizedBox(height: 6),
-                            TextFormField(
-                              controller: _replacedMeterFinalReadingCtrl,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(
-                                  RegExp(r'[0-9.,]'),
-                                ),
-                              ],
-                              validator: _replacedMeterFinalReadingValidator,
-                              decoration: const InputDecoration(
-                                labelText:
-                                    'Staro stanje vodomjera (opcionalno)',
-                                prefixIcon: Icon(Icons.history_outlined),
-                              ),
-                            ),
-                          ],
                           const SizedBox(height: 14),
                           TextFormField(
                             controller: _noteCtrl,
                             maxLines: 2,
-                            validator: _noteValidator,
-                            decoration: InputDecoration(
-                              labelText: _isMeterReplacement
-                                  ? 'Napomena (obavezno - razlog zamjene)'
-                                  : 'Napomena (opcionalno)',
-                              prefixIcon: const Icon(Icons.notes_outlined),
+                            decoration: const InputDecoration(
+                              labelText: 'Napomena (opcionalno)',
+                              prefixIcon: Icon(Icons.notes_outlined),
                             ),
                           ),
                           const SizedBox(height: 14),
@@ -602,6 +590,62 @@ class _CollectorMeterReadingEntryScreenState
       return Color.lerp(base, Colors.white, 0.6)!;
     }
     return base;
+  }
+}
+
+/// Confirmation dialog for [_CollectorMeterReadingEntryScreenState._markBroken]:
+/// collects the mandatory reason and pops it back on confirm, or pops `null`
+/// on cancel.
+class _MarkBrokenDialog extends StatefulWidget {
+  const _MarkBrokenDialog({required this.serialNumber});
+
+  final String serialNumber;
+
+  @override
+  State<_MarkBrokenDialog> createState() => _MarkBrokenDialogState();
+}
+
+class _MarkBrokenDialogState extends State<_MarkBrokenDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _reasonCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _reasonCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Označi vodomjer ${widget.serialNumber} neispravnim'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _reasonCtrl,
+          autofocus: true,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Razlog'),
+          validator: (value) {
+            final text = value?.trim() ?? '';
+            return text.isEmpty ? 'Razlog je obavezan.' : null;
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Odustani'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_formKey.currentState?.validate() != true) return;
+            Navigator.of(context).pop(_reasonCtrl.text.trim());
+          },
+          child: const Text('Potvrdi'),
+        ),
+      ],
+    );
   }
 }
 
@@ -697,8 +741,7 @@ class _InfoRow extends StatelessWidget {
 /// consumption is the last *counting* reading (fetched via
 /// `/MeterReadings/last-counting`, same source the server itself uses as
 /// `previousReading`) subtracted from the entered reading, falling back to
-/// `meter.lastReading` only when there is no reading history at all (or 0 as
-/// the baseline when "Zamjena vodomjera" is on), matching
+/// `meter.lastReading` only when there is no reading history at all, matching
 /// `MeterReadingService.CreateForCollectorAsync` exactly - `meter.lastReading`
 /// alone can lag behind reality after a cancelled invoice. Multiplied by the
 /// selected tariff's [TariffLookup.pricePerM3]. Purely client-side; the

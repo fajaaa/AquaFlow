@@ -225,6 +225,61 @@ public class MeterReadingServiceTests
         Assert.Empty(context.Invoices);
     }
 
+    // A ReadingValue below the last recorded reading is always rejected - a Note does not bypass this.
+    [Fact]
+    public async Task CreateForCollectorAsync_LowerReadingThanLastRecorded_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var waterMeter = context.WaterMeters.First(m => m.Id == 1);
+        waterMeter.LastReading = 1500m;
+        context.SaveChanges();
+
+        var service = CreateService(context);
+        var request = new MeterReadingCollectorEntryRequest
+        {
+            WaterMeterId = 1,
+            ReadingValue = 5,
+            TariffId = 1,
+            Note = "Vodomjer je fizicki zamijenjen."
+        };
+
+        var exception = await Assert.ThrowsAsync<ClientException>(
+            () => service.CreateForCollectorAsync(callerUserId: 3, request));
+
+        Assert.Contains("lower than the last recorded reading", exception.Message);
+        Assert.Empty(context.MeterReadings);
+        Assert.Empty(context.Invoices);
+        Assert.Equal(1500m, waterMeter.LastReading);
+    }
+
+    // Zero consumption must not create an invoice: a 0.00 KM Issued invoice can never be marked Paid
+    // (RecordPaymentInternalAsync rejects amount <= 0), so it would be permanently stuck.
+    [Fact]
+    public async Task CreateForCollectorAsync_ZeroConsumption_RecordsReadingWithNoInvoice()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context); // WaterMeter Id=1 seeds with LastReading = 0
+        var service = CreateService(context);
+
+        var request = new MeterReadingCollectorEntryRequest
+        {
+            WaterMeterId = 1,
+            ReadingValue = 0,
+            TariffId = 1
+        };
+
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, request);
+
+        Assert.Null(response.InvoiceId);
+        Assert.Null(response.InvoiceNumber);
+        Assert.Null(response.InvoiceTotalAmount);
+        Assert.Empty(context.Invoices);
+
+        var reading = await context.MeterReadings.FirstAsync(r => r.Id == response.Id);
+        Assert.Null(reading.InvoiceId);
+    }
+
     // Water meter with Status = Active: reading is accepted
     [Fact]
     public async Task CreateForCollectorAsync_MeterActive_Succeeds()

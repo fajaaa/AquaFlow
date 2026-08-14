@@ -1,3 +1,4 @@
+using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -5,11 +6,11 @@ using AquaFlow.Services;
 
 namespace AquaFlow.WebAPI.Tests.WaterMeters;
 
-// Hand-written stand-in for IBaseCRUDService<...> so controller tests can drive
-// WaterMetersController's ownership pinning without a database. Only the read
-// paths carry controller logic, so the write members are not supported.
-public class FakeWaterMeterCrudService
-    : IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>
+// Hand-written stand-in for IWaterMeterService so controller tests can drive
+// WaterMetersController's ownership pinning and MarkBroken action without a database. Only the
+// read paths and MarkBrokenAsync carry controller-exercised logic; the remaining write members
+// are not supported.
+public class FakeWaterMeterCrudService : IWaterMeterService
 {
     private readonly List<WaterMeterResponse> _rows;
 
@@ -56,4 +57,21 @@ public class FakeWaterMeterCrudService
 
     public Task DeleteAsync(int id)
         => throw new NotSupportedException();
+
+    public Task<WaterMeterResponse> MarkBrokenAsync(int id, WaterMeterMarkBrokenRequest request)
+    {
+        var row = _rows.SingleOrDefault(row => row.Id == id);
+        if (row is null)
+        {
+            throw new KeyNotFoundException();
+        }
+
+        if (string.Equals(row.Status, "Removed", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ClientException($"Water meter with id {id} is already marked as Removed.");
+        }
+
+        row.Status = "Removed";
+        return Task.FromResult(row);
+    }
 }
