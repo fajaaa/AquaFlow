@@ -331,12 +331,21 @@ class _SidebarState extends State<_Sidebar> {
     setState(() => _expandedGroup = _expandedGroup == label ? null : label);
   }
 
+  /// Builds the scrollable menu tiles for every entry except the trailing
+  /// "Moj nalog" leaf, which is rendered in the footer instead (see `build`),
+  /// directly above the logout tile.
   List<Widget> _buildMenuChildren() {
     final children = <Widget>[];
     var flatIndex = 0;
-    for (final entry in widget.entries) {
+    final entries = widget.entries;
+    for (var e = 0; e < entries.length; e++) {
+      final entry = entries[e];
+      final isTrailingAccountLeaf = e == entries.length - 1;
       switch (entry) {
         case _AdminNavLeaf(:final item):
+          if (isTrailingAccountLeaf) {
+            break;
+          }
           final index = flatIndex;
           children.add(_AdminNavTile(
             item: item,
@@ -381,6 +390,12 @@ class _SidebarState extends State<_Sidebar> {
     final theme = Theme.of(context);
     final email =
         context.select<AuthProvider, String>((a) => a.session?.email ?? '');
+    // "Moj nalog" is always the trailing leaf in `_buildNavEntries` - pulled
+    // out here so it can render in the footer, right above logout, instead
+    // of inside the scrollable menu.
+    final flatItems = _flattenNavItems(widget.entries);
+    final accountIndex = flatItems.length - 1;
+    final accountItem = flatItems[accountIndex];
 
     return Container(
       width: 248,
@@ -433,7 +448,15 @@ class _SidebarState extends State<_Sidebar> {
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+              child: _AdminNavTile(
+                item: accountItem,
+                selected: accountIndex == widget.selectedIndex,
+                onTap: () => widget.onSelect(accountIndex),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: _AdminNavTile(
                 item: const _AdminNavItem(
                   icon: Icons.logout,

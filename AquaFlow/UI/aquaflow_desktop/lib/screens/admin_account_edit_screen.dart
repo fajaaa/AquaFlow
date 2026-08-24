@@ -21,6 +21,7 @@ import 'package:aquaflow_desktop/shared/services/account_exception.dart';
 import 'package:aquaflow_desktop/shared/services/account_service.dart';
 import 'package:aquaflow_desktop/shared/services/preferences_api_service.dart';
 import 'package:aquaflow_desktop/shared/services/preferences_exception.dart';
+import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 
 /// Admin-only "Moj nalog" screen (embedded directly in
 /// [AdminDashboardScreen], not pushed as a route - unlike the shared
@@ -370,10 +371,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Moj nalog')),
-      body: _buildBody(),
-    );
+    return SafeArea(child: _buildBody());
   }
 
   Widget _buildBody() {
@@ -383,55 +381,24 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     if (_loadError != null) {
       return _ErrorRetry(message: _loadError!, onRetry: _load);
     }
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Form(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const ScreenHeader(
+              title: 'Moj nalog',
+              subtitle: 'Uredite svoje podatke, izgled aplikacije i lozinku.',
+              actions: [],
+            ),
+            const SizedBox(height: 24),
+            Form(
               key: _formKey,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _SectionLabel('Podaci naloga'),
-                  _field(
-                    controller: _emailCtrl,
-                    label: 'Email',
-                    icon: Icons.email_outlined,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: _emailValidator,
-                    maxLength: 150,
-                  ),
-                  _field(
-                    controller: _phoneCtrl,
-                    label: 'Telefon',
-                    icon: Icons.phone_outlined,
-                    keyboardType: TextInputType.phone,
-                    validator: _phoneValidator,
-                    maxLength: 30,
-                  ),
-                  const SizedBox(height: 8),
-                  const _SectionLabel('Izgled'),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: SegmentedButton<bool>(
-                      segments: const [
-                        ButtonSegment(
-                          value: false,
-                          label: Text('Svijetla'),
-                          icon: Icon(Icons.light_mode_outlined),
-                        ),
-                        ButtonSegment(
-                          value: true,
-                          label: Text('Tamna'),
-                          icon: Icon(Icons.dark_mode_outlined),
-                        ),
-                      ],
-                      selected: {_preferences?.isDarkTheme ?? false},
-                      onSelectionChanged: (selection) => _setTheme(selection.first),
-                    ),
-                  ),
                   const _SectionLabel('Profil'),
                   if (_customerCode != null) ...[
                     TextFormField(
@@ -443,116 +410,173 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                         prefixIcon: Icon(Icons.badge_outlined),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                   ],
-                  _field(
-                    controller: _firstNameCtrl,
-                    label: 'Ime',
-                    icon: Icons.person_outline,
-                    validator: _firstNameValidator,
-                    onChanged: () => setState(() {}),
-                    maxLength: 80,
-                  ),
-                  _field(
-                    controller: _lastNameCtrl,
-                    label: 'Prezime',
-                    icon: Icons.person_outline,
-                    validator: _lastNameValidator,
-                    onChanged: () => setState(() {}),
-                    maxLength: 80,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _defaultLanguage,
-                      decoration: const InputDecoration(
-                        labelText: 'Jezik',
-                        prefixIcon: Icon(Icons.language_outlined),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _field(
+                          controller: _firstNameCtrl,
+                          label: 'Ime',
+                          validator: _firstNameValidator,
+                          onChanged: () => setState(() {}),
+                          maxLength: 80,
+                        ),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'bs', child: Text('Bosanski')),
-                        DropdownMenuItem(value: 'en', child: Text('Engleski')),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => _defaultLanguage = value);
-                      },
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _field(
+                          controller: _lastNameCtrl,
+                          label: 'Prezime',
+                          validator: _lastNameValidator,
+                          onChanged: () => setState(() {}),
+                          maxLength: 80,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: _defaultLanguage,
+                    decoration: const InputDecoration(labelText: 'Jezik'),
+                    items: const [
+                      DropdownMenuItem(value: 'bs', child: Text('Bosanski')),
+                      DropdownMenuItem(value: 'en', child: Text('Engleski')),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _defaultLanguage = value);
+                    },
+                  ),
+                  const SizedBox(height: 22),
+
+                  const _SectionLabel('Kontakt'),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _field(
+                          controller: _emailCtrl,
+                          label: 'Email',
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: _emailValidator,
+                          maxLength: 150,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _field(
+                          controller: _phoneCtrl,
+                          label: 'Telefon',
+                          icon: Icons.phone_outlined,
+                          keyboardType: TextInputType.phone,
+                          validator: _phoneValidator,
+                          maxLength: 30,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+
+                  const _SectionLabel('Izgled'),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(
+                        value: false,
+                        label: Text('Svijetla'),
+                        icon: Icon(Icons.light_mode_outlined),
+                      ),
+                      ButtonSegment(
+                        value: true,
+                        label: Text('Tamna'),
+                        icon: Icon(Icons.dark_mode_outlined),
+                      ),
+                    ],
+                    selected: {_preferences?.isDarkTheme ?? false},
+                    onSelectionChanged: (selection) => _setTheme(selection.first),
+                  ),
+                  const SizedBox(height: 22),
+
                   const _SectionLabel('Adresa'),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _selectedCityId ?? 0,
-                      decoration: const InputDecoration(
-                        labelText: 'Grad',
-                        prefixIcon: Icon(Icons.location_city_outlined),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          initialValue: _selectedCityId ?? 0,
+                          decoration: const InputDecoration(labelText: 'Grad'),
+                          items: [
+                            const DropdownMenuItem(
+                                value: 0, child: Text('Bez grada')),
+                            for (final city in _cities)
+                              DropdownMenuItem(
+                                  value: city.id, child: Text(city.name)),
+                          ],
+                          onChanged: (value) =>
+                              _onCityChanged(value == 0 ? null : value),
+                        ),
                       ),
-                      items: [
-                        const DropdownMenuItem(value: 0, child: Text('Bez grada')),
-                        for (final city in _cities)
-                          DropdownMenuItem(value: city.id, child: Text(city.name)),
-                      ],
-                      onChanged: (value) => _onCityChanged(value == 0 ? null : value),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _selectedMunicipalityId ?? 0,
-                      decoration: const InputDecoration(
-                        labelText: 'Općina',
-                        prefixIcon: Icon(Icons.map_outlined),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          initialValue: _selectedMunicipalityId ?? 0,
+                          decoration: const InputDecoration(labelText: 'Općina'),
+                          items: [
+                            const DropdownMenuItem(
+                                value: 0, child: Text('Bez općine')),
+                            for (final municipality in _municipalitiesForSelectedCity)
+                              DropdownMenuItem(
+                                value: municipality.id,
+                                child: Text(municipality.name),
+                              ),
+                          ],
+                          onChanged: _selectedCityId == null
+                              ? null
+                              : (value) =>
+                                  _onMunicipalityChanged(value == 0 ? null : value),
+                        ),
                       ),
-                      items: [
-                        const DropdownMenuItem(value: 0, child: Text('Bez općine')),
-                        for (final municipality in _municipalitiesForSelectedCity)
-                          DropdownMenuItem(
-                            value: municipality.id,
-                            child: Text(municipality.name),
-                          ),
-                      ],
-                      onChanged: _selectedCityId == null
-                          ? null
-                          : (value) => _onMunicipalityChanged(value == 0 ? null : value),
-                    ),
+                    ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _selectedSettlementId ?? 0,
-                      decoration: const InputDecoration(
-                        labelText: 'Naselje',
-                        prefixIcon: Icon(Icons.holiday_village_outlined),
+                  const SizedBox(height: 14),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: DropdownButtonFormField<int>(
+                          initialValue: _selectedSettlementId ?? 0,
+                          decoration: const InputDecoration(labelText: 'Naselje'),
+                          items: [
+                            const DropdownMenuItem(
+                                value: 0, child: Text('Bez naselja')),
+                            for (final settlement in _settlementsForSelectedMunicipality)
+                              DropdownMenuItem(
+                                value: settlement.id,
+                                child: Text(settlement.name),
+                              ),
+                          ],
+                          validator: _settlementValidator,
+                          onChanged: _selectedMunicipalityId == null
+                              ? null
+                              : (value) =>
+                                  _onSettlementChanged(value == 0 ? null : value),
+                        ),
                       ),
-                      items: [
-                        const DropdownMenuItem(value: 0, child: Text('Bez naselja')),
-                        for (final settlement in _settlementsForSelectedMunicipality)
-                          DropdownMenuItem(
-                            value: settlement.id,
-                            child: Text(settlement.name),
-                          ),
-                      ],
-                      validator: _settlementValidator,
-                      onChanged: _selectedMunicipalityId == null
-                          ? null
-                          : (value) => _onSettlementChanged(value == 0 ? null : value),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: _field(controller: _streetCtrl, label: 'Ulica', maxLength: 120),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _field(controller: _houseNumberCtrl, label: 'Broj', maxLength: 20),
+                      ),
+                    ],
                   ),
-                  _field(
-                    controller: _streetCtrl,
-                    label: 'Ulica',
-                    icon: Icons.signpost_outlined,
-                    maxLength: 120,
-                  ),
-                  _field(
-                    controller: _houseNumberCtrl,
-                    label: 'Broj',
-                    icon: Icons.pin_outlined,
-                    maxLength: 20,
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 22),
+
                   const _SectionLabel('Promjena lozinke'),
                   Text(
                     'Ostavite prazno ako ne mijenjate lozinku.',
@@ -569,41 +593,63 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                     validator: _currentPasswordValidator,
                     onChanged: () => setState(() {}),
                   ),
-                  _field(
-                    controller: _newPasswordCtrl,
-                    label: 'Nova lozinka',
-                    icon: Icons.lock_outline,
-                    obscureText: true,
-                    validator: _newPasswordValidator,
-                    onChanged: () => setState(() {}),
+                  const SizedBox(height: 14),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _field(
+                          controller: _newPasswordCtrl,
+                          label: 'Nova lozinka',
+                          icon: Icons.lock_outline,
+                          obscureText: true,
+                          validator: _newPasswordValidator,
+                          onChanged: () => setState(() {}),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _field(
+                          controller: _confirmPasswordCtrl,
+                          label: 'Potvrda nove lozinke',
+                          icon: Icons.lock_outline,
+                          obscureText: true,
+                          validator: _confirmPasswordValidator,
+                          onChanged: () => setState(() {}),
+                        ),
+                      ),
+                    ],
                   ),
-                  _field(
-                    controller: _confirmPasswordCtrl,
-                    label: 'Potvrda nove lozinke',
-                    icon: Icons.lock_outline,
-                    obscureText: true,
-                    validator: _confirmPasswordValidator,
-                    onChanged: () => setState(() {}),
-                  ),
-                  const SizedBox(height: 8),
-                  FilledButton.icon(
-                    onPressed: _saving ? null : _save,
-                    icon: _saving
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.save_outlined),
-                    label: Text(_saving ? 'Spašavanje...' : 'Sačuvaj'),
+                  const SizedBox(height: 22),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: _saving ? null : _load,
+                        child: const Text('Odustani'),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: _saving ? null : _save,
+                        icon: _saving
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.save_outlined),
+                        label: Text(_saving ? 'Spašavanje...' : 'Sačuvaj'),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -612,27 +658,24 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   Widget _field({
     required TextEditingController controller,
     required String label,
-    required IconData icon,
+    IconData? icon,
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     int? maxLength,
     bool obscureText = false,
     VoidCallback? onChanged,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        validator: validator,
-        maxLength: maxLength,
-        obscureText: obscureText,
-        onChanged: onChanged == null ? null : (_) => onChanged(),
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon),
-          counterText: '',
-        ),
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      maxLength: maxLength,
+      obscureText: obscureText,
+      onChanged: onChanged == null ? null : (_) => onChanged(),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: icon == null ? null : Icon(icon),
+        counterText: '',
       ),
     );
   }
@@ -713,7 +756,9 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   }
 }
 
-/// Small muted heading that separates the form into sections.
+/// Small uppercase-weight heading that separates the form into sections -
+/// mirrors `_FormSectionHeader` in `admin_users_screen.dart`'s "Uredi
+/// administratora" dialog so this screen reads consistently with it.
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
 
@@ -722,13 +767,15 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+          color: Color(0xFF64748B),
+        ),
       ),
     );
   }
