@@ -4,11 +4,11 @@ import 'dart:io' show SocketException;
 
 import 'package:http/http.dart' as http;
 
+import 'package:aquaflow_desktop/models/admin_customer_profile.dart';
 import 'package:aquaflow_desktop/models/admin_customer_profile_draft.dart';
 import 'package:aquaflow_desktop/models/admin_collector_profile.dart';
 import 'package:aquaflow_desktop/models/admin_collector_profile_draft.dart';
 import 'package:aquaflow_desktop/models/admin_collector_profile_page.dart';
-import 'package:aquaflow_desktop/models/admin_settlement_option.dart';
 import 'package:aquaflow_desktop/models/admin_user.dart';
 import 'package:aquaflow_desktop/models/admin_user_role_option.dart';
 import 'package:aquaflow_desktop/services/admin_collector_exception.dart';
@@ -108,15 +108,12 @@ class AdminCollectorService {
     return AdminCollectorProfile.fromJson(first);
   }
 
-  Future<List<AdminUser>> fetchCollectorUsers() async {
+  /// Fetches the CustomerProfile owned by [userId] (collectors reuse the
+  /// same profile table as customers), or null if they don't have one yet.
+  Future<AdminCustomerProfile?> fetchCustomerProfile(int userId) async {
     final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/Users').replace(
-      queryParameters: {
-        'UserRole': 'Collector',
-        'PageSize': '100',
-        'IncludeTotalCount': 'true',
-        'SortBy': 'Email',
-      },
+    final uri = Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles').replace(
+      queryParameters: {'UserId': '$userId', 'PageSize': '1'},
     );
 
     final response = await _send(
@@ -125,105 +122,153 @@ class AdminCollectorService {
 
     if (response.statusCode != 200) {
       throw AdminCollectorException(
-        _messageFor(response, 'Korisnike inkasante nije moguće učitati'),
+        _messageFor(response, 'Profil inkasanta nije moguće učitati'),
       );
     }
 
     final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw const AdminCollectorException(
-        'Korisnici inkasanti su u neispravnom formatu.',
-      );
-    }
+    final itemsJson = decoded is Map<String, dynamic> ? decoded['items'] : null;
+    if (itemsJson is! List || itemsJson.isEmpty) return null;
 
-    final itemsJson = decoded['items'];
-    if (itemsJson is! List) {
-      throw const AdminCollectorException(
-        'Lista korisnika inkasanata je neispravna.',
-      );
-    }
-
-    return itemsJson
-        .whereType<Map<String, dynamic>>()
-        .map(AdminUser.fromJson)
-        .toList();
-  }
-
-  Future<List<AdminSettlementOption>> fetchSettlements() async {
-    final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/Settlements').replace(
-      queryParameters: {
-        'PageSize': '100',
-        'IncludeTotalCount': 'true',
-        'SortBy': 'Name',
-      },
-    );
-
-    final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
-    );
-
-    if (response.statusCode != 200) {
-      throw AdminCollectorException(
-        _messageFor(response, 'Područja nije moguće učitati'),
-      );
-    }
-
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw const AdminCollectorException('Područja su u neispravnom formatu.');
-    }
-
-    final itemsJson = decoded['items'];
-    if (itemsJson is! List) {
-      throw const AdminCollectorException('Lista područja je neispravna.');
-    }
-
-    return itemsJson
-        .whereType<Map<String, dynamic>>()
-        .map(AdminSettlementOption.fromJson)
-        .toList();
+    final first = itemsJson.first;
+    if (first is! Map<String, dynamic>) return null;
+    return AdminCustomerProfile.fromJson(first);
   }
 
   Future<AdminCollectorProfile> create(AdminCollectorProfileDraft draft) {
-    return createCollectorProfile(draft.userId, draft.assignedAreaId);
+    return createCollectorProfile(draft.userId);
   }
 
-  Future<AdminCollectorProfile> createCollectorProfile(
-    int userId,
-    int? assignedAreaId,
-  ) async {
+  Future<AdminCollectorProfile> createCollectorProfile(int userId) async {
     final token = await _requireToken();
-    return _postCollectorProfile(
+    return _postCollectorProfile(token, AdminCollectorProfileDraft(userId: userId));
+  }
+
+  /// Saves an edit of an existing collector: patches the collector's own
+  /// [User] record (email/phone/status/optional password) and upserts their
+  /// CustomerProfile (name) - mirroring how the Korisnici screen edits a
+  /// user in one flow.
+  ///
+  /// [existingProfileId] must be the id of the collector's current
+  /// CustomerProfile (from [fetchCustomerProfile]), or null if they don't
+  /// have one yet - this decides whether the profile is PATCHed or POSTed.
+  Future<AdminCollectorProfile> updateCollectorUserAndProfile({
+    required int collectorProfileId,
+    required int userId,
+    required String email,
+    required String phone,
+    required bool isActive,
+    String? password,
+    required String firstName,
+    required String lastName,
+    int? existingProfileId,
+  }) async {
+    final token = await _requireToken();
+
+    await _patchCollectorUser(
       token,
-      AdminCollectorProfileDraft(
-        userId: userId,
-        assignedAreaId: assignedAreaId,
+      userId,
+      email: email,
+      phone: phone,
+      isActive: isActive,
+      password: password,
+    );
+
+    final profile = AdminCustomerProfileDraft(
+      firstName: firstName,
+      lastName: lastName,
+      defaultLanguage: 'bs',
+      theme: 'light',
+    );
+    if (existingProfileId != null) {
+      await _patchCustomerProfile(token, existingProfileId, userId, profile);
+    } else {
+      await _postCustomerProfile(token, userId, profile);
+    }
+
+    return _fetchCollectorProfileById(token, collectorProfileId);
+  }
+
+  Future<AdminCollectorProfile> _fetchCollectorProfileById(
+    String token,
+    int id,
+  ) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/CollectorProfiles/$id');
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw AdminCollectorException(
+        _messageFor(response, 'Profil inkasanta nije moguće učitati'),
+      );
+    }
+
+    return _decodeCollector(response.body);
+  }
+
+  Future<void> _patchCollectorUser(
+    String token,
+    int userId, {
+    required String email,
+    required String phone,
+    required bool isActive,
+    String? password,
+  }) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Users/$userId');
+
+    final body = <String, Object?>{
+      'email': email,
+      'phone': phone,
+      'isActive': isActive,
+    };
+    if (password != null && password.isNotEmpty) {
+      body['password'] = password;
+    }
+
+    final response = await _send(
+      () => _client.patch(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
       ),
     );
+
+    if (response.statusCode != 200) {
+      throw AdminCollectorException(
+        _messageFor(response, 'Korisnika inkasanta nije moguće sačuvati'),
+      );
+    }
   }
 
-  Future<AdminCollectorProfile> update(
-    int id,
-    AdminCollectorProfileDraft draft,
-  ) {
-    return updateCollectorProfile(id, draft.userId, draft.assignedAreaId);
-  }
-
-  Future<AdminCollectorProfile> updateCollectorProfile(
+  Future<void> _patchCustomerProfile(
+    String token,
     int profileId,
     int userId,
-    int? assignedAreaId,
+    AdminCustomerProfileDraft profile,
   ) async {
-    final token = await _requireToken();
-    return _putCollectorProfile(
-      token,
-      profileId,
-      AdminCollectorProfileDraft(
-        userId: userId,
-        assignedAreaId: assignedAreaId,
+    final uri = Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles/$profileId');
+
+    final response = await _send(
+      () => _client.patch(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(profile.toJson(userId)),
       ),
     );
+
+    if (response.statusCode != 200) {
+      throw AdminCollectorException(
+        _messageFor(response, 'Profil inkasanta nije moguće sačuvati'),
+      );
+    }
   }
 
   Future<AdminCollectorProfile> createCollectorUserWithProfile({
@@ -232,7 +277,6 @@ class AdminCollectorService {
     String phone = '',
     String? firstName,
     String? lastName,
-    int? assignedAreaId,
     bool isActive = true,
     String defaultLanguage = 'bs',
     String theme = 'light',
@@ -270,13 +314,7 @@ class AdminCollectorService {
       );
     }
 
-    return _postCollectorProfile(
-      token,
-      AdminCollectorProfileDraft(
-        userId: user.id,
-        assignedAreaId: assignedAreaId,
-      ),
-    );
+    return _postCollectorProfile(token, AdminCollectorProfileDraft(userId: user.id));
   }
 
   Future<int> _fetchCollectorRoleId(String token) async {
@@ -407,33 +445,6 @@ class AdminCollectorService {
     if (response.statusCode != 201) {
       throw AdminCollectorException(
         _messageFor(response, 'Inkasant nije moguće dodati'),
-      );
-    }
-
-    return _decodeCollector(response.body);
-  }
-
-  Future<AdminCollectorProfile> _putCollectorProfile(
-    String token,
-    int id,
-    AdminCollectorProfileDraft draft,
-  ) async {
-    final uri = Uri.parse('${ApiConfig.baseUrl}/CollectorProfiles/$id');
-
-    final response = await _send(
-      () => _client.put(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(draft.toJson()),
-      ),
-    );
-
-    if (response.statusCode != 200) {
-      throw AdminCollectorException(
-        _messageFor(response, 'Profil inkasanta nije moguće sačuvati'),
       );
     }
 

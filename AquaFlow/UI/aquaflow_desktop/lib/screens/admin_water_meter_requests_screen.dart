@@ -476,7 +476,6 @@ class _AssignDialogState extends State<_AssignDialog> {
                         DataColumn(label: Text('Ime i prezime')),
                         DataColumn(label: Text('Email')),
                         DataColumn(label: Text('Telefon')),
-                        DataColumn(label: Text('Područje')),
                       ],
                       rows: [
                         for (final collector in widget.collectors)
@@ -577,7 +576,6 @@ class _AssignDialogState extends State<_AssignDialog> {
             ),
           ),
         ),
-        DataCell(Text(collector.areaLabel)),
       ],
     );
   }

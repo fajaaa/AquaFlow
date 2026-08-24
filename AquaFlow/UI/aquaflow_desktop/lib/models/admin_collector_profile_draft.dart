@@ -1,13 +1,9 @@
 class AdminCollectorProfileDraft {
-  const AdminCollectorProfileDraft({
-    required this.userId,
-    required this.assignedAreaId,
-  });
+  const AdminCollectorProfileDraft({required this.userId});
 
   final int userId;
-  final int? assignedAreaId;
 
   Map<String, Object?> toJson() {
-    return {'userId': userId, 'assignedAreaId': assignedAreaId};
+    return {'userId': userId};
   }
 }

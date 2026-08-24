@@ -12,5 +12,7 @@ public class UserInsertValidator : AbstractValidator<UserInsertRequest>
         RuleFor(x => x.Phone).MaximumLength(30).Matches(@"^[0-9+\-\s()]*$")
             .WithMessage("Telefon smije sadržavati samo brojeve i simbole + - ( ).");
         RuleFor(x => x.UserRoleId).GreaterThan(0);
+        RuleFor(x => x.FirstName).MaximumLength(80);
+        RuleFor(x => x.LastName).MaximumLength(80);
     }
 }

@@ -7,4 +7,8 @@ public class UserPatchRequest
     public string? Phone { get; set; }
     public int? UserRoleId { get; set; }
     public bool? IsActive { get; set; }
+
+    // Only meaningful for users without a CustomerProfile (admin/collector) - see User.FirstName/LastName.
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
 }

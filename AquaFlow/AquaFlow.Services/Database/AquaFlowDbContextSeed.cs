@@ -761,7 +761,6 @@ public partial class AquaFlowDbContext
                 Id = 1,
                 UserId = 2,
                 EmployeeCode = "COL-0001",
-                AssignedAreaId = (int?)8,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -770,7 +769,6 @@ public partial class AquaFlowDbContext
                 Id = 2,
                 UserId = 3,
                 EmployeeCode = "COL-0002",
-                AssignedAreaId = (int?)6,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });

@@ -3,8 +3,6 @@ class AdminCollectorProfile {
     required this.id,
     required this.userId,
     required this.employeeCode,
-    required this.assignedAreaId,
-    required this.assignedAreaName,
     required this.isActive,
     required this.createdAt,
     required this.firstName,
@@ -16,8 +14,6 @@ class AdminCollectorProfile {
   final int id;
   final int userId;
   final String employeeCode;
-  final int? assignedAreaId;
-  final String assignedAreaName;
   final bool isActive;
   final DateTime? createdAt;
   final String firstName;
@@ -44,20 +40,11 @@ class AdminCollectorProfile {
     return [first, last].where((part) => part.isNotEmpty).join(' ');
   }
 
-  String get areaLabel {
-    final area = assignedAreaName.trim();
-    if (area.isNotEmpty) return area;
-    final areaId = assignedAreaId;
-    return areaId == null ? '-' : 'Područje #$areaId';
-  }
-
   factory AdminCollectorProfile.fromJson(Map<String, dynamic> json) {
     return AdminCollectorProfile(
       id: (json['id'] as num?)?.toInt() ?? 0,
       userId: (json['userId'] as num?)?.toInt() ?? 0,
       employeeCode: (json['employeeCode'] ?? '') as String,
-      assignedAreaId: (json['assignedAreaId'] as num?)?.toInt(),
-      assignedAreaName: (json['assignedAreaName'] ?? '') as String,
       isActive: (json['isActive'] as bool?) ?? false,
       createdAt: _date(json['createdAt']),
       firstName: (json['firstName'] ?? '') as String,

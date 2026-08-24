@@ -3,9 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'package:aquaflow_desktop/models/admin_collector_profile.dart';
-import 'package:aquaflow_desktop/models/admin_collector_profile_draft.dart';
-import 'package:aquaflow_desktop/models/admin_settlement_option.dart';
-import 'package:aquaflow_desktop/models/admin_user.dart';
+import 'package:aquaflow_desktop/models/admin_customer_profile.dart';
 import 'package:aquaflow_desktop/screens/admin_user_activity_logs_screen.dart';
 import 'package:aquaflow_desktop/services/admin_collector_exception.dart';
 import 'package:aquaflow_desktop/services/admin_collector_service.dart';
@@ -29,15 +27,10 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
     with PagedListController<AdminCollectorProfile, AdminCollectorsScreen> {
   final AdminCollectorService _service = AdminCollectorService();
 
-  List<AdminUser> _collectorUsers = const [];
-  List<AdminSettlementOption> _settlements = const [];
-  bool _lookupsLoading = false;
-
   @override
   void initState() {
     super.initState();
     load();
-    _loadLookups(showErrors: false);
   }
 
   @override
@@ -57,48 +50,6 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
         : 'Došlo je do neočekivane greške.';
   }
 
-  Future<bool> _loadLookups({bool showErrors = true}) async {
-    if (_lookupsLoading) return false;
-
-    setState(() => _lookupsLoading = true);
-    try {
-      final results = await Future.wait<dynamic>([
-        _service.fetchCollectorUsers(),
-        _service.fetchSettlements(),
-      ]);
-      if (!mounted) return false;
-      setState(() {
-        _collectorUsers = results[0] as List<AdminUser>;
-        _settlements = results[1] as List<AdminSettlementOption>;
-      });
-      return true;
-    } catch (e) {
-      if (!mounted) return false;
-      if (showErrors) showError(describeError(e));
-      return false;
-    } finally {
-      if (mounted) setState(() => _lookupsLoading = false);
-    }
-  }
-
-  Future<bool> _loadSettlements({bool showErrors = true}) async {
-    if (_lookupsLoading) return false;
-
-    setState(() => _lookupsLoading = true);
-    try {
-      final settlements = await _service.fetchSettlements();
-      if (!mounted) return false;
-      setState(() => _settlements = settlements);
-      return true;
-    } catch (e) {
-      if (!mounted) return false;
-      if (showErrors) showError(describeError(e));
-      return false;
-    } finally {
-      if (mounted) setState(() => _lookupsLoading = false);
-    }
-  }
-
   void _openActivityLogs(AdminCollectorProfile profile) {
     context.pushScreen(
       AdminUserActivityLogsScreen(
@@ -109,13 +60,10 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
   }
 
   Future<void> _openCreate() async {
-    final loaded = await _loadSettlements();
-    if (!mounted || !loaded) return;
-
     final draft = await showDialog<_CollectorCreateDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _CollectorCreateDialog(settlements: _settlements),
+      builder: (_) => const _CollectorCreateDialog(),
     );
     if (!mounted || draft == null) return;
 
@@ -127,7 +75,6 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
           phone: draft.phone,
           firstName: draft.firstName,
           lastName: draft.lastName,
-          assignedAreaId: draft.assignedAreaId,
         );
       },
       'Inkasant je dodan.',
@@ -136,55 +83,40 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
   }
 
   Future<void> _openEdit(AdminCollectorProfile collector) async {
-    final loaded = await _loadLookups();
-    if (!mounted || !loaded) return;
+    AdminCustomerProfile? existingProfile;
+    try {
+      existingProfile = await _service.fetchCustomerProfile(collector.userId);
+    } on AdminCollectorException catch (e) {
+      if (!mounted) return;
+      showError(e.message);
+    }
+    if (!mounted) return;
 
-    final users = _usersIncludingCollector(collector);
-    final draft = await showDialog<AdminCollectorProfileDraft>(
+    final draft = await showDialog<_CollectorEditDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _CollectorEditorDialog(
-        collector: collector,
-        users: users,
-        settlements: _settlements,
-      ),
+      builder: (_) => _CollectorEditorDialog(collector: collector),
     );
     if (!mounted || draft == null) return;
 
     await _runMutation(() async {
-      await _service.updateCollectorProfile(
-        collector.id,
-        draft.userId,
-        draft.assignedAreaId,
+      await _service.updateCollectorUserAndProfile(
+        collectorProfileId: collector.id,
+        userId: collector.userId,
+        email: draft.email,
+        phone: draft.phone,
+        isActive: draft.isActive,
+        password: draft.password,
+        firstName: draft.firstName,
+        lastName: draft.lastName,
+        existingProfileId: existingProfile?.id,
       );
     }, 'Profil inkasanta je sačuvan.');
   }
 
-  List<AdminUser> _usersIncludingCollector(AdminCollectorProfile collector) {
-    if (_collectorUsers.any((user) => user.id == collector.userId)) {
-      return _collectorUsers;
-    }
-
-    return [
-      AdminUser(
-        id: collector.userId,
-        email: collector.email,
-        phone: collector.phone,
-        userRoleId: 0,
-        userRole: 'Collector',
-        isActive: collector.isActive,
-        createdAt: null,
-        firstName: collector.firstName,
-        lastName: collector.lastName,
-      ),
-      ..._collectorUsers,
-    ];
-  }
-
-  // The shared `runMutation` doesn't support an optional page reset or a
-  // post-success lookups reload, both of which this screen's create/edit
-  // flows need - so mutations keep this local wrapper, reusing `mutating`/
-  // `load`/`showError`/`describeError` from the mixin.
+  // The shared `runMutation` doesn't support an optional page reset, which
+  // this screen's create flow needs - so mutations keep this local wrapper,
+  // reusing `mutating`/`load`/`showError`/`describeError` from the mixin.
   Future<void> _runMutation(
     Future<void> Function() action,
     String successMessage, {
@@ -198,7 +130,6 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
         context,
       ).showSnackBar(SnackBar(content: Text(successMessage)));
       await load(resetPage: resetPageAfterSuccess);
-      await _loadLookups(showErrors: false);
     } catch (e) {
       if (!mounted) return;
       showError(describeError(e));
@@ -226,25 +157,17 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
               title: 'Inkasanti',
               subtitle: 'Pregled i uređivanje profila inkasanata za terenski rad.',
               actions: [
-                RefreshButton(
-                  onRefresh: () async {
-                    await load();
-                    await _loadLookups();
-                  },
-                  enabled: !(mutating || _lookupsLoading),
-                ),
+                RefreshButton(onRefresh: load, enabled: !mutating),
                 const SizedBox(width: 8),
                 FilledButton.icon(
-                  onPressed: loading || mutating || _lookupsLoading
-                      ? null
-                      : _openCreate,
+                  onPressed: loading || mutating ? null : _openCreate,
                   icon: const Icon(Icons.add),
                   label: const Text('Dodaj inkasanta'),
                 ),
               ],
             ),
           ),
-          if ((loading && !isInitialLoad) || mutating || _lookupsLoading)
+          if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent()),
           if (!isInitialLoad && error == null)
@@ -306,7 +229,6 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
                       DataColumn(label: Text('Email')),
                       DataColumn(label: Text('Telefon')),
                       DataColumn(label: Text('Šifra inkasanta')),
-                      DataColumn(label: Text('Područje')),
                       DataColumn(label: Text('Status')),
                       DataColumn(label: Text('Akcije')),
                     ],
@@ -321,7 +243,6 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
                             DataCell(Text(_textOrDash(item.email))),
                             DataCell(Text(_textOrDash(item.phone))),
                             DataCell(Text(_textOrDash(item.employeeCode))),
-                            DataCell(Text(item.areaLabel)),
                             DataCell(_StatusPill(isActive: item.isActive)),
                             DataCell(
                               TableRowActions(
@@ -400,7 +321,6 @@ class _CollectorCreateDraft {
     required this.phone,
     required this.firstName,
     required this.lastName,
-    required this.assignedAreaId,
   });
 
   final String email;
@@ -408,13 +328,10 @@ class _CollectorCreateDraft {
   final String phone;
   final String firstName;
   final String lastName;
-  final int? assignedAreaId;
 }
 
 class _CollectorCreateDialog extends StatefulWidget {
-  const _CollectorCreateDialog({required this.settlements});
-
-  final List<AdminSettlementOption> settlements;
+  const _CollectorCreateDialog();
 
   @override
   State<_CollectorCreateDialog> createState() => _CollectorCreateDialogState();
@@ -427,8 +344,6 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
   final _passwordCtrl = TextEditingController();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
-
-  int? _assignedAreaId;
 
   @override
   void dispose() {
@@ -451,7 +366,6 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
         phone: _phoneCtrl.text.trim(),
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
-        assignedAreaId: _assignedAreaId,
       ),
     );
   }
@@ -524,28 +438,6 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
                     prefixIcon: Icon(Icons.lock_outline),
                   ),
                 ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<int>(
-                  initialValue: _assignedAreaId ?? 0,
-                  decoration: const InputDecoration(
-                    labelText: 'Područje dodjele',
-                    prefixIcon: Icon(Icons.map_outlined),
-                  ),
-                  items: [
-                    const DropdownMenuItem(
-                      value: 0,
-                      child: Text('Bez dodijeljenog područja'),
-                    ),
-                    for (final settlement in widget.settlements)
-                      DropdownMenuItem(
-                        value: settlement.id,
-                        child: Text(settlement.label),
-                      ),
-                  ],
-                  onChanged: (value) {
-                    setState(() => _assignedAreaId = value == 0 ? null : value);
-                  },
-                ),
               ],
             ),
           ),
@@ -607,16 +499,31 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
   }
 }
 
-class _CollectorEditorDialog extends StatefulWidget {
-  const _CollectorEditorDialog({
-    required this.users,
-    required this.settlements,
-    this.collector,
+/// Fields editable when saving an existing collector - mirrors the shape of
+/// the Korisnici screen's `AdminUserDraft`, but scoped to what a collector
+/// actually has (no address/language/theme).
+class _CollectorEditDraft {
+  const _CollectorEditDraft({
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+    required this.phone,
+    required this.isActive,
+    this.password,
   });
 
-  final List<AdminUser> users;
-  final List<AdminSettlementOption> settlements;
-  final AdminCollectorProfile? collector;
+  final String firstName;
+  final String lastName;
+  final String email;
+  final String phone;
+  final bool isActive;
+  final String? password;
+}
+
+class _CollectorEditorDialog extends StatefulWidget {
+  const _CollectorEditorDialog({required this.collector});
+
+  final AdminCollectorProfile collector;
 
   @override
   State<_CollectorEditorDialog> createState() => _CollectorEditorDialogState();
@@ -624,39 +531,50 @@ class _CollectorEditorDialog extends StatefulWidget {
 
 class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
 
-  int? _userId;
-  int? _assignedAreaId;
-
-  bool get _isEdit => widget.collector != null;
+  late bool _isActive;
 
   @override
   void initState() {
     super.initState();
 
     final collector = widget.collector;
-    final userIds = widget.users.map((user) => user.id).toSet();
-    final areaIds = widget.settlements
-        .map((settlement) => settlement.id)
-        .toSet();
+    _emailCtrl.text = collector.email;
+    _phoneCtrl.text = collector.phone;
+    _firstNameCtrl.text = collector.firstName;
+    _lastNameCtrl.text = collector.lastName;
+    _isActive = collector.isActive;
+  }
 
-    _userId = collector != null && userIds.contains(collector.userId)
-        ? collector.userId
-        : (widget.users.length == 1 ? widget.users.first.id : null);
-    _assignedAreaId =
-        collector != null && areaIds.contains(collector.assignedAreaId)
-        ? collector.assignedAreaId
-        : null;
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _passwordCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    super.dispose();
   }
 
   void _save() {
     final form = _formKey.currentState;
     if (form == null || !form.validate()) return;
 
+    final password = _passwordCtrl.text.trim();
+
     Navigator.of(context).pop(
-      AdminCollectorProfileDraft(
-        userId: _userId ?? 0,
-        assignedAreaId: _assignedAreaId,
+      _CollectorEditDraft(
+        firstName: _firstNameCtrl.text.trim(),
+        lastName: _lastNameCtrl.text.trim(),
+        email: _emailCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim(),
+        isActive: _isActive,
+        password: password.isEmpty ? null : password,
       ),
     );
   }
@@ -666,78 +584,101 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
     final collector = widget.collector;
 
     return AlertDialog(
-      title: Text(_isEdit ? 'Uredi profil inkasanta' : 'Dodaj inkasanta'),
+      title: const Text('Uredi profil inkasanta'),
       content: SizedBox(
-        width: math.min(520, MediaQuery.sizeOf(context).width - 48),
+        width: math.min(560, MediaQuery.sizeOf(context).width - 48),
+        height: math.min(560, MediaQuery.sizeOf(context).height - 120),
         child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(2, 10, 2, 4),
           child: Form(
             key: _formKey,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (collector == null) ...[
-                  const _GeneratedCodeInfo(),
-                  const SizedBox(height: 14),
-                ] else ...[
-                  TextFormField(
-                    key: ValueKey(collector.employeeCode),
-                    initialValue: collector.employeeCode,
-                    enabled: false,
-                    decoration: const InputDecoration(
-                      labelText: 'Šifra inkasanta',
-                      prefixIcon: Icon(Icons.badge_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-                DropdownButtonFormField<int>(
-                  initialValue: _userId ?? 0,
-                  decoration: const InputDecoration(
-                    labelText: 'Korisnik',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  items: [
-                    const DropdownMenuItem(
-                      value: 0,
-                      child: Text('Odaberite korisnika'),
-                    ),
-                    for (final user in widget.users)
-                      DropdownMenuItem(
-                        value: user.id,
-                        child: Text(_userLabel(user)),
+                const _CollectorFormSectionHeader('Profil'),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _firstNameCtrl,
+                        textInputAction: TextInputAction.next,
+                        validator: _requiredValidator,
+                        decoration: const InputDecoration(labelText: 'Ime'),
                       ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _lastNameCtrl,
+                        textInputAction: TextInputAction.next,
+                        validator: _requiredValidator,
+                        decoration: const InputDecoration(labelText: 'Prezime'),
+                      ),
+                    ),
                   ],
-                  validator: (value) =>
-                      value == null || value == 0 ? 'Obavezno polje.' : null,
-                  onChanged: (value) {
-                    if (value == null || value == 0) {
-                      setState(() => _userId = null);
-                      return;
-                    }
-                    setState(() => _userId = value);
-                  },
                 ),
                 const SizedBox(height: 14),
-                DropdownButtonFormField<int>(
-                  initialValue: _assignedAreaId ?? 0,
+                TextFormField(
+                  key: ValueKey(collector.employeeCode),
+                  initialValue: collector.employeeCode,
+                  enabled: false,
+                  style: const TextStyle(letterSpacing: 0.6),
                   decoration: const InputDecoration(
-                    labelText: 'Područje',
-                    prefixIcon: Icon(Icons.map_outlined),
+                    labelText: 'Šifra inkasanta (automatski dodijeljena)',
+                    prefixIcon: Icon(Icons.lock_outline),
                   ),
-                  items: [
-                    const DropdownMenuItem(
-                      value: 0,
-                      child: Text('Bez dodijeljenog područja'),
-                    ),
-                    for (final settlement in widget.settlements)
-                      DropdownMenuItem(
-                        value: settlement.id,
-                        child: Text(settlement.label),
+                ),
+                const SizedBox(height: 22),
+
+                const _CollectorFormSectionHeader('Kontakt'),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _emailCtrl,
+                        textInputAction: TextInputAction.next,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: _emailValidator,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
                       ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _phoneCtrl,
+                        textInputAction: TextInputAction.next,
+                        keyboardType: TextInputType.phone,
+                        validator: _phoneValidator,
+                        decoration: const InputDecoration(
+                          labelText: 'Telefon',
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
+                      ),
+                    ),
                   ],
-                  onChanged: (value) {
-                    setState(() => _assignedAreaId = value == 0 ? null : value);
-                  },
+                ),
+                const SizedBox(height: 22),
+
+                const _CollectorFormSectionHeader('Nalog'),
+                _CollectorStatusSwitchField(
+                  value: _isActive,
+                  onChanged: (value) => setState(() => _isActive = value),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _passwordCtrl,
+                  obscureText: true,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _save(),
+                  decoration: const InputDecoration(
+                    labelText: 'Nova lozinka (ostavi prazno da zadržiš postojeću)',
+                    prefixIcon: Icon(Icons.password_outlined),
+                  ),
                 ),
               ],
             ),
@@ -758,14 +699,94 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
     );
   }
 
-  String _userLabel(AdminUser user) {
-    final name = user.fullName.trim();
-    final primary = name.isEmpty ? user.email : name;
-    final secondary = name.isEmpty || user.email.isEmpty
-        ? ''
-        : ' - ${user.email}';
-    final status = user.isActive ? '' : ' (neaktivan)';
-    return '$primary$secondary$status';
+  String? _requiredValidator(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Obavezno polje.';
+    return null;
+  }
+
+  String? _emailValidator(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Obavezno polje.';
+    final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailPattern.hasMatch(text)) return 'Unesite ispravan email.';
+    return null;
+  }
+
+  String? _phoneValidator(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final phonePattern = RegExp(r'^[0-9+\-\s()]+$');
+    if (!phonePattern.hasMatch(text) ||
+        text.replaceAll(RegExp(r'[^0-9]'), '').length < 6) {
+      return 'Unesite ispravan broj telefona.';
+    }
+    return null;
+  }
+}
+
+/// Small uppercase label introducing a group of related fields - mirrors
+/// `_FormSectionHeader` on the Korisnici screen's editor dialog.
+class _CollectorFormSectionHeader extends StatelessWidget {
+  const _CollectorFormSectionHeader(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+          color: Color(0xFF64748B),
+        ),
+      ),
+    );
+  }
+}
+
+/// Mirrors `_StatusSwitchField` on the Korisnici screen's editor dialog.
+class _CollectorStatusSwitchField extends StatelessWidget {
+  const _CollectorStatusSwitchField({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.inputDecorationTheme.fillColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDCE6ED)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            value ? Icons.check_circle_outline : Icons.cancel_outlined,
+            color: value ? const Color(0xFF2E7D32) : const Color(0xFF64748B),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value ? 'Aktivan' : 'Neaktivan',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
+          Switch(value: value, onChanged: onChanged),
+        ],
+      ),
+    );
   }
 }
 

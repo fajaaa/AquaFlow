@@ -31,7 +31,6 @@ public class CollectorProfileService
     protected override async Task BeforeInsertAsync(CollectorProfileInsertRequest request)
     {
         await EnsureUserExistsAndIsCollectorAsync(request.UserId);
-        await EnsureAssignedAreaExistsAsync(request.AssignedAreaId);
         await EnsureUserDoesNotHaveCollectorProfileAsync(request.UserId);
 
         // EmployeeCode is never client-supplied; always assign a fresh generated one.
@@ -41,7 +40,6 @@ public class CollectorProfileService
     protected override async Task BeforeUpdateAsync(int id, CollectorProfileUpdateRequest request, CollectorProfile entity)
     {
         await EnsureUserExistsAndIsCollectorAsync(request.UserId);
-        await EnsureAssignedAreaExistsAsync(request.AssignedAreaId);
         await EnsureUserDoesNotHaveCollectorProfileAsync(request.UserId, id);
 
         // EmployeeCode is immutable once assigned; ignore whatever the caller sent.
@@ -58,24 +56,17 @@ public class CollectorProfileService
             await EnsureUserExistsAndIsCollectorAsync(request.UserId.Value);
             await EnsureUserDoesNotHaveCollectorProfileAsync(request.UserId.Value, id);
         }
-
-        if (request.AssignedAreaId.HasValue)
-        {
-            await EnsureAssignedAreaExistsAsync(request.AssignedAreaId.Value);
-        }
     }
 
     protected override IQueryable<CollectorProfile> IncludeForRead(IQueryable<CollectorProfile> query)
     {
         return query
-            .Include(profile => profile.AssignedArea)
             .Include(profile => profile.User)
             .ThenInclude(user => user!.CustomerProfile);
     }
 
     protected override async Task LoadReferencesAsync(CollectorProfile entity)
     {
-        await _dbContext.Entry(entity).Reference(profile => profile.AssignedArea).LoadAsync();
         await _dbContext.Entry(entity).Reference(profile => profile.User).LoadAsync();
         if (entity.User != null)
         {
@@ -112,19 +103,6 @@ public class CollectorProfileService
         if (!string.Equals(user.UserRole?.Name, CollectorRoleName, StringComparison.OrdinalIgnoreCase))
         {
             throw new ClientException($"User with id {userId} must have the Collector role.");
-        }
-    }
-
-    private async Task EnsureAssignedAreaExistsAsync(int? assignedAreaId)
-    {
-        if (!assignedAreaId.HasValue)
-        {
-            return;
-        }
-
-        if (!await _dbContext.Settlements.AnyAsync(settlement => settlement.Id == assignedAreaId.Value))
-        {
-            throw new ClientException($"Settlement with id {assignedAreaId.Value} was not found.");
         }
     }
 

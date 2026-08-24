@@ -167,6 +167,15 @@ class _AdminUserActivityLogsScreenState
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Only "Opis" grows with window width - the other three columns
+        // stay sized to their (short, fairly constant) content. 420 is a
+        // rough reservation for those columns plus DataTable's default
+        // column spacing/margins; the horizontal scroll fallback below
+        // covers any underestimate on narrow windows.
+        final descriptionWidth = (constraints.maxWidth - 56 - 420).clamp(
+          280.0,
+          900.0,
+        );
         return Scrollbar(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(28, 8, 28, 20),
@@ -185,6 +194,7 @@ class _AdminUserActivityLogsScreenState
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
+                    showCheckboxColumn: false,
                     dataRowMinHeight: 56,
                     dataRowMaxHeight: 72,
                     columns: const [
@@ -196,13 +206,15 @@ class _AdminUserActivityLogsScreenState
                     rows: [
                       for (final item in items)
                         DataRow(
+                          onSelectChanged: (_) =>
+                              _showActivityDetailsDialog(context, item),
                           cells: [
                             DataCell(
                               _EventTypePill(eventType: item.eventType),
                             ),
                             DataCell(
                               SizedBox(
-                                width: 320,
+                                width: descriptionWidth,
                                 child: Text(
                                   _valueOrDash(item.description),
                                   maxLines: 2,
@@ -226,6 +238,49 @@ class _AdminUserActivityLogsScreenState
   }
 
   bool get _hasFilters => _eventTypeFilter != null;
+
+  Future<void> _showActivityDetailsDialog(
+    BuildContext context,
+    AdminActivityLog item,
+  ) {
+    final labelStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+    );
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: _EventTypePill(eventType: item.eventType),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Opis', style: labelStyle),
+                const SizedBox(height: 4),
+                SelectableText(_valueOrDash(item.description)),
+                const SizedBox(height: 16),
+                Text('IP adresa', style: labelStyle),
+                const SizedBox(height: 4),
+                SelectableText(_valueOrDash(item.ipAddress)),
+                const SizedBox(height: 16),
+                Text('Vrijeme', style: labelStyle),
+                const SizedBox(height: 4),
+                Text(_formatDate(item.createdAt)),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Zatvori'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _EventTypePill extends StatelessWidget {
