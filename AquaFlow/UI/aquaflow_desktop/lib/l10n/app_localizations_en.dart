@@ -1292,4 +1292,87 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supportTicketStatusClosed => 'Closed';
+
+  @override
+  String get recommendationsAndAlertsGroupLabel => 'Recommendations & alerts';
+
+  @override
+  String get recommendationsNavLabel => 'Recommendations';
+
+  @override
+  String get recommendationsScreenSubtitle =>
+      'Review consumption-based recommendations and resolve them.';
+
+  @override
+  String get refreshRecommendationsButtonLabel => 'Refresh recommendations';
+
+  @override
+  String get recommendationsRecomputedSuccess => 'Recommendations refreshed.';
+
+  @override
+  String get recommendationsEmptyMessage => 'No recommendations.';
+
+  @override
+  String get markAsReadTooltip => 'Mark as read';
+
+  @override
+  String get recommendationMarkedReadSuccess =>
+      'Recommendation marked as read.';
+
+  @override
+  String get deleteRecommendationDialogTitle => 'Delete recommendation';
+
+  @override
+  String get deleteRecommendationDialogContent =>
+      'Are you sure you want to delete this recommendation?';
+
+  @override
+  String get recommendationDeletedSuccess => 'Recommendation deleted.';
+
+  @override
+  String get reasonColumnLabel => 'Reason';
+
+  @override
+  String get messageColumnLabel => 'Message';
+
+  @override
+  String get readStatusLabel => 'Read';
+
+  @override
+  String get unreadStatusLabel => 'Unread';
+
+  @override
+  String get consumptionAlertsNavLabel => 'Consumption alerts';
+
+  @override
+  String get consumptionAlertsScreenSubtitle =>
+      'Review water consumption anomaly alerts and resolve them.';
+
+  @override
+  String get checkAnomaliesButtonLabel => 'Check anomalies';
+
+  @override
+  String get consumptionAlertsRecomputedSuccess =>
+      'Consumption anomalies checked.';
+
+  @override
+  String get consumptionAlertsEmptyMessage => 'No consumption alerts.';
+
+  @override
+  String get markAsResolvedTooltip => 'Mark as resolved';
+
+  @override
+  String get alertMarkedResolvedSuccess => 'Alert marked as resolved.';
+
+  @override
+  String get measuredValueColumnLabel => 'Measured value';
+
+  @override
+  String get thresholdValueColumnLabel => 'Threshold value';
+
+  @override
+  String get resolvedStatusLabel => 'Resolved';
+
+  @override
+  String get unresolvedStatusLabel => 'Unresolved';
 }

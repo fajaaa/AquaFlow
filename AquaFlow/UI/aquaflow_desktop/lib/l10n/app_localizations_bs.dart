@@ -1287,4 +1287,88 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get supportTicketStatusClosed => 'Zatvoren';
+
+  @override
+  String get recommendationsAndAlertsGroupLabel => 'Preporuke i upozorenja';
+
+  @override
+  String get recommendationsNavLabel => 'Preporuke';
+
+  @override
+  String get recommendationsScreenSubtitle =>
+      'Pregled preporuka zasnovanih na potrošnji i njihovo rješavanje.';
+
+  @override
+  String get refreshRecommendationsButtonLabel => 'Osvježi preporuke';
+
+  @override
+  String get recommendationsRecomputedSuccess => 'Preporuke su osvježene.';
+
+  @override
+  String get recommendationsEmptyMessage => 'Nema preporuka.';
+
+  @override
+  String get markAsReadTooltip => 'Označi kao pročitano';
+
+  @override
+  String get recommendationMarkedReadSuccess =>
+      'Preporuka je označena kao pročitana.';
+
+  @override
+  String get deleteRecommendationDialogTitle => 'Obriši preporuku';
+
+  @override
+  String get deleteRecommendationDialogContent =>
+      'Da li ste sigurni da želite obrisati ovu preporuku?';
+
+  @override
+  String get recommendationDeletedSuccess => 'Preporuka je obrisana.';
+
+  @override
+  String get reasonColumnLabel => 'Razlog';
+
+  @override
+  String get messageColumnLabel => 'Poruka';
+
+  @override
+  String get readStatusLabel => 'Pročitano';
+
+  @override
+  String get unreadStatusLabel => 'Nepročitano';
+
+  @override
+  String get consumptionAlertsNavLabel => 'Upozorenja o potrošnji';
+
+  @override
+  String get consumptionAlertsScreenSubtitle =>
+      'Pregled upozorenja o neuobičajenoj potrošnji vode i njihovo rješavanje.';
+
+  @override
+  String get checkAnomaliesButtonLabel => 'Provjeri anomalije';
+
+  @override
+  String get consumptionAlertsRecomputedSuccess =>
+      'Anomalije potrošnje su provjerene.';
+
+  @override
+  String get consumptionAlertsEmptyMessage => 'Nema upozorenja o potrošnji.';
+
+  @override
+  String get markAsResolvedTooltip => 'Označi kao riješeno';
+
+  @override
+  String get alertMarkedResolvedSuccess =>
+      'Upozorenje je označeno kao riješeno.';
+
+  @override
+  String get measuredValueColumnLabel => 'Izmjerena vrijednost';
+
+  @override
+  String get thresholdValueColumnLabel => 'Granična vrijednost';
+
+  @override
+  String get resolvedStatusLabel => 'Riješeno';
+
+  @override
+  String get unresolvedStatusLabel => 'Neriješeno';
 }

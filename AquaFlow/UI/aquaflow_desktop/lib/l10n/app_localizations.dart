@@ -2443,6 +2443,162 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Zatvoren'**
   String get supportTicketStatusClosed;
+
+  /// Sidebar menu label for the 'Preporuke i upozorenja' category group, shown only when the caller can manage recommendations and/or consumption alerts.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preporuke i upozorenja'**
+  String get recommendationsAndAlertsGroupLabel;
+
+  /// Sidebar menu label for the recommendations management section.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preporuke'**
+  String get recommendationsNavLabel;
+
+  /// Subtitle on the 'Preporuke' screen header.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pregled preporuka zasnovanih na potrošnji i njihovo rješavanje.'**
+  String get recommendationsScreenSubtitle;
+
+  /// Button label on the 'Preporuke' screen that triggers recomputing recommendations.
+  ///
+  /// In bs, this message translates to:
+  /// **'Osvježi preporuke'**
+  String get refreshRecommendationsButtonLabel;
+
+  /// Snackbar message shown after recommendations are recomputed.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preporuke su osvježene.'**
+  String get recommendationsRecomputedSuccess;
+
+  /// Empty-state message on the 'Preporuke' screen when there are no rows.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema preporuka.'**
+  String get recommendationsEmptyMessage;
+
+  /// Tooltip for the row action that marks a recommendation as read.
+  ///
+  /// In bs, this message translates to:
+  /// **'Označi kao pročitano'**
+  String get markAsReadTooltip;
+
+  /// Snackbar message shown after a recommendation is marked as read.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preporuka je označena kao pročitana.'**
+  String get recommendationMarkedReadSuccess;
+
+  /// Title of the confirmation dialog shown before deleting a recommendation.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obriši preporuku'**
+  String get deleteRecommendationDialogTitle;
+
+  /// Content of the confirmation dialog shown before deleting a recommendation.
+  ///
+  /// In bs, this message translates to:
+  /// **'Da li ste sigurni da želite obrisati ovu preporuku?'**
+  String get deleteRecommendationDialogContent;
+
+  /// Snackbar message shown after a recommendation is deleted.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preporuka je obrisana.'**
+  String get recommendationDeletedSuccess;
+
+  /// Table column header for a recommendation's reason.
+  ///
+  /// In bs, this message translates to:
+  /// **'Razlog'**
+  String get reasonColumnLabel;
+
+  /// Table column header for a message (recommendation or consumption alert).
+  ///
+  /// In bs, this message translates to:
+  /// **'Poruka'**
+  String get messageColumnLabel;
+
+  /// Status pill label for a read recommendation.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pročitano'**
+  String get readStatusLabel;
+
+  /// Status pill label for an unread recommendation.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nepročitano'**
+  String get unreadStatusLabel;
+
+  /// Sidebar menu label for the water consumption alerts management section.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upozorenja o potrošnji'**
+  String get consumptionAlertsNavLabel;
+
+  /// Subtitle on the 'Upozorenja o potrošnji' screen header.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pregled upozorenja o neuobičajenoj potrošnji vode i njihovo rješavanje.'**
+  String get consumptionAlertsScreenSubtitle;
+
+  /// Button label on the 'Upozorenja o potrošnji' screen that triggers recomputing consumption alerts.
+  ///
+  /// In bs, this message translates to:
+  /// **'Provjeri anomalije'**
+  String get checkAnomaliesButtonLabel;
+
+  /// Snackbar message shown after consumption alerts are recomputed.
+  ///
+  /// In bs, this message translates to:
+  /// **'Anomalije potrošnje su provjerene.'**
+  String get consumptionAlertsRecomputedSuccess;
+
+  /// Empty-state message on the 'Upozorenja o potrošnji' screen when there are no rows.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema upozorenja o potrošnji.'**
+  String get consumptionAlertsEmptyMessage;
+
+  /// Tooltip for the row action that marks a consumption alert as resolved.
+  ///
+  /// In bs, this message translates to:
+  /// **'Označi kao riješeno'**
+  String get markAsResolvedTooltip;
+
+  /// Snackbar message shown after a consumption alert is marked as resolved.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upozorenje je označeno kao riješeno.'**
+  String get alertMarkedResolvedSuccess;
+
+  /// Table column header for a consumption alert's measured value.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izmjerena vrijednost'**
+  String get measuredValueColumnLabel;
+
+  /// Table column header for a consumption alert's threshold value.
+  ///
+  /// In bs, this message translates to:
+  /// **'Granična vrijednost'**
+  String get thresholdValueColumnLabel;
+
+  /// Status pill label for a resolved consumption alert.
+  ///
+  /// In bs, this message translates to:
+  /// **'Riješeno'**
+  String get resolvedStatusLabel;
+
+  /// Status pill label for an unresolved consumption alert.
+  ///
+  /// In bs, this message translates to:
+  /// **'Neriješeno'**
+  String get unresolvedStatusLabel;
 }
 
 class _AppLocalizationsDelegate

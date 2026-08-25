@@ -1774,5 +1774,111 @@
   "supportTicketStatusClosed": "Zatvoren",
   "@supportTicketStatusClosed": {
     "description": "Singular display label for a closed support ticket's status pill."
+  },
+
+  "recommendationsAndAlertsGroupLabel": "Preporuke i upozorenja",
+  "@recommendationsAndAlertsGroupLabel": {
+    "description": "Sidebar menu label for the 'Preporuke i upozorenja' category group, shown only when the caller can manage recommendations and/or consumption alerts."
+  },
+  "recommendationsNavLabel": "Preporuke",
+  "@recommendationsNavLabel": {
+    "description": "Sidebar menu label for the recommendations management section."
+  },
+  "recommendationsScreenSubtitle": "Pregled preporuka zasnovanih na potrošnji i njihovo rješavanje.",
+  "@recommendationsScreenSubtitle": {
+    "description": "Subtitle on the 'Preporuke' screen header."
+  },
+  "refreshRecommendationsButtonLabel": "Osvježi preporuke",
+  "@refreshRecommendationsButtonLabel": {
+    "description": "Button label on the 'Preporuke' screen that triggers recomputing recommendations."
+  },
+  "recommendationsRecomputedSuccess": "Preporuke su osvježene.",
+  "@recommendationsRecomputedSuccess": {
+    "description": "Snackbar message shown after recommendations are recomputed."
+  },
+  "recommendationsEmptyMessage": "Nema preporuka.",
+  "@recommendationsEmptyMessage": {
+    "description": "Empty-state message on the 'Preporuke' screen when there are no rows."
+  },
+  "markAsReadTooltip": "Označi kao pročitano",
+  "@markAsReadTooltip": {
+    "description": "Tooltip for the row action that marks a recommendation as read."
+  },
+  "recommendationMarkedReadSuccess": "Preporuka je označena kao pročitana.",
+  "@recommendationMarkedReadSuccess": {
+    "description": "Snackbar message shown after a recommendation is marked as read."
+  },
+  "deleteRecommendationDialogTitle": "Obriši preporuku",
+  "@deleteRecommendationDialogTitle": {
+    "description": "Title of the confirmation dialog shown before deleting a recommendation."
+  },
+  "deleteRecommendationDialogContent": "Da li ste sigurni da želite obrisati ovu preporuku?",
+  "@deleteRecommendationDialogContent": {
+    "description": "Content of the confirmation dialog shown before deleting a recommendation."
+  },
+  "recommendationDeletedSuccess": "Preporuka je obrisana.",
+  "@recommendationDeletedSuccess": {
+    "description": "Snackbar message shown after a recommendation is deleted."
+  },
+  "reasonColumnLabel": "Razlog",
+  "@reasonColumnLabel": {
+    "description": "Table column header for a recommendation's reason."
+  },
+  "messageColumnLabel": "Poruka",
+  "@messageColumnLabel": {
+    "description": "Table column header for a message (recommendation or consumption alert)."
+  },
+  "readStatusLabel": "Pročitano",
+  "@readStatusLabel": {
+    "description": "Status pill label for a read recommendation."
+  },
+  "unreadStatusLabel": "Nepročitano",
+  "@unreadStatusLabel": {
+    "description": "Status pill label for an unread recommendation."
+  },
+
+  "consumptionAlertsNavLabel": "Upozorenja o potrošnji",
+  "@consumptionAlertsNavLabel": {
+    "description": "Sidebar menu label for the water consumption alerts management section."
+  },
+  "consumptionAlertsScreenSubtitle": "Pregled upozorenja o neuobičajenoj potrošnji vode i njihovo rješavanje.",
+  "@consumptionAlertsScreenSubtitle": {
+    "description": "Subtitle on the 'Upozorenja o potrošnji' screen header."
+  },
+  "checkAnomaliesButtonLabel": "Provjeri anomalije",
+  "@checkAnomaliesButtonLabel": {
+    "description": "Button label on the 'Upozorenja o potrošnji' screen that triggers recomputing consumption alerts."
+  },
+  "consumptionAlertsRecomputedSuccess": "Anomalije potrošnje su provjerene.",
+  "@consumptionAlertsRecomputedSuccess": {
+    "description": "Snackbar message shown after consumption alerts are recomputed."
+  },
+  "consumptionAlertsEmptyMessage": "Nema upozorenja o potrošnji.",
+  "@consumptionAlertsEmptyMessage": {
+    "description": "Empty-state message on the 'Upozorenja o potrošnji' screen when there are no rows."
+  },
+  "markAsResolvedTooltip": "Označi kao riješeno",
+  "@markAsResolvedTooltip": {
+    "description": "Tooltip for the row action that marks a consumption alert as resolved."
+  },
+  "alertMarkedResolvedSuccess": "Upozorenje je označeno kao riješeno.",
+  "@alertMarkedResolvedSuccess": {
+    "description": "Snackbar message shown after a consumption alert is marked as resolved."
+  },
+  "measuredValueColumnLabel": "Izmjerena vrijednost",
+  "@measuredValueColumnLabel": {
+    "description": "Table column header for a consumption alert's measured value."
+  },
+  "thresholdValueColumnLabel": "Granična vrijednost",
+  "@thresholdValueColumnLabel": {
+    "description": "Table column header for a consumption alert's threshold value."
+  },
+  "resolvedStatusLabel": "Riješeno",
+  "@resolvedStatusLabel": {
+    "description": "Status pill label for a resolved consumption alert."
+  },
+  "unresolvedStatusLabel": "Neriješeno",
+  "@unresolvedStatusLabel": {
+    "description": "Status pill label for an unresolved consumption alert."
   }
 }

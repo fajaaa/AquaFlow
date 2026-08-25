@@ -7,10 +7,12 @@ import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/screens/admin_account_edit_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_codebook_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_collectors_screen.dart';
+import 'package:aquaflow_desktop/screens/admin_consumption_alerts_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_fault_reports_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_invoices_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_notifications_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_payments_screen.dart';
+import 'package:aquaflow_desktop/screens/admin_recommendations_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_support_tickets_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_tariffs_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_users_screen.dart';
@@ -39,7 +41,12 @@ import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 /// since it edits more than contact data here. The nav tree is built
 /// per-session (`_buildNavEntries`, not a static const list) because
 /// "Podrška" only appears for a caller holding `SupportTickets.Manage` - see
-/// [AdminSupportTicketsScreen]. Selection is tracked as a single flat index
+/// [AdminSupportTicketsScreen]. Same reasoning gates the whole "Preporuke i
+/// upozorenja" group behind `Recommendations.Manage`/`ConsumptionAlerts.Manage`
+/// (each of its two leaves independently, so a caller with only one
+/// permission still sees the group with just that leaf) - see
+/// [AdminRecommendationsScreen]/[AdminConsumptionAlertsScreen]. Selection is
+/// tracked as a single flat index
 /// into the tree's leaf items in display order (see `_flattenNavItems`), so
 /// existing per-session selection/clamping logic didn't need to change shape.
 class AdminDashboardScreen extends StatefulWidget {
@@ -106,6 +113,10 @@ List<_AdminNavEntry> _buildNavEntries(
 ) {
   final canManageSupportTickets =
       session?.hasPermission('SupportTickets.Manage') ?? false;
+  final canManageRecommendations =
+      session?.hasPermission('Recommendations.Manage') ?? false;
+  final canManageConsumptionAlerts =
+      session?.hasPermission('ConsumptionAlerts.Manage') ?? false;
 
   return [
     _AdminNavLeaf(
@@ -205,6 +216,27 @@ List<_AdminNavEntry> _buildNavEntries(
           ),
       ],
     ),
+    if (canManageRecommendations || canManageConsumptionAlerts)
+      _AdminNavGroup(
+        label: loc.recommendationsAndAlertsGroupLabel,
+        icon: Icons.insights_outlined,
+        items: [
+          if (canManageRecommendations)
+            _AdminNavItem(
+              icon: Icons.tips_and_updates_outlined,
+              selectedIcon: Icons.tips_and_updates,
+              label: loc.recommendationsNavLabel,
+              builder: (_) => const AdminRecommendationsScreen(),
+            ),
+          if (canManageConsumptionAlerts)
+            _AdminNavItem(
+              icon: Icons.warning_amber_outlined,
+              selectedIcon: Icons.warning_amber,
+              label: loc.consumptionAlertsNavLabel,
+              builder: (_) => const AdminConsumptionAlertsScreen(),
+            ),
+        ],
+      ),
     _AdminNavGroup(
       label: loc.systemGroupLabel,
       icon: Icons.settings_outlined,
