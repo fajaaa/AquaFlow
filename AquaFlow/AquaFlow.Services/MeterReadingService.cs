@@ -206,7 +206,7 @@ public class MeterReadingService
     // apart (see the callers in CreateForCollectorAsync), and reused below by GetLastCountingReadingAsync
     // so the collector app's own cooldown lookup agrees with what a new collector-entry would actually
     // accept. A reading stops counting once it is voided or its invoice was cancelled.
-    private static IQueryable<MeterReading> CountingReadings(IQueryable<MeterReading> readings)
+    internal static IQueryable<MeterReading> CountingReadings(IQueryable<MeterReading> readings)
         => readings.Where(reading => reading.VoidedAt == null
             && (reading.InvoiceId == null || reading.Invoice!.Status != InvoiceStatus.Cancelled));
 

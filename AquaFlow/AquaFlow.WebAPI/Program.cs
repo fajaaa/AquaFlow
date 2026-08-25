@@ -9,6 +9,7 @@ using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.FaultReportStateMachine;
+using AquaFlow.Services.Forecasting;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Payments;
 using AquaFlow.Services.Pdf;
@@ -195,6 +196,14 @@ mapperConfig.NewConfig<WaterMeter, WaterMeterResponse>()
     .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
     .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
     .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName);
+mapperConfig.NewConfig<Recommendation, RecommendationResponse>()
+    .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
+    .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
+    .Map(destination => destination.WaterMeterSerialNumber, source => source.WaterMeter == null ? string.Empty : source.WaterMeter.SerialNumber);
+mapperConfig.NewConfig<WaterConsumptionAlert, WaterConsumptionAlertResponse>()
+    .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
+    .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
+    .Map(destination => destination.WaterMeterSerialNumber, source => source.WaterMeter == null ? string.Empty : source.WaterMeter.SerialNumber);
 mapperConfig.NewConfig<WaterMeterRequest, WaterMeterRequestResponse>()
     .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
     .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
@@ -272,6 +281,18 @@ AddPatchMapping<MeterReadingPatchRequest, MeterReading>();
 builder.Services.AddScoped<IMeterReadingService, MeterReadingService>();
 builder.Services.AddScoped<IBaseCRUDService<MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IMeterReadingService>());
+builder.Services.AddScoped<IConsumptionForecastingService, ConsumptionForecastingService>();
+// Recommendation/WaterConsumptionAlert are registered by hand (not AddCrud<>) because RecomputeAsync
+// is an extra action beyond the generic EfCrudService; the generic IBaseCRUDService alias still
+// resolves to the same service instance, same pattern as WaterMeter/MeterReading above.
+AddPatchMapping<RecommendationPatchRequest, Recommendation>();
+builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+builder.Services.AddScoped<IBaseCRUDService<RecommendationResponse, RecommendationSearchObject, RecommendationInsertRequest, RecommendationUpdateRequest, RecommendationPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IRecommendationService>());
+AddPatchMapping<WaterConsumptionAlertPatchRequest, WaterConsumptionAlert>();
+builder.Services.AddScoped<IWaterConsumptionAlertService, WaterConsumptionAlertService>();
+builder.Services.AddScoped<IBaseCRUDService<WaterConsumptionAlertResponse, WaterConsumptionAlertSearchObject, WaterConsumptionAlertInsertRequest, WaterConsumptionAlertUpdateRequest, WaterConsumptionAlertPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IWaterConsumptionAlertService>());
 AddPatchMapping<TariffPatchRequest, Tariff>();
 builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>, TariffService>();
 // Payments:Provider selects which IPaymentProvider is registered (today only "Manual" exists);
