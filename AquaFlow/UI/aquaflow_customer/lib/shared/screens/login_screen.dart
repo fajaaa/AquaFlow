@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/locale_provider.dart';
 import '../theme/app_theme.dart';
 
 /// Email + password login form, pushed on top of [WelcomeScreen]. On success
@@ -73,7 +74,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final isBusy = context.select<AuthProvider, bool>((a) => a.isBusy);
 
     return Scaffold(
-      body: Container(
+      body: Stack(
+        children: [
+          Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -276,6 +279,46 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+          const Positioned(
+            top: 8,
+            right: 8,
+            child: SafeArea(child: _LanguageToggle()),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small BS/EN switch, independent of any account/login state and with no
+/// backend call - the only way to change language before authenticating.
+/// Nothing here persists: a fresh app launch defaults back to
+/// [LocaleProvider]'s own `Locale('bs')` until a logged-in user's
+/// `UserPreference.Language` is fetched in `AuthProvider.bootstrap()`.
+class _LanguageToggle extends StatelessWidget {
+  const _LanguageToggle();
+
+  @override
+  Widget build(BuildContext context) {
+    final languageCode = context.watch<LocaleProvider>().locale.languageCode;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: SegmentedButton<String>(
+        style: SegmentedButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+        ),
+        segments: const [
+          ButtonSegment(value: 'bs', label: Text('BS')),
+          ButtonSegment(value: 'en', label: Text('EN')),
+        ],
+        selected: {languageCode},
+        onSelectionChanged: (selection) =>
+            context.read<LocaleProvider>().setLanguageCode(selection.first),
       ),
     );
   }

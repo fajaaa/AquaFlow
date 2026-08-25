@@ -5,6 +5,7 @@ import '../models/account_details.dart';
 import '../models/customer_profile.dart';
 import '../models/user_preferences.dart';
 import '../providers/auth_provider.dart';
+import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/account_exception.dart';
 import '../services/account_service.dart';
@@ -164,6 +165,37 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Tema nije sačuvana: ${e.message}'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  /// Applies [code] ('bs'/'en') to the shared [LocaleProvider] immediately,
+  /// then persists it via `PUT /Account/preferences` in the background. On
+  /// save failure the app language stays changed (better than reverting under
+  /// the user), but a snackbar reports that the choice wasn't saved.
+  Future<void> _setLanguage(String code) async {
+    final current = _preferences ??
+        const UserPreferences(
+          theme: 'light',
+          language: 'bs',
+          receiveEmailNotifications: true,
+          receivePushNotifications: true,
+        );
+    final updated = current.copyWith(language: code);
+
+    setState(() => _preferences = updated);
+    context.read<LocaleProvider>().setLanguageCode(code);
+
+    try {
+      final saved = await _preferencesService.updatePreferences(updated);
+      if (mounted) setState(() => _preferences = saved);
+    } on PreferencesException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Jezik nije sačuvan: ${e.message}'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -333,6 +365,18 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
                       selected: {_preferences?.isDarkTheme ?? false},
                       onSelectionChanged: (selection) =>
                           _setTheme(selection.first),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'bs', label: Text('Bosanski')),
+                        ButtonSegment(value: 'en', label: Text('English')),
+                      ],
+                      selected: {_preferences?.language ?? 'bs'},
+                      onSelectionChanged: (selection) =>
+                          _setLanguage(selection.first),
                     ),
                   ),
                   const SizedBox(height: 8),

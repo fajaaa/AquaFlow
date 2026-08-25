@@ -1,0 +1,23 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "AquaFlow",
+
+  "commonSave": "Save",
+  "commonCancel": "Cancel",
+  "commonDelete": "Delete",
+  "commonEdit": "Edit",
+  "commonRefresh": "Refresh",
+  "commonSearch": "Search",
+  "commonRetry": "Try again",
+
+  "stateLoading": "Loading...",
+  "errorGeneric": "Error",
+  "emptyGeneric": "No data",
+  "emptyList": "Empty list",
+
+  "paginationPrevious": "Previous page",
+  "paginationNext": "Next page",
+  "paginationPageOf": "Page {page} of {totalPages}",
+  "paginationTotalCount": "{count} total"
+}

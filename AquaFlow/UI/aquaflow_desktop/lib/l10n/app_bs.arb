@@ -1,0 +1,84 @@
+{
+  "@@locale": "bs",
+
+  "appTitle": "AquaFlow",
+  "@appTitle": {
+    "description": "The application name, shown in the OS task switcher and window title."
+  },
+
+  "commonSave": "Sačuvaj",
+  "@commonSave": {
+    "description": "Generic save action button label."
+  },
+  "commonCancel": "Otkaži",
+  "@commonCancel": {
+    "description": "Generic cancel action button label."
+  },
+  "commonDelete": "Obriši",
+  "@commonDelete": {
+    "description": "Generic delete action button label."
+  },
+  "commonEdit": "Uredi",
+  "@commonEdit": {
+    "description": "Generic edit action button label."
+  },
+  "commonRefresh": "Osvježi",
+  "@commonRefresh": {
+    "description": "Generic refresh action button label."
+  },
+  "commonSearch": "Pretraga",
+  "@commonSearch": {
+    "description": "Generic search field label/placeholder."
+  },
+  "commonRetry": "Pokušaj ponovo",
+  "@commonRetry": {
+    "description": "Retry button label shown by ErrorRetry."
+  },
+
+  "stateLoading": "Učitavanje...",
+  "@stateLoading": {
+    "description": "Generic loading indicator caption."
+  },
+  "errorGeneric": "Greška",
+  "@errorGeneric": {
+    "description": "Generic error state heading."
+  },
+  "emptyGeneric": "Nema podataka",
+  "@emptyGeneric": {
+    "description": "Generic empty-state message used by EmptyStateView."
+  },
+  "emptyList": "Prazna lista",
+  "@emptyList": {
+    "description": "Generic empty-list message, alternate phrasing of emptyGeneric for list-shaped content."
+  },
+
+  "paginationPrevious": "Prethodna stranica",
+  "@paginationPrevious": {
+    "description": "Tooltip for the previous-page button in PagedTablePaginationBar."
+  },
+  "paginationNext": "Sljedeća stranica",
+  "@paginationNext": {
+    "description": "Tooltip for the next-page button in PagedTablePaginationBar."
+  },
+  "paginationPageOf": "Stranica {page} od {totalPages}",
+  "@paginationPageOf": {
+    "description": "Current page summary in PagedTablePaginationBar.",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      }
+    }
+  },
+  "paginationTotalCount": "{count} ukupno",
+  "@paginationTotalCount": {
+    "description": "Total row count summary in PagedTablePaginationBar.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+}

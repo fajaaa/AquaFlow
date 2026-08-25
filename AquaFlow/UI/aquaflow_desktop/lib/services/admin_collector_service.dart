@@ -177,7 +177,6 @@ class AdminCollectorService {
     final profile = AdminCustomerProfileDraft(
       firstName: firstName,
       lastName: lastName,
-      defaultLanguage: 'bs',
       theme: 'light',
     );
     if (existingProfileId != null) {
@@ -278,7 +277,6 @@ class AdminCollectorService {
     String? firstName,
     String? lastName,
     bool isActive = true,
-    String defaultLanguage = 'bs',
     String theme = 'light',
   }) async {
     final first = firstName?.trim() ?? '';
@@ -308,7 +306,6 @@ class AdminCollectorService {
         AdminCustomerProfileDraft(
           firstName: first,
           lastName: last,
-          defaultLanguage: defaultLanguage,
           theme: theme,
         ),
       );

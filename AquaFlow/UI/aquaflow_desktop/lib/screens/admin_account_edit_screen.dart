@@ -5,6 +5,7 @@ import 'package:aquaflow_desktop/services/admin_account_service.dart';
 import 'package:aquaflow_desktop/shared/models/account_details.dart';
 import 'package:aquaflow_desktop/shared/models/user_preferences.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
+import 'package:aquaflow_desktop/shared/providers/locale_provider.dart';
 import 'package:aquaflow_desktop/shared/providers/theme_provider.dart';
 import 'package:aquaflow_desktop/shared/services/account_exception.dart';
 import 'package:aquaflow_desktop/shared/services/account_service.dart';
@@ -150,6 +151,37 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Tema nije sačuvana: ${e.message}'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  /// Applies [code] ('bs'/'en') to the shared [LocaleProvider] immediately,
+  /// then persists it via `PUT /Account/preferences` in the background. On
+  /// save failure the app language stays changed (better than reverting under
+  /// the admin), but a snackbar reports that the choice wasn't saved.
+  Future<void> _setLanguage(String code) async {
+    final current = _preferences ??
+        const UserPreferences(
+          theme: 'light',
+          language: 'bs',
+          receiveEmailNotifications: true,
+          receivePushNotifications: true,
+        );
+    final updated = current.copyWith(language: code);
+
+    setState(() => _preferences = updated);
+    context.read<LocaleProvider>().setLanguageCode(code);
+
+    try {
+      final saved = await _preferencesService.updatePreferences(updated);
+      if (mounted) setState(() => _preferences = saved);
+    } on PreferencesException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Jezik nije sačuvan: ${e.message}'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -320,6 +352,15 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                     ],
                     selected: {_preferences?.isDarkTheme ?? false},
                     onSelectionChanged: (selection) => _setTheme(selection.first),
+                  ),
+                  const SizedBox(height: 14),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'bs', label: Text('Bosanski')),
+                      ButtonSegment(value: 'en', label: Text('English')),
+                    ],
+                    selected: {_preferences?.language ?? 'bs'},
+                    onSelectionChanged: (selection) => _setLanguage(selection.first),
                   ),
                   const SizedBox(height: 22),
 

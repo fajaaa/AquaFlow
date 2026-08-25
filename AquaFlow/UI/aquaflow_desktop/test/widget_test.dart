@@ -6,13 +6,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
+import 'package:aquaflow_desktop/shared/providers/locale_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/login_screen.dart';
 
 void main() {
   testWidgets('login form validates required fields', (tester) async {
     await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => AuthProvider(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => LocaleProvider()),
+        ],
         child: const MaterialApp(home: LoginScreen()),
       ),
     );

@@ -703,7 +703,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   final _houseNumberCtrl = TextEditingController();
 
   late bool _isActive;
-  late String _defaultLanguage;
   late String _theme;
   int? _selectedCityId;
   int? _selectedMunicipalityId;
@@ -745,7 +744,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
       _firstNameCtrl.text = user?.firstName ?? '';
       _lastNameCtrl.text = user?.lastName ?? '';
     }
-    _defaultLanguage = profile?.defaultLanguage ?? 'bs';
     _theme = profile?.theme ?? 'light';
     _streetCtrl.text = profile?.street ?? '';
     _houseNumberCtrl.text = profile?.houseNumber ?? '';
@@ -832,7 +830,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
             ? AdminCustomerProfileDraft(
                 firstName: _firstNameCtrl.text.trim(),
                 lastName: _lastNameCtrl.text.trim(),
-                defaultLanguage: _defaultLanguage,
                 theme: _theme,
                 settlementId: _selectedSettlementId,
                 street: street.isEmpty ? null : street,
@@ -910,42 +907,17 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                 ],
                 if (widget.mode.usesCustomerProfile) ...[
                   const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _defaultLanguage,
-                          decoration: const InputDecoration(labelText: 'Jezik'),
-                          items: const [
-                            DropdownMenuItem(
-                                value: 'bs', child: Text('Bosanski')),
-                            DropdownMenuItem(
-                                value: 'en', child: Text('Engleski')),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() => _defaultLanguage = value);
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _theme,
-                          decoration: const InputDecoration(labelText: 'Tema'),
-                          items: const [
-                            DropdownMenuItem(
-                                value: 'light', child: Text('Svijetla')),
-                            DropdownMenuItem(
-                                value: 'dark', child: Text('Tamna')),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() => _theme = value);
-                          },
-                        ),
-                      ),
+                  DropdownButtonFormField<String>(
+                    initialValue: _theme,
+                    decoration: const InputDecoration(labelText: 'Tema'),
+                    items: const [
+                      DropdownMenuItem(value: 'light', child: Text('Svijetla')),
+                      DropdownMenuItem(value: 'dark', child: Text('Tamna')),
                     ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _theme = value);
+                    },
                   ),
                 ],
                 const SizedBox(height: 22),

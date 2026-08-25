@@ -4,7 +4,9 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_customer/app/role_gate.dart';
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/shared/providers/auth_provider.dart';
+import 'package:aquaflow_customer/shared/providers/locale_provider.dart';
 import 'package:aquaflow_customer/shared/providers/notification_badge_provider.dart';
 import 'package:aquaflow_customer/shared/providers/theme_provider.dart';
 import 'package:aquaflow_customer/shared/screens/welcome_screen.dart';
@@ -27,6 +29,11 @@ final _notificationBadgeProvider = NotificationBadgeProvider();
 /// be passed into [AuthProvider], which applies the signed-in user's
 /// `UserPreference.Theme` to it after login/session restore.
 final _themeProvider = ThemeProvider();
+
+/// Created here (not inside [AquaFlowApp]'s `build`) so the same instance can
+/// be passed into [AuthProvider], which applies the signed-in user's
+/// `UserPreference.Language` to it after login/session restore.
+final _localeProvider = LocaleProvider();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,7 +70,10 @@ class AquaFlowApp extends StatelessWidget {
       providers: [
         // Restore any saved session as soon as the provider is created.
         ChangeNotifierProvider(
-          create: (_) => AuthProvider(themeProvider: _themeProvider)..bootstrap(),
+          create: (_) => AuthProvider(
+            themeProvider: _themeProvider,
+            localeProvider: _localeProvider,
+          )..bootstrap(),
         ),
         // Shared instance (not `create`) so PushMessageHandler's onMessage
         // callback in `main()`, which runs outside the widget tree, bumps the
@@ -71,11 +81,15 @@ class AquaFlowApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: _notificationBadgeProvider),
         // Shared instance (not `create`) - see the comment on [_themeProvider].
         ChangeNotifierProvider.value(value: _themeProvider),
+        ChangeNotifierProvider.value(value: _localeProvider),
       ],
       child: Builder(
         builder: (context) {
           final themeMode = context.select<ThemeProvider, ThemeMode>(
             (p) => p.themeMode,
+          );
+          final locale = context.select<LocaleProvider, Locale>(
+            (p) => p.locale,
           );
           return MaterialApp(
             navigatorKey: _navigatorKey,
@@ -84,6 +98,9 @@ class AquaFlowApp extends StatelessWidget {
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: themeMode,
+            locale: locale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: const _AuthGate(),
           );
         },

@@ -8,7 +8,6 @@ class AdminCustomerProfile {
     required this.firstName,
     required this.lastName,
     required this.customerCode,
-    required this.defaultLanguage,
     required this.theme,
     required this.settlementId,
     required this.settlementName,
@@ -21,7 +20,6 @@ class AdminCustomerProfile {
   final String firstName;
   final String lastName;
   final String customerCode;
-  final String defaultLanguage;
   final String theme;
   final int? settlementId;
   final String settlementName;
@@ -44,7 +42,6 @@ class AdminCustomerProfile {
       firstName: (json['firstName'] ?? '') as String,
       lastName: (json['lastName'] ?? '') as String,
       customerCode: (json['customerCode'] ?? '') as String,
-      defaultLanguage: (json['defaultLanguage'] ?? 'bs') as String,
       theme: (json['theme'] ?? 'light') as String,
       settlementId: (json['settlementId'] as num?)?.toInt(),
       settlementName: (json['settlementName'] ?? '') as String,
