@@ -13,13 +13,16 @@ using Xunit;
 
 namespace AquaFlow.WebAPI.Tests.Invoices;
 
-// Exercises only InvoicesController's ownership pinning around POST {id}/checkout - the checkout
-// business rules themselves (Status/RemainingAmount preconditions, idempotent Pending reuse, the
-// server-computed amount) live in InvoiceService and are covered by
+// Exercises InvoicesController's ownership pinning around POST {id}/checkout and GET {id}/pdf - the
+// checkout business rules themselves (Status/RemainingAmount preconditions, idempotent Pending reuse,
+// the server-computed amount) live in InvoiceService and are covered by
 // AquaFlow.Services.Tests/InvoiceCheckoutTests instead, same layering as every other controller in
-// this project (see the AquaFlow.WebAPI.Tests remarks in AGENTS.md).
+// this project (see the AquaFlow.WebAPI.Tests remarks in AGENTS.md). Likewise, GetPdf's actual PDF
+// rendering is covered by AquaFlow.Services.Tests/Pdf/InvoicePdfServiceTests - FakeInvoicePdfService
+// here only stands in for it so this file can assert the controller's own ownership check.
 public class InvoicesControllerTests
 {
+    private const string ReadPermission = "Invoices.Read";
     private const string PayPermission = "Invoices.Pay";
     private const string ManagePermission = "Invoices.Manage";
     private const string CustomerRole = "Customer";
@@ -156,6 +159,118 @@ public class InvoicesControllerTests
         Assert.IsType<UnauthorizedResult>(context.Result);
     }
 
+    [Fact]
+    public void GetPdf_RequiresInvoicesReadOrManagePermission()
+    {
+        var method = typeof(InvoicesController)
+            .GetMethods()
+            .Single(m => m.Name == nameof(InvoicesController.GetPdf) && m.DeclaringType == typeof(InvoicesController));
+
+        var attribute = method
+            .GetCustomAttributes(typeof(RequirePermissionAttribute), inherit: false)
+            .Cast<RequirePermissionAttribute>()
+            .SingleOrDefault();
+
+        Assert.NotNull(attribute);
+        var codes = Assert.IsType<string[]>(attribute!.Arguments![0]);
+        Assert.Contains(ReadPermission, codes);
+        Assert.Contains(ManagePermission, codes);
+    }
+
+    [Fact]
+    public async Task GetPdf_OwnInvoice_ReturnsPdfFile()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 1, role: CustomerRole),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
+            invoices: [new InvoiceResponse { Id = 1, CustomerId = 10, InvoiceNumber = "INV-2026-0001", Status = "Issued" }],
+            checkoutResponse: null,
+            out _);
+
+        var result = await controller.GetPdf(1);
+
+        var file = Assert.IsType<FileContentResult>(result);
+        Assert.Equal("application/pdf", file.ContentType);
+        Assert.Equal("INV-2026-0001.pdf", file.FileDownloadName);
+    }
+
+    // A Manage holder (Admin) may download any invoice's PDF, same pass-through as GetById/GetAll.
+    [Fact]
+    public async Task GetPdf_ManageHolder_CanDownloadAnyInvoice()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 99, role: AdminRole, permissions: [ManagePermission]),
+            profiles: [],
+            invoices: [new InvoiceResponse { Id = 1, CustomerId = 20, InvoiceNumber = "INV-2026-0001", Status = "Issued" }],
+            checkoutResponse: null,
+            out _);
+
+        var result = await controller.GetPdf(1);
+
+        var file = Assert.IsType<FileContentResult>(result);
+        Assert.Equal("application/pdf", file.ContentType);
+    }
+
+    [Fact]
+    public async Task GetPdf_OtherCustomersInvoice_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 1, role: CustomerRole),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
+            invoices: [new InvoiceResponse { Id = 1, CustomerId = 20, InvoiceNumber = "INV-2026-0001", Status = "Issued" }],
+            checkoutResponse: null,
+            out _);
+
+        var result = await controller.GetPdf(1);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetPdf_CustomerWithoutProfile_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 1, role: CustomerRole),
+            profiles: [],
+            invoices: [new InvoiceResponse { Id = 1, CustomerId = 10, InvoiceNumber = "INV-2026-0001", Status = "Issued" }],
+            checkoutResponse: null,
+            out _);
+
+        var result = await controller.GetPdf(1);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetPdf_MissingInvoice_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 1, role: CustomerRole),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
+            invoices: [],
+            checkoutResponse: null,
+            out _);
+
+        var result = await controller.GetPdf(999);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetPdf_MissingIdClaim_ReturnsUnauthorized()
+    {
+        var controller = CreateController(
+            BuildUser(userId: null, role: CustomerRole),
+            profiles: [],
+            invoices: [new InvoiceResponse { Id = 1, CustomerId = 10, InvoiceNumber = "INV-2026-0001", Status = "Issued" }],
+            checkoutResponse: null,
+            out _);
+
+        var result = await controller.GetPdf(1);
+
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
     private static AuthorizationFilterContext AuthorizeCheckout(ClaimsPrincipal user)
     {
         var attribute = typeof(InvoicesController)
@@ -192,7 +307,8 @@ public class InvoicesControllerTests
     {
         fakeInvoiceService = new FakeInvoiceService(invoices) { CheckoutResponse = checkoutResponse };
         var profileService = new FakeCustomerProfileCrudService(profiles);
-        return new InvoicesController(fakeInvoiceService, profileService)
+        var pdfService = new FakeInvoicePdfService(invoices.Select(invoice => invoice.Id));
+        return new InvoicesController(fakeInvoiceService, profileService, pdfService)
         {
             ControllerContext = new ControllerContext
             {

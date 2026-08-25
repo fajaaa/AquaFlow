@@ -10,6 +10,7 @@ using AquaFlow.Services.Database;
 using AquaFlow.Services.FaultReportStateMachine;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Payments;
+using AquaFlow.Services.Pdf;
 using AquaFlow.Services.Validators;
 using AquaFlow.Services.WaterMeterRequestStateMachine;
 using AquaFlow.WebAPI.Filters;
@@ -32,6 +33,11 @@ using Scalar.AspNetCore;
 // double-underscore convention IConfiguration already reads ConnectionStrings__DefaultConnection
 // through. Must run before WebApplication.CreateBuilder(args) so those variables are visible to it.
 DotNetEnv.Env.Load();
+
+// QuestPDF (used by InvoicePdfService) throws at generation time unless a license type is set
+// explicitly. Community is free only below $1M annual revenue for the company/individual using it -
+// TODO: revisit this if AquaFlow ever crosses that threshold.
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -299,6 +305,14 @@ builder.Services.AddKeyedScoped<BaseInvoiceState, IssuedInvoiceState>(InvoiceSta
 builder.Services.AddKeyedScoped<BaseInvoiceState, PaidInvoiceState>(InvoiceStatus.Paid);
 builder.Services.AddKeyedScoped<BaseInvoiceState, CancelledInvoiceState>(InvoiceStatus.Cancelled);
 builder.Services.AddScoped<IInvoiceStateResolver, InvoiceStateResolver>();
+// InvoicePdfService is independent of the state machine above - it only reads an Invoice (plus
+// CompanySettings) to render a PDF, never mutates one. The typed HttpClient is for the optional
+// CompanySettings.LogoUrl download in the PDF header; a short timeout keeps a slow/unreachable logo
+// host from stalling the whole request (the service falls back to a text-only header on any failure).
+builder.Services.AddHttpClient<IInvoicePdfService, InvoicePdfService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
 // WaterMeterRequest mirrors the Invoice registration above: the state machine service is
 // registered by hand, the generic IBaseCRUDService alias resolves to the same instance, and each
 // request state is a keyed scoped BaseWaterMeterRequestState (status string as key) that
