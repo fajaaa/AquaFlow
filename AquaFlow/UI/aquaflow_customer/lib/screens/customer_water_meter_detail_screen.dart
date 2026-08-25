@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_invoice.dart';
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
 import 'package:aquaflow_customer/models/customer_water_meter_stats.dart';
@@ -91,8 +92,9 @@ class _CustomerWaterMeterDetailScreenState
     final meter = widget.meter;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final loc = AppLocalizations.of(context);
 
-    final meta = WaterMeterStatusMeta.of(meter.status);
+    final meta = WaterMeterStatusMeta.of(meter.status, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     final onAccent =
         ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
@@ -189,7 +191,7 @@ class _CustomerWaterMeterDetailScreenState
                               ),
                               onPressed: _openInvoices,
                               icon: const Icon(Icons.receipt_long_outlined),
-                              label: const Text('Prikaži račune'),
+                              label: Text(loc.showInvoicesButton),
                             ),
                           ),
                         ],
@@ -225,42 +227,43 @@ class _MeterInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Podaci o vodomjeru',
+            loc.meterInfoSectionHeading,
             icon: Icons.info_outline,
             color: accent,
           ),
           const SizedBox(height: 10),
           _KeyValueRow(
-            label: 'Naselje',
+            label: loc.locationSettlementLabel,
             value: meter.settlementName.trim().isEmpty
                 ? '-'
                 : meter.settlementName,
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Adresa',
+            label: loc.addressLabel,
             value: meter.address.isEmpty ? '-' : meter.address,
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Datum ugradnje',
+            label: loc.installedAtLabel,
             value: meter.installedAt != null
                 ? _formatDate(meter.installedAt!)
                 : '-',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Početno očitanje',
+            label: loc.initialReadingLabel,
             value: '${meter.initialReading.toStringAsFixed(2)} m³',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Zadnje očitanje',
+            label: loc.lastReadingFieldLabel,
             value: '${meter.lastReading.toStringAsFixed(2)} m³',
           ),
         ],
@@ -277,6 +280,7 @@ class _StatsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final hasUnpaid = stats.unpaidCount > 0;
     final period =
         stats.lastBillingPeriodFrom != null && stats.lastBillingPeriodTo != null
@@ -288,36 +292,40 @@ class _StatsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Statistika',
+            loc.statisticsSectionHeading,
             icon: Icons.insights_outlined,
             color: accent,
           ),
           const SizedBox(height: 10),
           _KeyValueRow(
-            label: 'Zadnje očitanje (m³)',
+            label: loc.lastReadingM3Label,
             value: '${stats.lastReading.toStringAsFixed(2)} m³',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Prosječna potrošnja po obračunskom periodu (m³)',
+            label: loc.averageConsumptionLabel,
             value: '${stats.averageConsumptionM3.toStringAsFixed(2)} m³',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Ukupno potrošeno (m³)',
-            value:
-                '${stats.totalConsumptionM3.toStringAsFixed(2)} m³ (${stats.invoiceCount} računa)',
+            label: loc.totalConsumptionLabel,
+            value: loc.totalConsumptionValue(
+              stats.totalConsumptionM3.toStringAsFixed(2),
+              stats.invoiceCount,
+            ),
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Neplaćeno',
-            value:
-                '${stats.unpaidCount} računa / ${formatMoney(stats.unpaidAmount)} KM',
+            label: loc.unpaidLabel,
+            value: loc.unpaidValue(
+              stats.unpaidCount,
+              formatMoney(stats.unpaidAmount),
+            ),
             valueColor: hasUnpaid ? AppColors.warning : null,
             emphasize: hasUnpaid,
           ),
           const SizedBox(height: 6),
-          _KeyValueRow(label: 'Zadnji obračunski period', value: period),
+          _KeyValueRow(label: loc.lastBillingPeriodLabel, value: period),
         ],
       ),
     );
@@ -351,6 +359,7 @@ class _ConsumptionChartCardState extends State<_ConsumptionChartCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final items = widget.stats.recentForChart;
     final maxConsumption = items.fold<double>(
       0,
@@ -363,7 +372,7 @@ class _ConsumptionChartCardState extends State<_ConsumptionChartCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Potrošnja po periodima',
+            loc.consumptionByPeriodHeading,
             icon: Icons.bar_chart_outlined,
             color: widget.accent,
           ),
@@ -382,7 +391,7 @@ class _ConsumptionChartCardState extends State<_ConsumptionChartCard> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Nema podataka o potrošnji.',
+                      loc.noConsumptionDataMessage,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,

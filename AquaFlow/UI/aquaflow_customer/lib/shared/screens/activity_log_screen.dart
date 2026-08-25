@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
+
 import '../models/activity_log_item.dart';
 import '../models/activity_log_page.dart';
 import '../providers/auth_provider.dart';
@@ -39,7 +41,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     if (session == null) {
       setState(() {
         _loading = false;
-        _error = 'Niste prijavljeni.';
+        _error = AppLocalizations.of(context).notLoggedInError;
       });
       return;
     }
@@ -115,7 +117,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Moje aktivnosti'),
+        title: Text(AppLocalizations.of(context).accountActivityLogTitle),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -158,9 +160,9 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
           padding: const EdgeInsets.all(24),
           children: [
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-            const EmptyStateView(
+            EmptyStateView(
               icon: Icons.history_toggle_off,
-              message: 'Nema zabilježenih aktivnosti.',
+              message: AppLocalizations.of(context).activityLogEmptyMessage,
             ),
           ],
         ),
@@ -188,6 +190,7 @@ class _ActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final accent = _typeColor(item.eventType, theme.colorScheme);
     final description = item.description?.trim();
 
@@ -217,7 +220,7 @@ class _ActivityCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _typeLabel(item.eventType),
+                    _typeLabel(item.eventType, loc),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -310,30 +313,30 @@ class _ActivityCard extends StatelessWidget {
     }
   }
 
-  static String _typeLabel(String type) {
+  static String _typeLabel(String type, AppLocalizations loc) {
     switch (type) {
       case 'LoginSuccess':
-        return 'Uspješna prijava';
+        return loc.activityTypeLoginSuccess;
       case 'LoginFailed':
-        return 'Neuspješna prijava';
+        return loc.activityTypeLoginFailed;
       case 'TokenRefreshed':
-        return 'Obnova sesije';
+        return loc.activityTypeTokenRefreshed;
       case 'Registered':
-        return 'Registracija';
+        return loc.registerTitle;
       case 'PasswordChanged':
-        return 'Promjena lozinke';
+        return loc.activityTypePasswordChanged;
       case 'AccountUpdated':
-        return 'Izmjena naloga';
+        return loc.activityTypeAccountUpdated;
       case 'UserRoleChanged':
-        return 'Promjena role';
+        return loc.activityTypeUserRoleChanged;
       case 'UserActivated':
-        return 'Korisnik aktiviran';
+        return loc.activityTypeUserActivated;
       case 'UserDeactivated':
-        return 'Korisnik deaktiviran';
+        return loc.activityTypeUserDeactivated;
       case 'UserDeleted':
-        return 'Korisnik obrisan';
+        return loc.activityTypeUserDeleted;
       default:
-        return type.isEmpty ? 'Aktivnost' : type;
+        return type.isEmpty ? loc.activityTypeGenericLabel : type;
     }
   }
 

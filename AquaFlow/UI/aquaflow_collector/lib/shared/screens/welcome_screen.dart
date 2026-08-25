@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
+
 import '../navigation/app_navigation.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
@@ -13,6 +15,7 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -49,10 +52,10 @@ class WelcomeScreen extends StatelessWidget {
                         'assets/images/logo.png',
                         height: 56,
                         fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => const Text(
-                          'AquaFlow',
+                        errorBuilder: (context, error, stackTrace) => Text(
+                          loc.appTitle,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -62,20 +65,20 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    const Text(
-                      'Svaka kap, evidentirana.',
+                    Text(
+                      loc.welcomeTagline,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 26,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Mali koraci u štednji vode prave velike valove promjena.',
+                    Text(
+                      loc.welcomeSubtitle,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white70,
                         fontStyle: FontStyle.italic,
                         fontSize: 14,
@@ -92,11 +95,12 @@ class WelcomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Prijavi se'),
+                      child: Text(loc.authLoginButton),
                     ),
                     const SizedBox(height: 12),
                     FilledButton(
-                      onPressed: () => context.pushScreen(const RegisterScreen()),
+                      onPressed: () =>
+                          context.pushScreen(const RegisterScreen()),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: AppColors.primary,
@@ -105,7 +109,7 @@ class WelcomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Registruj se'),
+                      child: Text(loc.authRegisterButton),
                     ),
                   ],
                 ),

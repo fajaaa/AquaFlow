@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_invoice.dart';
 import 'package:aquaflow_customer/models/customer_invoice_page.dart';
 import 'package:aquaflow_customer/screens/customer_invoice_detail_screen.dart';
@@ -130,6 +131,7 @@ class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen> {
   Widget build(BuildContext context) {
     final pageData = _pageData;
     final serial = widget.meterSerialNumber;
+    final loc = AppLocalizations.of(context);
 
     // Docked below the list rather than as its last scrollable item, so it
     // stays visible and reachable at the bottom of the screen on every
@@ -149,7 +151,9 @@ class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(serial != null ? 'Računi - $serial' : 'Računi'),
+        title: Text(
+          serial != null ? loc.invoicesTitleForMeter(serial) : loc.invoicesTitle,
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -196,8 +200,8 @@ class _CustomerInvoicesScreenState extends State<CustomerInvoicesScreen> {
                 EmptyStateView(
                   icon: Icons.receipt_long_outlined,
                   message: widget.waterMeterId != null
-                      ? 'Za ovaj vodomjer još nema izdatih računa.'
-                      : 'Nemate izdatih računa.',
+                      ? AppLocalizations.of(context).invoicesEmptyForMeterMessage
+                      : AppLocalizations.of(context).invoicesEmptyMessage,
                 ),
               ],
             ),

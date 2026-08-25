@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_fault_report.dart';
 import 'package:aquaflow_customer/models/customer_fault_report_page.dart';
 import 'package:aquaflow_customer/screens/customer_fault_report_detail_screen.dart';
@@ -99,7 +100,9 @@ class _CustomerFaultReportsScreenState
     final created = await showNewFaultReportDialog(context);
     if (created == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prijava kvara je poslana.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).faultReportSubmitSuccess),
+        ),
       );
       await _load(resetPage: true);
     }
@@ -120,6 +123,7 @@ class _CustomerFaultReportsScreenState
   @override
   Widget build(BuildContext context) {
     final pageData = _pageData;
+    final loc = AppLocalizations.of(context);
     // Docked below the list rather than as its last scrollable item, so it
     // stays visible at the bottom of the tab regardless of scroll position
     // or how many reports there are.
@@ -144,14 +148,14 @@ class _CustomerFaultReportsScreenState
               children: [
                 Expanded(
                   child: Text(
-                    'Prijave kvarova',
+                    loc.tabFaultReports,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Nova prijava',
+                  tooltip: loc.newFaultReportTooltip,
                   onPressed: _loading ? null : _openNewReportDialog,
                   icon: const Icon(Icons.add),
                 ),
@@ -188,9 +192,9 @@ class _CustomerFaultReportsScreenState
               padding: const EdgeInsets.all(24),
               children: [
                 SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-                const EmptyStateView(
+                EmptyStateView(
                   icon: Icons.report_problem_outlined,
-                  message: 'Nemate poslanih prijava kvarova.',
+                  message: AppLocalizations.of(context).faultReportsEmptyMessage,
                 ),
               ],
             ),
@@ -252,8 +256,9 @@ class _ReportCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
+    final loc = AppLocalizations.of(context);
 
-    final meta = _StatusMeta.of(report.status);
+    final meta = _StatusMeta.of(report.status, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     // A New report hasn't been picked up yet - same "needs attention" role
     // `!isRead` plays for a notification card / `isInactive` for a meter card.
@@ -448,31 +453,31 @@ class _StatusMeta {
   final IconData icon;
   final Color color;
 
-  static _StatusMeta of(String status) {
+  static _StatusMeta of(String status, AppLocalizations loc) {
     switch (status.toLowerCase()) {
       case 'new':
-        return const _StatusMeta(
-          'Nova',
+        return _StatusMeta(
+          loc.faultReportStatusNew,
           Icons.fiber_new_outlined,
-          Color(0xFFB45309),
+          const Color(0xFFB45309),
         );
       case 'assigned':
-        return const _StatusMeta(
-          'Dodijeljena',
+        return _StatusMeta(
+          loc.faultReportStatusAssigned,
           Icons.assignment_ind_outlined,
-          Color(0xFF6D28D9),
+          const Color(0xFF6D28D9),
         );
       case 'inprogress':
-        return const _StatusMeta(
-          'U toku',
+        return _StatusMeta(
+          loc.faultReportStatusInProgress,
           Icons.engineering_outlined,
-          Color(0xFF1D4ED8),
+          const Color(0xFF1D4ED8),
         );
       case 'resolved':
-        return const _StatusMeta(
-          'Riješena',
+        return _StatusMeta(
+          loc.faultReportStatusResolved,
           Icons.check_circle_outline,
-          Color(0xFF2E7D32),
+          const Color(0xFF2E7D32),
         );
       default:
         return _StatusMeta(status, Icons.help_outline, const Color(0xFF64748B));

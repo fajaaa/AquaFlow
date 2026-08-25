@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart' as stripe;
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_invoice.dart';
 import 'package:aquaflow_customer/models/customer_payment.dart';
 import 'package:aquaflow_customer/screens/customer_invoices_screen.dart';
@@ -87,8 +88,9 @@ class _CustomerInvoiceDetailScreenState
     final invoice = _invoice;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final loc = AppLocalizations.of(context);
 
-    final meta = InvoiceStatusMeta.of(invoice.status);
+    final meta = InvoiceStatusMeta.of(invoice.status, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     final onAccent =
         ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
@@ -100,7 +102,7 @@ class _CustomerInvoiceDetailScreenState
         title: Text(invoice.invoiceNumber),
         actions: [
           IconButton(
-            tooltip: 'Svi računi',
+            tooltip: loc.allInvoicesTooltip,
             icon: const Icon(Icons.receipt_long_outlined),
             onPressed: () =>
                 context.pushScreen(const CustomerInvoicesScreen()),
@@ -137,7 +139,7 @@ class _CustomerInvoiceDetailScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'STATUS RAČUNA',
+                          loc.invoiceStatusFieldLabel.toUpperCase(),
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
@@ -186,7 +188,7 @@ class _CustomerInvoiceDetailScreenState
                                   ),
                                 )
                               : const Icon(Icons.payment_outlined),
-                          label: const Text('Plati'),
+                          label: Text(loc.payButton),
                         ),
                       ),
                     ],
@@ -219,22 +221,22 @@ class _CustomerInvoiceDetailScreenState
   // _refreshInvoiceWithRetry polls for the Paid status for a few seconds
   // instead of assuming it landed immediately.
   Future<void> _payInvoice(CustomerInvoice invoice) async {
+    final loc = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Potvrda plaćanja'),
+        title: Text(loc.paymentConfirmTitle),
         content: Text(
-          'Da li ste sigurni da želite platiti '
-          '${_formatMoney(invoice.remainingAmount)} BAM?',
+          loc.paymentConfirmMessage(_formatMoney(invoice.remainingAmount)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Otkaži'),
+            child: Text(loc.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Plati'),
+            child: Text(loc.payButton),
           ),
         ],
       ),
@@ -266,8 +268,11 @@ class _CustomerInvoiceDetailScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Plaćanje pokrenuto: $amount ${session.currency} '
-              '(status: ${_statusLabel(session.status)}).',
+              loc.paymentStartedMessage(
+                amount,
+                session.currency,
+                _statusLabel(session.status, loc),
+              ),
             ),
           ),
         );
@@ -302,26 +307,25 @@ class _CustomerInvoiceDetailScreenState
       await stripe.Stripe.instance.presentPaymentSheet();
 
       if (!mounted) return true;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Plaćanje u obradi.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).paymentProcessingMessage)),
+      );
       return true;
     } on stripe.StripeException catch (e) {
       if (!mounted) return false;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(_stripeErrorMessage(e))));
+      ).showSnackBar(SnackBar(content: Text(_stripeErrorMessage(e, context))));
       return false;
     }
   }
 
-  String _stripeErrorMessage(stripe.StripeException e) {
+  String _stripeErrorMessage(stripe.StripeException e, BuildContext context) {
+    final loc = AppLocalizations.of(context);
     if (e.error.code == stripe.FailureCode.Canceled) {
-      return 'Plaćanje je otkazano.';
+      return loc.paymentCancelledMessage;
     }
-    return e.error.localizedMessage ??
-        e.error.message ??
-        'Plaćanje nije uspjelo.';
+    return e.error.localizedMessage ?? e.error.message ?? loc.paymentFailedMessage;
   }
 
   Future<void> _refreshInvoice() async {
@@ -357,14 +361,14 @@ class _CustomerInvoiceDetailScreenState
     }
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(String status, AppLocalizations loc) {
     switch (status.toLowerCase()) {
       case 'pending':
-        return 'Na čekanju';
+        return loc.requestStatusPending;
       case 'completed':
-        return 'Završeno';
+        return loc.paymentStatusCompleted;
       case 'failed':
-        return 'Neuspješno';
+        return loc.paymentStatusFailed;
       default:
         return status;
     }
@@ -421,34 +425,35 @@ class _ReadingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Očitanja',
+            loc.readingsSectionHeading,
             icon: Icons.speed_outlined,
             color: accent,
           ),
           const SizedBox(height: 10),
           _KeyValueRow(
-            label: 'Period',
+            label: loc.periodLabel,
             value:
                 '${_formatDate(invoice.billingPeriodFrom)} - ${_formatDate(invoice.billingPeriodTo)}',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Prethodno očitanje',
+            label: loc.previousReadingLabel,
             value: '${_formatMoney(invoice.previousReading)} m³',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Novo očitanje',
+            label: loc.currentReadingLabel,
             value: '${_formatMoney(invoice.currentReading)} m³',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Potrošnja',
+            label: loc.consumptionLabel,
             value: '${_formatMoney(invoice.consumptionM3)} m³',
           ),
         ],
@@ -465,23 +470,24 @@ class _AmountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Iznos',
+            loc.amountSectionHeading,
             icon: Icons.payments_outlined,
             color: accent,
           ),
           const SizedBox(height: 10),
           _KeyValueRow(
-            label: 'Osnovica',
+            label: loc.subtotalLabel,
             value: '${_formatMoney(invoice.subtotal)} BAM',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Ukupno',
+            label: loc.totalLabel,
             value: '${_formatMoney(invoice.totalAmount)} BAM',
             emphasize: true,
           ),
@@ -507,12 +513,13 @@ class _PaymentsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Uplate',
+            loc.paymentsSectionHeading,
             icon: Icons.receipt_long_outlined,
             color: accent,
           ),
@@ -521,7 +528,7 @@ class _PaymentsCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                'Nema evidentiranih uplata.',
+                loc.paymentsEmptyMessage,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -538,12 +545,12 @@ class _PaymentsCard extends StatelessWidget {
             ),
           const Divider(height: 24),
           _KeyValueRow(
-            label: 'Plaćeno ukupno',
+            label: loc.totalPaidLabel,
             value: '${_formatMoney(totalPaid)} BAM',
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Preostalo za platiti',
+            label: loc.remainingToPayLabel,
             value: '${_formatMoney(remaining < 0 ? 0 : remaining)} BAM',
             emphasize: true,
           ),
@@ -712,7 +719,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

@@ -33,6 +33,18 @@ class AppLocalizationsBs extends AppLocalizations {
   String get commonRetry => 'Pokušaj ponovo';
 
   @override
+  String get commonSend => 'Pošalji';
+
+  @override
+  String get commonAddPhoto => 'Dodaj sliku';
+
+  @override
+  String get commonTakePhoto => 'Slikaj';
+
+  @override
+  String get commonChooseFromGallery => 'Iz galerije';
+
+  @override
   String get stateLoading => 'Učitavanje...';
 
   @override
@@ -293,4 +305,427 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get supportSubtitle => 'Vaši tiketi i poruke podršci';
+
+  @override
+  String get notLoggedInError => 'Niste prijavljeni.';
+
+  @override
+  String get notificationsMarkAllReadTooltip => 'Označi sve kao pročitano';
+
+  @override
+  String get notificationTypeFieldLabel => 'Tip obavijesti';
+
+  @override
+  String get notificationsAllTypesOption => 'Svi tipovi';
+
+  @override
+  String get notificationTypeInfoLabel => 'Info';
+
+  @override
+  String get notificationTypePlannedWorksLabel => 'Planirani radovi';
+
+  @override
+  String get notificationTypeWarningLabel => 'Upozorenje';
+
+  @override
+  String get notificationTypeGenericLabel => 'Obavijest';
+
+  @override
+  String notificationFallbackTitle(int id) {
+    return 'Obavijest #$id';
+  }
+
+  @override
+  String get notificationsEmptyMessage => 'Nema obavijesti.';
+
+  @override
+  String get notificationsEmptyFilteredMessage =>
+      'Nema obavijesti za odabrani tip.';
+
+  @override
+  String get notificationDetailTitle => 'Detalji obavijesti';
+
+  @override
+  String get notificationDetailDescriptionHeading => 'Opis';
+
+  @override
+  String get notificationDetailEmptyBody => 'Nema dodatnog sadržaja.';
+
+  @override
+  String get notificationDetailDetailsHeading => 'Detalji';
+
+  @override
+  String get notificationDetailCreatedAtLabel => 'Datum kreiranja';
+
+  @override
+  String notificationDetailImagesHeading(int count) {
+    return 'Slike ($count)';
+  }
+
+  @override
+  String get notificationStatusRead => 'Pročitano';
+
+  @override
+  String get notificationStatusUnread => 'Novo';
+
+  @override
+  String get activityLogEmptyMessage => 'Nema zabilježenih aktivnosti.';
+
+  @override
+  String get activityTypeLoginSuccess => 'Uspješna prijava';
+
+  @override
+  String get activityTypeLoginFailed => 'Neuspješna prijava';
+
+  @override
+  String get activityTypeTokenRefreshed => 'Obnova sesije';
+
+  @override
+  String get activityTypePasswordChanged => 'Promjena lozinke';
+
+  @override
+  String get activityTypeAccountUpdated => 'Izmjena naloga';
+
+  @override
+  String get activityTypeUserRoleChanged => 'Promjena role';
+
+  @override
+  String get activityTypeUserActivated => 'Korisnik aktiviran';
+
+  @override
+  String get activityTypeUserDeactivated => 'Korisnik deaktiviran';
+
+  @override
+  String get activityTypeUserDeleted => 'Korisnik obrisan';
+
+  @override
+  String get activityTypeGenericLabel => 'Aktivnost';
+
+  @override
+  String get dialogDismissButton => 'Odustani';
+
+  @override
+  String get addWaterMeterTooltip => 'Dodaj vodomjer';
+
+  @override
+  String get waterMetersEmptyMessage =>
+      'Trenutno nemate evidentiranih vodomjera.';
+
+  @override
+  String lastReadingLabel(String value) {
+    return 'Zadnje očitanje: $value m³';
+  }
+
+  @override
+  String get newWaterMeterRequestSuccess =>
+      'Zahtjev za novi vodomjer je poslan.';
+
+  @override
+  String get requestsTitle => 'Zahtjevi';
+
+  @override
+  String get newRequestTooltip => 'Novi zahtjev';
+
+  @override
+  String get cancelRequestConfirmTitle => 'Otkazati zahtjev?';
+
+  @override
+  String cancelRequestConfirmMessage(int id) {
+    return 'Zahtjev za novi vodomjer #$id će biti otkazan.';
+  }
+
+  @override
+  String get cancelRequestButton => 'Otkaži zahtjev';
+
+  @override
+  String get cancelRequestSuccess => 'Zahtjev je otkazan.';
+
+  @override
+  String requestCardTitle(int id) {
+    return 'Zahtjev #$id';
+  }
+
+  @override
+  String get requestsEmptyMessage => 'Nemate poslanih zahtjeva za vodomjer.';
+
+  @override
+  String get newWaterMeterRequestTitle => 'Zahtjev za novi vodomjer';
+
+  @override
+  String get newWaterMeterRequestSubmitButton => 'Pošalji zahtjev';
+
+  @override
+  String get newWaterMeterRequestNoteLabel => 'Napomena (opciono)';
+
+  @override
+  String get settlementRequiredError => 'Odaberite naselje.';
+
+  @override
+  String get showInvoicesButton => 'Prikaži račune';
+
+  @override
+  String get meterInfoSectionHeading => 'Podaci o vodomjeru';
+
+  @override
+  String get addressLabel => 'Adresa';
+
+  @override
+  String get installedAtLabel => 'Datum ugradnje';
+
+  @override
+  String get initialReadingLabel => 'Početno očitanje';
+
+  @override
+  String get lastReadingFieldLabel => 'Zadnje očitanje';
+
+  @override
+  String get lastReadingM3Label => 'Zadnje očitanje (m³)';
+
+  @override
+  String get statisticsSectionHeading => 'Statistika';
+
+  @override
+  String get averageConsumptionLabel =>
+      'Prosječna potrošnja po obračunskom periodu (m³)';
+
+  @override
+  String get totalConsumptionLabel => 'Ukupno potrošeno (m³)';
+
+  @override
+  String totalConsumptionValue(String m3, int invoiceCount) {
+    return '$m3 m³ ($invoiceCount računa)';
+  }
+
+  @override
+  String get unpaidLabel => 'Neplaćeno';
+
+  @override
+  String unpaidValue(int count, String amount) {
+    return '$count računa / $amount KM';
+  }
+
+  @override
+  String get lastBillingPeriodLabel => 'Zadnji obračunski period';
+
+  @override
+  String get consumptionByPeriodHeading => 'Potrošnja po periodima';
+
+  @override
+  String get noConsumptionDataMessage => 'Nema podataka o potrošnji.';
+
+  @override
+  String get waterMeterStatusActive => 'Aktivan';
+
+  @override
+  String get waterMeterStatusInactive => 'Neaktivan';
+
+  @override
+  String get waterMeterStatusRemoved => 'Uklonjen';
+
+  @override
+  String get requestStatusPending => 'Na čekanju';
+
+  @override
+  String get requestStatusAssigned => 'Dodijeljen';
+
+  @override
+  String get requestStatusRegistered => 'Registrovan';
+
+  @override
+  String get requestStatusRejected => 'Odbijen';
+
+  @override
+  String get requestStatusCancelled => 'Otkazan';
+
+  @override
+  String get invoicesTitle => 'Računi';
+
+  @override
+  String invoicesTitleForMeter(String serial) {
+    return 'Računi - $serial';
+  }
+
+  @override
+  String get invoicesEmptyMessage => 'Nemate izdatih računa.';
+
+  @override
+  String get invoicesEmptyForMeterMessage =>
+      'Za ovaj vodomjer još nema izdatih računa.';
+
+  @override
+  String invoiceRemainingAmountLabel(String amount) {
+    return 'Preostalo: $amount KM';
+  }
+
+  @override
+  String get invoiceStatusIssued => 'Izdat';
+
+  @override
+  String get invoiceStatusPaid => 'Plaćen';
+
+  @override
+  String get invoiceStatusCancelled => 'Storniran';
+
+  @override
+  String get allInvoicesTooltip => 'Svi računi';
+
+  @override
+  String get invoiceStatusFieldLabel => 'Status računa';
+
+  @override
+  String get payButton => 'Plati';
+
+  @override
+  String get paymentConfirmTitle => 'Potvrda plaćanja';
+
+  @override
+  String paymentConfirmMessage(String amount) {
+    return 'Da li ste sigurni da želite platiti $amount BAM?';
+  }
+
+  @override
+  String paymentStartedMessage(
+    String amount,
+    String currency,
+    String statusLabel,
+  ) {
+    return 'Plaćanje pokrenuto: $amount $currency (status: $statusLabel).';
+  }
+
+  @override
+  String get paymentProcessingMessage => 'Plaćanje u obradi.';
+
+  @override
+  String get paymentCancelledMessage => 'Plaćanje je otkazano.';
+
+  @override
+  String get paymentFailedMessage => 'Plaćanje nije uspjelo.';
+
+  @override
+  String get paymentStatusCompleted => 'Završeno';
+
+  @override
+  String get paymentStatusFailed => 'Neuspješno';
+
+  @override
+  String get readingsSectionHeading => 'Očitanja';
+
+  @override
+  String get periodLabel => 'Period';
+
+  @override
+  String get previousReadingLabel => 'Prethodno očitanje';
+
+  @override
+  String get currentReadingLabel => 'Novo očitanje';
+
+  @override
+  String get consumptionLabel => 'Potrošnja';
+
+  @override
+  String get amountSectionHeading => 'Iznos';
+
+  @override
+  String get subtotalLabel => 'Osnovica';
+
+  @override
+  String get totalLabel => 'Ukupno';
+
+  @override
+  String get paymentsSectionHeading => 'Uplate';
+
+  @override
+  String get paymentsEmptyMessage => 'Nema evidentiranih uplata.';
+
+  @override
+  String get totalPaidLabel => 'Plaćeno ukupno';
+
+  @override
+  String get remainingToPayLabel => 'Preostalo za platiti';
+
+  @override
+  String get faultReportSubmitSuccess => 'Prijava kvara je poslana.';
+
+  @override
+  String get newFaultReportTooltip => 'Nova prijava';
+
+  @override
+  String get faultReportsEmptyMessage => 'Nemate poslanih prijava kvarova.';
+
+  @override
+  String get faultReportStatusNew => 'Nova';
+
+  @override
+  String get faultReportStatusAssigned => 'Dodijeljena';
+
+  @override
+  String get faultReportStatusInProgress => 'U toku';
+
+  @override
+  String get faultReportStatusResolved => 'Riješena';
+
+  @override
+  String get faultReportStatusFieldLabel => 'Status prijave';
+
+  @override
+  String get photosSectionHeading => 'Fotografije';
+
+  @override
+  String get noPhotosMessage => 'Nema priloženih fotografija.';
+
+  @override
+  String get faultReportInfoSectionHeading => 'Podaci o prijavi';
+
+  @override
+  String get reportedAtLabel => 'Prijavljeno';
+
+  @override
+  String get resolvedAtLabel => 'Riješeno';
+
+  @override
+  String get supportTicketStatusOpen => 'Otvoren';
+
+  @override
+  String get supportTicketStatusClosed => 'Zatvoren';
+
+  @override
+  String get newSupportTicketTooltip => 'Novi tiket';
+
+  @override
+  String get supportTicketCreateSuccess => 'Tiket je kreiran.';
+
+  @override
+  String get supportTicketsEmptyTitle => 'Nemate otvorenih tiketa.';
+
+  @override
+  String get supportTicketsEmptySubtitle =>
+      'Otvorite novi tiket da kontaktirate podršku.';
+
+  @override
+  String supportTicketLastMessageLabel(String date) {
+    return 'Zadnja poruka: $date';
+  }
+
+  @override
+  String get supportTicketReplyHint => 'Napišite poruku...';
+
+  @override
+  String get supportTicketReplyRequiredError => 'Unesite tekst poruke.';
+
+  @override
+  String get supportTicketDefaultTitle => 'Tiket';
+
+  @override
+  String get supportTicketNoMessages => 'Nema poruka.';
+
+  @override
+  String supportTicketOpenedAtLabel(String date) {
+    return 'Otvoren: $date';
+  }
+
+  @override
+  String get supportTicketYouLabel => 'Vi';
+
+  @override
+  String get supportTicketClosedBanner => 'Tiket je zatvoren';
 }

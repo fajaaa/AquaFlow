@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_invoice.dart';
 import 'package:aquaflow_customer/shared/theme/app_theme.dart';
 import 'package:aquaflow_customer/shared/utils/money_format.dart';
@@ -28,8 +29,9 @@ class InvoiceSummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
+    final loc = AppLocalizations.of(context);
 
-    final meta = InvoiceStatusMeta.of(invoice.status);
+    final meta = InvoiceStatusMeta.of(invoice.status, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     // Issued (still unpaid) is the invoice's "needs attention" state, same
     // role `!isRead` plays for a notification card.
@@ -177,7 +179,9 @@ class InvoiceSummaryCard extends StatelessWidget {
                             ),
                             Text(
                               invoice.isPayable
-                                  ? 'Preostalo: ${formatMoney(invoice.remainingAmount)} KM'
+                                  ? loc.invoiceRemainingAmountLabel(
+                                      formatMoney(invoice.remainingAmount),
+                                    )
                                   : '${formatMoney(invoice.totalAmount)} KM',
                               style: TextStyle(
                                 fontSize: 10.5,

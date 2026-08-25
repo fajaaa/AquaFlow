@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
+
 import '../models/account_details.dart';
 import '../models/customer_profile.dart';
 import '../models/user_preferences.dart';
@@ -143,7 +145,8 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
   /// failure the app theme stays changed (better than reverting under the
   /// user), but a snackbar reports that the choice wasn't saved.
   Future<void> _setTheme(bool isDark) async {
-    final current = _preferences ??
+    final current =
+        _preferences ??
         const UserPreferences(
           theme: 'light',
           language: 'bs',
@@ -153,9 +156,9 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
     final updated = current.copyWith(theme: isDark ? 'dark' : 'light');
 
     setState(() => _preferences = updated);
-    context
-        .read<ThemeProvider>()
-        .setThemeMode(isDark ? ThemeMode.dark : ThemeMode.light);
+    context.read<ThemeProvider>().setThemeMode(
+      isDark ? ThemeMode.dark : ThemeMode.light,
+    );
 
     try {
       final saved = await _preferencesService.updatePreferences(updated);
@@ -164,7 +167,9 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Tema nije sačuvana: ${e.message}'),
+          content: Text(
+            AppLocalizations.of(context).themeSaveFailedError(e.message),
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -176,7 +181,8 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
   /// save failure the app language stays changed (better than reverting under
   /// the user), but a snackbar reports that the choice wasn't saved.
   Future<void> _setLanguage(String code) async {
-    final current = _preferences ??
+    final current =
+        _preferences ??
         const UserPreferences(
           theme: 'light',
           language: 'bs',
@@ -195,7 +201,9 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Jezik nije sačuvan: ${e.message}'),
+          content: Text(
+            AppLocalizations.of(context).languageSaveFailedError(e.message),
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -234,7 +242,11 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lični podaci su sačuvani.')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).personalDetailsSaveSuccess,
+          ),
+        ),
       );
       await _load();
     } on AccountException catch (e) {
@@ -273,7 +285,9 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Lični podaci')),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context).personalDetailsTitle),
+      ),
       body: _buildBody(),
     );
   }
@@ -288,6 +302,7 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
   }
 
   Widget _buildForm(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -300,16 +315,16 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Ime i prezime',
+                    loc.personalDetailsNameSectionTitle,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   _field(
                     controller: _firstNameCtrl,
-                    label: 'Ime',
+                    label: loc.fieldFirstNameLabel,
                     icon: Icons.person_outline,
                     validator: _firstNameValidator,
                     onChanged: () => setState(() {}),
@@ -317,7 +332,7 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
                   ),
                   _field(
                     controller: _lastNameCtrl,
-                    label: 'Prezime',
+                    label: loc.fieldLastNameLabel,
                     icon: Icons.person_outline,
                     validator: _lastNameValidator,
                     onChanged: () => setState(() {}),
@@ -325,7 +340,7 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
                   ),
                   _field(
                     controller: _emailCtrl,
-                    label: 'Email',
+                    label: loc.fieldEmailLabel,
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
                     validator: _email,
@@ -333,33 +348,33 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
                   ),
                   _field(
                     controller: _phoneCtrl,
-                    label: 'Telefon',
+                    label: loc.fieldPhoneLabel,
                     icon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
                     maxLength: 30,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Izgled',
+                    loc.personalDetailsAppearanceSectionTitle,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: SegmentedButton<bool>(
-                      segments: const [
+                      segments: [
                         ButtonSegment(
                           value: false,
-                          label: Text('Svijetla'),
-                          icon: Icon(Icons.light_mode_outlined),
+                          label: Text(loc.themeLightOption),
+                          icon: const Icon(Icons.light_mode_outlined),
                         ),
                         ButtonSegment(
                           value: true,
-                          label: Text('Tamna'),
-                          icon: Icon(Icons.dark_mode_outlined),
+                          label: Text(loc.themeDarkOption),
+                          icon: const Icon(Icons.dark_mode_outlined),
                         ),
                       ],
                       selected: {_preferences?.isDarkTheme ?? false},
@@ -392,7 +407,7 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
                             ),
                           )
                         : const Icon(Icons.save_outlined),
-                    label: Text(_saving ? 'Spašavanje...' : 'Sačuvaj'),
+                    label: Text(_saving ? loc.commonSaving : loc.commonSave),
                   ),
                 ],
               ),
@@ -431,11 +446,13 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
 
   String? _email(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    if (text.isEmpty) return AppLocalizations.of(context).fieldRequiredError;
     // Mirrors the backend EmailAddress() rule loosely: must contain "@" with
     // something on both sides. The backend is the authority on validity.
     final at = text.indexOf('@');
-    if (at <= 0 || at == text.length - 1) return 'Unesite ispravan email.';
+    if (at <= 0 || at == text.length - 1) {
+      return AppLocalizations.of(context).emailInvalidError;
+    }
     return null;
   }
 
@@ -444,7 +461,7 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
   String? _firstNameValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _lastNameCtrl.text.trim().isNotEmpty) {
-      return 'Obavezno ako unosite ime i prezime.';
+      return AppLocalizations.of(context).nameRequiredTogetherError;
     }
     return null;
   }
@@ -452,7 +469,7 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
   String? _lastNameValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _firstNameCtrl.text.trim().isNotEmpty) {
-      return 'Obavezno ako unosite ime i prezime.';
+      return AppLocalizations.of(context).nameRequiredTogetherError;
     }
     return null;
   }

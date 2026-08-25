@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_water_meter_request.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_request_exception.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_request_service.dart';
@@ -114,27 +115,29 @@ class _CustomerRequestsScreenState extends State<CustomerRequestsScreen> {
     final created = await showNewWaterMeterRequestDialog(context);
     if (created == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Zahtjev za novi vodomjer je poslan.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).newWaterMeterRequestSuccess),
+        ),
       );
       await _loadFirstPage();
     }
   }
 
   Future<void> _cancelRequest(CustomerWaterMeterRequest request) async {
+    final loc = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Otkazati zahtjev?'),
-        content:
-            Text('Zahtjev za novi vodomjer #${request.id} će biti otkazan.'),
+        title: Text(loc.cancelRequestConfirmTitle),
+        content: Text(loc.cancelRequestConfirmMessage(request.id)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Odustani'),
+            child: Text(loc.dialogDismissButton),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Otkaži zahtjev'),
+            child: Text(loc.cancelRequestButton),
           ),
         ],
       ),
@@ -145,7 +148,7 @@ class _CustomerRequestsScreenState extends State<CustomerRequestsScreen> {
       await _service.cancel(request.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Zahtjev je otkazan.')),
+        SnackBar(content: Text(loc.cancelRequestSuccess)),
       );
       await _loadFirstPage();
     } on CustomerWaterMeterRequestException catch (e) {
@@ -158,12 +161,13 @@ class _CustomerRequestsScreenState extends State<CustomerRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Zahtjevi'),
+        title: Text(loc.requestsTitle),
         actions: [
           IconButton(
-            tooltip: 'Novi zahtjev',
+            tooltip: loc.newRequestTooltip,
             onPressed: _loading ? null : _openNewRequestDialog,
             icon: const Icon(Icons.add),
           ),
@@ -233,6 +237,7 @@ class _RequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final note = request.note;
     final address = request.address;
 
@@ -258,7 +263,7 @@ class _RequestCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Zahtjev #${request.id}',
+                    loc.requestCardTitle(request.id),
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -295,7 +300,7 @@ class _RequestCard extends StatelessWidget {
                 child: TextButton.icon(
                   onPressed: onCancel,
                   icon: const Icon(Icons.close, size: 18),
-                  label: const Text('Otkaži zahtjev'),
+                  label: Text(loc.cancelRequestButton),
                 ),
               ),
             ],
@@ -343,7 +348,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'Nemate poslanih zahtjeva za vodomjer.',
+            AppLocalizations.of(context).requestsEmptyMessage,
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium,
           ),
@@ -375,7 +380,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

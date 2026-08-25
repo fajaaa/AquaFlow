@@ -34,6 +34,22 @@
   "@commonRetry": {
     "description": "Retry button label shown by ErrorRetry."
   },
+  "commonSend": "Pošalji",
+  "@commonSend": {
+    "description": "Generic send action tooltip/button label, e.g. for a chat message composer."
+  },
+  "commonAddPhoto": "Dodaj sliku",
+  "@commonAddPhoto": {
+    "description": "Generic tooltip for a button that opens the take-photo/choose-from-gallery sheet."
+  },
+  "commonTakePhoto": "Slikaj",
+  "@commonTakePhoto": {
+    "description": "Option label in the image-source bottom sheet for taking a photo with the camera."
+  },
+  "commonChooseFromGallery": "Iz galerije",
+  "@commonChooseFromGallery": {
+    "description": "Option label in the image-source bottom sheet for picking a photo from the gallery."
+  },
 
   "stateLoading": "Učitavanje...",
   "@stateLoading": {
@@ -403,5 +419,614 @@
   "supportSubtitle": "Vaši tiketi i poruke podršci",
   "@supportSubtitle": {
     "description": "Subtitle for the support entry on the account screen."
+  },
+
+  "notLoggedInError": "Niste prijavljeni.",
+  "@notLoggedInError": {
+    "description": "Error shown when a screen tries to load per-user data (notifications, activity log) with no signed-in session."
+  },
+
+  "notificationsMarkAllReadTooltip": "Označi sve kao pročitano",
+  "@notificationsMarkAllReadTooltip": {
+    "description": "Tooltip for the 'mark all as read' icon button on the notifications screen."
+  },
+  "notificationTypeFieldLabel": "Tip obavijesti",
+  "@notificationTypeFieldLabel": {
+    "description": "Shared label for the notification type: the filter dropdown on the notifications list, and the type field on the notification detail screen (also shown uppercased as an eyebrow label there)."
+  },
+  "notificationsAllTypesOption": "Svi tipovi",
+  "@notificationsAllTypesOption": {
+    "description": "Option in the notification type filter dropdown meaning no filter (all types)."
+  },
+  "notificationTypeInfoLabel": "Info",
+  "@notificationTypeInfoLabel": {
+    "description": "Display label for the 'Info' notification type."
+  },
+  "notificationTypePlannedWorksLabel": "Planirani radovi",
+  "@notificationTypePlannedWorksLabel": {
+    "description": "Display label for the 'PlannedWorks' notification type."
+  },
+  "notificationTypeWarningLabel": "Upozorenje",
+  "@notificationTypeWarningLabel": {
+    "description": "Display label for the 'Warning' notification type."
+  },
+  "notificationTypeGenericLabel": "Obavijest",
+  "@notificationTypeGenericLabel": {
+    "description": "Generic singular fallback label for a notification of unknown/empty type."
+  },
+  "notificationFallbackTitle": "Obavijest #{id}",
+  "@notificationFallbackTitle": {
+    "description": "Fallback notification title used when the notification has no title, shown on both the list card and the detail screen.",
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsEmptyMessage": "Nema obavijesti.",
+  "@notificationsEmptyMessage": {
+    "description": "Empty-state message shown when the notification list has no items."
+  },
+  "notificationsEmptyFilteredMessage": "Nema obavijesti za odabrani tip.",
+  "@notificationsEmptyFilteredMessage": {
+    "description": "Empty-state message shown when the notification list has no items matching the selected type filter."
+  },
+
+  "notificationDetailTitle": "Detalji obavijesti",
+  "@notificationDetailTitle": {
+    "description": "Notification detail screen app bar title."
+  },
+  "notificationDetailDescriptionHeading": "Opis",
+  "@notificationDetailDescriptionHeading": {
+    "description": "Generic 'Description' section heading, used above the notification body text on the notification detail screen and above the description text on the fault report detail screen."
+  },
+  "notificationDetailEmptyBody": "Nema dodatnog sadržaja.",
+  "@notificationDetailEmptyBody": {
+    "description": "Placeholder shown in the description section when the notification has no body text."
+  },
+  "notificationDetailDetailsHeading": "Detalji",
+  "@notificationDetailDetailsHeading": {
+    "description": "Section heading above the type/date detail rows on the notification detail screen."
+  },
+  "notificationDetailCreatedAtLabel": "Datum kreiranja",
+  "@notificationDetailCreatedAtLabel": {
+    "description": "Label for the created-at date row on the notification detail screen."
+  },
+  "notificationDetailImagesHeading": "Slike ({count})",
+  "@notificationDetailImagesHeading": {
+    "description": "Section heading above the image gallery on the notification detail screen, with the image count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationStatusRead": "Pročitano",
+  "@notificationStatusRead": {
+    "description": "Status pill label shown on a read notification's detail screen."
+  },
+  "notificationStatusUnread": "Novo",
+  "@notificationStatusUnread": {
+    "description": "Status pill label shown on an unread notification's detail screen."
+  },
+
+  "activityLogEmptyMessage": "Nema zabilježenih aktivnosti.",
+  "@activityLogEmptyMessage": {
+    "description": "Empty-state message shown when the activity log has no items."
+  },
+  "activityTypeLoginSuccess": "Uspješna prijava",
+  "@activityTypeLoginSuccess": {
+    "description": "Display label for the 'LoginSuccess' activity log event type."
+  },
+  "activityTypeLoginFailed": "Neuspješna prijava",
+  "@activityTypeLoginFailed": {
+    "description": "Display label for the 'LoginFailed' activity log event type."
+  },
+  "activityTypeTokenRefreshed": "Obnova sesije",
+  "@activityTypeTokenRefreshed": {
+    "description": "Display label for the 'TokenRefreshed' activity log event type."
+  },
+  "activityTypePasswordChanged": "Promjena lozinke",
+  "@activityTypePasswordChanged": {
+    "description": "Display label for the 'PasswordChanged' activity log event type."
+  },
+  "activityTypeAccountUpdated": "Izmjena naloga",
+  "@activityTypeAccountUpdated": {
+    "description": "Display label for the 'AccountUpdated' activity log event type."
+  },
+  "activityTypeUserRoleChanged": "Promjena role",
+  "@activityTypeUserRoleChanged": {
+    "description": "Display label for the 'UserRoleChanged' activity log event type."
+  },
+  "activityTypeUserActivated": "Korisnik aktiviran",
+  "@activityTypeUserActivated": {
+    "description": "Display label for the 'UserActivated' activity log event type."
+  },
+  "activityTypeUserDeactivated": "Korisnik deaktiviran",
+  "@activityTypeUserDeactivated": {
+    "description": "Display label for the 'UserDeactivated' activity log event type."
+  },
+  "activityTypeUserDeleted": "Korisnik obrisan",
+  "@activityTypeUserDeleted": {
+    "description": "Display label for the 'UserDeleted' activity log event type."
+  },
+  "activityTypeGenericLabel": "Aktivnost",
+  "@activityTypeGenericLabel": {
+    "description": "Generic singular fallback label for an activity log event of unknown/empty type."
+  },
+
+  "dialogDismissButton": "Odustani",
+  "@dialogDismissButton": {
+    "description": "Generic 'back out of this dialog without acting' button label, distinct from commonCancel which cancels an in-progress action."
+  },
+
+  "addWaterMeterTooltip": "Dodaj vodomjer",
+  "@addWaterMeterTooltip": {
+    "description": "Tooltip for the '+' icon button that opens the new water meter request dialog."
+  },
+  "waterMetersEmptyMessage": "Trenutno nemate evidentiranih vodomjera.",
+  "@waterMetersEmptyMessage": {
+    "description": "Empty-state message shown when the customer has no water meters."
+  },
+  "lastReadingLabel": "Zadnje očitanje: {value} m³",
+  "@lastReadingLabel": {
+    "description": "Inline last-reading value shown on a water meter list card, with the already-formatted reading value.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "newWaterMeterRequestSuccess": "Zahtjev za novi vodomjer je poslan.",
+  "@newWaterMeterRequestSuccess": {
+    "description": "Snackbar message shown after a new water meter request is submitted successfully."
+  },
+
+  "requestsTitle": "Zahtjevi",
+  "@requestsTitle": {
+    "description": "Title for the water meter requests screen/tooltip, shared by the requests screen app bar and the 'open requests' icon button on the water meters tab."
+  },
+  "newRequestTooltip": "Novi zahtjev",
+  "@newRequestTooltip": {
+    "description": "Tooltip for the 'new request' icon button on the requests screen."
+  },
+  "cancelRequestConfirmTitle": "Otkazati zahtjev?",
+  "@cancelRequestConfirmTitle": {
+    "description": "Title of the confirmation dialog shown before cancelling a water meter request."
+  },
+  "cancelRequestConfirmMessage": "Zahtjev za novi vodomjer #{id} će biti otkazan.",
+  "@cancelRequestConfirmMessage": {
+    "description": "Body of the confirmation dialog shown before cancelling a water meter request.",
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "cancelRequestButton": "Otkaži zahtjev",
+  "@cancelRequestButton": {
+    "description": "Button label for cancelling a water meter request, used both on the request card and as the confirm action in its confirmation dialog."
+  },
+  "cancelRequestSuccess": "Zahtjev je otkazan.",
+  "@cancelRequestSuccess": {
+    "description": "Snackbar message shown after a water meter request is cancelled successfully."
+  },
+  "requestCardTitle": "Zahtjev #{id}",
+  "@requestCardTitle": {
+    "description": "Title on a water meter request card.",
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "requestsEmptyMessage": "Nemate poslanih zahtjeva za vodomjer.",
+  "@requestsEmptyMessage": {
+    "description": "Empty-state message shown when the customer has no water meter requests."
+  },
+
+  "newWaterMeterRequestTitle": "Zahtjev za novi vodomjer",
+  "@newWaterMeterRequestTitle": {
+    "description": "Title of the new water meter request dialog."
+  },
+  "newWaterMeterRequestSubmitButton": "Pošalji zahtjev",
+  "@newWaterMeterRequestSubmitButton": {
+    "description": "Submit button label on the new water meter request dialog."
+  },
+  "newWaterMeterRequestNoteLabel": "Napomena (opciono)",
+  "@newWaterMeterRequestNoteLabel": {
+    "description": "Label for the optional note field on the new water meter request dialog."
+  },
+  "settlementRequiredError": "Odaberite naselje.",
+  "@settlementRequiredError": {
+    "description": "Validation error shown when no settlement is selected on the new water meter request dialog."
+  },
+
+  "showInvoicesButton": "Prikaži račune",
+  "@showInvoicesButton": {
+    "description": "Button label on the water meter detail screen that opens that meter's invoices."
+  },
+  "meterInfoSectionHeading": "Podaci o vodomjeru",
+  "@meterInfoSectionHeading": {
+    "description": "Section heading for the meter info card on the water meter detail screen."
+  },
+  "addressLabel": "Adresa",
+  "@addressLabel": {
+    "description": "Label for the address field on the water meter detail screen."
+  },
+  "installedAtLabel": "Datum ugradnje",
+  "@installedAtLabel": {
+    "description": "Label for the installation date field on the water meter detail screen."
+  },
+  "initialReadingLabel": "Početno očitanje",
+  "@initialReadingLabel": {
+    "description": "Label for the initial reading field on the water meter detail screen."
+  },
+  "lastReadingFieldLabel": "Zadnje očitanje",
+  "@lastReadingFieldLabel": {
+    "description": "Plain label for the last reading field on the water meter detail screen's meter info card."
+  },
+  "lastReadingM3Label": "Zadnje očitanje (m³)",
+  "@lastReadingM3Label": {
+    "description": "Label for the last reading stat, with unit, on the water meter detail screen's stats card."
+  },
+  "statisticsSectionHeading": "Statistika",
+  "@statisticsSectionHeading": {
+    "description": "Section heading for the stats card on the water meter detail screen."
+  },
+  "averageConsumptionLabel": "Prosječna potrošnja po obračunskom periodu (m³)",
+  "@averageConsumptionLabel": {
+    "description": "Label for the average consumption per billing period stat on the water meter detail screen."
+  },
+  "totalConsumptionLabel": "Ukupno potrošeno (m³)",
+  "@totalConsumptionLabel": {
+    "description": "Label for the total consumption stat on the water meter detail screen."
+  },
+  "totalConsumptionValue": "{m3} m³ ({invoiceCount} računa)",
+  "@totalConsumptionValue": {
+    "description": "Value for the total consumption stat: the already-formatted m3 figure plus the invoice count it was computed from.",
+    "placeholders": {
+      "m3": {
+        "type": "String"
+      },
+      "invoiceCount": {
+        "type": "int"
+      }
+    }
+  },
+  "unpaidLabel": "Neplaćeno",
+  "@unpaidLabel": {
+    "description": "Label for the unpaid-invoices stat on the water meter detail screen."
+  },
+  "unpaidValue": "{count} računa / {amount} KM",
+  "@unpaidValue": {
+    "description": "Value for the unpaid-invoices stat: unpaid invoice count and the already-formatted unpaid amount.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "lastBillingPeriodLabel": "Zadnji obračunski period",
+  "@lastBillingPeriodLabel": {
+    "description": "Label for the last billing period stat on the water meter detail screen."
+  },
+  "consumptionByPeriodHeading": "Potrošnja po periodima",
+  "@consumptionByPeriodHeading": {
+    "description": "Section heading for the consumption chart card on the water meter detail screen."
+  },
+  "noConsumptionDataMessage": "Nema podataka o potrošnji.",
+  "@noConsumptionDataMessage": {
+    "description": "Message shown in the consumption chart card when there is no consumption data to plot."
+  },
+
+  "waterMeterStatusActive": "Aktivan",
+  "@waterMeterStatusActive": {
+    "description": "Display label for the 'Active' water meter status."
+  },
+  "waterMeterStatusInactive": "Neaktivan",
+  "@waterMeterStatusInactive": {
+    "description": "Display label for the 'Inactive' water meter status."
+  },
+  "waterMeterStatusRemoved": "Uklonjen",
+  "@waterMeterStatusRemoved": {
+    "description": "Display label for the 'Removed' water meter status."
+  },
+  "requestStatusPending": "Na čekanju",
+  "@requestStatusPending": {
+    "description": "Display label for the 'Pending' water meter request status."
+  },
+  "requestStatusAssigned": "Dodijeljen",
+  "@requestStatusAssigned": {
+    "description": "Display label for the 'Assigned' water meter request status."
+  },
+  "requestStatusRegistered": "Registrovan",
+  "@requestStatusRegistered": {
+    "description": "Display label for the 'Registered' water meter request status."
+  },
+  "requestStatusRejected": "Odbijen",
+  "@requestStatusRejected": {
+    "description": "Display label for the 'Rejected' water meter request status."
+  },
+  "requestStatusCancelled": "Otkazan",
+  "@requestStatusCancelled": {
+    "description": "Display label for the 'Cancelled' water meter request status."
+  },
+
+  "invoicesTitle": "Računi",
+  "@invoicesTitle": {
+    "description": "App bar title for the invoices list screen when not scoped to a single water meter."
+  },
+  "invoicesTitleForMeter": "Računi - {serial}",
+  "@invoicesTitleForMeter": {
+    "description": "App bar title for the invoices list screen when scoped to one water meter's invoices.",
+    "placeholders": {
+      "serial": {
+        "type": "String"
+      }
+    }
+  },
+  "invoicesEmptyMessage": "Nemate izdatih računa.",
+  "@invoicesEmptyMessage": {
+    "description": "Empty-state message shown when the customer has no invoices at all."
+  },
+  "invoicesEmptyForMeterMessage": "Za ovaj vodomjer još nema izdatih računa.",
+  "@invoicesEmptyForMeterMessage": {
+    "description": "Empty-state message shown when a water meter has no invoices yet."
+  },
+
+  "invoiceRemainingAmountLabel": "Preostalo: {amount} KM",
+  "@invoiceRemainingAmountLabel": {
+    "description": "Inline remaining-amount value shown on a payable invoice's summary card, with the already-formatted amount. The KM currency suffix is not translated - this app is BAM/KM-only regardless of UI language.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+
+  "invoiceStatusIssued": "Izdat",
+  "@invoiceStatusIssued": {
+    "description": "Display label for the 'Issued' invoice status."
+  },
+  "invoiceStatusPaid": "Plaćen",
+  "@invoiceStatusPaid": {
+    "description": "Display label for the 'Paid' invoice status."
+  },
+  "invoiceStatusCancelled": "Storniran",
+  "@invoiceStatusCancelled": {
+    "description": "Display label for the 'Cancelled' invoice status."
+  },
+
+  "allInvoicesTooltip": "Svi računi",
+  "@allInvoicesTooltip": {
+    "description": "Tooltip for the 'all invoices' icon button on the invoice detail screen's app bar."
+  },
+  "invoiceStatusFieldLabel": "Status računa",
+  "@invoiceStatusFieldLabel": {
+    "description": "Eyebrow label above the status name on the invoice detail screen's status banner, shown uppercased."
+  },
+  "payButton": "Plati",
+  "@payButton": {
+    "description": "Button label for paying an invoice, used both on the invoice detail screen and in its payment confirmation dialog."
+  },
+  "paymentConfirmTitle": "Potvrda plaćanja",
+  "@paymentConfirmTitle": {
+    "description": "Title of the confirmation dialog shown before paying an invoice."
+  },
+  "paymentConfirmMessage": "Da li ste sigurni da želite platiti {amount} BAM?",
+  "@paymentConfirmMessage": {
+    "description": "Body of the payment confirmation dialog, with the already-formatted amount. The BAM currency suffix is not translated.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentStartedMessage": "Plaćanje pokrenuto: {amount} {currency} (status: {statusLabel}).",
+  "@paymentStartedMessage": {
+    "description": "Snackbar shown when a payment session opens without a Stripe client secret (the Manual provider placeholder flow). currency is the backend-provided currency code, passed through as-is.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      },
+      "statusLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentProcessingMessage": "Plaćanje u obradi.",
+  "@paymentProcessingMessage": {
+    "description": "Snackbar shown after the Stripe payment sheet is presented successfully."
+  },
+  "paymentCancelledMessage": "Plaćanje je otkazano.",
+  "@paymentCancelledMessage": {
+    "description": "Error message shown when the customer cancels the Stripe payment sheet."
+  },
+  "paymentFailedMessage": "Plaćanje nije uspjelo.",
+  "@paymentFailedMessage": {
+    "description": "Fallback error message shown when a Stripe payment fails without a specific message from the SDK."
+  },
+  "paymentStatusCompleted": "Završeno",
+  "@paymentStatusCompleted": {
+    "description": "Display label for a 'Completed' payment session status."
+  },
+  "paymentStatusFailed": "Neuspješno",
+  "@paymentStatusFailed": {
+    "description": "Display label for a 'Failed' payment session status."
+  },
+  "readingsSectionHeading": "Očitanja",
+  "@readingsSectionHeading": {
+    "description": "Section heading for the readings card on the invoice detail screen."
+  },
+  "periodLabel": "Period",
+  "@periodLabel": {
+    "description": "Label for the billing period field on the invoice detail screen."
+  },
+  "previousReadingLabel": "Prethodno očitanje",
+  "@previousReadingLabel": {
+    "description": "Label for the previous meter reading field on the invoice detail screen."
+  },
+  "currentReadingLabel": "Novo očitanje",
+  "@currentReadingLabel": {
+    "description": "Label for the current meter reading field on the invoice detail screen."
+  },
+  "consumptionLabel": "Potrošnja",
+  "@consumptionLabel": {
+    "description": "Label for the consumption field on the invoice detail screen."
+  },
+  "amountSectionHeading": "Iznos",
+  "@amountSectionHeading": {
+    "description": "Section heading for the amount card on the invoice detail screen."
+  },
+  "subtotalLabel": "Osnovica",
+  "@subtotalLabel": {
+    "description": "Label for the subtotal field on the invoice detail screen."
+  },
+  "totalLabel": "Ukupno",
+  "@totalLabel": {
+    "description": "Label for the total amount field on the invoice detail screen."
+  },
+  "paymentsSectionHeading": "Uplate",
+  "@paymentsSectionHeading": {
+    "description": "Section heading for the payments card on the invoice detail screen."
+  },
+  "paymentsEmptyMessage": "Nema evidentiranih uplata.",
+  "@paymentsEmptyMessage": {
+    "description": "Empty-state message shown when an invoice has no recorded payments."
+  },
+  "totalPaidLabel": "Plaćeno ukupno",
+  "@totalPaidLabel": {
+    "description": "Label for the total-paid field on the invoice detail screen's payments card."
+  },
+  "remainingToPayLabel": "Preostalo za platiti",
+  "@remainingToPayLabel": {
+    "description": "Label for the remaining-to-pay field on the invoice detail screen's payments card."
+  },
+
+  "faultReportSubmitSuccess": "Prijava kvara je poslana.",
+  "@faultReportSubmitSuccess": {
+    "description": "Snackbar message shown after a new fault report is submitted successfully."
+  },
+  "newFaultReportTooltip": "Nova prijava",
+  "@newFaultReportTooltip": {
+    "description": "Tooltip for the '+' icon button that opens the new fault report dialog."
+  },
+  "faultReportsEmptyMessage": "Nemate poslanih prijava kvarova.",
+  "@faultReportsEmptyMessage": {
+    "description": "Empty-state message shown when the customer has no fault reports."
+  },
+  "faultReportStatusNew": "Nova",
+  "@faultReportStatusNew": {
+    "description": "Display label for the 'New' fault report status, shared by the report list card and the detail screen's status banner."
+  },
+  "faultReportStatusAssigned": "Dodijeljena",
+  "@faultReportStatusAssigned": {
+    "description": "Display label for the 'Assigned' fault report status, shared by the report list card and the detail screen's status banner."
+  },
+  "faultReportStatusInProgress": "U toku",
+  "@faultReportStatusInProgress": {
+    "description": "Display label for the 'InProgress' fault report status, shared by the report list card and the detail screen's status banner."
+  },
+  "faultReportStatusResolved": "Riješena",
+  "@faultReportStatusResolved": {
+    "description": "Display label for the 'Resolved' fault report status, shared by the report list card and the detail screen's status banner."
+  },
+  "faultReportStatusFieldLabel": "Status prijave",
+  "@faultReportStatusFieldLabel": {
+    "description": "Eyebrow label above the status name on the fault report detail screen's status banner, shown uppercased."
+  },
+  "photosSectionHeading": "Fotografije",
+  "@photosSectionHeading": {
+    "description": "Section heading for the photos card on the fault report detail screen."
+  },
+  "noPhotosMessage": "Nema priloženih fotografija.",
+  "@noPhotosMessage": {
+    "description": "Message shown in the photos card when a fault report has no attached photos."
+  },
+  "faultReportInfoSectionHeading": "Podaci o prijavi",
+  "@faultReportInfoSectionHeading": {
+    "description": "Section heading for the info card on the fault report detail screen."
+  },
+  "reportedAtLabel": "Prijavljeno",
+  "@reportedAtLabel": {
+    "description": "Label for the reported-at date field on the fault report detail screen."
+  },
+  "resolvedAtLabel": "Riješeno",
+  "@resolvedAtLabel": {
+    "description": "Label for the resolved-at date field on the fault report detail screen. Distinct from faultReportStatusResolved ('Riješena') which is a different grammatical form used as the status pill label."
+  },
+
+  "supportTicketStatusOpen": "Otvoren",
+  "@supportTicketStatusOpen": {
+    "description": "Display label for the 'Open' support ticket status, shown by SupportTicketStatusPill."
+  },
+  "supportTicketStatusClosed": "Zatvoren",
+  "@supportTicketStatusClosed": {
+    "description": "Display label for the 'Closed' support ticket status, shown by SupportTicketStatusPill."
+  },
+  "newSupportTicketTooltip": "Novi tiket",
+  "@newSupportTicketTooltip": {
+    "description": "Tooltip for the '+' icon button that opens the new support ticket dialog."
+  },
+  "supportTicketCreateSuccess": "Tiket je kreiran.",
+  "@supportTicketCreateSuccess": {
+    "description": "Snackbar message shown after a new support ticket is submitted successfully."
+  },
+  "supportTicketsEmptyTitle": "Nemate otvorenih tiketa.",
+  "@supportTicketsEmptyTitle": {
+    "description": "Empty-state title shown when the customer has no support tickets."
+  },
+  "supportTicketsEmptySubtitle": "Otvorite novi tiket da kontaktirate podršku.",
+  "@supportTicketsEmptySubtitle": {
+    "description": "Empty-state subtitle shown below supportTicketsEmptyTitle, prompting the customer to open a new ticket."
+  },
+  "supportTicketLastMessageLabel": "Zadnja poruka: {date}",
+  "@supportTicketLastMessageLabel": {
+    "description": "Inline last-message timestamp shown on a support ticket list card, with the already-formatted date/time.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "supportTicketReplyHint": "Napišite poruku...",
+  "@supportTicketReplyHint": {
+    "description": "Hint text in the reply composer's text field on the support ticket detail screen."
+  },
+  "supportTicketReplyRequiredError": "Unesite tekst poruke.",
+  "@supportTicketReplyRequiredError": {
+    "description": "Snackbar shown when the customer tries to send a reply with no text (photos alone aren't enough, the backend requires a message body)."
+  },
+  "supportTicketDefaultTitle": "Tiket",
+  "@supportTicketDefaultTitle": {
+    "description": "Fallback AppBar title on the support ticket detail screen while the ticket is loading or has an empty subject."
+  },
+  "supportTicketNoMessages": "Nema poruka.",
+  "@supportTicketNoMessages": {
+    "description": "Message shown in the thread body when a support ticket has no messages yet."
+  },
+  "supportTicketOpenedAtLabel": "Otvoren: {date}",
+  "@supportTicketOpenedAtLabel": {
+    "description": "Ticket-created-at date shown in the status header on the support ticket detail screen, with the already-formatted date/time.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "supportTicketYouLabel": "Vi",
+  "@supportTicketYouLabel": {
+    "description": "Sender label shown above the customer's own chat bubbles on the support ticket detail screen."
+  },
+  "supportTicketClosedBanner": "Tiket je zatvoren",
+  "@supportTicketClosedBanner": {
+    "description": "Banner shown instead of the reply composer once a support ticket is closed."
   }
 }

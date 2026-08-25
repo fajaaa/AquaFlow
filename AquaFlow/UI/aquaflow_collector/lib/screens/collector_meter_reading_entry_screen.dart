@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
 import 'package:aquaflow_collector/models/collector_meter_reading.dart';
 import 'package:aquaflow_collector/models/collector_water_meter.dart';
 import 'package:aquaflow_collector/services/collector_meter_reading_exception.dart';
@@ -191,18 +192,20 @@ class _CollectorMeterReadingEntryScreenState
         photoUrl: _photoUrlCtrl.text,
       );
       if (!mounted) return;
+      final loc = AppLocalizations.of(context);
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             result.hasInvoice
-                ? 'Očitanje je snimljeno. Potrošnja: '
-                      '${_formatReading(result.consumptionM3)} m³. '
-                      'Račun ${result.invoiceNumber}: '
-                      '${_formatReading(result.invoiceTotalAmount!)} BAM.'
-                : 'Očitanje je snimljeno. Potrošnja: '
-                      '${_formatReading(result.consumptionM3)} m³. '
-                      'Račun nije kreiran (potrošnja je 0).',
+                ? loc.readingSubmittedWithInvoiceSuccess(
+                    _formatReading(result.consumptionM3),
+                    result.invoiceNumber!,
+                    _formatReading(result.invoiceTotalAmount!),
+                  )
+                : loc.readingSubmittedNoInvoiceSuccess(
+                    _formatReading(result.consumptionM3),
+                  ),
           ),
         ),
       );
@@ -217,9 +220,10 @@ class _CollectorMeterReadingEntryScreenState
 
   String? _readingValidator(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    final loc = AppLocalizations.of(context);
+    if (text.isEmpty) return loc.fieldRequiredError;
     final parsed = double.tryParse(text.replaceAll(',', '.'));
-    if (parsed == null || parsed < 0) return 'Unesite pozitivan broj.';
+    if (parsed == null || parsed < 0) return loc.positiveNumberRequiredError;
     return null;
   }
 
@@ -229,7 +233,8 @@ class _CollectorMeterReadingEntryScreenState
   Future<void> _markBroken() async {
     final reason = await showDialog<String>(
       context: context,
-      builder: (context) => _MarkBrokenDialog(serialNumber: widget.meter.serialNumber),
+      builder: (context) =>
+          _MarkBrokenDialog(serialNumber: widget.meter.serialNumber),
     );
     if (reason == null || !mounted) return;
 
@@ -242,7 +247,9 @@ class _CollectorMeterReadingEntryScreenState
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vodomjer je označen kao neispravan.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).meterMarkedBrokenSuccess),
+        ),
       );
     } on CollectorWaterMeterException catch (e) {
       if (!mounted) return;
@@ -258,8 +265,9 @@ class _CollectorMeterReadingEntryScreenState
     final meter = widget.meter;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final loc = AppLocalizations.of(context);
 
-    final meta = CollectorWaterMeterStatusMeta.of(meter.status);
+    final meta = CollectorWaterMeterStatusMeta.of(meter.status, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     final onAccent =
         ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
@@ -273,7 +281,7 @@ class _CollectorMeterReadingEntryScreenState
         title: Text(meter.serialNumber),
         actions: [
           IconButton(
-            tooltip: 'Označi kao neispravan',
+            tooltip: loc.markBrokenTooltip,
             icon: _markingBroken
                 ? const SizedBox(
                     width: 20,
@@ -339,7 +347,7 @@ class _CollectorMeterReadingEntryScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _SectionHeading(
-                          'Podaci o vodomjeru',
+                          loc.meterInfoSectionHeading,
                           icon: Icons.info_outline,
                           color: accent,
                         ),
@@ -388,11 +396,10 @@ class _CollectorMeterReadingEntryScreenState
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'ZADNJE STANJE',
+                                      loc.lastReadingStateLabel.toUpperCase(),
                                       style: theme.textTheme.labelSmall
                                           ?.copyWith(
                                             fontWeight: FontWeight.w700,
@@ -438,7 +445,9 @@ class _CollectorMeterReadingEntryScreenState
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Sljedeće očitanje je moguće od: $_nextReadingAllowedDate',
+                              loc.nextReadingAllowedLabel(
+                                _nextReadingAllowedDate!,
+                              ),
                               style: TextStyle(
                                 color: theme.colorScheme.onErrorContainer,
                               ),
@@ -456,7 +465,7 @@ class _CollectorMeterReadingEntryScreenState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _SectionHeading(
-                            'Novo očitanje',
+                            loc.newReadingSectionHeading,
                             icon: Icons.edit_note_outlined,
                             color: accent,
                           ),
@@ -472,25 +481,25 @@ class _CollectorMeterReadingEntryScreenState
                               ),
                             ],
                             validator: _readingValidator,
-                            decoration: const InputDecoration(
-                              labelText: 'Novo stanje (m³)',
-                              prefixIcon: Icon(Icons.speed_outlined),
+                            decoration: InputDecoration(
+                              labelText: loc.newReadingFieldLabel,
+                              prefixIcon: const Icon(Icons.speed_outlined),
                             ),
                           ),
                           const SizedBox(height: 14),
                           DropdownButtonFormField<int>(
                             initialValue: _selectedTariffId,
                             decoration: InputDecoration(
-                              labelText: 'Tarifa',
+                              labelText: loc.tariffLabel,
                               prefixIcon: const Icon(Icons.sell_outlined),
                               errorText: _tariffError,
                             ),
                             hint: Text(
                               _loadingTariffs
-                                  ? 'Učitavanje tarifa...'
+                                  ? loc.tariffsLoadingHint
                                   : _tariffs.isEmpty
-                                  ? 'Nema aktivnih tarifa'
-                                  : 'Odaberite tarifu',
+                                  ? loc.tariffsEmptyHint
+                                  : loc.tariffSelectHint,
                             ),
                             items: [
                               for (final tariff in _tariffs)
@@ -500,7 +509,7 @@ class _CollectorMeterReadingEntryScreenState
                                 ),
                             ],
                             validator: (value) =>
-                                value == null ? 'Obavezno polje.' : null,
+                                value == null ? loc.fieldRequiredError : null,
                             onChanged: _tariffs.isNotEmpty
                                 ? (value) =>
                                       setState(() => _selectedTariffId = value)
@@ -515,17 +524,19 @@ class _CollectorMeterReadingEntryScreenState
                           TextFormField(
                             controller: _noteCtrl,
                             maxLines: 2,
-                            decoration: const InputDecoration(
-                              labelText: 'Napomena (opcionalno)',
-                              prefixIcon: Icon(Icons.notes_outlined),
+                            decoration: InputDecoration(
+                              labelText: loc.noteOptionalLabel,
+                              prefixIcon: const Icon(Icons.notes_outlined),
                             ),
                           ),
                           const SizedBox(height: 14),
                           TextFormField(
                             controller: _photoUrlCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Foto (URL, opcionalno)',
-                              prefixIcon: Icon(Icons.photo_camera_outlined),
+                            decoration: InputDecoration(
+                              labelText: loc.photoUrlOptionalLabel,
+                              prefixIcon: const Icon(
+                                Icons.photo_camera_outlined,
+                              ),
                             ),
                           ),
                           if (_error != null) ...[
@@ -565,7 +576,7 @@ class _CollectorMeterReadingEntryScreenState
                                       ),
                                     )
                                   : const Icon(Icons.save_outlined),
-                              label: const Text('Snimi očitanje'),
+                              label: Text(loc.submitReadingButton),
                             ),
                           ),
                         ],
@@ -617,32 +628,33 @@ class _MarkBrokenDialogState extends State<_MarkBrokenDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text('Označi vodomjer ${widget.serialNumber} neispravnim'),
+      title: Text(loc.markBrokenDialogTitle(widget.serialNumber)),
       content: Form(
         key: _formKey,
         child: TextFormField(
           controller: _reasonCtrl,
           autofocus: true,
           maxLines: 3,
-          decoration: const InputDecoration(labelText: 'Razlog'),
+          decoration: InputDecoration(labelText: loc.reasonLabel),
           validator: (value) {
             final text = value?.trim() ?? '';
-            return text.isEmpty ? 'Razlog je obavezan.' : null;
+            return text.isEmpty ? loc.reasonRequiredError : null;
           },
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton(
           onPressed: () {
             if (_formKey.currentState?.validate() != true) return;
             Navigator.of(context).pop(_reasonCtrl.text.trim());
           },
-          child: const Text('Potvrdi'),
+          child: Text(loc.commonConfirm),
         ),
       ],
     );
@@ -760,6 +772,7 @@ class _PricePreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final total = (consumption != null && tariff != null)
         ? consumption! * tariff!.pricePerM3
         : null;
@@ -781,7 +794,7 @@ class _PricePreviewCard extends StatelessWidget {
               Icon(Icons.calculate_outlined, size: 16, color: accent),
               const SizedBox(width: 6),
               Text(
-                'PREGLED IZNOSA',
+                loc.priceSummaryHeading.toUpperCase(),
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
@@ -792,14 +805,14 @@ class _PricePreviewCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _PriceLine(
-            label: 'Potrošnja',
+            label: loc.consumptionLabel,
             value: consumption != null
                 ? '${_formatReading(consumption!)} m³'
                 : '-',
           ),
           const SizedBox(height: 4),
           _PriceLine(
-            label: 'Cijena po m³',
+            label: loc.pricePerM3Label,
             value: tariff != null
                 ? '${_formatReading(tariff!.pricePerM3)} BAM'
                 : '-',
@@ -812,7 +825,7 @@ class _PricePreviewCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Ukupno',
+                loc.totalLabel,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),

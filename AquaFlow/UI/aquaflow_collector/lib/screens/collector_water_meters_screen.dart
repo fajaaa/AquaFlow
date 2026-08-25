@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
 import 'package:aquaflow_collector/models/collector_water_meter.dart';
 import 'package:aquaflow_collector/screens/collector_fault_reports_screen.dart';
 import 'package:aquaflow_collector/screens/collector_meter_reading_entry_screen.dart';
@@ -114,6 +115,7 @@ class _CollectorWaterMetersScreenState
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: Column(
         children: [
@@ -123,14 +125,14 @@ class _CollectorWaterMetersScreenState
               children: [
                 Expanded(
                   child: Text(
-                    'Vodomjeri',
+                    loc.tabWaterMeters,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Prijave kvarova',
+                  tooltip: loc.faultReportsTooltip,
                   onPressed: _openFaultReports,
                   icon: const Icon(Icons.report_problem_outlined),
                 ),
@@ -148,12 +150,12 @@ class _CollectorWaterMetersScreenState
                 _search();
               },
               decoration: InputDecoration(
-                hintText: 'Ime vlasnika, naselje, serijski broj ili adresa',
+                hintText: loc.collectorMeterSearchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchCtrl.text.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: 'Obriši',
+                        tooltip: loc.commonClear,
                         onPressed: _clearSearch,
                         icon: const Icon(Icons.close),
                       ),
@@ -186,7 +188,9 @@ class _CollectorWaterMetersScreenState
     if (_meters.isEmpty) {
       return EmptyStateView(
         icon: Icons.water_drop_outlined,
-        message: 'Nema vodomjera za "${_searchCtrl.text.trim()}".',
+        message: AppLocalizations.of(
+          context,
+        ).collectorMetersEmptyMessage(_searchCtrl.text.trim()),
       );
     }
 
@@ -233,8 +237,9 @@ class _WaterMeterCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
+    final loc = AppLocalizations.of(context);
 
-    final meta = CollectorWaterMeterStatusMeta.of(meter.status);
+    final meta = CollectorWaterMeterStatusMeta.of(meter.status, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     final needsAttention = meter.status.toLowerCase() == 'inactive';
 
@@ -379,7 +384,9 @@ class _WaterMeterCard extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'Zadnje stanje: ${_formatReading(meter.lastReading)} m³',
+                              loc.collectorLastReadingLabel(
+                                _formatReading(meter.lastReading),
+                              ),
                               style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w700,
@@ -438,7 +445,7 @@ class _PromptState extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              'Unesite ime vlasnika, naselje, serijski broj ili adresu.',
+              AppLocalizations.of(context).collectorMetersPromptMessage,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium,
             ),

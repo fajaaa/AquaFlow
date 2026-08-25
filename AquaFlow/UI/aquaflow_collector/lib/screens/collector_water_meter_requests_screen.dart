@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
 import 'package:aquaflow_collector/models/collector_water_meter_request.dart';
 import 'package:aquaflow_collector/services/collector_water_meter_request_exception.dart';
 import 'package:aquaflow_collector/services/collector_water_meter_request_service.dart';
@@ -80,9 +81,11 @@ class _CollectorWaterMeterRequestsScreenState
         houseNumber: draft.houseNumber,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Vodomjer je registrovan.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).meterRegisteredSuccess),
+        ),
+      );
       await _load();
     } on CollectorWaterMeterRequestException catch (e) {
       if (!mounted) return;
@@ -114,13 +117,16 @@ class _CollectorWaterMeterRequestsScreenState
               children: [
                 Expanded(
                   child: Text(
-                    'Radni nalozi',
+                    AppLocalizations.of(context).waterMeterRequestsScreenTitle,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-                RefreshButton(onRefresh: _load, enabled: !(_loading || _mutating)),
+                RefreshButton(
+                  onRefresh: _load,
+                  enabled: !(_loading || _mutating),
+                ),
               ],
             ),
           ),
@@ -186,6 +192,7 @@ class _RequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final note = request.note?.trim();
     final settlementName = request.settlementName;
     final address = request.address;
@@ -193,7 +200,7 @@ class _RequestCard extends StatelessWidget {
     final hasPhone = phone.isNotEmpty;
     final customerLabel = request.customerFullName.isNotEmpty
         ? request.customerFullName
-        : 'Korisnik #${request.customerId}';
+        : loc.customerFallbackLabel(request.customerId);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -217,7 +224,7 @@ class _RequestCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Zahtjev #${request.id}',
+                    loc.requestCardTitle(request.id),
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -231,7 +238,7 @@ class _RequestCard extends StatelessWidget {
             const SizedBox(height: 6),
             _InfoRow(
               icon: Icons.phone_outlined,
-              label: hasPhone ? phone : 'Broj telefona nije dostupan',
+              label: hasPhone ? phone : loc.phoneNotAvailableLabel,
             ),
             const SizedBox(height: 6),
             _InfoRow(
@@ -246,7 +253,7 @@ class _RequestCard extends StatelessWidget {
             const SizedBox(height: 6),
             _InfoRow(
               icon: Icons.event_outlined,
-              label: 'Kreirano: ${_formatDate(request.createdAt)}',
+              label: loc.createdAtInlineLabel(_formatDate(request.createdAt)),
             ),
             if (note != null && note.isNotEmpty) ...[
               const SizedBox(height: 6),
@@ -261,7 +268,7 @@ class _RequestCard extends StatelessWidget {
                         ? () => _launchPhone(context, 'tel', phone)
                         : null,
                     icon: const Icon(Icons.call_outlined),
-                    label: const Text('Pozovi'),
+                    label: Text(loc.callButton),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -282,7 +289,7 @@ class _RequestCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: disabled ? null : onRegister,
                 icon: const Icon(Icons.water_drop_outlined),
-                label: const Text('Registruj vodomjer'),
+                label: Text(loc.registerWaterMeterTitle),
               ),
             ),
           ],
@@ -307,7 +314,9 @@ class _RequestCard extends StatelessWidget {
 
   void _showLaunchError(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Akcija nije podržana na ovom uređaju.')),
+      SnackBar(
+        content: Text(AppLocalizations.of(context).actionNotSupportedError),
+      ),
     );
   }
 }
@@ -499,18 +508,19 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Registruj vodomjer'),
+      title: Text(loc.registerWaterMeterTitle),
       content: SizedBox(width: 420, child: _buildContent()),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: _loading || _loadError != null ? null : _submit,
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Registruj'),
+          label: Text(loc.registerButton),
         ),
       ],
     );
@@ -518,6 +528,7 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
 
   Widget _buildContent() {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
 
     if (_loading) {
       return const SizedBox(
@@ -545,7 +556,7 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
               FilledButton.icon(
                 onPressed: _load,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Pokušaj ponovo'),
+                label: Text(loc.commonRetry),
               ),
             ],
           ),
@@ -560,29 +571,31 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _CascadingDropdown(
-              label: 'Grad',
+              label: loc.locationCityLabel,
               icon: Icons.location_city_outlined,
-              emptyLabel: 'Bez grada',
+              emptyLabel: loc.locationNoCityOption,
               value: _selectedCityId,
               items: [for (final city in _cities) (city.id, city.name)],
               onChanged: _onCityChanged,
             ),
             const SizedBox(height: 14),
             _CascadingDropdown(
-              label: 'Općina',
+              label: loc.locationMunicipalityLabel,
               icon: Icons.map_outlined,
-              emptyLabel: 'Bez općine',
+              emptyLabel: loc.locationNoMunicipalityOption,
               value: _selectedMunicipalityId,
               items: [
                 for (final m in _municipalitiesForSelectedCity) (m.id, m.name),
               ],
-              onChanged: _selectedCityId == null ? null : _onMunicipalityChanged,
+              onChanged: _selectedCityId == null
+                  ? null
+                  : _onMunicipalityChanged,
             ),
             const SizedBox(height: 14),
             _CascadingDropdown(
-              label: 'Naselje',
+              label: loc.locationSettlementLabel,
               icon: Icons.holiday_village_outlined,
-              emptyLabel: 'Bez naselja',
+              emptyLabel: loc.locationNoSettlementOption,
               value: _selectedSettlementId,
               items: [
                 for (final s in _settlementsForSelectedMunicipality)
@@ -599,9 +612,9 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
               textInputAction: TextInputAction.next,
               maxLength: 200,
               validator: _required,
-              decoration: const InputDecoration(
-                labelText: 'Ulica',
-                prefixIcon: Icon(Icons.signpost_outlined),
+              decoration: InputDecoration(
+                labelText: loc.locationStreetLabel,
+                prefixIcon: const Icon(Icons.signpost_outlined),
                 counterText: '',
               ),
             ),
@@ -611,9 +624,9 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
               textInputAction: TextInputAction.next,
               maxLength: 30,
               validator: _required,
-              decoration: const InputDecoration(
-                labelText: 'Broj',
-                prefixIcon: Icon(Icons.pin_outlined),
+              decoration: InputDecoration(
+                labelText: loc.locationHouseNumberLabel,
+                prefixIcon: const Icon(Icons.pin_outlined),
                 counterText: '',
               ),
             ),
@@ -622,9 +635,9 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
               controller: _serialCtrl,
               textInputAction: TextInputAction.next,
               validator: _required,
-              decoration: const InputDecoration(
-                labelText: 'Serijski broj',
-                prefixIcon: Icon(Icons.confirmation_number_outlined),
+              decoration: InputDecoration(
+                labelText: loc.serialNumberLabel,
+                prefixIcon: const Icon(Icons.confirmation_number_outlined),
               ),
             ),
             const SizedBox(height: 14),
@@ -637,9 +650,9 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
               validator: _readingValidator,
-              decoration: const InputDecoration(
-                labelText: 'Početno očitanje',
-                prefixIcon: Icon(Icons.speed_outlined),
+              decoration: InputDecoration(
+                labelText: loc.initialReadingLabel,
+                prefixIcon: const Icon(Icons.speed_outlined),
               ),
             ),
             const SizedBox(height: 14),
@@ -651,19 +664,24 @@ class _RegisterWaterMeterDialogState extends State<_RegisterWaterMeterDialog> {
   }
 
   String? _settlementValidator(int? value) {
-    if (value == null || value == 0) return 'Odaberite naselje.';
+    if (value == null || value == 0) {
+      return AppLocalizations.of(context).settlementRequiredError;
+    }
     return null;
   }
 
   String? _required(String? value) {
-    return value == null || value.trim().isEmpty ? 'Obavezno polje.' : null;
+    return value == null || value.trim().isEmpty
+        ? AppLocalizations.of(context).fieldRequiredError
+        : null;
   }
 
   String? _readingValidator(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    final loc = AppLocalizations.of(context);
+    if (text.isEmpty) return loc.fieldRequiredError;
     final parsed = double.tryParse(text);
-    if (parsed == null || parsed < 0) return 'Unesite pozitivan broj.';
+    if (parsed == null || parsed < 0) return loc.positiveNumberRequiredError;
     return null;
   }
 }
@@ -736,6 +754,7 @@ class _InstalledAtField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -756,7 +775,7 @@ class _InstalledAtField extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Datum instalacije',
+                  loc.installedAtFieldLabel,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -767,7 +786,7 @@ class _InstalledAtField extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Odaberi datum',
+            tooltip: loc.pickDateTooltip,
             onPressed: onPick,
             icon: const Icon(Icons.calendar_month_outlined),
           ),
@@ -796,7 +815,7 @@ class _AssignedPill extends StatelessWidget {
           const Icon(Icons.engineering_outlined, size: 15, color: color),
           const SizedBox(width: 5),
           Text(
-            'Dodijeljen',
+            AppLocalizations.of(context).requestStatusAssigned,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: color,
               fontWeight: FontWeight.w700,
@@ -845,7 +864,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'Trenutno nema dodijeljenih zahtjeva.',
+            AppLocalizations.of(context).waterMeterRequestsEmptyMessage,
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium,
           ),
@@ -877,7 +896,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

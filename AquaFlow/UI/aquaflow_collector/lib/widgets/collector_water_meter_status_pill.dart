@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
 import 'package:aquaflow_collector/shared/theme/app_theme.dart';
 
 /// Icon + accent color + label for a water meter `status`, covering every
@@ -15,21 +16,21 @@ class CollectorWaterMeterStatusMeta {
   final Color color;
   final IconData icon;
 
-  static CollectorWaterMeterStatusMeta of(String status) {
+  static CollectorWaterMeterStatusMeta of(String status, AppLocalizations loc) {
     return switch (status.toLowerCase()) {
-      'active' => const CollectorWaterMeterStatusMeta(
-        'Aktivan',
+      'active' => CollectorWaterMeterStatusMeta(
+        loc.waterMeterStatusActive,
         AppColors.success,
         Icons.check_circle_outline,
       ),
-      'inactive' => const CollectorWaterMeterStatusMeta(
-        'Neaktivan',
+      'inactive' => CollectorWaterMeterStatusMeta(
+        loc.waterMeterStatusInactive,
         AppColors.warning,
         Icons.pause_circle_outline,
       ),
-      'removed' => const CollectorWaterMeterStatusMeta(
-        'Uklonjen',
-        Color(0xFF64748B),
+      'removed' => CollectorWaterMeterStatusMeta(
+        loc.waterMeterStatusRemoved,
+        const Color(0xFF64748B),
         Icons.block_outlined,
       ),
       _ => CollectorWaterMeterStatusMeta(

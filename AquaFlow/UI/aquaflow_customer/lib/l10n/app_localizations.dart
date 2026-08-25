@@ -146,6 +146,30 @@ abstract class AppLocalizations {
   /// **'Pokušaj ponovo'**
   String get commonRetry;
 
+  /// Generic send action tooltip/button label, e.g. for a chat message composer.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pošalji'**
+  String get commonSend;
+
+  /// Generic tooltip for a button that opens the take-photo/choose-from-gallery sheet.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dodaj sliku'**
+  String get commonAddPhoto;
+
+  /// Option label in the image-source bottom sheet for taking a photo with the camera.
+  ///
+  /// In bs, this message translates to:
+  /// **'Slikaj'**
+  String get commonTakePhoto;
+
+  /// Option label in the image-source bottom sheet for picking a photo from the gallery.
+  ///
+  /// In bs, this message translates to:
+  /// **'Iz galerije'**
+  String get commonChooseFromGallery;
+
   /// Generic loading indicator caption.
   ///
   /// In bs, this message translates to:
@@ -643,6 +667,784 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Vaši tiketi i poruke podršci'**
   String get supportSubtitle;
+
+  /// Error shown when a screen tries to load per-user data (notifications, activity log) with no signed-in session.
+  ///
+  /// In bs, this message translates to:
+  /// **'Niste prijavljeni.'**
+  String get notLoggedInError;
+
+  /// Tooltip for the 'mark all as read' icon button on the notifications screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Označi sve kao pročitano'**
+  String get notificationsMarkAllReadTooltip;
+
+  /// Shared label for the notification type: the filter dropdown on the notifications list, and the type field on the notification detail screen (also shown uppercased as an eyebrow label there).
+  ///
+  /// In bs, this message translates to:
+  /// **'Tip obavijesti'**
+  String get notificationTypeFieldLabel;
+
+  /// Option in the notification type filter dropdown meaning no filter (all types).
+  ///
+  /// In bs, this message translates to:
+  /// **'Svi tipovi'**
+  String get notificationsAllTypesOption;
+
+  /// Display label for the 'Info' notification type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Info'**
+  String get notificationTypeInfoLabel;
+
+  /// Display label for the 'PlannedWorks' notification type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Planirani radovi'**
+  String get notificationTypePlannedWorksLabel;
+
+  /// Display label for the 'Warning' notification type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upozorenje'**
+  String get notificationTypeWarningLabel;
+
+  /// Generic singular fallback label for a notification of unknown/empty type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obavijest'**
+  String get notificationTypeGenericLabel;
+
+  /// Fallback notification title used when the notification has no title, shown on both the list card and the detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obavijest #{id}'**
+  String notificationFallbackTitle(int id);
+
+  /// Empty-state message shown when the notification list has no items.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema obavijesti.'**
+  String get notificationsEmptyMessage;
+
+  /// Empty-state message shown when the notification list has no items matching the selected type filter.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema obavijesti za odabrani tip.'**
+  String get notificationsEmptyFilteredMessage;
+
+  /// Notification detail screen app bar title.
+  ///
+  /// In bs, this message translates to:
+  /// **'Detalji obavijesti'**
+  String get notificationDetailTitle;
+
+  /// Generic 'Description' section heading, used above the notification body text on the notification detail screen and above the description text on the fault report detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Opis'**
+  String get notificationDetailDescriptionHeading;
+
+  /// Placeholder shown in the description section when the notification has no body text.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema dodatnog sadržaja.'**
+  String get notificationDetailEmptyBody;
+
+  /// Section heading above the type/date detail rows on the notification detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Detalji'**
+  String get notificationDetailDetailsHeading;
+
+  /// Label for the created-at date row on the notification detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Datum kreiranja'**
+  String get notificationDetailCreatedAtLabel;
+
+  /// Section heading above the image gallery on the notification detail screen, with the image count.
+  ///
+  /// In bs, this message translates to:
+  /// **'Slike ({count})'**
+  String notificationDetailImagesHeading(int count);
+
+  /// Status pill label shown on a read notification's detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pročitano'**
+  String get notificationStatusRead;
+
+  /// Status pill label shown on an unread notification's detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Novo'**
+  String get notificationStatusUnread;
+
+  /// Empty-state message shown when the activity log has no items.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema zabilježenih aktivnosti.'**
+  String get activityLogEmptyMessage;
+
+  /// Display label for the 'LoginSuccess' activity log event type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Uspješna prijava'**
+  String get activityTypeLoginSuccess;
+
+  /// Display label for the 'LoginFailed' activity log event type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Neuspješna prijava'**
+  String get activityTypeLoginFailed;
+
+  /// Display label for the 'TokenRefreshed' activity log event type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obnova sesije'**
+  String get activityTypeTokenRefreshed;
+
+  /// Display label for the 'PasswordChanged' activity log event type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Promjena lozinke'**
+  String get activityTypePasswordChanged;
+
+  /// Display label for the 'AccountUpdated' activity log event type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izmjena naloga'**
+  String get activityTypeAccountUpdated;
+
+  /// Display label for the 'UserRoleChanged' activity log event type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Promjena role'**
+  String get activityTypeUserRoleChanged;
+
+  /// Display label for the 'UserActivated' activity log event type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Korisnik aktiviran'**
+  String get activityTypeUserActivated;
+
+  /// Display label for the 'UserDeactivated' activity log event type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Korisnik deaktiviran'**
+  String get activityTypeUserDeactivated;
+
+  /// Display label for the 'UserDeleted' activity log event type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Korisnik obrisan'**
+  String get activityTypeUserDeleted;
+
+  /// Generic singular fallback label for an activity log event of unknown/empty type.
+  ///
+  /// In bs, this message translates to:
+  /// **'Aktivnost'**
+  String get activityTypeGenericLabel;
+
+  /// Generic 'back out of this dialog without acting' button label, distinct from commonCancel which cancels an in-progress action.
+  ///
+  /// In bs, this message translates to:
+  /// **'Odustani'**
+  String get dialogDismissButton;
+
+  /// Tooltip for the '+' icon button that opens the new water meter request dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dodaj vodomjer'**
+  String get addWaterMeterTooltip;
+
+  /// Empty-state message shown when the customer has no water meters.
+  ///
+  /// In bs, this message translates to:
+  /// **'Trenutno nemate evidentiranih vodomjera.'**
+  String get waterMetersEmptyMessage;
+
+  /// Inline last-reading value shown on a water meter list card, with the already-formatted reading value.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zadnje očitanje: {value} m³'**
+  String lastReadingLabel(String value);
+
+  /// Snackbar message shown after a new water meter request is submitted successfully.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zahtjev za novi vodomjer je poslan.'**
+  String get newWaterMeterRequestSuccess;
+
+  /// Title for the water meter requests screen/tooltip, shared by the requests screen app bar and the 'open requests' icon button on the water meters tab.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zahtjevi'**
+  String get requestsTitle;
+
+  /// Tooltip for the 'new request' icon button on the requests screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Novi zahtjev'**
+  String get newRequestTooltip;
+
+  /// Title of the confirmation dialog shown before cancelling a water meter request.
+  ///
+  /// In bs, this message translates to:
+  /// **'Otkazati zahtjev?'**
+  String get cancelRequestConfirmTitle;
+
+  /// Body of the confirmation dialog shown before cancelling a water meter request.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zahtjev za novi vodomjer #{id} će biti otkazan.'**
+  String cancelRequestConfirmMessage(int id);
+
+  /// Button label for cancelling a water meter request, used both on the request card and as the confirm action in its confirmation dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Otkaži zahtjev'**
+  String get cancelRequestButton;
+
+  /// Snackbar message shown after a water meter request is cancelled successfully.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zahtjev je otkazan.'**
+  String get cancelRequestSuccess;
+
+  /// Title on a water meter request card.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zahtjev #{id}'**
+  String requestCardTitle(int id);
+
+  /// Empty-state message shown when the customer has no water meter requests.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nemate poslanih zahtjeva za vodomjer.'**
+  String get requestsEmptyMessage;
+
+  /// Title of the new water meter request dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zahtjev za novi vodomjer'**
+  String get newWaterMeterRequestTitle;
+
+  /// Submit button label on the new water meter request dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pošalji zahtjev'**
+  String get newWaterMeterRequestSubmitButton;
+
+  /// Label for the optional note field on the new water meter request dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Napomena (opciono)'**
+  String get newWaterMeterRequestNoteLabel;
+
+  /// Validation error shown when no settlement is selected on the new water meter request dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Odaberite naselje.'**
+  String get settlementRequiredError;
+
+  /// Button label on the water meter detail screen that opens that meter's invoices.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prikaži račune'**
+  String get showInvoicesButton;
+
+  /// Section heading for the meter info card on the water meter detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Podaci o vodomjeru'**
+  String get meterInfoSectionHeading;
+
+  /// Label for the address field on the water meter detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Adresa'**
+  String get addressLabel;
+
+  /// Label for the installation date field on the water meter detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Datum ugradnje'**
+  String get installedAtLabel;
+
+  /// Label for the initial reading field on the water meter detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Početno očitanje'**
+  String get initialReadingLabel;
+
+  /// Plain label for the last reading field on the water meter detail screen's meter info card.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zadnje očitanje'**
+  String get lastReadingFieldLabel;
+
+  /// Label for the last reading stat, with unit, on the water meter detail screen's stats card.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zadnje očitanje (m³)'**
+  String get lastReadingM3Label;
+
+  /// Section heading for the stats card on the water meter detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statistika'**
+  String get statisticsSectionHeading;
+
+  /// Label for the average consumption per billing period stat on the water meter detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prosječna potrošnja po obračunskom periodu (m³)'**
+  String get averageConsumptionLabel;
+
+  /// Label for the total consumption stat on the water meter detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ukupno potrošeno (m³)'**
+  String get totalConsumptionLabel;
+
+  /// Value for the total consumption stat: the already-formatted m3 figure plus the invoice count it was computed from.
+  ///
+  /// In bs, this message translates to:
+  /// **'{m3} m³ ({invoiceCount} računa)'**
+  String totalConsumptionValue(String m3, int invoiceCount);
+
+  /// Label for the unpaid-invoices stat on the water meter detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Neplaćeno'**
+  String get unpaidLabel;
+
+  /// Value for the unpaid-invoices stat: unpaid invoice count and the already-formatted unpaid amount.
+  ///
+  /// In bs, this message translates to:
+  /// **'{count} računa / {amount} KM'**
+  String unpaidValue(int count, String amount);
+
+  /// Label for the last billing period stat on the water meter detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zadnji obračunski period'**
+  String get lastBillingPeriodLabel;
+
+  /// Section heading for the consumption chart card on the water meter detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potrošnja po periodima'**
+  String get consumptionByPeriodHeading;
+
+  /// Message shown in the consumption chart card when there is no consumption data to plot.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema podataka o potrošnji.'**
+  String get noConsumptionDataMessage;
+
+  /// Display label for the 'Active' water meter status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Aktivan'**
+  String get waterMeterStatusActive;
+
+  /// Display label for the 'Inactive' water meter status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Neaktivan'**
+  String get waterMeterStatusInactive;
+
+  /// Display label for the 'Removed' water meter status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Uklonjen'**
+  String get waterMeterStatusRemoved;
+
+  /// Display label for the 'Pending' water meter request status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Na čekanju'**
+  String get requestStatusPending;
+
+  /// Display label for the 'Assigned' water meter request status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dodijeljen'**
+  String get requestStatusAssigned;
+
+  /// Display label for the 'Registered' water meter request status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Registrovan'**
+  String get requestStatusRegistered;
+
+  /// Display label for the 'Rejected' water meter request status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Odbijen'**
+  String get requestStatusRejected;
+
+  /// Display label for the 'Cancelled' water meter request status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Otkazan'**
+  String get requestStatusCancelled;
+
+  /// App bar title for the invoices list screen when not scoped to a single water meter.
+  ///
+  /// In bs, this message translates to:
+  /// **'Računi'**
+  String get invoicesTitle;
+
+  /// App bar title for the invoices list screen when scoped to one water meter's invoices.
+  ///
+  /// In bs, this message translates to:
+  /// **'Računi - {serial}'**
+  String invoicesTitleForMeter(String serial);
+
+  /// Empty-state message shown when the customer has no invoices at all.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nemate izdatih računa.'**
+  String get invoicesEmptyMessage;
+
+  /// Empty-state message shown when a water meter has no invoices yet.
+  ///
+  /// In bs, this message translates to:
+  /// **'Za ovaj vodomjer još nema izdatih računa.'**
+  String get invoicesEmptyForMeterMessage;
+
+  /// Inline remaining-amount value shown on a payable invoice's summary card, with the already-formatted amount. The KM currency suffix is not translated - this app is BAM/KM-only regardless of UI language.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preostalo: {amount} KM'**
+  String invoiceRemainingAmountLabel(String amount);
+
+  /// Display label for the 'Issued' invoice status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izdat'**
+  String get invoiceStatusIssued;
+
+  /// Display label for the 'Paid' invoice status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Plaćen'**
+  String get invoiceStatusPaid;
+
+  /// Display label for the 'Cancelled' invoice status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Storniran'**
+  String get invoiceStatusCancelled;
+
+  /// Tooltip for the 'all invoices' icon button on the invoice detail screen's app bar.
+  ///
+  /// In bs, this message translates to:
+  /// **'Svi računi'**
+  String get allInvoicesTooltip;
+
+  /// Eyebrow label above the status name on the invoice detail screen's status banner, shown uppercased.
+  ///
+  /// In bs, this message translates to:
+  /// **'Status računa'**
+  String get invoiceStatusFieldLabel;
+
+  /// Button label for paying an invoice, used both on the invoice detail screen and in its payment confirmation dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Plati'**
+  String get payButton;
+
+  /// Title of the confirmation dialog shown before paying an invoice.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potvrda plaćanja'**
+  String get paymentConfirmTitle;
+
+  /// Body of the payment confirmation dialog, with the already-formatted amount. The BAM currency suffix is not translated.
+  ///
+  /// In bs, this message translates to:
+  /// **'Da li ste sigurni da želite platiti {amount} BAM?'**
+  String paymentConfirmMessage(String amount);
+
+  /// Snackbar shown when a payment session opens without a Stripe client secret (the Manual provider placeholder flow). currency is the backend-provided currency code, passed through as-is.
+  ///
+  /// In bs, this message translates to:
+  /// **'Plaćanje pokrenuto: {amount} {currency} (status: {statusLabel}).'**
+  String paymentStartedMessage(
+    String amount,
+    String currency,
+    String statusLabel,
+  );
+
+  /// Snackbar shown after the Stripe payment sheet is presented successfully.
+  ///
+  /// In bs, this message translates to:
+  /// **'Plaćanje u obradi.'**
+  String get paymentProcessingMessage;
+
+  /// Error message shown when the customer cancels the Stripe payment sheet.
+  ///
+  /// In bs, this message translates to:
+  /// **'Plaćanje je otkazano.'**
+  String get paymentCancelledMessage;
+
+  /// Fallback error message shown when a Stripe payment fails without a specific message from the SDK.
+  ///
+  /// In bs, this message translates to:
+  /// **'Plaćanje nije uspjelo.'**
+  String get paymentFailedMessage;
+
+  /// Display label for a 'Completed' payment session status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Završeno'**
+  String get paymentStatusCompleted;
+
+  /// Display label for a 'Failed' payment session status.
+  ///
+  /// In bs, this message translates to:
+  /// **'Neuspješno'**
+  String get paymentStatusFailed;
+
+  /// Section heading for the readings card on the invoice detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Očitanja'**
+  String get readingsSectionHeading;
+
+  /// Label for the billing period field on the invoice detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Period'**
+  String get periodLabel;
+
+  /// Label for the previous meter reading field on the invoice detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prethodno očitanje'**
+  String get previousReadingLabel;
+
+  /// Label for the current meter reading field on the invoice detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Novo očitanje'**
+  String get currentReadingLabel;
+
+  /// Label for the consumption field on the invoice detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potrošnja'**
+  String get consumptionLabel;
+
+  /// Section heading for the amount card on the invoice detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Iznos'**
+  String get amountSectionHeading;
+
+  /// Label for the subtotal field on the invoice detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Osnovica'**
+  String get subtotalLabel;
+
+  /// Label for the total amount field on the invoice detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ukupno'**
+  String get totalLabel;
+
+  /// Section heading for the payments card on the invoice detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Uplate'**
+  String get paymentsSectionHeading;
+
+  /// Empty-state message shown when an invoice has no recorded payments.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema evidentiranih uplata.'**
+  String get paymentsEmptyMessage;
+
+  /// Label for the total-paid field on the invoice detail screen's payments card.
+  ///
+  /// In bs, this message translates to:
+  /// **'Plaćeno ukupno'**
+  String get totalPaidLabel;
+
+  /// Label for the remaining-to-pay field on the invoice detail screen's payments card.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preostalo za platiti'**
+  String get remainingToPayLabel;
+
+  /// Snackbar message shown after a new fault report is submitted successfully.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijava kvara je poslana.'**
+  String get faultReportSubmitSuccess;
+
+  /// Tooltip for the '+' icon button that opens the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova prijava'**
+  String get newFaultReportTooltip;
+
+  /// Empty-state message shown when the customer has no fault reports.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nemate poslanih prijava kvarova.'**
+  String get faultReportsEmptyMessage;
+
+  /// Display label for the 'New' fault report status, shared by the report list card and the detail screen's status banner.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova'**
+  String get faultReportStatusNew;
+
+  /// Display label for the 'Assigned' fault report status, shared by the report list card and the detail screen's status banner.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dodijeljena'**
+  String get faultReportStatusAssigned;
+
+  /// Display label for the 'InProgress' fault report status, shared by the report list card and the detail screen's status banner.
+  ///
+  /// In bs, this message translates to:
+  /// **'U toku'**
+  String get faultReportStatusInProgress;
+
+  /// Display label for the 'Resolved' fault report status, shared by the report list card and the detail screen's status banner.
+  ///
+  /// In bs, this message translates to:
+  /// **'Riješena'**
+  String get faultReportStatusResolved;
+
+  /// Eyebrow label above the status name on the fault report detail screen's status banner, shown uppercased.
+  ///
+  /// In bs, this message translates to:
+  /// **'Status prijave'**
+  String get faultReportStatusFieldLabel;
+
+  /// Section heading for the photos card on the fault report detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Fotografije'**
+  String get photosSectionHeading;
+
+  /// Message shown in the photos card when a fault report has no attached photos.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema priloženih fotografija.'**
+  String get noPhotosMessage;
+
+  /// Section heading for the info card on the fault report detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Podaci o prijavi'**
+  String get faultReportInfoSectionHeading;
+
+  /// Label for the reported-at date field on the fault report detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijavljeno'**
+  String get reportedAtLabel;
+
+  /// Label for the resolved-at date field on the fault report detail screen. Distinct from faultReportStatusResolved ('Riješena') which is a different grammatical form used as the status pill label.
+  ///
+  /// In bs, this message translates to:
+  /// **'Riješeno'**
+  String get resolvedAtLabel;
+
+  /// Display label for the 'Open' support ticket status, shown by SupportTicketStatusPill.
+  ///
+  /// In bs, this message translates to:
+  /// **'Otvoren'**
+  String get supportTicketStatusOpen;
+
+  /// Display label for the 'Closed' support ticket status, shown by SupportTicketStatusPill.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zatvoren'**
+  String get supportTicketStatusClosed;
+
+  /// Tooltip for the '+' icon button that opens the new support ticket dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Novi tiket'**
+  String get newSupportTicketTooltip;
+
+  /// Snackbar message shown after a new support ticket is submitted successfully.
+  ///
+  /// In bs, this message translates to:
+  /// **'Tiket je kreiran.'**
+  String get supportTicketCreateSuccess;
+
+  /// Empty-state title shown when the customer has no support tickets.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nemate otvorenih tiketa.'**
+  String get supportTicketsEmptyTitle;
+
+  /// Empty-state subtitle shown below supportTicketsEmptyTitle, prompting the customer to open a new ticket.
+  ///
+  /// In bs, this message translates to:
+  /// **'Otvorite novi tiket da kontaktirate podršku.'**
+  String get supportTicketsEmptySubtitle;
+
+  /// Inline last-message timestamp shown on a support ticket list card, with the already-formatted date/time.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zadnja poruka: {date}'**
+  String supportTicketLastMessageLabel(String date);
+
+  /// Hint text in the reply composer's text field on the support ticket detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Napišite poruku...'**
+  String get supportTicketReplyHint;
+
+  /// Snackbar shown when the customer tries to send a reply with no text (photos alone aren't enough, the backend requires a message body).
+  ///
+  /// In bs, this message translates to:
+  /// **'Unesite tekst poruke.'**
+  String get supportTicketReplyRequiredError;
+
+  /// Fallback AppBar title on the support ticket detail screen while the ticket is loading or has an empty subject.
+  ///
+  /// In bs, this message translates to:
+  /// **'Tiket'**
+  String get supportTicketDefaultTitle;
+
+  /// Message shown in the thread body when a support ticket has no messages yet.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema poruka.'**
+  String get supportTicketNoMessages;
+
+  /// Ticket-created-at date shown in the status header on the support ticket detail screen, with the already-formatted date/time.
+  ///
+  /// In bs, this message translates to:
+  /// **'Otvoren: {date}'**
+  String supportTicketOpenedAtLabel(String date);
+
+  /// Sender label shown above the customer's own chat bubbles on the support ticket detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Vi'**
+  String get supportTicketYouLabel;
+
+  /// Banner shown instead of the reply composer once a support ticket is closed.
+  ///
+  /// In bs, this message translates to:
+  /// **'Tiket je zatvoren'**
+  String get supportTicketClosedBanner;
 }
 
 class _AppLocalizationsDelegate

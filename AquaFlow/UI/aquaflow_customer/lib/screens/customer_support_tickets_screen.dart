@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_support_ticket.dart';
 import 'package:aquaflow_customer/screens/customer_support_ticket_detail_screen.dart';
 import 'package:aquaflow_customer/services/customer_support_ticket_exception.dart';
@@ -77,7 +78,8 @@ class _CustomerSupportTicketsScreenState
       setState(() {
         _items = result.items;
         _nextPage = 2;
-        _hasMore = result.items.length >= _pageSize &&
+        _hasMore =
+            result.items.length >= _pageSize &&
             _items.length < result.totalCount;
         _loading = false;
       });
@@ -103,7 +105,8 @@ class _CustomerSupportTicketsScreenState
       setState(() {
         _items = [..._items, ...result.items];
         _nextPage += 1;
-        final reachedEnd = result.items.length < _pageSize ||
+        final reachedEnd =
+            result.items.length < _pageSize ||
             _items.length >= result.totalCount;
         _hasMore = !reachedEnd;
         _loadingMore = false;
@@ -111,9 +114,9 @@ class _CustomerSupportTicketsScreenState
     } on CustomerSupportTicketException catch (e) {
       if (!mounted) return;
       setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     }
   }
 
@@ -121,7 +124,11 @@ class _CustomerSupportTicketsScreenState
     final created = await showNewSupportTicketDialog(context);
     if (created == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tiket je kreiran.')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).supportTicketCreateSuccess,
+          ),
+        ),
       );
       await _loadFirstPage();
     }
@@ -137,12 +144,13 @@ class _CustomerSupportTicketsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Podrška'),
+        title: Text(loc.supportTitle),
         actions: [
           IconButton(
-            tooltip: 'Novi tiket',
+            tooltip: loc.newSupportTicketTooltip,
             onPressed: _loading ? null : _openNewTicketDialog,
             icon: const Icon(Icons.add),
           ),
@@ -193,10 +201,7 @@ class _CustomerSupportTicketsScreenState
             );
           }
           final ticket = _items[index];
-          return _TicketCard(
-            ticket: ticket,
-            onTap: () => _openDetail(ticket),
-          );
+          return _TicketCard(ticket: ticket, onTap: () => _openDetail(ticket));
         },
       ),
     );
@@ -270,8 +275,10 @@ class _TicketCard extends StatelessWidget {
               const SizedBox(height: 8),
               _InfoRow(
                 icon: Icons.schedule_outlined,
-                label:
-                    'Zadnja poruka: ${_formatDate(ticket.lastMessageAt)}',
+                label: AppLocalizations.of(context)
+                    .supportTicketLastMessageLabel(
+                      _formatDate(ticket.lastMessageAt),
+                    ),
               ),
             ],
           ),
@@ -307,6 +314,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -318,13 +326,13 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'Nemate otvorenih tiketa.',
+            loc.supportTicketsEmptyTitle,
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium,
           ),
           const SizedBox(height: 6),
           Text(
-            'Otvorite novi tiket da kontaktirate podršku.',
+            loc.supportTicketsEmptySubtitle,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
@@ -358,7 +366,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

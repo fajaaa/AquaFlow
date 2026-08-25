@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
+
 import '../models/notification_page.dart';
 import '../models/user_notification_item.dart';
 import '../navigation/app_navigation.dart';
@@ -45,7 +47,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (session == null) {
       setState(() {
         _loading = false;
-        _error = 'Niste prijavljeni.';
+        _error = AppLocalizations.of(context).notLoggedInError;
       });
       return;
     }
@@ -189,6 +191,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final hasUnread = (_pageData?.items ?? const <UserNotificationItem>[]).any(
       (item) => !item.isRead,
     );
+    final loc = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -197,7 +200,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           children: [
             Expanded(
               child: Text(
-                'Obavijesti',
+                loc.tabNotifications,
                 style: Theme.of(
                   context,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -205,7 +208,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
             if (hasUnread)
               IconButton(
-                tooltip: 'Označi sve kao pročitano',
+                tooltip: loc.notificationsMarkAllReadTooltip,
                 onPressed: (_loading || _markingAll) ? null : _markAllAsRead,
                 icon: _markingAll
                     ? const SizedBox(
@@ -216,22 +219,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     : const Icon(Icons.done_all),
               ),
             if (hasUnread) const SizedBox(width: 8),
-            RefreshButton(
-              enabled: !_loading,
-              onRefresh: () => _load(),
-            ),
+            RefreshButton(enabled: !_loading, onRefresh: () => _load()),
           ],
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _typeFilter ?? '',
-          decoration: const InputDecoration(
-            labelText: 'Tip obavijesti',
-            prefixIcon: Icon(Icons.filter_alt_outlined),
+          decoration: InputDecoration(
+            labelText: loc.notificationTypeFieldLabel,
+            prefixIcon: const Icon(Icons.filter_alt_outlined),
           ),
           items: [
-            const DropdownMenuItem(value: '', child: Text('Svi tipovi')),
-            for (final option in _notificationTypeOptions)
+            DropdownMenuItem(
+              value: '',
+              child: Text(loc.notificationsAllTypesOption),
+            ),
+            for (final option in _notificationTypeOptions(loc))
               DropdownMenuItem(value: option.value, child: Text(option.label)),
           ],
           onChanged: _loading ? null : (value) => _setTypeFilter(value ?? ''),
@@ -261,10 +264,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
             EmptyStateView(
               icon: Icons.notifications_none,
-              message: 'Nema obavijesti.',
+              message: AppLocalizations.of(context).notificationsEmptyMessage,
               hasFilters: _typeFilter != null,
               filteredIcon: Icons.filter_alt_off_outlined,
-              filteredMessage: 'Nema obavijesti za odabrani tip.',
+              filteredMessage: AppLocalizations.of(
+                context,
+              ).notificationsEmptyFilteredMessage,
             ),
           ],
         ),
@@ -303,6 +308,7 @@ class _NotificationCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
+    final loc = AppLocalizations.of(context);
 
     final notification = item.notification;
     final type = notification?.type ?? '';
@@ -316,7 +322,7 @@ class _NotificationCard extends StatelessWidget {
     final createdAt = notification?.createdAt ?? item.createdAt;
     final rawTitle = notification?.title.trim();
     final title = rawTitle == null || rawTitle.isEmpty
-        ? 'Obavijest #${item.notificationId}'
+        ? loc.notificationFallbackTitle(item.notificationId)
         : rawTitle;
     final body = _truncate(notification?.body.trim() ?? '', 50);
 
@@ -454,7 +460,7 @@ class _NotificationCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                _typeLabel(type),
+                                _typeLabel(type, loc),
                                 style: TextStyle(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w700,
@@ -520,14 +526,14 @@ class _NotificationCard extends StatelessWidget {
     return base;
   }
 
-  static String _typeLabel(String type) {
+  static String _typeLabel(String type, AppLocalizations loc) {
     switch (type.toLowerCase()) {
       case 'plannedworks':
-        return 'Planirani radovi';
+        return loc.notificationTypePlannedWorksLabel;
       case 'warning':
-        return 'Upozorenje';
+        return loc.notificationTypeWarningLabel;
       default:
-        return type.isEmpty ? 'Obavijest' : type;
+        return type.isEmpty ? loc.notificationTypeGenericLabel : type;
     }
   }
 
@@ -558,8 +564,11 @@ class _SelectOption {
   final String label;
 }
 
-const List<_SelectOption> _notificationTypeOptions = [
-  _SelectOption(value: 'Info', label: 'Info'),
-  _SelectOption(value: 'PlannedWorks', label: 'Planirani radovi'),
-  _SelectOption(value: 'Warning', label: 'Upozorenje'),
+List<_SelectOption> _notificationTypeOptions(AppLocalizations loc) => [
+  _SelectOption(value: 'Info', label: loc.notificationTypeInfoLabel),
+  _SelectOption(
+    value: 'PlannedWorks',
+    label: loc.notificationTypePlannedWorksLabel,
+  ),
+  _SelectOption(value: 'Warning', label: loc.notificationTypeWarningLabel),
 ];

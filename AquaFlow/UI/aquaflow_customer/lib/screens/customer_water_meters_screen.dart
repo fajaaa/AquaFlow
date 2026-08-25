@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
 import 'package:aquaflow_customer/models/customer_water_meter_page.dart';
 import 'package:aquaflow_customer/screens/customer_requests_screen.dart';
@@ -107,7 +108,9 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
     final created = await showNewWaterMeterRequestDialog(context);
     if (created == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Zahtjev za novi vodomjer je poslan.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).newWaterMeterRequestSuccess),
+        ),
       );
       await _load(resetPage: true);
     }
@@ -132,6 +135,7 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
   @override
   Widget build(BuildContext context) {
     final pageData = _pageData;
+    final loc = AppLocalizations.of(context);
 
     // Docked below the list rather than as its last scrollable item, so it
     // stays visible and reachable at the bottom of the tab on every device
@@ -157,19 +161,19 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Vodomjeri',
+                    loc.tabWaterMeters,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Zahtjevi',
+                  tooltip: loc.requestsTitle,
                   onPressed: _openRequests,
                   icon: const Icon(Icons.receipt_long_outlined),
                 ),
                 IconButton(
-                  tooltip: 'Dodaj vodomjer',
+                  tooltip: loc.addWaterMeterTooltip,
                   onPressed: _loading ? null : _openNewRequestDialog,
                   icon: const Icon(Icons.add),
                 ),
@@ -205,9 +209,9 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
               padding: const EdgeInsets.all(24),
               children: [
                 SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-                const EmptyStateView(
+                EmptyStateView(
                   icon: Icons.water_drop_outlined,
-                  message: 'Trenutno nemate evidentiranih vodomjera.',
+                  message: AppLocalizations.of(context).waterMetersEmptyMessage,
                 ),
               ],
             ),
@@ -258,8 +262,9 @@ class _WaterMeterCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
+    final loc = AppLocalizations.of(context);
 
-    final meta = WaterMeterStatusMeta.of(meter.status);
+    final meta = WaterMeterStatusMeta.of(meter.status, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     // Inactive is the meter's "needs attention" state, same role
     // `isPayable` plays for an invoice card / `!isRead` plays for a
@@ -399,7 +404,9 @@ class _WaterMeterCard extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'Zadnje očitanje: ${meter.lastReading.toStringAsFixed(2)} m³',
+                              loc.lastReadingLabel(
+                                meter.lastReading.toStringAsFixed(2),
+                              ),
                               style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w700,

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_fault_report.dart';
 import 'package:aquaflow_customer/models/customer_fault_report_photo.dart';
 import 'package:aquaflow_customer/services/customer_fault_report_exception.dart';
@@ -96,8 +97,9 @@ class _CustomerFaultReportDetailScreenState
     final report = widget.report;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final loc = AppLocalizations.of(context);
 
-    final meta = _metaFor(report.status);
+    final meta = _metaFor(report.status, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     final onAccent =
         ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
@@ -136,7 +138,7 @@ class _CustomerFaultReportDetailScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'STATUS PRIJAVE',
+                          loc.faultReportStatusFieldLabel.toUpperCase(),
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
@@ -191,12 +193,13 @@ class _CustomerFaultReportDetailScreenState
       return _ErrorRetry(message: error, onRetry: _load);
     }
 
+    final loc = AppLocalizations.of(context);
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Fotografije',
+            loc.photosSectionHeading,
             icon: Icons.photo_library_outlined,
             color: accent,
           ),
@@ -205,7 +208,7 @@ class _CustomerFaultReportDetailScreenState
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                'Nema priloženih fotografija.',
+                loc.noPhotosMessage,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -239,31 +242,31 @@ class _CustomerFaultReportDetailScreenState
     );
   }
 
-  static _StatusMeta _metaFor(String status) {
+  static _StatusMeta _metaFor(String status, AppLocalizations loc) {
     switch (status.toLowerCase()) {
       case 'new':
-        return const _StatusMeta(
-          'Nova',
+        return _StatusMeta(
+          loc.faultReportStatusNew,
           Icons.fiber_new_outlined,
-          Color(0xFFB45309),
+          const Color(0xFFB45309),
         );
       case 'assigned':
-        return const _StatusMeta(
-          'Dodijeljena',
+        return _StatusMeta(
+          loc.faultReportStatusAssigned,
           Icons.assignment_ind_outlined,
-          Color(0xFF6D28D9),
+          const Color(0xFF6D28D9),
         );
       case 'inprogress':
-        return const _StatusMeta(
-          'U toku',
+        return _StatusMeta(
+          loc.faultReportStatusInProgress,
           Icons.engineering_outlined,
-          Color(0xFF1D4ED8),
+          const Color(0xFF1D4ED8),
         );
       case 'resolved':
-        return const _StatusMeta(
-          'Riješena',
+        return _StatusMeta(
+          loc.faultReportStatusResolved,
           Icons.check_circle_outline,
-          Color(0xFF2E7D32),
+          const Color(0xFF2E7D32),
         );
       default:
         return _StatusMeta(status, Icons.help_outline, const Color(0xFF64748B));
@@ -310,35 +313,36 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Podaci o prijavi',
+            loc.faultReportInfoSectionHeading,
             icon: Icons.info_outline,
             color: accent,
           ),
           const SizedBox(height: 10),
           _KeyValueRow(
-            label: 'Naselje',
+            label: loc.locationSettlementLabel,
             value: report.settlementName.trim().isEmpty
                 ? '-'
                 : report.settlementName.trim(),
           ),
           if (report.address.isNotEmpty) ...[
             const SizedBox(height: 6),
-            _KeyValueRow(label: 'Adresa', value: report.address),
+            _KeyValueRow(label: loc.addressLabel, value: report.address),
           ],
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Prijavljeno',
+            label: loc.reportedAtLabel,
             value: _formatDate(report.createdAt),
           ),
           if (report.resolvedAt != null) ...[
             const SizedBox(height: 6),
             _KeyValueRow(
-              label: 'Riješeno',
+              label: loc.resolvedAtLabel,
               value: _formatDate(report.resolvedAt),
             ),
           ],
@@ -362,7 +366,7 @@ class _DescriptionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Opis',
+            AppLocalizations.of(context).notificationDetailDescriptionHeading,
             icon: Icons.description_outlined,
             color: accent,
           ),
@@ -503,7 +507,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),
