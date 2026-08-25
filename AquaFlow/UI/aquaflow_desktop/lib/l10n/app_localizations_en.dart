@@ -309,22 +309,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get codebookLabel => 'Codebook';
 
   @override
-  String get dashboardOverviewSubtitle => 'Overview of key metrics (demo data)';
+  String get dashboardOverviewSubtitle => 'Overview of key metrics';
 
   @override
-  String get lineChartTitle => 'Line chart';
+  String get dashboardRevenueTrendChartTitle => 'Revenue';
 
   @override
-  String get donutChartTitle => 'Donut chart';
+  String get dashboardInvoiceStatusChartTitle => 'Invoice status';
 
   @override
-  String get barChartTitle => 'Bar chart';
+  String get dashboardConsumptionTrendChartTitle => 'Water consumption';
 
   @override
-  String get seriesALabel => 'Series A';
+  String get dashboardFaultReportStatusChartTitle => 'Fault reports by status';
 
   @override
-  String get seriesBLabel => 'Series B';
+  String get dashboardUserGrowthChartTitle => 'User base growth';
+
+  @override
+  String get dashboardWaterMeterRequestStatusChartTitle =>
+      'Water meter requests by status';
+
+  @override
+  String get dashboardFilterCityLabel => 'City';
+
+  @override
+  String get dashboardFilterAllCities => 'All cities';
+
+  @override
+  String get dashboardFilterDateRangeTooltip => 'Choose date range';
+
+  @override
+  String get dashboardFilterReset => 'Reset filters';
 
   @override
   String get statusFieldLabel => 'Status';
@@ -1294,52 +1310,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportTicketStatusClosed => 'Closed';
 
   @override
-  String get recommendationsAndAlertsGroupLabel => 'Recommendations & alerts';
-
-  @override
-  String get recommendationsNavLabel => 'Recommendations';
-
-  @override
-  String get recommendationsScreenSubtitle =>
-      'Review consumption-based recommendations and resolve them.';
-
-  @override
-  String get refreshRecommendationsButtonLabel => 'Refresh recommendations';
-
-  @override
-  String get recommendationsRecomputedSuccess => 'Recommendations refreshed.';
-
-  @override
-  String get recommendationsEmptyMessage => 'No recommendations.';
-
-  @override
-  String get markAsReadTooltip => 'Mark as read';
-
-  @override
-  String get recommendationMarkedReadSuccess =>
-      'Recommendation marked as read.';
-
-  @override
-  String get deleteRecommendationDialogTitle => 'Delete recommendation';
-
-  @override
-  String get deleteRecommendationDialogContent =>
-      'Are you sure you want to delete this recommendation?';
-
-  @override
-  String get recommendationDeletedSuccess => 'Recommendation deleted.';
-
-  @override
-  String get reasonColumnLabel => 'Reason';
-
-  @override
   String get messageColumnLabel => 'Message';
-
-  @override
-  String get readStatusLabel => 'Read';
-
-  @override
-  String get unreadStatusLabel => 'Unread';
 
   @override
   String get consumptionAlertsNavLabel => 'Consumption alerts';

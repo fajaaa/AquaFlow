@@ -417,29 +417,49 @@
     "description": "Sidebar menu label for the codebook (cities/municipalities/settlements) section."
   },
 
-  "dashboardOverviewSubtitle": "Pregled ključnih pokazatelja (demo podaci)",
+  "dashboardOverviewSubtitle": "Pregled ključnih pokazatelja",
   "@dashboardOverviewSubtitle": {
-    "description": "Subtitle under the dashboard overview heading, noting the charts show demo data."
+    "description": "Subtitle under the dashboard overview heading."
   },
-  "lineChartTitle": "Linijski grafikon",
-  "@lineChartTitle": {
-    "description": "Title for the demo line chart card on the dashboard overview."
+  "dashboardRevenueTrendChartTitle": "Prihod od naplate",
+  "@dashboardRevenueTrendChartTitle": {
+    "description": "Title for the revenue-over-time chart card on the dashboard overview."
   },
-  "donutChartTitle": "Kružni grafikon",
-  "@donutChartTitle": {
-    "description": "Title for the demo donut chart card on the dashboard overview."
+  "dashboardInvoiceStatusChartTitle": "Status računa",
+  "@dashboardInvoiceStatusChartTitle": {
+    "description": "Title for the invoice-status breakdown chart card on the dashboard overview."
   },
-  "barChartTitle": "Trakasti grafikon",
-  "@barChartTitle": {
-    "description": "Title for the demo bar chart card on the dashboard overview."
+  "dashboardConsumptionTrendChartTitle": "Potrošnja vode",
+  "@dashboardConsumptionTrendChartTitle": {
+    "description": "Title for the water consumption-over-time chart card on the dashboard overview."
   },
-  "seriesALabel": "Serija A",
-  "@seriesALabel": {
-    "description": "Legend label for the first series in the demo bar chart."
+  "dashboardFaultReportStatusChartTitle": "Prijave kvarova po statusu",
+  "@dashboardFaultReportStatusChartTitle": {
+    "description": "Title for the fault-report-status breakdown chart card on the dashboard overview."
   },
-  "seriesBLabel": "Serija B",
-  "@seriesBLabel": {
-    "description": "Legend label for the second series in the demo bar chart."
+  "dashboardUserGrowthChartTitle": "Rast korisničke baze",
+  "@dashboardUserGrowthChartTitle": {
+    "description": "Title for the new-users-over-time chart card on the dashboard overview."
+  },
+  "dashboardWaterMeterRequestStatusChartTitle": "Zahtjevi za vodomjere po statusu",
+  "@dashboardWaterMeterRequestStatusChartTitle": {
+    "description": "Title for the water-meter-request-status breakdown chart card on the dashboard overview."
+  },
+  "dashboardFilterCityLabel": "Grad",
+  "@dashboardFilterCityLabel": {
+    "description": "Label for the city filter dropdown above the dashboard charts."
+  },
+  "dashboardFilterAllCities": "Svi gradovi",
+  "@dashboardFilterAllCities": {
+    "description": "Option in the dashboard city filter dropdown that clears the city filter."
+  },
+  "dashboardFilterDateRangeTooltip": "Odaberi raspon datuma",
+  "@dashboardFilterDateRangeTooltip": {
+    "description": "Tooltip for the date range button above the dashboard charts."
+  },
+  "dashboardFilterReset": "Resetuj filtere",
+  "@dashboardFilterReset": {
+    "description": "Button that resets the dashboard filters (date range and city) to their defaults."
   },
 
   "statusFieldLabel": "Status",
@@ -1776,65 +1796,9 @@
     "description": "Singular display label for a closed support ticket's status pill."
   },
 
-  "recommendationsAndAlertsGroupLabel": "Preporuke i upozorenja",
-  "@recommendationsAndAlertsGroupLabel": {
-    "description": "Sidebar menu label for the 'Preporuke i upozorenja' category group, shown only when the caller can manage recommendations and/or consumption alerts."
-  },
-  "recommendationsNavLabel": "Preporuke",
-  "@recommendationsNavLabel": {
-    "description": "Sidebar menu label for the recommendations management section."
-  },
-  "recommendationsScreenSubtitle": "Pregled preporuka zasnovanih na potrošnji i njihovo rješavanje.",
-  "@recommendationsScreenSubtitle": {
-    "description": "Subtitle on the 'Preporuke' screen header."
-  },
-  "refreshRecommendationsButtonLabel": "Osvježi preporuke",
-  "@refreshRecommendationsButtonLabel": {
-    "description": "Button label on the 'Preporuke' screen that triggers recomputing recommendations."
-  },
-  "recommendationsRecomputedSuccess": "Preporuke su osvježene.",
-  "@recommendationsRecomputedSuccess": {
-    "description": "Snackbar message shown after recommendations are recomputed."
-  },
-  "recommendationsEmptyMessage": "Nema preporuka.",
-  "@recommendationsEmptyMessage": {
-    "description": "Empty-state message on the 'Preporuke' screen when there are no rows."
-  },
-  "markAsReadTooltip": "Označi kao pročitano",
-  "@markAsReadTooltip": {
-    "description": "Tooltip for the row action that marks a recommendation as read."
-  },
-  "recommendationMarkedReadSuccess": "Preporuka je označena kao pročitana.",
-  "@recommendationMarkedReadSuccess": {
-    "description": "Snackbar message shown after a recommendation is marked as read."
-  },
-  "deleteRecommendationDialogTitle": "Obriši preporuku",
-  "@deleteRecommendationDialogTitle": {
-    "description": "Title of the confirmation dialog shown before deleting a recommendation."
-  },
-  "deleteRecommendationDialogContent": "Da li ste sigurni da želite obrisati ovu preporuku?",
-  "@deleteRecommendationDialogContent": {
-    "description": "Content of the confirmation dialog shown before deleting a recommendation."
-  },
-  "recommendationDeletedSuccess": "Preporuka je obrisana.",
-  "@recommendationDeletedSuccess": {
-    "description": "Snackbar message shown after a recommendation is deleted."
-  },
-  "reasonColumnLabel": "Razlog",
-  "@reasonColumnLabel": {
-    "description": "Table column header for a recommendation's reason."
-  },
   "messageColumnLabel": "Poruka",
   "@messageColumnLabel": {
-    "description": "Table column header for a message (recommendation or consumption alert)."
-  },
-  "readStatusLabel": "Pročitano",
-  "@readStatusLabel": {
-    "description": "Status pill label for a read recommendation."
-  },
-  "unreadStatusLabel": "Nepročitano",
-  "@unreadStatusLabel": {
-    "description": "Status pill label for an unread recommendation."
+    "description": "Table column header for a consumption alert's message."
   },
 
   "consumptionAlertsNavLabel": "Upozorenja o potrošnji",

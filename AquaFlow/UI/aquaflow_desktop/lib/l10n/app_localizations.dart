@@ -662,41 +662,71 @@ abstract class AppLocalizations {
   /// **'Šifarnik'**
   String get codebookLabel;
 
-  /// Subtitle under the dashboard overview heading, noting the charts show demo data.
+  /// Subtitle under the dashboard overview heading.
   ///
   /// In bs, this message translates to:
-  /// **'Pregled ključnih pokazatelja (demo podaci)'**
+  /// **'Pregled ključnih pokazatelja'**
   String get dashboardOverviewSubtitle;
 
-  /// Title for the demo line chart card on the dashboard overview.
+  /// Title for the revenue-over-time chart card on the dashboard overview.
   ///
   /// In bs, this message translates to:
-  /// **'Linijski grafikon'**
-  String get lineChartTitle;
+  /// **'Prihod od naplate'**
+  String get dashboardRevenueTrendChartTitle;
 
-  /// Title for the demo donut chart card on the dashboard overview.
+  /// Title for the invoice-status breakdown chart card on the dashboard overview.
   ///
   /// In bs, this message translates to:
-  /// **'Kružni grafikon'**
-  String get donutChartTitle;
+  /// **'Status računa'**
+  String get dashboardInvoiceStatusChartTitle;
 
-  /// Title for the demo bar chart card on the dashboard overview.
+  /// Title for the water consumption-over-time chart card on the dashboard overview.
   ///
   /// In bs, this message translates to:
-  /// **'Trakasti grafikon'**
-  String get barChartTitle;
+  /// **'Potrošnja vode'**
+  String get dashboardConsumptionTrendChartTitle;
 
-  /// Legend label for the first series in the demo bar chart.
+  /// Title for the fault-report-status breakdown chart card on the dashboard overview.
   ///
   /// In bs, this message translates to:
-  /// **'Serija A'**
-  String get seriesALabel;
+  /// **'Prijave kvarova po statusu'**
+  String get dashboardFaultReportStatusChartTitle;
 
-  /// Legend label for the second series in the demo bar chart.
+  /// Title for the new-users-over-time chart card on the dashboard overview.
   ///
   /// In bs, this message translates to:
-  /// **'Serija B'**
-  String get seriesBLabel;
+  /// **'Rast korisničke baze'**
+  String get dashboardUserGrowthChartTitle;
+
+  /// Title for the water-meter-request-status breakdown chart card on the dashboard overview.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zahtjevi za vodomjere po statusu'**
+  String get dashboardWaterMeterRequestStatusChartTitle;
+
+  /// Label for the city filter dropdown above the dashboard charts.
+  ///
+  /// In bs, this message translates to:
+  /// **'Grad'**
+  String get dashboardFilterCityLabel;
+
+  /// Option in the dashboard city filter dropdown that clears the city filter.
+  ///
+  /// In bs, this message translates to:
+  /// **'Svi gradovi'**
+  String get dashboardFilterAllCities;
+
+  /// Tooltip for the date range button above the dashboard charts.
+  ///
+  /// In bs, this message translates to:
+  /// **'Odaberi raspon datuma'**
+  String get dashboardFilterDateRangeTooltip;
+
+  /// Button that resets the dashboard filters (date range and city) to their defaults.
+  ///
+  /// In bs, this message translates to:
+  /// **'Resetuj filtere'**
+  String get dashboardFilterReset;
 
   /// Label for a status filter/column, shared across the users, collectors, and water meters screens.
   ///
@@ -2444,95 +2474,11 @@ abstract class AppLocalizations {
   /// **'Zatvoren'**
   String get supportTicketStatusClosed;
 
-  /// Sidebar menu label for the 'Preporuke i upozorenja' category group, shown only when the caller can manage recommendations and/or consumption alerts.
-  ///
-  /// In bs, this message translates to:
-  /// **'Preporuke i upozorenja'**
-  String get recommendationsAndAlertsGroupLabel;
-
-  /// Sidebar menu label for the recommendations management section.
-  ///
-  /// In bs, this message translates to:
-  /// **'Preporuke'**
-  String get recommendationsNavLabel;
-
-  /// Subtitle on the 'Preporuke' screen header.
-  ///
-  /// In bs, this message translates to:
-  /// **'Pregled preporuka zasnovanih na potrošnji i njihovo rješavanje.'**
-  String get recommendationsScreenSubtitle;
-
-  /// Button label on the 'Preporuke' screen that triggers recomputing recommendations.
-  ///
-  /// In bs, this message translates to:
-  /// **'Osvježi preporuke'**
-  String get refreshRecommendationsButtonLabel;
-
-  /// Snackbar message shown after recommendations are recomputed.
-  ///
-  /// In bs, this message translates to:
-  /// **'Preporuke su osvježene.'**
-  String get recommendationsRecomputedSuccess;
-
-  /// Empty-state message on the 'Preporuke' screen when there are no rows.
-  ///
-  /// In bs, this message translates to:
-  /// **'Nema preporuka.'**
-  String get recommendationsEmptyMessage;
-
-  /// Tooltip for the row action that marks a recommendation as read.
-  ///
-  /// In bs, this message translates to:
-  /// **'Označi kao pročitano'**
-  String get markAsReadTooltip;
-
-  /// Snackbar message shown after a recommendation is marked as read.
-  ///
-  /// In bs, this message translates to:
-  /// **'Preporuka je označena kao pročitana.'**
-  String get recommendationMarkedReadSuccess;
-
-  /// Title of the confirmation dialog shown before deleting a recommendation.
-  ///
-  /// In bs, this message translates to:
-  /// **'Obriši preporuku'**
-  String get deleteRecommendationDialogTitle;
-
-  /// Content of the confirmation dialog shown before deleting a recommendation.
-  ///
-  /// In bs, this message translates to:
-  /// **'Da li ste sigurni da želite obrisati ovu preporuku?'**
-  String get deleteRecommendationDialogContent;
-
-  /// Snackbar message shown after a recommendation is deleted.
-  ///
-  /// In bs, this message translates to:
-  /// **'Preporuka je obrisana.'**
-  String get recommendationDeletedSuccess;
-
-  /// Table column header for a recommendation's reason.
-  ///
-  /// In bs, this message translates to:
-  /// **'Razlog'**
-  String get reasonColumnLabel;
-
-  /// Table column header for a message (recommendation or consumption alert).
+  /// Table column header for a consumption alert's message.
   ///
   /// In bs, this message translates to:
   /// **'Poruka'**
   String get messageColumnLabel;
-
-  /// Status pill label for a read recommendation.
-  ///
-  /// In bs, this message translates to:
-  /// **'Pročitano'**
-  String get readStatusLabel;
-
-  /// Status pill label for an unread recommendation.
-  ///
-  /// In bs, this message translates to:
-  /// **'Nepročitano'**
-  String get unreadStatusLabel;
 
   /// Sidebar menu label for the water consumption alerts management section.
   ///

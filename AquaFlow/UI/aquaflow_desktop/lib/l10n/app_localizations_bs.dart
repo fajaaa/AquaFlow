@@ -307,23 +307,39 @@ class AppLocalizationsBs extends AppLocalizations {
   String get codebookLabel => 'Šifarnik';
 
   @override
-  String get dashboardOverviewSubtitle =>
-      'Pregled ključnih pokazatelja (demo podaci)';
+  String get dashboardOverviewSubtitle => 'Pregled ključnih pokazatelja';
 
   @override
-  String get lineChartTitle => 'Linijski grafikon';
+  String get dashboardRevenueTrendChartTitle => 'Prihod od naplate';
 
   @override
-  String get donutChartTitle => 'Kružni grafikon';
+  String get dashboardInvoiceStatusChartTitle => 'Status računa';
 
   @override
-  String get barChartTitle => 'Trakasti grafikon';
+  String get dashboardConsumptionTrendChartTitle => 'Potrošnja vode';
 
   @override
-  String get seriesALabel => 'Serija A';
+  String get dashboardFaultReportStatusChartTitle =>
+      'Prijave kvarova po statusu';
 
   @override
-  String get seriesBLabel => 'Serija B';
+  String get dashboardUserGrowthChartTitle => 'Rast korisničke baze';
+
+  @override
+  String get dashboardWaterMeterRequestStatusChartTitle =>
+      'Zahtjevi za vodomjere po statusu';
+
+  @override
+  String get dashboardFilterCityLabel => 'Grad';
+
+  @override
+  String get dashboardFilterAllCities => 'Svi gradovi';
+
+  @override
+  String get dashboardFilterDateRangeTooltip => 'Odaberi raspon datuma';
+
+  @override
+  String get dashboardFilterReset => 'Resetuj filtere';
 
   @override
   String get statusFieldLabel => 'Status';
@@ -1289,52 +1305,7 @@ class AppLocalizationsBs extends AppLocalizations {
   String get supportTicketStatusClosed => 'Zatvoren';
 
   @override
-  String get recommendationsAndAlertsGroupLabel => 'Preporuke i upozorenja';
-
-  @override
-  String get recommendationsNavLabel => 'Preporuke';
-
-  @override
-  String get recommendationsScreenSubtitle =>
-      'Pregled preporuka zasnovanih na potrošnji i njihovo rješavanje.';
-
-  @override
-  String get refreshRecommendationsButtonLabel => 'Osvježi preporuke';
-
-  @override
-  String get recommendationsRecomputedSuccess => 'Preporuke su osvježene.';
-
-  @override
-  String get recommendationsEmptyMessage => 'Nema preporuka.';
-
-  @override
-  String get markAsReadTooltip => 'Označi kao pročitano';
-
-  @override
-  String get recommendationMarkedReadSuccess =>
-      'Preporuka je označena kao pročitana.';
-
-  @override
-  String get deleteRecommendationDialogTitle => 'Obriši preporuku';
-
-  @override
-  String get deleteRecommendationDialogContent =>
-      'Da li ste sigurni da želite obrisati ovu preporuku?';
-
-  @override
-  String get recommendationDeletedSuccess => 'Preporuka je obrisana.';
-
-  @override
-  String get reasonColumnLabel => 'Razlog';
-
-  @override
   String get messageColumnLabel => 'Poruka';
-
-  @override
-  String get readStatusLabel => 'Pročitano';
-
-  @override
-  String get unreadStatusLabel => 'Nepročitano';
 
   @override
   String get consumptionAlertsNavLabel => 'Upozorenja o potrošnji';

@@ -288,17 +288,6 @@ public partial class AquaFlowDbContext
             },
             new
             {
-                Id = 22,
-                Code = "Recommendations.Manage",
-                Name = "Manage recommendations",
-                Module = "Recommendations",
-                Description = "Allows viewing, resolving, and recomputing consumption-based recommendations.",
-                IsActive = true,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
-            new
-            {
                 Id = 23,
                 Code = "ConsumptionAlerts.Manage",
                 Name = "Manage consumption alerts",
@@ -501,14 +490,6 @@ public partial class AquaFlowDbContext
                 Id = 25,
                 UserRoleId = 3,
                 PermissionId = 21,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
-            new
-            {
-                Id = 26,
-                UserRoleId = 1,
-                PermissionId = 22,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
