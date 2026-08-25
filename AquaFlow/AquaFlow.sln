@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AquaFlow.Services.Tests", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AquaFlow.WebAPI.Tests", "AquaFlow.WebAPI.Tests\AquaFlow.WebAPI.Tests.csproj", "{57AC04CB-7827-4CE6-BE85-57C1543DCD00}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AquaFlow.Subscriber", "AquaFlow.Subscriber\AquaFlow.Subscriber.csproj", "{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -97,6 +99,18 @@ Global
 		{57AC04CB-7827-4CE6-BE85-57C1543DCD00}.Release|x64.Build.0 = Release|Any CPU
 		{57AC04CB-7827-4CE6-BE85-57C1543DCD00}.Release|x86.ActiveCfg = Release|Any CPU
 		{57AC04CB-7827-4CE6-BE85-57C1543DCD00}.Release|x86.Build.0 = Release|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Debug|x64.Build.0 = Debug|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Debug|x86.Build.0 = Debug|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Release|x64.ActiveCfg = Release|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Release|x64.Build.0 = Release|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Release|x86.ActiveCfg = Release|Any CPU
+		{8B2D225E-6CD7-4705-97D5-14D6C272AB9C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

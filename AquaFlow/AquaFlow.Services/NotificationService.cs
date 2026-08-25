@@ -1,4 +1,6 @@
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Common.Services.PushNotificationService;
+using AquaFlow.Model.Messages;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -17,6 +19,7 @@ public class NotificationService
 
     private readonly NotificationRecipientService _recipientService;
     private readonly IPushNotificationSender _pushNotificationSender;
+    private readonly IMessagePublisher _messagePublisher;
     private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
@@ -27,11 +30,13 @@ public class NotificationService
         IEnumerable<IValidator<NotificationPatchRequest>> patchValidators,
         NotificationRecipientService recipientService,
         IPushNotificationSender pushNotificationSender,
+        IMessagePublisher messagePublisher,
         ILogger<NotificationService> logger)
         : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _recipientService = recipientService;
         _pushNotificationSender = pushNotificationSender;
+        _messagePublisher = messagePublisher;
         _logger = logger;
     }
 
@@ -73,6 +78,7 @@ public class NotificationService
         await transaction.CommitAsync();
 
         await SendPushNotificationAsync(entity, recipientUserIds);
+        await PublishNotificationCreatedAsync(entity);
 
         await LoadReferencesAsync(entity);
 
@@ -201,6 +207,27 @@ public class NotificationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send push notification for notification {NotificationId}.", notification.Id);
+        }
+    }
+
+    // Deliberately outside the InsertAsync transaction (called after CommitAsync): a RabbitMQ
+    // outage must never block or roll back notification creation, so any failure here is caught,
+    // logged, and swallowed instead of propagating.
+    private async Task PublishNotificationCreatedAsync(Notification notification)
+    {
+        try
+        {
+            var response = Mapper.Map<NotificationResponse>(notification);
+
+            await _messagePublisher.PublishAsync(new NotificationCreated
+            {
+                Id = notification.Id,
+                Data = response
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish NotificationCreated message for notification {NotificationId}.", notification.Id);
         }
     }
 
