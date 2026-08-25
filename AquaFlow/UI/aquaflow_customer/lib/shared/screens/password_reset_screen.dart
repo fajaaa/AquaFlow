@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
+
 import '../services/account_exception.dart';
 import '../services/account_service.dart';
 
@@ -44,7 +46,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lozinka je promijenjena.')),
+        SnackBar(content: Text(AppLocalizations.of(context).passwordResetSuccess)),
       );
     } on AccountException catch (e) {
       if (!mounted) return;
@@ -70,8 +72,9 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Promjena lozinke')),
+      appBar: AppBar(title: Text(loc.passwordResetTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -84,7 +87,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Unesite trenutnu i novu lozinku da biste je promijenili.',
+                      loc.passwordResetDescription,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
@@ -92,17 +95,17 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                     const SizedBox(height: 16),
                     _field(
                       controller: _currentPasswordCtrl,
-                      label: 'Trenutna lozinka',
+                      label: loc.passwordResetCurrentLabel,
                       validator: _currentPasswordValidator,
                     ),
                     _field(
                       controller: _newPasswordCtrl,
-                      label: 'Nova lozinka',
+                      label: loc.passwordResetNewLabel,
                       validator: _newPasswordValidator,
                     ),
                     _field(
                       controller: _confirmPasswordCtrl,
-                      label: 'Potvrda nove lozinke',
+                      label: loc.passwordResetConfirmLabel,
                       validator: _confirmPasswordValidator,
                     ),
                     const SizedBox(height: 8),
@@ -118,7 +121,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                               ),
                             )
                           : const Icon(Icons.lock_reset_outlined),
-                      label: Text(_saving ? 'Spašavanje...' : 'Promijeni lozinku'),
+                      label: Text(_saving ? loc.commonSaving : loc.passwordResetSubmitButton),
                     ),
                   ],
                 ),
@@ -153,19 +156,24 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
   // change"), this screen exists only to change the password, so all three
   // fields are always required.
   String? _currentPasswordValidator(String? value) {
-    if ((value ?? '').isEmpty) return 'Unesite trenutnu lozinku.';
+    if ((value ?? '').isEmpty) {
+      return AppLocalizations.of(context).passwordResetCurrentRequiredError;
+    }
     return null;
   }
 
   String? _newPasswordValidator(String? value) {
     final text = value ?? '';
-    if (text.isEmpty) return 'Unesite novu lozinku.';
-    if (text.length < 6) return 'Lozinka mora imati najmanje 6 znakova.';
+    final loc = AppLocalizations.of(context);
+    if (text.isEmpty) return loc.passwordResetNewRequiredError;
+    if (text.length < 6) return loc.passwordTooShortError;
     return null;
   }
 
   String? _confirmPasswordValidator(String? value) {
-    if (value != _newPasswordCtrl.text) return 'Lozinke se ne podudaraju.';
+    if (value != _newPasswordCtrl.text) {
+      return AppLocalizations.of(context).passwordMismatchError;
+    }
     return null;
   }
 }

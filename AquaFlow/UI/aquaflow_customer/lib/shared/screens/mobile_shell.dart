@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/shared/models/user_preferences.dart';
 import 'package:aquaflow_customer/shared/providers/auth_provider.dart';
 import 'package:aquaflow_customer/shared/providers/theme_provider.dart';
@@ -116,7 +117,8 @@ class _MobileShellState extends State<MobileShell> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Tema nije sačuvana: ${e.message}'),
+          content:
+              Text(AppLocalizations.of(context).themeSaveFailedError(e.message)),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -128,6 +130,7 @@ class _MobileShellState extends State<MobileShell> {
     final tabs = widget.tabs;
     final themeMode = context.select<ThemeProvider, ThemeMode>((p) => p.themeMode);
     final isDark = themeMode == ThemeMode.dark;
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -136,7 +139,7 @@ class _MobileShellState extends State<MobileShell> {
         leading: Center(
           child: CircleIconButton(
             icon: isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-            tooltip: 'Promijeni temu',
+            tooltip: loc.mobileShellThemeTooltip,
             onTap: _onThemeToggle,
           ),
         ),
@@ -144,14 +147,14 @@ class _MobileShellState extends State<MobileShell> {
           'assets/images/logo.png',
           height: 32,
           fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => const Text('AquaFlow'),
+          errorBuilder: (context, error, stackTrace) => Text(loc.appTitle),
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: CircleIconButton(
               icon: Icons.logout,
-              tooltip: 'Odjava',
+              tooltip: loc.mobileShellLogoutTooltip,
               onTap: () => context.read<AuthProvider>().logout(),
             ),
           ),

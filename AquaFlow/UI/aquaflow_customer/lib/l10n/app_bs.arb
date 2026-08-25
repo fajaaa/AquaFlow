@@ -80,5 +80,328 @@
         "type": "int"
       }
     }
+  },
+
+  "commonSaving": "Spašavanje...",
+  "@commonSaving": {
+    "description": "Generic saving-in-progress button label, shown while a save request is in flight."
+  },
+
+  "welcomeTagline": "Svaka kap, evidentirana.",
+  "@welcomeTagline": {
+    "description": "Tagline shown under the logo on the welcome screen."
+  },
+  "welcomeSubtitle": "Mali koraci u štednji vode prave velike valove promjena.",
+  "@welcomeSubtitle": {
+    "description": "Subtitle/italic quote shown under the tagline on the welcome screen."
+  },
+  "authLoginButton": "Prijavi se",
+  "@authLoginButton": {
+    "description": "Login action button label, used on the welcome screen and as the login form's submit button."
+  },
+  "authRegisterButton": "Registruj se",
+  "@authRegisterButton": {
+    "description": "Register action button label, used on the welcome screen and as the registration form's submit button."
+  },
+
+  "loginTitle": "Prijava",
+  "@loginTitle": {
+    "description": "Login screen app bar / header title."
+  },
+  "loginWelcomeBack": "Dobrodošli nazad",
+  "@loginWelcomeBack": {
+    "description": "Welcome-back caption shown above the login form."
+  },
+  "loginRememberMe": "Zapamti me",
+  "@loginRememberMe": {
+    "description": "Label for the 'remember me' checkbox on the login form."
+  },
+  "loginFailedError": "Prijava nije uspjela.",
+  "@loginFailedError": {
+    "description": "Fallback snackbar message shown when login fails without a specific server error message."
+  },
+
+  "registerTitle": "Registracija",
+  "@registerTitle": {
+    "description": "Registration screen app bar / header title."
+  },
+  "firstNameRequiredError": "Ime je obavezno.",
+  "@firstNameRequiredError": {
+    "description": "Validation error shown on the registration form when the first name field is left empty."
+  },
+  "lastNameRequiredError": "Prezime je obavezno.",
+  "@lastNameRequiredError": {
+    "description": "Validation error shown on the registration form when the last name field is left empty."
+  },
+  "phoneInvalidError": "Telefon smije sadržavati samo brojeve i simbole + - ( ).",
+  "@phoneInvalidError": {
+    "description": "Validation error shown when the phone field contains characters other than digits and + - ( )."
+  },
+  "fieldConfirmPasswordLabel": "Potvrdi lozinku",
+  "@fieldConfirmPasswordLabel": {
+    "description": "Label for the confirm-password field on the registration form."
+  },
+  "registerThemeLabel": "Tema",
+  "@registerThemeLabel": {
+    "description": "Section label above the theme picker on the registration form."
+  },
+  "registrationFailedError": "Registracija nije uspjela.",
+  "@registrationFailedError": {
+    "description": "Fallback snackbar message shown when registration fails without a specific server error message."
+  },
+
+  "fieldEmailLabel": "Email",
+  "@fieldEmailLabel": {
+    "description": "Shared label for an email input field (login, registration, personal details)."
+  },
+  "fieldPhoneLabel": "Telefon",
+  "@fieldPhoneLabel": {
+    "description": "Shared label for a phone input field (registration, personal details)."
+  },
+  "fieldFirstNameLabel": "Ime",
+  "@fieldFirstNameLabel": {
+    "description": "Shared label for a first-name input field (registration, personal details)."
+  },
+  "fieldLastNameLabel": "Prezime",
+  "@fieldLastNameLabel": {
+    "description": "Shared label for a last-name input field (registration, personal details)."
+  },
+  "fieldPasswordLabel": "Lozinka",
+  "@fieldPasswordLabel": {
+    "description": "Shared label for a password input field (login, registration)."
+  },
+
+  "emailRequiredError": "Email je obavezan.",
+  "@emailRequiredError": {
+    "description": "Shared validation error shown when an email field is left empty (login, registration)."
+  },
+  "emailInvalidError": "Unesite ispravan email.",
+  "@emailInvalidError": {
+    "description": "Shared validation error shown when an email field does not look like a valid email address (login, registration, personal details)."
+  },
+  "passwordRequiredError": "Lozinka je obavezna.",
+  "@passwordRequiredError": {
+    "description": "Shared validation error shown when a password field is left empty (login, registration)."
+  },
+  "passwordTooShortError": "Lozinka mora imati najmanje 6 znakova.",
+  "@passwordTooShortError": {
+    "description": "Shared validation error shown when a new password is shorter than 6 characters (registration, password reset)."
+  },
+  "passwordMismatchError": "Lozinke se ne podudaraju.",
+  "@passwordMismatchError": {
+    "description": "Shared validation error shown when a password confirmation field does not match (registration, password reset)."
+  },
+  "fieldRequiredError": "Obavezno polje.",
+  "@fieldRequiredError": {
+    "description": "Generic validation error for a required field left empty."
+  },
+
+  "themeLightOption": "Svijetla",
+  "@themeLightOption": {
+    "description": "Label for the light-theme option in a theme picker."
+  },
+  "themeDarkOption": "Tamna",
+  "@themeDarkOption": {
+    "description": "Label for the dark-theme option in a theme picker."
+  },
+
+  "passwordResetTitle": "Promjena lozinke",
+  "@passwordResetTitle": {
+    "description": "Password reset screen app bar title, also used as the account screen's entry title for it."
+  },
+  "passwordResetDescription": "Unesite trenutnu i novu lozinku da biste je promijenili.",
+  "@passwordResetDescription": {
+    "description": "Instruction text shown above the password reset form."
+  },
+  "passwordResetCurrentLabel": "Trenutna lozinka",
+  "@passwordResetCurrentLabel": {
+    "description": "Label for the current-password field on the password reset form."
+  },
+  "passwordResetNewLabel": "Nova lozinka",
+  "@passwordResetNewLabel": {
+    "description": "Label for the new-password field on the password reset form."
+  },
+  "passwordResetConfirmLabel": "Potvrda nove lozinke",
+  "@passwordResetConfirmLabel": {
+    "description": "Label for the confirm-new-password field on the password reset form."
+  },
+  "passwordResetSubmitButton": "Promijeni lozinku",
+  "@passwordResetSubmitButton": {
+    "description": "Submit button label on the password reset form."
+  },
+  "passwordResetSuccess": "Lozinka je promijenjena.",
+  "@passwordResetSuccess": {
+    "description": "Snackbar message shown after a successful password change."
+  },
+  "passwordResetCurrentRequiredError": "Unesite trenutnu lozinku.",
+  "@passwordResetCurrentRequiredError": {
+    "description": "Validation error shown when the current-password field is left empty."
+  },
+  "passwordResetNewRequiredError": "Unesite novu lozinku.",
+  "@passwordResetNewRequiredError": {
+    "description": "Validation error shown when the new-password field is left empty."
+  },
+
+  "personalDetailsTitle": "Lični podaci",
+  "@personalDetailsTitle": {
+    "description": "Personal details screen app bar title, also used as the account screen's entry title for it."
+  },
+  "themeSaveFailedError": "Tema nije sačuvana: {message}",
+  "@themeSaveFailedError": {
+    "description": "Snackbar message shown when saving the theme preference fails, with the server error appended.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "languageSaveFailedError": "Jezik nije sačuvan: {message}",
+  "@languageSaveFailedError": {
+    "description": "Snackbar message shown when saving the language preference fails, with the server error appended.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "personalDetailsSaveSuccess": "Lični podaci su sačuvani.",
+  "@personalDetailsSaveSuccess": {
+    "description": "Snackbar message shown after personal details are saved successfully."
+  },
+  "personalDetailsNameSectionTitle": "Ime i prezime",
+  "@personalDetailsNameSectionTitle": {
+    "description": "Section header above the first/last name fields on the personal details form."
+  },
+  "personalDetailsAppearanceSectionTitle": "Izgled",
+  "@personalDetailsAppearanceSectionTitle": {
+    "description": "Section header above the theme/language pickers on the personal details form."
+  },
+  "nameRequiredTogetherError": "Obavezno ako unosite ime i prezime.",
+  "@nameRequiredTogetherError": {
+    "description": "Validation error shown on the personal details form when only one of first/last name is filled in."
+  },
+
+  "accountDataSectionTitle": "Podaci o nalogu",
+  "@accountDataSectionTitle": {
+    "description": "Section header above the account-data entry cards on the account screen."
+  },
+  "accountPersonalDetailsSubtitle": "Ime, prezime, email, telefon i tema",
+  "@accountPersonalDetailsSubtitle": {
+    "description": "Subtitle for the personal details entry on the account screen."
+  },
+  "locationTitle": "Lokacija",
+  "@locationTitle": {
+    "description": "Location edit screen app bar title, also used as the account screen's entry title for it."
+  },
+  "accountLocationSubtitle": "Adresa prebivališta",
+  "@accountLocationSubtitle": {
+    "description": "Subtitle for the location entry on the account screen."
+  },
+  "accountPasswordSubtitle": "Ažuriranje lozinke naloga",
+  "@accountPasswordSubtitle": {
+    "description": "Subtitle for the password-change entry on the account screen."
+  },
+  "accountActivityLogTitle": "Moje aktivnosti",
+  "@accountActivityLogTitle": {
+    "description": "Title for the activity log entry on the account screen."
+  },
+  "accountActivityLogSubtitle": "Historija prijava i izmjena naloga",
+  "@accountActivityLogSubtitle": {
+    "description": "Subtitle for the activity log entry on the account screen."
+  },
+  "accountCompanySettingsTitle": "Postavke firme",
+  "@accountCompanySettingsTitle": {
+    "description": "Title for the admin-only company settings entry on the account screen."
+  },
+  "accountCompanySettingsSubtitle": "Upravljanje podacima firme",
+  "@accountCompanySettingsSubtitle": {
+    "description": "Subtitle for the admin-only company settings entry on the account screen."
+  },
+  "roleAdmin": "Administrator",
+  "@roleAdmin": {
+    "description": "Display label for the admin user role."
+  },
+  "roleCollector": "Inkasant",
+  "@roleCollector": {
+    "description": "Display label for the collector user role."
+  },
+  "roleCustomer": "Korisnik",
+  "@roleCustomer": {
+    "description": "Display label for the customer user role, also used as the generic fallback role label."
+  },
+
+  "locationNameRequiredError": "Unesite ime i prezime u \"Lični podaci\" da biste sačuvali adresu.",
+  "@locationNameRequiredError": {
+    "description": "Snackbar message shown when trying to save an address before a name has been set on the personal details screen."
+  },
+  "locationSaveSuccess": "Lokacija je sačuvana.",
+  "@locationSaveSuccess": {
+    "description": "Snackbar message shown after the location is saved successfully."
+  },
+  "locationCityLabel": "Grad",
+  "@locationCityLabel": {
+    "description": "Label for the city dropdown on the location edit form."
+  },
+  "locationNoCityOption": "Bez grada",
+  "@locationNoCityOption": {
+    "description": "Option in the city dropdown meaning no city selected."
+  },
+  "locationMunicipalityLabel": "Općina",
+  "@locationMunicipalityLabel": {
+    "description": "Label for the municipality dropdown on the location edit form."
+  },
+  "locationNoMunicipalityOption": "Bez općine",
+  "@locationNoMunicipalityOption": {
+    "description": "Option in the municipality dropdown meaning no municipality selected."
+  },
+  "locationSettlementLabel": "Naselje",
+  "@locationSettlementLabel": {
+    "description": "Label for the settlement dropdown on the location edit form."
+  },
+  "locationNoSettlementOption": "Bez naselja",
+  "@locationNoSettlementOption": {
+    "description": "Option in the settlement dropdown meaning no settlement selected."
+  },
+  "locationStreetLabel": "Ulica",
+  "@locationStreetLabel": {
+    "description": "Label for the street field on the location edit form."
+  },
+  "locationHouseNumberLabel": "Broj",
+  "@locationHouseNumberLabel": {
+    "description": "Label for the house number field on the location edit form."
+  },
+
+  "mobileShellThemeTooltip": "Promijeni temu",
+  "@mobileShellThemeTooltip": {
+    "description": "Tooltip for the theme-toggle icon button in the mobile shell's app bar."
+  },
+  "mobileShellLogoutTooltip": "Odjava",
+  "@mobileShellLogoutTooltip": {
+    "description": "Tooltip for the logout icon button in the mobile shell's app bar."
+  },
+
+  "tabNotifications": "Obavijesti",
+  "@tabNotifications": {
+    "description": "Bottom navigation label for the notifications tab."
+  },
+  "tabWaterMeters": "Vodomjeri",
+  "@tabWaterMeters": {
+    "description": "Bottom navigation label for the water meters tab."
+  },
+  "tabFaultReports": "Prijave kvarova",
+  "@tabFaultReports": {
+    "description": "Bottom navigation label for the fault reports tab."
+  },
+  "tabAccount": "Nalog",
+  "@tabAccount": {
+    "description": "Bottom navigation label for the account tab."
+  },
+  "supportTitle": "Podrška",
+  "@supportTitle": {
+    "description": "Title for the support entry on the account screen."
+  },
+  "supportSubtitle": "Vaši tiketi i poruke podršci",
+  "@supportSubtitle": {
+    "description": "Subtitle for the support entry on the account screen."
   }
 }

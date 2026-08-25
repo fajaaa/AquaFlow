@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/screens/customer_fault_reports_screen.dart';
 import 'package:aquaflow_customer/screens/customer_support_tickets_screen.dart';
 import 'package:aquaflow_customer/screens/customer_water_meters_screen.dart';
@@ -31,38 +32,39 @@ class CustomerShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unreadCount = context.watch<NotificationBadgeProvider>().unreadCount;
+    final loc = AppLocalizations.of(context);
 
     return MobileShell(
       tabs: [
         MobileTab(
           icon: Icons.notifications_outlined,
           selectedIcon: Icons.notifications,
-          label: 'Obavijesti',
+          label: loc.tabNotifications,
           badgeCount: unreadCount,
           body: const NotificationsScreen(),
         ),
-        const MobileTab(
+        MobileTab(
           icon: Icons.water_drop_outlined,
           selectedIcon: Icons.water_drop,
-          label: 'Vodomjeri',
-          body: CustomerWaterMetersScreen(),
+          label: loc.tabWaterMeters,
+          body: const CustomerWaterMetersScreen(),
         ),
-        const MobileTab(
+        MobileTab(
           icon: Icons.report_problem_outlined,
           selectedIcon: Icons.report_problem,
-          label: 'Prijave kvarova',
-          body: CustomerFaultReportsScreen(),
+          label: loc.tabFaultReports,
+          body: const CustomerFaultReportsScreen(),
         ),
         MobileTab(
           icon: Icons.person_outline,
           selectedIcon: Icons.person,
-          label: 'Nalog',
+          label: loc.tabAccount,
           body: AccountScreen(
             extraEntries: [
               AccountEntry(
                 icon: Icons.support_agent_outlined,
-                title: 'Podrška',
-                subtitle: 'Vaši tiketi i poruke podršci',
+                title: loc.supportTitle,
+                subtitle: loc.supportSubtitle,
                 onTap: (context) =>
                     context.pushScreen(const CustomerSupportTicketsScreen()),
               ),

@@ -193,6 +193,456 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'{count} ukupno'**
   String paginationTotalCount(int count);
+
+  /// Generic saving-in-progress button label, shown while a save request is in flight.
+  ///
+  /// In bs, this message translates to:
+  /// **'Spašavanje...'**
+  String get commonSaving;
+
+  /// Tagline shown under the logo on the welcome screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Svaka kap, evidentirana.'**
+  String get welcomeTagline;
+
+  /// Subtitle/italic quote shown under the tagline on the welcome screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Mali koraci u štednji vode prave velike valove promjena.'**
+  String get welcomeSubtitle;
+
+  /// Login action button label, used on the welcome screen and as the login form's submit button.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijavi se'**
+  String get authLoginButton;
+
+  /// Register action button label, used on the welcome screen and as the registration form's submit button.
+  ///
+  /// In bs, this message translates to:
+  /// **'Registruj se'**
+  String get authRegisterButton;
+
+  /// Login screen app bar / header title.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijava'**
+  String get loginTitle;
+
+  /// Welcome-back caption shown above the login form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dobrodošli nazad'**
+  String get loginWelcomeBack;
+
+  /// Label for the 'remember me' checkbox on the login form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zapamti me'**
+  String get loginRememberMe;
+
+  /// Fallback snackbar message shown when login fails without a specific server error message.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijava nije uspjela.'**
+  String get loginFailedError;
+
+  /// Registration screen app bar / header title.
+  ///
+  /// In bs, this message translates to:
+  /// **'Registracija'**
+  String get registerTitle;
+
+  /// Validation error shown on the registration form when the first name field is left empty.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ime je obavezno.'**
+  String get firstNameRequiredError;
+
+  /// Validation error shown on the registration form when the last name field is left empty.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prezime je obavezno.'**
+  String get lastNameRequiredError;
+
+  /// Validation error shown when the phone field contains characters other than digits and + - ( ).
+  ///
+  /// In bs, this message translates to:
+  /// **'Telefon smije sadržavati samo brojeve i simbole + - ( ).'**
+  String get phoneInvalidError;
+
+  /// Label for the confirm-password field on the registration form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potvrdi lozinku'**
+  String get fieldConfirmPasswordLabel;
+
+  /// Section label above the theme picker on the registration form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Tema'**
+  String get registerThemeLabel;
+
+  /// Fallback snackbar message shown when registration fails without a specific server error message.
+  ///
+  /// In bs, this message translates to:
+  /// **'Registracija nije uspjela.'**
+  String get registrationFailedError;
+
+  /// Shared label for an email input field (login, registration, personal details).
+  ///
+  /// In bs, this message translates to:
+  /// **'Email'**
+  String get fieldEmailLabel;
+
+  /// Shared label for a phone input field (registration, personal details).
+  ///
+  /// In bs, this message translates to:
+  /// **'Telefon'**
+  String get fieldPhoneLabel;
+
+  /// Shared label for a first-name input field (registration, personal details).
+  ///
+  /// In bs, this message translates to:
+  /// **'Ime'**
+  String get fieldFirstNameLabel;
+
+  /// Shared label for a last-name input field (registration, personal details).
+  ///
+  /// In bs, this message translates to:
+  /// **'Prezime'**
+  String get fieldLastNameLabel;
+
+  /// Shared label for a password input field (login, registration).
+  ///
+  /// In bs, this message translates to:
+  /// **'Lozinka'**
+  String get fieldPasswordLabel;
+
+  /// Shared validation error shown when an email field is left empty (login, registration).
+  ///
+  /// In bs, this message translates to:
+  /// **'Email je obavezan.'**
+  String get emailRequiredError;
+
+  /// Shared validation error shown when an email field does not look like a valid email address (login, registration, personal details).
+  ///
+  /// In bs, this message translates to:
+  /// **'Unesite ispravan email.'**
+  String get emailInvalidError;
+
+  /// Shared validation error shown when a password field is left empty (login, registration).
+  ///
+  /// In bs, this message translates to:
+  /// **'Lozinka je obavezna.'**
+  String get passwordRequiredError;
+
+  /// Shared validation error shown when a new password is shorter than 6 characters (registration, password reset).
+  ///
+  /// In bs, this message translates to:
+  /// **'Lozinka mora imati najmanje 6 znakova.'**
+  String get passwordTooShortError;
+
+  /// Shared validation error shown when a password confirmation field does not match (registration, password reset).
+  ///
+  /// In bs, this message translates to:
+  /// **'Lozinke se ne podudaraju.'**
+  String get passwordMismatchError;
+
+  /// Generic validation error for a required field left empty.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obavezno polje.'**
+  String get fieldRequiredError;
+
+  /// Label for the light-theme option in a theme picker.
+  ///
+  /// In bs, this message translates to:
+  /// **'Svijetla'**
+  String get themeLightOption;
+
+  /// Label for the dark-theme option in a theme picker.
+  ///
+  /// In bs, this message translates to:
+  /// **'Tamna'**
+  String get themeDarkOption;
+
+  /// Password reset screen app bar title, also used as the account screen's entry title for it.
+  ///
+  /// In bs, this message translates to:
+  /// **'Promjena lozinke'**
+  String get passwordResetTitle;
+
+  /// Instruction text shown above the password reset form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Unesite trenutnu i novu lozinku da biste je promijenili.'**
+  String get passwordResetDescription;
+
+  /// Label for the current-password field on the password reset form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Trenutna lozinka'**
+  String get passwordResetCurrentLabel;
+
+  /// Label for the new-password field on the password reset form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova lozinka'**
+  String get passwordResetNewLabel;
+
+  /// Label for the confirm-new-password field on the password reset form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potvrda nove lozinke'**
+  String get passwordResetConfirmLabel;
+
+  /// Submit button label on the password reset form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Promijeni lozinku'**
+  String get passwordResetSubmitButton;
+
+  /// Snackbar message shown after a successful password change.
+  ///
+  /// In bs, this message translates to:
+  /// **'Lozinka je promijenjena.'**
+  String get passwordResetSuccess;
+
+  /// Validation error shown when the current-password field is left empty.
+  ///
+  /// In bs, this message translates to:
+  /// **'Unesite trenutnu lozinku.'**
+  String get passwordResetCurrentRequiredError;
+
+  /// Validation error shown when the new-password field is left empty.
+  ///
+  /// In bs, this message translates to:
+  /// **'Unesite novu lozinku.'**
+  String get passwordResetNewRequiredError;
+
+  /// Personal details screen app bar title, also used as the account screen's entry title for it.
+  ///
+  /// In bs, this message translates to:
+  /// **'Lični podaci'**
+  String get personalDetailsTitle;
+
+  /// Snackbar message shown when saving the theme preference fails, with the server error appended.
+  ///
+  /// In bs, this message translates to:
+  /// **'Tema nije sačuvana: {message}'**
+  String themeSaveFailedError(String message);
+
+  /// Snackbar message shown when saving the language preference fails, with the server error appended.
+  ///
+  /// In bs, this message translates to:
+  /// **'Jezik nije sačuvan: {message}'**
+  String languageSaveFailedError(String message);
+
+  /// Snackbar message shown after personal details are saved successfully.
+  ///
+  /// In bs, this message translates to:
+  /// **'Lični podaci su sačuvani.'**
+  String get personalDetailsSaveSuccess;
+
+  /// Section header above the first/last name fields on the personal details form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ime i prezime'**
+  String get personalDetailsNameSectionTitle;
+
+  /// Section header above the theme/language pickers on the personal details form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izgled'**
+  String get personalDetailsAppearanceSectionTitle;
+
+  /// Validation error shown on the personal details form when only one of first/last name is filled in.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obavezno ako unosite ime i prezime.'**
+  String get nameRequiredTogetherError;
+
+  /// Section header above the account-data entry cards on the account screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Podaci o nalogu'**
+  String get accountDataSectionTitle;
+
+  /// Subtitle for the personal details entry on the account screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ime, prezime, email, telefon i tema'**
+  String get accountPersonalDetailsSubtitle;
+
+  /// Location edit screen app bar title, also used as the account screen's entry title for it.
+  ///
+  /// In bs, this message translates to:
+  /// **'Lokacija'**
+  String get locationTitle;
+
+  /// Subtitle for the location entry on the account screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Adresa prebivališta'**
+  String get accountLocationSubtitle;
+
+  /// Subtitle for the password-change entry on the account screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ažuriranje lozinke naloga'**
+  String get accountPasswordSubtitle;
+
+  /// Title for the activity log entry on the account screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Moje aktivnosti'**
+  String get accountActivityLogTitle;
+
+  /// Subtitle for the activity log entry on the account screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Historija prijava i izmjena naloga'**
+  String get accountActivityLogSubtitle;
+
+  /// Title for the admin-only company settings entry on the account screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Postavke firme'**
+  String get accountCompanySettingsTitle;
+
+  /// Subtitle for the admin-only company settings entry on the account screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upravljanje podacima firme'**
+  String get accountCompanySettingsSubtitle;
+
+  /// Display label for the admin user role.
+  ///
+  /// In bs, this message translates to:
+  /// **'Administrator'**
+  String get roleAdmin;
+
+  /// Display label for the collector user role.
+  ///
+  /// In bs, this message translates to:
+  /// **'Inkasant'**
+  String get roleCollector;
+
+  /// Display label for the customer user role, also used as the generic fallback role label.
+  ///
+  /// In bs, this message translates to:
+  /// **'Korisnik'**
+  String get roleCustomer;
+
+  /// Snackbar message shown when trying to save an address before a name has been set on the personal details screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Unesite ime i prezime u \"Lični podaci\" da biste sačuvali adresu.'**
+  String get locationNameRequiredError;
+
+  /// Snackbar message shown after the location is saved successfully.
+  ///
+  /// In bs, this message translates to:
+  /// **'Lokacija je sačuvana.'**
+  String get locationSaveSuccess;
+
+  /// Label for the city dropdown on the location edit form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Grad'**
+  String get locationCityLabel;
+
+  /// Option in the city dropdown meaning no city selected.
+  ///
+  /// In bs, this message translates to:
+  /// **'Bez grada'**
+  String get locationNoCityOption;
+
+  /// Label for the municipality dropdown on the location edit form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Općina'**
+  String get locationMunicipalityLabel;
+
+  /// Option in the municipality dropdown meaning no municipality selected.
+  ///
+  /// In bs, this message translates to:
+  /// **'Bez općine'**
+  String get locationNoMunicipalityOption;
+
+  /// Label for the settlement dropdown on the location edit form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Naselje'**
+  String get locationSettlementLabel;
+
+  /// Option in the settlement dropdown meaning no settlement selected.
+  ///
+  /// In bs, this message translates to:
+  /// **'Bez naselja'**
+  String get locationNoSettlementOption;
+
+  /// Label for the street field on the location edit form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ulica'**
+  String get locationStreetLabel;
+
+  /// Label for the house number field on the location edit form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Broj'**
+  String get locationHouseNumberLabel;
+
+  /// Tooltip for the theme-toggle icon button in the mobile shell's app bar.
+  ///
+  /// In bs, this message translates to:
+  /// **'Promijeni temu'**
+  String get mobileShellThemeTooltip;
+
+  /// Tooltip for the logout icon button in the mobile shell's app bar.
+  ///
+  /// In bs, this message translates to:
+  /// **'Odjava'**
+  String get mobileShellLogoutTooltip;
+
+  /// Bottom navigation label for the notifications tab.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obavijesti'**
+  String get tabNotifications;
+
+  /// Bottom navigation label for the water meters tab.
+  ///
+  /// In bs, this message translates to:
+  /// **'Vodomjeri'**
+  String get tabWaterMeters;
+
+  /// Bottom navigation label for the fault reports tab.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijave kvarova'**
+  String get tabFaultReports;
+
+  /// Bottom navigation label for the account tab.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nalog'**
+  String get tabAccount;
+
+  /// Title for the support entry on the account screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Podrška'**
+  String get supportTitle;
+
+  /// Subtitle for the support entry on the account screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Vaši tiketi i poruke podršci'**
+  String get supportSubtitle;
 }
 
 class _AppLocalizationsDelegate

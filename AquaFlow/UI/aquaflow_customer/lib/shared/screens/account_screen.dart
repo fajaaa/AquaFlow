@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
+
 import '../models/customer_profile.dart';
 import '../navigation/app_navigation.dart';
 import '../providers/auth_provider.dart';
@@ -79,10 +81,11 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final session = context.watch<AuthProvider>().session;
     if (session == null) return const SizedBox.shrink();
 
-    final visual = _RoleVisual.forRole(session.userRole);
+    final visual = _RoleVisual.forRole(session.userRole, loc);
     final isRegularUser = _isRegularUser(session.userRole);
 
     return SafeArea(
@@ -142,7 +145,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Podaci o nalogu',
+                    loc.accountDataSectionTitle,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: theme.colorScheme.primary,
@@ -161,10 +164,8 @@ class _AccountScreenState extends State<AccountScreen> {
                     children: [
                       ListTile(
                         leading: const Icon(Icons.manage_accounts_outlined),
-                        title: const Text('Lični podaci'),
-                        subtitle: const Text(
-                          'Ime, prezime, email, telefon i tema',
-                        ),
+                        title: Text(loc.personalDetailsTitle),
+                        subtitle: Text(loc.accountPersonalDetailsSubtitle),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => context
                             .pushScreen(const PersonalDetailsEditScreen()),
@@ -172,8 +173,8 @@ class _AccountScreenState extends State<AccountScreen> {
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       ListTile(
                         leading: const Icon(Icons.location_on_outlined),
-                        title: const Text('Lokacija'),
-                        subtitle: const Text('Adresa prebivališta'),
+                        title: Text(loc.locationTitle),
+                        subtitle: Text(loc.accountLocationSubtitle),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () =>
                             context.pushScreen(const LocationEditScreen()),
@@ -181,8 +182,8 @@ class _AccountScreenState extends State<AccountScreen> {
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       ListTile(
                         leading: const Icon(Icons.lock_outline),
-                        title: const Text('Promjena lozinke'),
-                        subtitle: const Text('Ažuriranje lozinke naloga'),
+                        title: Text(loc.passwordResetTitle),
+                        subtitle: Text(loc.accountPasswordSubtitle),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () =>
                             context.pushScreen(const PasswordResetScreen()),
@@ -207,8 +208,8 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   child: ListTile(
                     leading: const Icon(Icons.history),
-                    title: const Text('Moje aktivnosti'),
-                    subtitle: const Text('Historija prijava i izmjena naloga'),
+                    title: Text(loc.accountActivityLogTitle),
+                    subtitle: Text(loc.accountActivityLogSubtitle),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.pushScreen(const ActivityLogScreen()),
                   ),
@@ -225,8 +226,8 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                     child: ListTile(
                       leading: const Icon(Icons.business_outlined),
-                      title: const Text('Postavke firme'),
-                      subtitle: const Text('Upravljanje podacima firme'),
+                      title: Text(loc.accountCompanySettingsTitle),
+                      subtitle: Text(loc.accountCompanySettingsSubtitle),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () =>
                           context.pushScreen(const CompanySettingsScreen()),
@@ -273,31 +274,31 @@ class _RoleVisual {
   final Color color;
   final String label;
 
-  factory _RoleVisual.forRole(String role) {
+  factory _RoleVisual.forRole(String role, AppLocalizations loc) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return const _RoleVisual(
+        return _RoleVisual(
           icon: Icons.admin_panel_settings,
-          color: Color(0xFF6A1B9A),
-          label: 'Administrator',
+          color: const Color(0xFF6A1B9A),
+          label: loc.roleAdmin,
         );
       case 'collector':
-        return const _RoleVisual(
+        return _RoleVisual(
           icon: Icons.route,
-          color: Color(0xFF00838F),
-          label: 'Inkasant',
+          color: const Color(0xFF00838F),
+          label: loc.roleCollector,
         );
       case 'customer':
-        return const _RoleVisual(
+        return _RoleVisual(
           icon: Icons.person,
-          color: Color(0xFF0277BD),
-          label: 'Korisnik',
+          color: const Color(0xFF0277BD),
+          label: loc.roleCustomer,
         );
       default:
         return _RoleVisual(
           icon: Icons.account_circle,
           color: Colors.blueGrey.shade600,
-          label: role.isEmpty ? 'Korisnik' : role,
+          label: role.isEmpty ? loc.roleCustomer : role,
         );
     }
   }
