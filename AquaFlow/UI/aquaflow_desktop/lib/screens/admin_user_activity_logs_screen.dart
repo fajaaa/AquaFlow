@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_activity_log.dart';
 import 'package:aquaflow_desktop/services/admin_activity_log_exception.dart';
 import 'package:aquaflow_desktop/services/admin_activity_log_service.dart';
@@ -7,6 +8,7 @@ import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
 import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 
 /// Read-only audit trail of a single user's `ActivityLog` rows, pushed from
 /// the "Aktivnosti" row action on [AdminUsersScreen] (both modes) and
@@ -62,7 +64,7 @@ class _AdminUserActivityLogsScreenState
   String describeError(Object error) {
     return error is AdminActivityLogException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   void _setEventTypeFilter(String value) {
@@ -79,19 +81,17 @@ class _AdminUserActivityLogsScreenState
     super.dispose();
   }
 
-  String get _title => 'Aktivnosti - ${widget.displayName}';
+  String _title(AppLocalizations loc) =>
+      loc.activityLogTitle(widget.displayName);
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(_title),
+        title: Text(_title(loc)),
         actions: [
-          IconButton(
-            tooltip: 'Osvježi',
-            onPressed: loading ? null : () => load(),
-            icon: const Icon(Icons.refresh),
-          ),
+          RefreshButton(onRefresh: () => load()),
           const SizedBox(width: 8),
         ],
       ),
@@ -101,11 +101,11 @@ class _AdminUserActivityLogsScreenState
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(28, 20, 28, 12),
-              child: _buildFilters(),
+              child: _buildFilters(loc),
             ),
             if (loading && !isInitialLoad)
               const LinearProgressIndicator(minHeight: 2),
-            Expanded(child: _buildContent()),
+            Expanded(child: _buildContent(loc)),
             if (!isInitialLoad && error == null)
               PagedTablePaginationBar(
                 page: page,
@@ -122,7 +122,7 @@ class _AdminUserActivityLogsScreenState
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     return Align(
       alignment: AlignmentDirectional.centerStart,
       child: SizedBox(
@@ -130,25 +130,27 @@ class _AdminUserActivityLogsScreenState
         child: DropdownButtonFormField<String>(
           initialValue: _eventTypeFilter ?? '',
           isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Događaj',
-            prefixIcon: Icon(Icons.category_outlined),
+          decoration: InputDecoration(
+            labelText: loc.eventTypeFieldLabel,
+            prefixIcon: const Icon(Icons.category_outlined),
           ),
           items: [
-            const DropdownMenuItem(value: '', child: Text('Svi')),
-            for (final option in _eventTypeOptions)
+            DropdownMenuItem(value: '', child: Text(loc.allOption)),
+            for (final option in _eventTypeOptions(loc))
               DropdownMenuItem(
                 value: option.value,
                 child: Text(option.label, overflow: TextOverflow.ellipsis),
               ),
           ],
-          onChanged: loading ? null : (value) => _setEventTypeFilter(value ?? ''),
+          onChanged: loading
+              ? null
+              : (value) => _setEventTypeFilter(value ?? ''),
         ),
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -161,15 +163,24 @@ class _AdminUserActivityLogsScreenState
     if (items.isEmpty) {
       return EmptyStateView(
         icon: Icons.history_toggle_off,
-        message: 'Korisnik nema zabilježenih aktivnosti.',
+        message: loc.userNoActivityMessage,
         hasFilters: _hasFilters,
         filteredIcon: Icons.search_off,
-        filteredMessage: 'Nema aktivnosti za zadane filtere.',
+        filteredMessage: loc.activitiesEmptyFilteredMessage,
       );
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Only "Opis" grows with window width - the other three columns
+        // stay sized to their (short, fairly constant) content. 420 is a
+        // rough reservation for those columns plus DataTable's default
+        // column spacing/margins; the horizontal scroll fallback below
+        // covers any underestimate on narrow windows.
+        final descriptionWidth = (constraints.maxWidth - 56 - 420).clamp(
+          280.0,
+          900.0,
+        );
         return Scrollbar(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(28, 8, 28, 20),
@@ -188,24 +199,25 @@ class _AdminUserActivityLogsScreenState
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
+                    showCheckboxColumn: false,
                     dataRowMinHeight: 56,
                     dataRowMaxHeight: 72,
-                    columns: const [
-                      DataColumn(label: Text('Događaj')),
-                      DataColumn(label: Text('Opis')),
-                      DataColumn(label: Text('IP adresa')),
-                      DataColumn(label: Text('Vrijeme')),
+                    columns: [
+                      DataColumn(label: Text(loc.eventTypeFieldLabel)),
+                      DataColumn(label: Text(loc.descriptionColumnLabel)),
+                      DataColumn(label: Text(loc.ipAddressColumnLabel)),
+                      DataColumn(label: Text(loc.timeColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
                         DataRow(
+                          onSelectChanged: (_) =>
+                              _showActivityDetailsDialog(context, item),
                           cells: [
-                            DataCell(
-                              _EventTypePill(eventType: item.eventType),
-                            ),
+                            DataCell(_EventTypePill(eventType: item.eventType)),
                             DataCell(
                               SizedBox(
-                                width: 320,
+                                width: descriptionWidth,
                                 child: Text(
                                   _valueOrDash(item.description),
                                   maxLines: 2,
@@ -229,6 +241,50 @@ class _AdminUserActivityLogsScreenState
   }
 
   bool get _hasFilters => _eventTypeFilter != null;
+
+  Future<void> _showActivityDetailsDialog(
+    BuildContext context,
+    AdminActivityLog item,
+  ) {
+    final labelStyle = Theme.of(
+      context,
+    ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600);
+    final loc = AppLocalizations.of(context);
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: _EventTypePill(eventType: item.eventType),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(loc.descriptionColumnLabel, style: labelStyle),
+                const SizedBox(height: 4),
+                SelectableText(_valueOrDash(item.description)),
+                const SizedBox(height: 16),
+                Text(loc.ipAddressColumnLabel, style: labelStyle),
+                const SizedBox(height: 4),
+                SelectableText(_valueOrDash(item.ipAddress)),
+                const SizedBox(height: 16),
+                Text(loc.timeColumnLabel, style: labelStyle),
+                const SizedBox(height: 4),
+                Text(_formatDate(item.createdAt)),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(loc.commonClose),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _EventTypePill extends StatelessWidget {
@@ -239,6 +295,7 @@ class _EventTypePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _eventTypeColor(eventType, Theme.of(context).colorScheme);
+    final loc = AppLocalizations.of(context);
     return Container(
       constraints: const BoxConstraints(maxWidth: 200),
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
@@ -253,7 +310,7 @@ class _EventTypePill extends StatelessWidget {
           const SizedBox(width: 5),
           Flexible(
             child: Text(
-              _eventTypeLabel(eventType),
+              _eventTypeLabel(eventType, loc),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -280,17 +337,26 @@ class _SelectOption {
 // UserRoleChanged/UserActivated/UserDeactivated/UserDeleted are admin actions
 // performed on another user's account (UsersController), so they show up here
 // (the admin listing) but never on the mobile self-service screen.
-const List<_SelectOption> _eventTypeOptions = [
-  _SelectOption(value: 'LoginSuccess', label: 'Uspješna prijava'),
-  _SelectOption(value: 'LoginFailed', label: 'Neuspješna prijava'),
-  _SelectOption(value: 'TokenRefreshed', label: 'Obnova sesije'),
-  _SelectOption(value: 'Registered', label: 'Registracija'),
-  _SelectOption(value: 'PasswordChanged', label: 'Promjena lozinke'),
-  _SelectOption(value: 'AccountUpdated', label: 'Izmjena naloga'),
-  _SelectOption(value: 'UserRoleChanged', label: 'Promjena role'),
-  _SelectOption(value: 'UserActivated', label: 'Korisnik aktiviran'),
-  _SelectOption(value: 'UserDeactivated', label: 'Korisnik deaktiviran'),
-  _SelectOption(value: 'UserDeleted', label: 'Korisnik obrisan'),
+List<_SelectOption> _eventTypeOptions(AppLocalizations loc) => [
+  _SelectOption(value: 'LoginSuccess', label: loc.activityTypeLoginSuccess),
+  _SelectOption(value: 'LoginFailed', label: loc.activityTypeLoginFailed),
+  _SelectOption(value: 'TokenRefreshed', label: loc.activityTypeTokenRefreshed),
+  _SelectOption(value: 'Registered', label: loc.registerTitle),
+  _SelectOption(
+    value: 'PasswordChanged',
+    label: loc.activityTypePasswordChanged,
+  ),
+  _SelectOption(value: 'AccountUpdated', label: loc.activityTypeAccountUpdated),
+  _SelectOption(
+    value: 'UserRoleChanged',
+    label: loc.activityTypeUserRoleChanged,
+  ),
+  _SelectOption(value: 'UserActivated', label: loc.activityTypeUserActivated),
+  _SelectOption(
+    value: 'UserDeactivated',
+    label: loc.activityTypeUserDeactivated,
+  ),
+  _SelectOption(value: 'UserDeleted', label: loc.activityTypeUserDeleted),
 ];
 
 IconData _eventTypeIcon(String type) {
@@ -347,30 +413,30 @@ Color _eventTypeColor(String type, ColorScheme colorScheme) {
   }
 }
 
-String _eventTypeLabel(String type) {
+String _eventTypeLabel(String type, AppLocalizations loc) {
   switch (type) {
     case 'LoginSuccess':
-      return 'Uspješna prijava';
+      return loc.activityTypeLoginSuccess;
     case 'LoginFailed':
-      return 'Neuspješna prijava';
+      return loc.activityTypeLoginFailed;
     case 'TokenRefreshed':
-      return 'Obnova sesije';
+      return loc.activityTypeTokenRefreshed;
     case 'Registered':
-      return 'Registracija';
+      return loc.registerTitle;
     case 'PasswordChanged':
-      return 'Promjena lozinke';
+      return loc.activityTypePasswordChanged;
     case 'AccountUpdated':
-      return 'Izmjena naloga';
+      return loc.activityTypeAccountUpdated;
     case 'UserRoleChanged':
-      return 'Promjena role';
+      return loc.activityTypeUserRoleChanged;
     case 'UserActivated':
-      return 'Korisnik aktiviran';
+      return loc.activityTypeUserActivated;
     case 'UserDeactivated':
-      return 'Korisnik deaktiviran';
+      return loc.activityTypeUserDeactivated;
     case 'UserDeleted':
-      return 'Korisnik obrisan';
+      return loc.activityTypeUserDeleted;
     default:
-      return type.isEmpty ? 'Aktivnost' : type;
+      return type.isEmpty ? loc.activityTypeGenericLabel : type;
   }
 }
 

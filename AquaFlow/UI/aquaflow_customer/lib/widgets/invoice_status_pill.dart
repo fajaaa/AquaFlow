@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/shared/theme/app_theme.dart';
 
 /// Icon + accent color + label for a customer invoice `status`, covering
@@ -16,21 +17,21 @@ class InvoiceStatusMeta {
   final Color color;
   final IconData icon;
 
-  static InvoiceStatusMeta of(String status) {
+  static InvoiceStatusMeta of(String status, AppLocalizations loc) {
     return switch (status.toLowerCase()) {
-      'issued' => const InvoiceStatusMeta(
-        'Izdat',
+      'issued' => InvoiceStatusMeta(
+        loc.invoiceStatusIssued,
         AppColors.warning,
         Icons.send_outlined,
       ),
-      'paid' => const InvoiceStatusMeta(
-        'Plaćen',
+      'paid' => InvoiceStatusMeta(
+        loc.invoiceStatusPaid,
         AppColors.success,
         Icons.check_circle_outline,
       ),
-      'cancelled' => const InvoiceStatusMeta(
-        'Storniran',
-        Color(0xFF64748B),
+      'cancelled' => InvoiceStatusMeta(
+        loc.invoiceStatusCancelled,
+        const Color(0xFF64748B),
         Icons.block_outlined,
       ),
       _ => InvoiceStatusMeta(status, const Color(0xFF64748B), Icons.help_outline),

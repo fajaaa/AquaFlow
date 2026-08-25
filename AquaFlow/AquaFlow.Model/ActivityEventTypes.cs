@@ -18,4 +18,9 @@ public static class ActivityEventTypes
     public const string UserActivated = "UserActivated";
     public const string UserDeactivated = "UserDeactivated";
     public const string UserDeleted = "UserDeleted";
+
+    // Collector action on a customer's water meter (WaterMetersController.MarkBroken), logged
+    // under the meter's owning customer's user id - not the collector's - with the collector
+    // identified in the Description.
+    public const string WaterMeterMarkedBroken = "WaterMeterMarkedBroken";
 }

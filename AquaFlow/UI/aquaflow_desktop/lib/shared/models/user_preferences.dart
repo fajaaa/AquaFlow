@@ -38,9 +38,9 @@ class UserPreferences {
         'receivePushNotifications': receivePushNotifications,
       };
 
-  UserPreferences copyWith({String? theme}) => UserPreferences(
+  UserPreferences copyWith({String? theme, String? language}) => UserPreferences(
         theme: theme ?? this.theme,
-        language: language,
+        language: language ?? this.language,
         receiveEmailNotifications: receiveEmailNotifications,
         receivePushNotifications: receivePushNotifications,
       );

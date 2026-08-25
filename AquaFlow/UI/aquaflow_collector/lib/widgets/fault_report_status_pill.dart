@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
+
 /// Coloured status pill for a fault report, covering the backend
 /// `FaultReport.Status` values (New/Assigned/InProgress/Resolved). Mirrors
 /// `CustomerFaultReportsScreen`'s `FaultReportStatusPill` (incl. the violet
@@ -13,20 +15,25 @@ class FaultReportStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final (label, color, icon) = switch (status.toLowerCase()) {
-      'new' => ('Nova', const Color(0xFFB45309), Icons.fiber_new_outlined),
+      'new' => (
+        loc.faultReportStatusNew,
+        const Color(0xFFB45309),
+        Icons.fiber_new_outlined,
+      ),
       'assigned' => (
-        'Dodijeljena',
+        loc.faultReportStatusAssigned,
         const Color(0xFF6D28D9),
         Icons.assignment_ind_outlined,
       ),
       'inprogress' => (
-        'U toku',
+        loc.faultReportStatusInProgress,
         const Color(0xFF1D4ED8),
         Icons.engineering_outlined,
       ),
       'resolved' => (
-        'Riješena',
+        loc.faultReportStatusResolved,
         const Color(0xFF2E7D32),
         Icons.check_circle_outline,
       ),

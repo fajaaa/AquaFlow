@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
+
 /// Shared error state: an icon, message, and retry button, for use wherever
 /// a load operation fails and the user should be able to try again.
 class ErrorRetry extends StatelessWidget {
@@ -24,7 +26,7 @@ class ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

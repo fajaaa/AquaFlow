@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
+
 import '../models/notification_image.dart';
 import '../models/user_notification_item.dart';
 import '../navigation/app_navigation.dart';
@@ -24,8 +26,8 @@ class _TypeMeta {
   final Color color;
 }
 
-const _TypeMeta _infoMeta = _TypeMeta(
-  'Info',
+_TypeMeta _infoMeta(AppLocalizations loc) => _TypeMeta(
+  loc.notificationTypeInfoLabel,
   Icons.info_outline,
   AppColors.secondary,
 );
@@ -126,22 +128,23 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final loc = AppLocalizations.of(context);
 
     final notification = _item.notification;
     final type = notification?.type ?? '';
-    final meta = _metaFor(type);
+    final meta = _metaFor(type, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     final onAccent =
         ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
         ? Colors.white
         : AppColors.textDark;
 
-    final title = _title(_item);
+    final title = _title(_item, loc);
     final body = notification?.body.trim() ?? '';
     final createdAt = notification?.createdAt ?? _item.createdAt;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Detalji obavijesti')),
+      appBar: AppBar(title: Text(loc.notificationDetailTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -171,7 +174,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'TIP OBAVIJESTI',
+                          loc.notificationTypeFieldLabel.toUpperCase(),
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
@@ -191,95 +194,94 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                   ],
                 ),
               ),
-              Center(
-                child: SizedBox(
-                  width: MediaQuery.sizeOf(context).width * 0.9,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header card - title, published date, read status.
-                        _Card(
-                          child: Column(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header card - title, published date, read status.
+                    _Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      title,
-                                      style: theme.textTheme.titleLarge
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w800,
-                                            color: accent,
-                                          ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  _StatusPill(
-                                    isRead: _item.isRead,
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
                                     color: accent,
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Body card - the notification text.
-                        _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeading('Opis', color: accent),
-                              const SizedBox(height: 10),
-                              Text(
-                                body.isEmpty ? 'Nema dodatnog sadržaja.' : body,
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  height: 1.55,
-                                  color: body.isEmpty
-                                      ? colorScheme.onSurfaceVariant
-                                      : colorScheme.onSurface.withValues(
-                                          alpha: 0.85,
-                                        ),
                                 ),
                               ),
+                              const SizedBox(width: 12),
+                              _StatusPill(isRead: _item.isRead, color: accent),
                             ],
                           ),
-                        ),
-                        if (!_imagesLoading && _images.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          _buildImagesSection(accent),
                         ],
-                        const SizedBox(height: 16),
-                        // Details card - type, dates, status.
-                        _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeading('Detalji', color: accent),
-                              const SizedBox(height: 14),
-                              _DetailRow(
-                                icon: meta.icon,
-                                iconColor: accent,
-                                label: 'Tip obavijesti',
-                                value: meta.label,
-                              ),
-                              const SizedBox(height: 14),
-                              _DetailRow(
-                                icon: Icons.calendar_today_outlined,
-                                iconColor: accent,
-                                label: 'Datum kreiranja',
-                                value: _formatDate(createdAt),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    // Body card - the notification text.
+                    _Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionHeading(
+                            loc.notificationDetailDescriptionHeading,
+                            color: accent,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            body.isEmpty
+                                ? loc.notificationDetailEmptyBody
+                                : body,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              height: 1.55,
+                              color: body.isEmpty
+                                  ? colorScheme.onSurfaceVariant
+                                  : colorScheme.onSurface.withValues(
+                                      alpha: 0.85,
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!_imagesLoading && _images.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _buildImagesSection(accent, loc),
+                    ],
+                    const SizedBox(height: 16),
+                    // Details card - type, dates, status.
+                    _Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionHeading(
+                            loc.notificationDetailDetailsHeading,
+                            color: accent,
+                          ),
+                          const SizedBox(height: 14),
+                          _DetailRow(
+                            icon: meta.icon,
+                            iconColor: accent,
+                            label: loc.notificationTypeFieldLabel,
+                            value: meta.label,
+                          ),
+                          const SizedBox(height: 14),
+                          _DetailRow(
+                            icon: Icons.calendar_today_outlined,
+                            iconColor: accent,
+                            label: loc.notificationDetailCreatedAtLabel,
+                            value: _formatDate(createdAt),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -292,12 +294,15 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   // Renders nothing while loading or when there are no images - most notifications carry
   // none, so this stays a lazy-loaded, easy-to-miss-if-absent section rather than a
   // placeholder, same approach as CustomerFaultReportDetailScreen's photo gallery.
-  Widget _buildImagesSection(Color accent) {
+  Widget _buildImagesSection(Color accent, AppLocalizations loc) {
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeading('Slike (${_images.length})', color: accent),
+          _SectionHeading(
+            loc.notificationDetailImagesHeading(_images.length),
+            color: accent,
+          ),
           const SizedBox(height: 12),
           GridView.builder(
             shrinkWrap: true,
@@ -337,32 +342,32 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     );
   }
 
-  static String _title(UserNotificationItem item) {
+  static String _title(UserNotificationItem item, AppLocalizations loc) {
     final notification = item.notification;
     final title = notification?.title.trim();
     if (title == null || title.isEmpty) {
-      return 'Obavijest #${item.notificationId}';
+      return loc.notificationFallbackTitle(item.notificationId);
     }
     return title;
   }
 
-  static _TypeMeta _metaFor(String type) {
+  static _TypeMeta _metaFor(String type, AppLocalizations loc) {
     switch (type.toLowerCase()) {
       case 'plannedworks':
-        return const _TypeMeta(
-          'Planirani radovi',
+        return _TypeMeta(
+          loc.notificationTypePlannedWorksLabel,
           Icons.build_outlined,
           AppColors.success,
         );
       case 'warning':
-        return const _TypeMeta(
-          'Upozorenje',
+        return _TypeMeta(
+          loc.notificationTypeWarningLabel,
           Icons.warning_amber_rounded,
           AppColors.warning,
         );
       case 'info':
       default:
-        return _infoMeta;
+        return _infoMeta(loc);
     }
   }
 
@@ -463,7 +468,9 @@ class _StatusPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        isRead ? 'Pročitano' : 'Novo',
+        isRead
+            ? AppLocalizations.of(context).notificationStatusRead
+            : AppLocalizations.of(context).notificationStatusUnread,
         style: theme.textTheme.labelSmall?.copyWith(
           color: foreground,
           fontWeight: FontWeight.w700,
@@ -601,8 +608,7 @@ class _FullscreenImageScreen extends StatefulWidget {
   final Future<Uint8List> Function(NotificationImage image) fetcherFor;
 
   @override
-  State<_FullscreenImageScreen> createState() =>
-      _FullscreenImageScreenState();
+  State<_FullscreenImageScreen> createState() => _FullscreenImageScreenState();
 }
 
 class _FullscreenImageScreenState extends State<_FullscreenImageScreen> {

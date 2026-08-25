@@ -13,5 +13,7 @@ public class UserPatchValidator : AbstractValidator<UserPatchRequest>
             .WithMessage("Telefon smije sadržavati samo brojeve i simbole + - ( ).")
             .When(x => x.Phone != null);
         RuleFor(x => x.UserRoleId).GreaterThan(0).When(x => x.UserRoleId.HasValue);
+        RuleFor(x => x.FirstName).MaximumLength(80).When(x => x.FirstName != null);
+        RuleFor(x => x.LastName).MaximumLength(80).When(x => x.LastName != null);
     }
 }

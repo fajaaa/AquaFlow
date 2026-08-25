@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_city.dart';
 import 'package:aquaflow_desktop/models/admin_municipality.dart';
 import 'package:aquaflow_desktop/models/admin_settlement.dart';
@@ -14,6 +15,7 @@ import 'package:aquaflow_desktop/services/admin_settlement_service.dart';
 import 'package:aquaflow_desktop/shared/screens/paged_list_controller.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
@@ -83,6 +85,7 @@ class _AdminCodebookScreenState extends State<AdminCodebookScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
 
     return SafeArea(
       child: Column(
@@ -94,14 +97,14 @@ class _AdminCodebookScreenState extends State<AdminCodebookScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Šifarnik',
+                  loc.codebookLabel,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Administrativni šifarnik lokacija: gradovi, općine i naselja.',
+                  loc.codebookSubtitle,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -115,13 +118,13 @@ class _AdminCodebookScreenState extends State<AdminCodebookScreen> {
               children: [
                 if (_level != _CodebookLevel.cities)
                   IconButton(
-                    tooltip: 'Nazad',
+                    tooltip: loc.backTooltip,
                     onPressed: _goBack,
                     icon: const Icon(Icons.arrow_back),
                   )
                 else
                   const SizedBox(width: 8),
-                Expanded(child: _buildBreadcrumb(theme)),
+                Expanded(child: _buildBreadcrumb(theme, loc)),
               ],
             ),
           ),
@@ -132,10 +135,10 @@ class _AdminCodebookScreenState extends State<AdminCodebookScreen> {
     );
   }
 
-  Widget _buildBreadcrumb(ThemeData theme) {
+  Widget _buildBreadcrumb(ThemeData theme, AppLocalizations loc) {
     final items = <_BreadcrumbItem>[
       _BreadcrumbItem(
-        'Gradovi',
+        loc.citiesLabel,
         _level == _CodebookLevel.cities ? null : _goToCities,
       ),
     ];
@@ -240,7 +243,7 @@ class _Breadcrumb extends StatelessWidget {
       } else {
         children.add(
           Tooltip(
-            message: 'Otvori',
+            message: AppLocalizations.of(context).openTooltip,
             child: InkWell(
               onTap: item.onTap,
               borderRadius: BorderRadius.circular(4),
@@ -265,7 +268,10 @@ class _Breadcrumb extends StatelessWidget {
       }
     }
 
-    return Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: children);
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: children,
+    );
   }
 }
 
@@ -337,6 +343,7 @@ Future<bool> _confirmDelete(
   required String title,
   required String message,
 }) async {
+  final loc = AppLocalizations.of(context);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -345,12 +352,12 @@ Future<bool> _confirmDelete(
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: () => Navigator.of(context).pop(true),
           icon: const Icon(Icons.delete_outline),
-          label: const Text('Obriši'),
+          label: Text(loc.commonDelete),
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
@@ -366,8 +373,10 @@ String _textOrDash(String value) {
   return text.isEmpty ? '-' : text;
 }
 
-String? _requiredValidator(String? value) {
-  return value == null || value.trim().isEmpty ? 'Obavezno polje.' : null;
+String? _requiredValidator(BuildContext context, String? value) {
+  return value == null || value.trim().isEmpty
+      ? AppLocalizations.of(context).fieldRequiredError
+      : null;
 }
 
 /// True when the just-deleted row was the only one left on a page other than
@@ -414,7 +423,7 @@ class _CitiesViewState extends State<_CitiesView>
   String describeError(Object error) {
     return error is AdminCityException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   Future<void> _openCreate() async {
@@ -427,7 +436,7 @@ class _CitiesViewState extends State<_CitiesView>
 
     await runMutation(() async {
       await _service.create(name: draft.name, code: draft.code);
-    }, 'Grad je dodan.');
+    }, AppLocalizations.of(context).cityCreatedSuccess);
   }
 
   Future<void> _openEdit(AdminCity city) async {
@@ -440,16 +449,15 @@ class _CitiesViewState extends State<_CitiesView>
 
     await runMutation(() async {
       await _service.update(city.id, name: draft.name, code: draft.code);
-    }, 'Grad je sačuvan.');
+    }, AppLocalizations.of(context).citySavedSuccess);
   }
 
   Future<void> _confirmAndDelete(AdminCity city) async {
+    final loc = AppLocalizations.of(context);
     final confirmed = await _confirmDelete(
       context,
-      title: 'Obriši grad',
-      message:
-          'Da li želite obrisati grad "${city.name}"? '
-          'Ova radnja se ne može poništiti.',
+      title: loc.deleteCityDialogTitle,
+      message: loc.deleteCityDialogContent(city.name),
     );
     if (!mounted || !confirmed) return;
 
@@ -458,7 +466,7 @@ class _CitiesViewState extends State<_CitiesView>
       if (shouldStepBackAfterDelete(itemsOnPage: items.length, page: page)) {
         page -= 1;
       }
-    }, 'Grad je obrisan.');
+    }, AppLocalizations.of(context).cityDeletedSuccess);
   }
 
   @override
@@ -470,6 +478,7 @@ class _CitiesViewState extends State<_CitiesView>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -479,30 +488,26 @@ class _CitiesViewState extends State<_CitiesView>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ScreenHeader(
-                title: 'Gradovi',
-                subtitle: 'Pregled, dodavanje, uređivanje i brisanje gradova.',
+                title: loc.citiesLabel,
+                subtitle: loc.citiesScreenSubtitle,
                 actions: [
-                  IconButton(
-                    tooltip: 'Osvježi',
-                    onPressed: loading || mutating ? null : () => load(),
-                    icon: const Icon(Icons.refresh),
-                  ),
+                  RefreshButton(onRefresh: () => load(), enabled: !mutating),
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: loading || mutating ? null : _openCreate,
                     icon: const Icon(Icons.add),
-                    label: const Text('Novi grad'),
+                    label: Text(loc.newCityButtonLabel),
                   ),
                 ],
               ),
               const SizedBox(height: 18),
-              _buildFilters(),
+              _buildFilters(loc),
             ],
           ),
         ),
         if ((loading && !isInitialLoad) || mutating)
           const LinearProgressIndicator(minHeight: 2),
-        Expanded(child: _buildContent()),
+        Expanded(child: _buildContent(loc)),
         if (!isInitialLoad && error == null)
           PagedTablePaginationBar(
             page: page,
@@ -517,7 +522,7 @@ class _CitiesViewState extends State<_CitiesView>
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     final hasSearch = searchController.text.trim().isNotEmpty;
     return SizedBox(
       width: 320,
@@ -527,12 +532,12 @@ class _CitiesViewState extends State<_CitiesView>
         onChanged: queueSearch,
         onSubmitted: submitSearch,
         decoration: InputDecoration(
-          labelText: 'Pretraga',
-          hintText: 'Naziv grada',
+          labelText: loc.commonSearch,
+          hintText: loc.citySearchHint,
           prefixIcon: const Icon(Icons.search),
           suffixIcon: hasSearch
               ? IconButton(
-                  tooltip: 'Očisti pretragu',
+                  tooltip: loc.clearSearchTooltip,
                   onPressed: clearSearch,
                   icon: const Icon(Icons.clear),
                 )
@@ -542,7 +547,7 @@ class _CitiesViewState extends State<_CitiesView>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -556,8 +561,8 @@ class _CitiesViewState extends State<_CitiesView>
       return _CodebookEmptyState(
         icon: Icons.location_city_outlined,
         hasFilters: _hasFilters,
-        emptyMessage: 'Nema gradova.',
-        filteredMessage: 'Nema gradova za zadanu pretragu.',
+        emptyMessage: loc.citiesEmptyMessage,
+        filteredMessage: loc.citiesEmptyFilteredMessage,
       );
     }
 
@@ -583,10 +588,10 @@ class _CitiesViewState extends State<_CitiesView>
                   child: DataTable(
                     dataRowMinHeight: 56,
                     dataRowMaxHeight: 64,
-                    columns: const [
-                      DataColumn(label: Text('Naziv')),
-                      DataColumn(label: Text('Kod')),
-                      DataColumn(label: Text('Akcije')),
+                    columns: [
+                      DataColumn(label: Text(loc.nameColumnLabel)),
+                      DataColumn(label: Text(loc.codeColumnLabel)),
+                      DataColumn(label: Text(loc.actionsColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
@@ -607,8 +612,9 @@ class _CitiesViewState extends State<_CitiesView>
                                   const SizedBox(width: 4),
                                   Icon(
                                     Icons.chevron_right,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                                   ),
                                 ],
                               ),
@@ -670,15 +676,16 @@ class _CityEditorDialogState extends State<_CityEditorDialog> {
     final form = _formKey.currentState;
     if (form == null || !form.validate()) return;
 
-    Navigator.of(context).pop(
-      _CityDraft(name: _nameCtrl.text.trim(), code: _codeCtrl.text.trim()),
-    );
+    Navigator.of(
+      context,
+    ).pop(_CityDraft(name: _nameCtrl.text.trim(), code: _codeCtrl.text.trim()));
   }
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(_isEdit ? 'Uredi grad' : 'Novi grad'),
+      title: Text(_isEdit ? loc.editCityDialogTitle : loc.newCityButtonLabel),
       content: SizedBox(
         width: math.min(420, MediaQuery.sizeOf(context).width - 48),
         child: SingleChildScrollView(
@@ -690,21 +697,21 @@ class _CityEditorDialogState extends State<_CityEditorDialog> {
                 TextFormField(
                   controller: _nameCtrl,
                   textInputAction: TextInputAction.next,
-                  validator: _requiredValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Naziv',
-                    prefixIcon: Icon(Icons.location_city_outlined),
+                  validator: (value) => _requiredValidator(context, value),
+                  decoration: InputDecoration(
+                    labelText: loc.nameColumnLabel,
+                    prefixIcon: const Icon(Icons.location_city_outlined),
                   ),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _codeCtrl,
                   textInputAction: TextInputAction.done,
-                  validator: _requiredValidator,
+                  validator: (value) => _requiredValidator(context, value),
                   onFieldSubmitted: (_) => _save(),
-                  decoration: const InputDecoration(
-                    labelText: 'Kod',
-                    prefixIcon: Icon(Icons.tag_outlined),
+                  decoration: InputDecoration(
+                    labelText: loc.codeColumnLabel,
+                    prefixIcon: const Icon(Icons.tag_outlined),
                   ),
                 ),
               ],
@@ -715,12 +722,12 @@ class _CityEditorDialogState extends State<_CityEditorDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: _save,
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Sačuvaj'),
+          label: Text(loc.commonSave),
         ),
       ],
     );
@@ -770,7 +777,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
   String describeError(Object error) {
     return error is AdminMunicipalityException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   Future<void> _openCreate() async {
@@ -787,7 +794,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
         code: draft.code,
         cityId: widget.city.id,
       );
-    }, 'Općina je dodana.');
+    }, AppLocalizations.of(context).municipalityCreatedSuccess);
   }
 
   Future<void> _openEdit(AdminMunicipality municipality) async {
@@ -808,16 +815,15 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
         code: draft.code,
         cityId: widget.city.id,
       );
-    }, 'Općina je sačuvana.');
+    }, AppLocalizations.of(context).municipalitySavedSuccess);
   }
 
   Future<void> _confirmAndDelete(AdminMunicipality municipality) async {
+    final loc = AppLocalizations.of(context);
     final confirmed = await _confirmDelete(
       context,
-      title: 'Obriši općinu',
-      message:
-          'Da li želite obrisati općinu "${municipality.name}"? '
-          'Ova radnja se ne može poništiti.',
+      title: loc.deleteMunicipalityDialogTitle,
+      message: loc.deleteMunicipalityDialogContent(municipality.name),
     );
     if (!mounted || !confirmed) return;
 
@@ -826,7 +832,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
       if (shouldStepBackAfterDelete(itemsOnPage: items.length, page: page)) {
         page -= 1;
       }
-    }, 'Općina je obrisana.');
+    }, AppLocalizations.of(context).municipalityDeletedSuccess);
   }
 
   @override
@@ -838,6 +844,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -847,30 +854,26 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ScreenHeader(
-                title: 'Općine · ${widget.city.name}',
-                subtitle: 'Pregled, dodavanje, uređivanje i brisanje općina.',
+                title: loc.municipalitiesTitle(widget.city.name),
+                subtitle: loc.municipalitiesScreenSubtitle,
                 actions: [
-                  IconButton(
-                    tooltip: 'Osvježi',
-                    onPressed: loading || mutating ? null : () => load(),
-                    icon: const Icon(Icons.refresh),
-                  ),
+                  RefreshButton(onRefresh: () => load(), enabled: !mutating),
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: loading || mutating ? null : _openCreate,
                     icon: const Icon(Icons.add),
-                    label: const Text('Nova općina'),
+                    label: Text(loc.newMunicipalityButtonLabel),
                   ),
                 ],
               ),
               const SizedBox(height: 18),
-              _buildFilters(),
+              _buildFilters(loc),
             ],
           ),
         ),
         if ((loading && !isInitialLoad) || mutating)
           const LinearProgressIndicator(minHeight: 2),
-        Expanded(child: _buildContent()),
+        Expanded(child: _buildContent(loc)),
         if (!isInitialLoad && error == null)
           PagedTablePaginationBar(
             page: page,
@@ -885,7 +888,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     final hasSearch = searchController.text.trim().isNotEmpty;
     return SizedBox(
       width: 320,
@@ -895,12 +898,12 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
         onChanged: queueSearch,
         onSubmitted: submitSearch,
         decoration: InputDecoration(
-          labelText: 'Pretraga',
-          hintText: 'Naziv općine',
+          labelText: loc.commonSearch,
+          hintText: loc.municipalitySearchHint,
           prefixIcon: const Icon(Icons.search),
           suffixIcon: hasSearch
               ? IconButton(
-                  tooltip: 'Očisti pretragu',
+                  tooltip: loc.clearSearchTooltip,
                   onPressed: clearSearch,
                   icon: const Icon(Icons.clear),
                 )
@@ -910,7 +913,7 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -924,9 +927,9 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
       return _CodebookEmptyState(
         icon: Icons.map_outlined,
         hasFilters: _hasFilters,
-        emptyMessage: "Grad '${widget.city.name}' još nema općina.",
-        filteredMessage: 'Nema općina za zadanu pretragu.',
-        actionLabel: 'Nova općina',
+        emptyMessage: loc.cityHasNoMunicipalitiesMessage(widget.city.name),
+        filteredMessage: loc.municipalitiesEmptyFilteredMessage,
+        actionLabel: loc.newMunicipalityButtonLabel,
         onAction: _openCreate,
       );
     }
@@ -953,15 +956,16 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
                   child: DataTable(
                     dataRowMinHeight: 56,
                     dataRowMaxHeight: 64,
-                    columns: const [
-                      DataColumn(label: Text('Naziv')),
-                      DataColumn(label: Text('Kod')),
-                      DataColumn(label: Text('Akcije')),
+                    columns: [
+                      DataColumn(label: Text(loc.nameColumnLabel)),
+                      DataColumn(label: Text(loc.codeColumnLabel)),
+                      DataColumn(label: Text(loc.actionsColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
                         DataRow(
-                          onSelectChanged: (_) => widget.onOpenMunicipality(item),
+                          onSelectChanged: (_) =>
+                              widget.onOpenMunicipality(item),
                           cells: [
                             DataCell(Text(_textOrDash(item.name))),
                             DataCell(Text(_textOrDash(item.code))),
@@ -977,8 +981,9 @@ class _MunicipalitiesViewState extends State<_MunicipalitiesView>
                                   const SizedBox(width: 4),
                                   Icon(
                                     Icons.chevron_right,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                                   ),
                                 ],
                               ),
@@ -1043,14 +1048,22 @@ class _MunicipalityEditorDialogState extends State<_MunicipalityEditorDialog> {
     if (form == null || !form.validate()) return;
 
     Navigator.of(context).pop(
-      _MunicipalityDraft(name: _nameCtrl.text.trim(), code: _codeCtrl.text.trim()),
+      _MunicipalityDraft(
+        name: _nameCtrl.text.trim(),
+        code: _codeCtrl.text.trim(),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(_isEdit ? 'Uredi općinu' : 'Nova općina'),
+      title: Text(
+        _isEdit
+            ? loc.editMunicipalityDialogTitle
+            : loc.newMunicipalityButtonLabel,
+      ),
       content: SizedBox(
         width: math.min(460, MediaQuery.sizeOf(context).width - 48),
         child: SingleChildScrollView(
@@ -1062,30 +1075,30 @@ class _MunicipalityEditorDialogState extends State<_MunicipalityEditorDialog> {
                 TextFormField(
                   initialValue: widget.city.name,
                   enabled: false,
-                  decoration: const InputDecoration(
-                    labelText: 'Grad',
-                    prefixIcon: Icon(Icons.location_city_outlined),
+                  decoration: InputDecoration(
+                    labelText: loc.locationCityLabel,
+                    prefixIcon: const Icon(Icons.location_city_outlined),
                   ),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _nameCtrl,
                   textInputAction: TextInputAction.next,
-                  validator: _requiredValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Naziv',
-                    prefixIcon: Icon(Icons.map_outlined),
+                  validator: (value) => _requiredValidator(context, value),
+                  decoration: InputDecoration(
+                    labelText: loc.nameColumnLabel,
+                    prefixIcon: const Icon(Icons.map_outlined),
                   ),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _codeCtrl,
                   textInputAction: TextInputAction.done,
-                  validator: _requiredValidator,
+                  validator: (value) => _requiredValidator(context, value),
                   onFieldSubmitted: (_) => _save(),
-                  decoration: const InputDecoration(
-                    labelText: 'Kod',
-                    prefixIcon: Icon(Icons.tag_outlined),
+                  decoration: InputDecoration(
+                    labelText: loc.codeColumnLabel,
+                    prefixIcon: const Icon(Icons.tag_outlined),
                   ),
                 ),
               ],
@@ -1096,12 +1109,12 @@ class _MunicipalityEditorDialogState extends State<_MunicipalityEditorDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: _save,
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Sačuvaj'),
+          label: Text(loc.commonSave),
         ),
       ],
     );
@@ -1146,14 +1159,15 @@ class _SettlementsViewState extends State<_SettlementsView>
   String describeError(Object error) {
     return error is AdminSettlementException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   Future<void> _openCreate() async {
     final draft = await showDialog<_SettlementDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _SettlementEditorDialog(municipality: widget.municipality),
+      builder: (_) =>
+          _SettlementEditorDialog(municipality: widget.municipality),
     );
     if (!mounted || draft == null) return;
 
@@ -1163,7 +1177,7 @@ class _SettlementsViewState extends State<_SettlementsView>
         municipalityId: widget.municipality.id,
         postalCode: draft.postalCode,
       );
-    }, 'Naselje je dodano.');
+    }, AppLocalizations.of(context).settlementCreatedSuccess);
   }
 
   Future<void> _openEdit(AdminSettlement settlement) async {
@@ -1184,16 +1198,15 @@ class _SettlementsViewState extends State<_SettlementsView>
         municipalityId: widget.municipality.id,
         postalCode: draft.postalCode,
       );
-    }, 'Naselje je sačuvano.');
+    }, AppLocalizations.of(context).settlementSavedSuccess);
   }
 
   Future<void> _confirmAndDelete(AdminSettlement settlement) async {
+    final loc = AppLocalizations.of(context);
     final confirmed = await _confirmDelete(
       context,
-      title: 'Obriši naselje',
-      message:
-          'Da li želite obrisati naselje "${settlement.name}"? '
-          'Ova radnja se ne može poništiti.',
+      title: loc.deleteSettlementDialogTitle,
+      message: loc.deleteSettlementDialogContent(settlement.name),
     );
     if (!mounted || !confirmed) return;
 
@@ -1202,7 +1215,7 @@ class _SettlementsViewState extends State<_SettlementsView>
       if (shouldStepBackAfterDelete(itemsOnPage: items.length, page: page)) {
         page -= 1;
       }
-    }, 'Naselje je obrisano.');
+    }, AppLocalizations.of(context).settlementDeletedSuccess);
   }
 
   @override
@@ -1214,6 +1227,7 @@ class _SettlementsViewState extends State<_SettlementsView>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1223,30 +1237,26 @@ class _SettlementsViewState extends State<_SettlementsView>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ScreenHeader(
-                title: 'Naselja · ${widget.municipality.name}',
-                subtitle: 'Pregled, dodavanje, uređivanje i brisanje naselja.',
+                title: loc.settlementsTitle(widget.municipality.name),
+                subtitle: loc.settlementsScreenSubtitle,
                 actions: [
-                  IconButton(
-                    tooltip: 'Osvježi',
-                    onPressed: loading || mutating ? null : () => load(),
-                    icon: const Icon(Icons.refresh),
-                  ),
+                  RefreshButton(onRefresh: () => load(), enabled: !mutating),
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: loading || mutating ? null : _openCreate,
                     icon: const Icon(Icons.add),
-                    label: const Text('Novo naselje'),
+                    label: Text(loc.newSettlementButtonLabel),
                   ),
                 ],
               ),
               const SizedBox(height: 18),
-              _buildFilters(),
+              _buildFilters(loc),
             ],
           ),
         ),
         if ((loading && !isInitialLoad) || mutating)
           const LinearProgressIndicator(minHeight: 2),
-        Expanded(child: _buildContent()),
+        Expanded(child: _buildContent(loc)),
         if (!isInitialLoad && error == null)
           PagedTablePaginationBar(
             page: page,
@@ -1261,7 +1271,7 @@ class _SettlementsViewState extends State<_SettlementsView>
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     final hasSearch = searchController.text.trim().isNotEmpty;
     return SizedBox(
       width: 320,
@@ -1271,12 +1281,12 @@ class _SettlementsViewState extends State<_SettlementsView>
         onChanged: queueSearch,
         onSubmitted: submitSearch,
         decoration: InputDecoration(
-          labelText: 'Pretraga',
-          hintText: 'Naziv naselja',
+          labelText: loc.commonSearch,
+          hintText: loc.settlementSearchHint,
           prefixIcon: const Icon(Icons.search),
           suffixIcon: hasSearch
               ? IconButton(
-                  tooltip: 'Očisti pretragu',
+                  tooltip: loc.clearSearchTooltip,
                   onPressed: clearSearch,
                   icon: const Icon(Icons.clear),
                 )
@@ -1286,7 +1296,7 @@ class _SettlementsViewState extends State<_SettlementsView>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -1300,9 +1310,11 @@ class _SettlementsViewState extends State<_SettlementsView>
       return _CodebookEmptyState(
         icon: Icons.holiday_village_outlined,
         hasFilters: _hasFilters,
-        emptyMessage: "Općina '${widget.municipality.name}' još nema naselja.",
-        filteredMessage: 'Nema naselja za zadanu pretragu.',
-        actionLabel: 'Novo naselje',
+        emptyMessage: loc.municipalityHasNoSettlementsMessage(
+          widget.municipality.name,
+        ),
+        filteredMessage: loc.settlementsEmptyFilteredMessage,
+        actionLabel: loc.newSettlementButtonLabel,
         onAction: _openCreate,
       );
     }
@@ -1329,10 +1341,10 @@ class _SettlementsViewState extends State<_SettlementsView>
                   child: DataTable(
                     dataRowMinHeight: 56,
                     dataRowMaxHeight: 64,
-                    columns: const [
-                      DataColumn(label: Text('Naziv')),
-                      DataColumn(label: Text('Poštanski broj')),
-                      DataColumn(label: Text('Akcije')),
+                    columns: [
+                      DataColumn(label: Text(loc.nameColumnLabel)),
+                      DataColumn(label: Text(loc.postalCodeColumnLabel)),
+                      DataColumn(label: Text(loc.actionsColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
@@ -1418,8 +1430,11 @@ class _SettlementEditorDialogState extends State<_SettlementEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(_isEdit ? 'Uredi naselje' : 'Novo naselje'),
+      title: Text(
+        _isEdit ? loc.editSettlementDialogTitle : loc.newSettlementButtonLabel,
+      ),
       content: SizedBox(
         width: math.min(480, MediaQuery.sizeOf(context).width - 48),
         child: SingleChildScrollView(
@@ -1431,19 +1446,19 @@ class _SettlementEditorDialogState extends State<_SettlementEditorDialog> {
                 TextFormField(
                   initialValue: widget.municipality.name,
                   enabled: false,
-                  decoration: const InputDecoration(
-                    labelText: 'Općina',
-                    prefixIcon: Icon(Icons.map_outlined),
+                  decoration: InputDecoration(
+                    labelText: loc.locationMunicipalityLabel,
+                    prefixIcon: const Icon(Icons.map_outlined),
                   ),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _nameCtrl,
                   textInputAction: TextInputAction.next,
-                  validator: _requiredValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Naziv',
-                    prefixIcon: Icon(Icons.holiday_village_outlined),
+                  validator: (value) => _requiredValidator(context, value),
+                  decoration: InputDecoration(
+                    labelText: loc.nameColumnLabel,
+                    prefixIcon: const Icon(Icons.holiday_village_outlined),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -1451,9 +1466,9 @@ class _SettlementEditorDialogState extends State<_SettlementEditorDialog> {
                   controller: _postalCodeCtrl,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _save(),
-                  decoration: const InputDecoration(
-                    labelText: 'Poštanski broj',
-                    prefixIcon: Icon(Icons.markunread_mailbox_outlined),
+                  decoration: InputDecoration(
+                    labelText: loc.postalCodeColumnLabel,
+                    prefixIcon: const Icon(Icons.markunread_mailbox_outlined),
                   ),
                 ),
               ],
@@ -1464,12 +1479,12 @@ class _SettlementEditorDialogState extends State<_SettlementEditorDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: _save,
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Sačuvaj'),
+          label: Text(loc.commonSave),
         ),
       ],
     );

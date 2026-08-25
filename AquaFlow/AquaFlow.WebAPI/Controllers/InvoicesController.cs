@@ -3,6 +3,7 @@ using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
+using AquaFlow.Services.Pdf;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Mvc;
@@ -16,10 +17,12 @@ public class InvoicesController : BaseCRUDController<InvoiceResponse, InvoiceSea
     private const string ManagePermission = "Invoices.Manage";
 
     private readonly CustomerProfileCrudService _customerProfileService;
+    private readonly IInvoicePdfService _pdfService;
 
-    public InvoicesController(IInvoiceService service, CustomerProfileCrudService customerProfileService) : base(service)
+    public InvoicesController(IInvoiceService service, CustomerProfileCrudService customerProfileService, IInvoicePdfService pdfService) : base(service)
     {
         _customerProfileService = customerProfileService;
+        _pdfService = pdfService;
     }
 
     // A caller holding Invoices.Manage (currently Admin only) sees every invoice
@@ -87,6 +90,43 @@ public class InvoicesController : BaseCRUDController<InvoiceResponse, InvoiceSea
         {
             return NotFound();
         }
+    }
+
+    // Same ownership pinning as GetById above, reusing the already-fetched InvoiceResponse for both
+    // the CustomerId check and the InvoiceNumber-based download filename - a mismatched or unknown
+    // invoice is 404, never Forbid.
+    [RequirePermission("Invoices.Read", ManagePermission)]
+    [HttpGet("{id:int}/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPdf(int id)
+    {
+        InvoiceResponse invoice;
+        try
+        {
+            invoice = await Service.GetByIdAsync(id);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+
+        if (!HasManagePermission())
+        {
+            if (!TryGetCurrentUserId(out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var customerId = await ResolveCustomerProfileIdAsync(userId);
+            if (customerId is null || invoice.CustomerId != customerId.Value)
+            {
+                return NotFound();
+            }
+        }
+
+        var pdfBytes = await _pdfService.GenerateInvoicePdfAsync(id);
+        return File(pdfBytes, "application/pdf", $"{invoice.InvoiceNumber}.pdf");
     }
 
     private async Task<int?> ResolveCustomerProfileIdAsync(int userId)

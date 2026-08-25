@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
 import 'package:aquaflow_collector/screens/collector_water_meter_requests_screen.dart';
 import 'package:aquaflow_collector/screens/collector_water_meters_screen.dart';
 import 'package:aquaflow_collector/shared/providers/notification_badge_provider.dart';
@@ -31,33 +32,34 @@ class CollectorShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unreadCount = context.watch<NotificationBadgeProvider>().unreadCount;
+    final loc = AppLocalizations.of(context);
 
     return MobileShell(
       tabs: [
         MobileTab(
           icon: Icons.notifications_outlined,
           selectedIcon: Icons.notifications,
-          label: 'Obavijesti',
+          label: loc.tabNotifications,
           badgeCount: unreadCount,
           body: const NotificationsScreen(),
         ),
-        const MobileTab(
+        MobileTab(
           icon: Icons.water_drop_outlined,
           selectedIcon: Icons.water_drop,
-          label: 'Vodomjeri',
-          body: CollectorWaterMetersScreen(),
+          label: loc.tabWaterMeters,
+          body: const CollectorWaterMetersScreen(),
         ),
-        const MobileTab(
+        MobileTab(
           icon: Icons.assignment_outlined,
           selectedIcon: Icons.assignment,
-          label: 'Nalozi',
-          body: CollectorWaterMeterRequestsScreen(),
+          label: loc.tabWaterMeterRequests,
+          body: const CollectorWaterMeterRequestsScreen(),
         ),
-        const MobileTab(
+        MobileTab(
           icon: Icons.person_outline,
           selectedIcon: Icons.person,
-          label: 'Nalog',
-          body: AccountScreen(),
+          label: loc.tabAccount,
+          body: const AccountScreen(),
         ),
       ],
     );

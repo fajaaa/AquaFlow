@@ -5,10 +5,9 @@ using AquaFlow.Services;
 
 namespace AquaFlow.WebAPI.Tests.UserNotifications;
 
-// Hand-written stand-in for IBaseCRUDService<...> so controller tests can drive
+// Hand-written stand-in for IUserNotificationService so controller tests can drive
 // UserNotificationsController's ownership/permission logic without a database.
-public class FakeUserNotificationCrudService
-    : IBaseCRUDService<UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>
+public class FakeUserNotificationCrudService : IUserNotificationService
 {
     private readonly List<UserNotificationResponse> _rows;
 
@@ -94,5 +93,16 @@ public class FakeUserNotificationCrudService
         var row = _rows.SingleOrDefault(row => row.Id == id) ?? throw new KeyNotFoundException();
         _rows.Remove(row);
         return Task.CompletedTask;
+    }
+
+    public Task<int> MarkAllAsReadAsync(int userId)
+    {
+        var unread = _rows.Where(row => row.UserId == userId && row.ReadAt == null).ToList();
+        foreach (var row in unread)
+        {
+            row.ReadAt = DateTime.UtcNow;
+        }
+
+        return Task.FromResult(unread.Count);
     }
 }

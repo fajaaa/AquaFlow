@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
+
 import '../models/company_settings.dart';
 import '../services/company_settings_exception.dart';
 import '../services/company_settings_service.dart';
@@ -97,7 +99,11 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
       await _service.update(updated);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Postavke firme su sačuvane.')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).companySettingsSaveSuccess,
+          ),
+        ),
       );
     } on CompanySettingsException catch (e) {
       if (!mounted) return;
@@ -130,7 +136,9 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Postavke firme')),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context).companySettingsScreenTitle),
+      ),
       body: _buildBody(),
     );
   }
@@ -142,6 +150,7 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
     if (_loadError != null) {
       return _ErrorRetry(message: _loadError!, onRetry: _load);
     }
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -155,47 +164,47 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                 children: [
                   _field(
                     controller: _companyNameCtrl,
-                    label: 'Naziv firme',
+                    label: loc.companyNameLabel,
                     icon: Icons.business_outlined,
-                    validator: _required,
+                    validator: (value) => _required(context, value),
                     maxLength: 150,
                   ),
                   _field(
                     controller: _emailCtrl,
-                    label: 'Email',
+                    label: loc.fieldEmailLabel,
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
-                    validator: _email,
+                    validator: (value) => _email(context, value),
                     maxLength: 150,
                   ),
                   _field(
                     controller: _phoneCtrl,
-                    label: 'Telefon',
+                    label: loc.fieldPhoneLabel,
                     icon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
                     maxLength: 30,
                   ),
                   _field(
                     controller: _addressCtrl,
-                    label: 'Adresa',
+                    label: loc.addressLabel,
                     icon: Icons.location_on_outlined,
                     maxLength: 200,
                   ),
                   _field(
                     controller: _taxNumberCtrl,
-                    label: 'Porezni broj',
+                    label: loc.taxNumberLabel,
                     icon: Icons.badge_outlined,
                     maxLength: 50,
                   ),
                   _field(
                     controller: _bankAccountCtrl,
-                    label: 'Bankovni račun',
+                    label: loc.bankAccountLabel,
                     icon: Icons.account_balance_outlined,
                     maxLength: 80,
                   ),
                   _field(
                     controller: _logoUrlCtrl,
-                    label: 'URL logotipa (opcionalno)',
+                    label: loc.logoUrlOptionalLabel,
                     icon: Icons.image_outlined,
                     keyboardType: TextInputType.url,
                   ),
@@ -204,9 +213,9 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                       Expanded(
                         child: _field(
                           controller: _defaultLanguageCtrl,
-                          label: 'Jezik',
+                          label: loc.defaultLanguageLabel,
                           icon: Icons.language_outlined,
-                          validator: _required,
+                          validator: (value) => _required(context, value),
                           maxLength: 10,
                         ),
                       ),
@@ -214,9 +223,9 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                       Expanded(
                         child: _field(
                           controller: _defaultCurrencyCtrl,
-                          label: 'Valuta',
+                          label: loc.defaultCurrencyLabel,
                           icon: Icons.payments_outlined,
-                          validator: _required,
+                          validator: (value) => _required(context, value),
                           maxLength: 10,
                         ),
                       ),
@@ -235,7 +244,7 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                             ),
                           )
                         : const Icon(Icons.save_outlined),
-                    label: Text(_saving ? 'Spašavanje...' : 'Sačuvaj'),
+                    label: Text(_saving ? loc.commonSaving : loc.commonSave),
                   ),
                 ],
               ),
@@ -270,16 +279,19 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
     );
   }
 
-  String? _required(String? value) =>
-      (value == null || value.trim().isEmpty) ? 'Obavezno polje.' : null;
+  String? _required(BuildContext context, String? value) =>
+      (value == null || value.trim().isEmpty)
+      ? AppLocalizations.of(context).fieldRequiredError
+      : null;
 
-  String? _email(String? value) {
+  String? _email(BuildContext context, String? value) {
+    final loc = AppLocalizations.of(context);
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    if (text.isEmpty) return loc.fieldRequiredError;
     // Mirrors the backend EmailAddress() rule loosely: must contain "@" with
     // something on both sides. The backend is the authority on validity.
     final at = text.indexOf('@');
-    if (at <= 0 || at == text.length - 1) return 'Unesite ispravan email.';
+    if (at <= 0 || at == text.length - 1) return loc.emailInvalidError;
     return null;
   }
 }
@@ -308,7 +320,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

@@ -65,6 +65,49 @@ class CollectorWaterMeterService {
         .toList();
   }
 
+  /// Retires a meter that is no longer functional: sets its status to Removed
+  /// server-side (`POST /WaterMeters/{id}/mark-broken`,
+  /// `WaterMetersController.MarkBroken`), which also blocks any further
+  /// reading from being recorded for it. `reason` is mandatory - it becomes
+  /// the audit trail (`ActivityLog`) for why the meter was retired. Replaces
+  /// the old "Zamjena vodomjera" reading-entry toggle: the collector now
+  /// records a normal final reading first, then calls this as a separate
+  /// action.
+  Future<CollectorWaterMeter> markBroken({
+    required int waterMeterId,
+    required String reason,
+  }) async {
+    final token = await _requireToken();
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/WaterMeters/$waterMeterId/mark-broken',
+    );
+
+    final response = await _send(
+      () => _client.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'reason': reason.trim()}),
+      ),
+    );
+
+    if (response.statusCode != 200) {
+      throw CollectorWaterMeterException(
+        _messageFor(response, 'Vodomjer nije moguće označiti kao neispravan'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const CollectorWaterMeterException(
+        'Odgovor servera je u neispravnom formatu.',
+      );
+    }
+    return CollectorWaterMeter.fromJson(decoded);
+  }
+
   Future<String> _requireToken() async {
     final token = await _tokenStorage.getAccessToken();
     if (token == null) {

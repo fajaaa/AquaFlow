@@ -232,31 +232,6 @@ public class SettlementServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_SettlementWithCollectorProfile_ThrowsClientExceptionListingBlocker()
-    {
-        await using var context = CreateContext();
-        SeedMunicipalities(context);
-        context.Settlements.Add(new Settlement { Id = 1, Name = "Bjelave", MunicipalityId = 1, PostalCode = "71000" });
-        context.UserRoles.Add(new UserRole { Id = 1, Name = "Collector" });
-        context.Users.Add(new User
-        {
-            Id = 1,
-            Email = "collector@aquaflow.ba",
-            PasswordHash = "hash",
-            PasswordSalt = "salt",
-            UserRoleId = 1,
-            IsActive = true
-        });
-        context.CollectorProfiles.Add(new CollectorProfile { Id = 1, UserId = 1, EmployeeCode = "EMP-0001", AssignedAreaId = 1 });
-        await context.SaveChangesAsync();
-        var service = CreateService(context);
-
-        var exception = await Assert.ThrowsAsync<ClientException>(() => service.DeleteAsync(1));
-
-        Assert.Contains("collector profiles", exception.Message);
-    }
-
-    [Fact]
     public async Task DeleteAsync_UnusedSettlement_DeletesSuccessfully()
     {
         await using var context = CreateContext();

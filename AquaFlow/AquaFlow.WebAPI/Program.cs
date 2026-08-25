@@ -10,6 +10,7 @@ using AquaFlow.Services.Database;
 using AquaFlow.Services.FaultReportStateMachine;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Payments;
+using AquaFlow.Services.Pdf;
 using AquaFlow.Services.Validators;
 using AquaFlow.Services.WaterMeterRequestStateMachine;
 using AquaFlow.WebAPI.Filters;
@@ -32,6 +33,11 @@ using Scalar.AspNetCore;
 // double-underscore convention IConfiguration already reads ConnectionStrings__DefaultConnection
 // through. Must run before WebApplication.CreateBuilder(args) so those variables are visible to it.
 DotNetEnv.Env.Load();
+
+// QuestPDF (used by InvoicePdfService) throws at generation time unless a license type is set
+// explicitly. Community is free only below $1M annual revenue for the company/individual using it -
+// TODO: revisit this if AquaFlow ever crosses that threshold.
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -147,8 +153,8 @@ builder.Services.AddCors(options =>
 var mapperConfig = TypeAdapterConfig.GlobalSettings;
 mapperConfig.NewConfig<User, UserResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
-    .Map(destination => destination.FirstName, source => source.CustomerProfile == null ? string.Empty : source.CustomerProfile.FirstName)
-    .Map(destination => destination.LastName, source => source.CustomerProfile == null ? string.Empty : source.CustomerProfile.LastName);
+    .Map(destination => destination.FirstName, source => source.CustomerProfile == null ? source.FirstName : source.CustomerProfile.FirstName)
+    .Map(destination => destination.LastName, source => source.CustomerProfile == null ? source.LastName : source.CustomerProfile.LastName);
 mapperConfig.NewConfig<User, UserSensitiveResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name);
 mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
@@ -156,10 +162,9 @@ mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
     .Map(destination => destination.PermissionCode, source => source.Permission == null ? string.Empty : source.Permission.Code)
     .Map(destination => destination.PermissionName, source => source.Permission == null ? string.Empty : source.Permission.Name);
 mapperConfig.NewConfig<CollectorProfile, CollectorProfileResponse>()
-    .Map(destination => destination.AssignedAreaName, source => source.AssignedArea == null ? string.Empty : source.AssignedArea.Name)
     .Map(destination => destination.IsActive, source => source.User != null && source.User.IsActive)
-    .Map(destination => destination.FirstName, source => source.User == null || source.User.CustomerProfile == null ? string.Empty : source.User.CustomerProfile.FirstName)
-    .Map(destination => destination.LastName, source => source.User == null || source.User.CustomerProfile == null ? string.Empty : source.User.CustomerProfile.LastName)
+    .Map(destination => destination.FirstName, source => source.User == null ? string.Empty : source.User.FirstName)
+    .Map(destination => destination.LastName, source => source.User == null ? string.Empty : source.User.LastName)
     .Map(destination => destination.Email, source => source.User == null ? string.Empty : source.User.Email)
     .Map(destination => destination.Phone, source => source.User == null ? string.Empty : source.User.Phone);
 mapperConfig.NewConfig<UserNotification, UserNotificationResponse>()
@@ -236,8 +241,13 @@ AddPatchMapping<MunicipalityPatchRequest, Municipality>();
 builder.Services.AddScoped<IBaseCRUDService<MunicipalityResponse, MunicipalitySearchObject, MunicipalityInsertRequest, MunicipalityUpdateRequest, MunicipalityPatchRequest>, MunicipalityService>();
 AddPatchMapping<SettlementPatchRequest, Settlement>();
 builder.Services.AddScoped<IBaseCRUDService<SettlementResponse, SettlementSearchObject, SettlementInsertRequest, SettlementUpdateRequest, SettlementPatchRequest>, SettlementService>();
+// WaterMeter is registered by hand (not AddCrud<>) because MarkBrokenAsync is an extra action
+// beyond the generic EfCrudService; the generic IBaseCRUDService alias still resolves to the same
+// WaterMeterService instance, same pattern as MeterReading/WaterMeterRequest/Invoice.
 AddPatchMapping<WaterMeterPatchRequest, WaterMeter>();
-builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>, WaterMeterService>();
+builder.Services.AddScoped<IWaterMeterService, WaterMeterService>();
+builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IWaterMeterService>());
 // MeterReading is registered by hand (not AddCrud<>) because the collector data-entry flow
 // (CreateForCollectorAsync) needs billing-cycle resolution/validation and WaterMeter.LastReading
 // updates beyond the generic EfCrudService; the generic IBaseCRUDService alias still resolves to
@@ -295,6 +305,14 @@ builder.Services.AddKeyedScoped<BaseInvoiceState, IssuedInvoiceState>(InvoiceSta
 builder.Services.AddKeyedScoped<BaseInvoiceState, PaidInvoiceState>(InvoiceStatus.Paid);
 builder.Services.AddKeyedScoped<BaseInvoiceState, CancelledInvoiceState>(InvoiceStatus.Cancelled);
 builder.Services.AddScoped<IInvoiceStateResolver, InvoiceStateResolver>();
+// InvoicePdfService is independent of the state machine above - it only reads an Invoice (plus
+// CompanySettings) to render a PDF, never mutates one. The typed HttpClient is for the optional
+// CompanySettings.LogoUrl download in the PDF header; a short timeout keeps a slow/unreachable logo
+// host from stalling the whole request (the service falls back to a text-only header on any failure).
+builder.Services.AddHttpClient<IInvoicePdfService, InvoicePdfService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
 // WaterMeterRequest mirrors the Invoice registration above: the state machine service is
 // registered by hand, the generic IBaseCRUDService alias resolves to the same instance, and each
 // request state is a keyed scoped BaseWaterMeterRequestState (status string as key) that
@@ -376,6 +394,7 @@ builder.Services.AddScoped<IValidator<SettlementPatchRequest>, SettlementPatchVa
 builder.Services.AddScoped<IValidator<WaterMeterInsertRequest>, WaterMeterInsertValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterUpdateRequest>, WaterMeterUpdateValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterPatchRequest>, WaterMeterPatchValidator>();
+builder.Services.AddScoped<IValidator<WaterMeterMarkBrokenRequest>, WaterMeterMarkBrokenValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestInsertRequest>, WaterMeterRequestInsertValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestUpdateRequest>, WaterMeterRequestUpdateValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestPatchRequest>, WaterMeterRequestPatchValidator>();

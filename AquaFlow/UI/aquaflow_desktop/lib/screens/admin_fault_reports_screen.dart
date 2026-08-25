@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_collector_profile.dart';
 import 'package:aquaflow_desktop/models/admin_fault_report.dart';
 import 'package:aquaflow_desktop/models/admin_fault_report_photo.dart';
@@ -13,6 +14,7 @@ import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
@@ -34,11 +36,11 @@ class AdminFaultReportsScreen extends StatefulWidget {
       _AdminFaultReportsScreenState();
 }
 
-const _statusOptions = <String, String>{
-  'New': 'Nova',
-  'Assigned': 'Dodijeljena',
-  'InProgress': 'U toku',
-  'Resolved': 'Riješena',
+Map<String, String> _statusOptions(AppLocalizations loc) => <String, String>{
+  'New': loc.faultReportStatusNew,
+  'Assigned': loc.faultReportStatusAssigned,
+  'InProgress': loc.faultReportStatusInProgress,
+  'Resolved': loc.faultReportStatusResolved,
 };
 
 class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
@@ -68,7 +70,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
   String describeError(Object error) {
     return error is AdminFaultReportException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   void _setStatusFilter(String value) {
@@ -81,7 +83,8 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
   void _openDetail(AdminFaultReport report) {
     showDialog<void>(
       context: context,
-      builder: (_) => _FaultReportDetailDialog(report: report, service: _service),
+      builder: (_) =>
+          _FaultReportDetailDialog(report: report, service: _service),
     );
   }
 
@@ -89,12 +92,14 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
     final next = _nextStatus(report.status);
     if (next == null) return;
 
+    final loc = AppLocalizations.of(context);
     final confirmed = await _confirmAction(
-      title: 'Promijeni status',
-      message:
-          'Da li želite promijeniti status prijave "${report.title}" u '
-          '"${_statusOptions[next] ?? next}"?',
-      confirmLabel: 'Promijeni',
+      title: loc.changeStatusDialogTitle,
+      message: loc.changeStatusDialogContent(
+        report.title,
+        _statusOptions(loc)[next] ?? next,
+      ),
+      confirmLabel: loc.changeButtonLabel,
       icon: _statusIcon(next),
     );
     if (!mounted || confirmed != true) return;
@@ -107,7 +112,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
       } else {
         await _service.resolve(report.id);
       }
-    }, 'Status prijave je promijenjen.');
+    }, AppLocalizations.of(context).statusChangedSuccess);
   }
 
   /// Assign (or reassign) the report to a collector: pick-list from
@@ -125,7 +130,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
     if (!mounted) return;
 
     if (collectors.isEmpty) {
-      showError('Nema dostupnih inkasanata.');
+      showError(AppLocalizations.of(context).noCollectorsAvailableError);
       return;
     }
 
@@ -144,7 +149,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
         collectorId: result.collectorId,
         note: result.note,
       );
-    }, 'Prijava je dodijeljena inkasantu.');
+    }, AppLocalizations.of(context).faultReportAssignedSuccess);
   }
 
   Future<bool?> _confirmAction({
@@ -161,7 +166,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Odustani'),
+            child: Text(AppLocalizations.of(context).dialogDismissButton),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(true),
@@ -182,6 +187,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -192,24 +198,20 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ScreenHeader(
-                  title: 'Prijave kvarova',
-                  subtitle: 'Pregled prijava kvarova i upravljanje statusom.',
+                  title: loc.faultReportsScreenTitle,
+                  subtitle: loc.faultReportsPageSubtitle,
                   actions: [
-                    IconButton(
-                      tooltip: 'Osvježi',
-                      onPressed: loading || mutating ? null : () => load(),
-                      icon: const Icon(Icons.refresh),
-                    ),
+                    RefreshButton(onRefresh: () => load(), enabled: !mutating),
                   ],
                 ),
                 const SizedBox(height: 18),
-                _buildFilters(),
+                _buildFilters(loc),
               ],
             ),
           ),
           if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent()),
+          Expanded(child: _buildContent(loc)),
           if (!isInitialLoad && error == null)
             PagedTablePaginationBar(
               page: page,
@@ -225,7 +227,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     final hasSearch = searchController.text.trim().isNotEmpty;
 
     return Wrap(
@@ -241,11 +243,11 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
             onChanged: queueSearch,
             onSubmitted: submitSearch,
             decoration: InputDecoration(
-              labelText: 'Naslov, kupac ili naselje',
+              labelText: loc.faultReportSearchLabel,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: hasSearch
                   ? IconButton(
-                      tooltip: 'Očisti pretragu',
+                      tooltip: loc.clearSearchTooltip,
                       onPressed: clearSearch,
                       icon: const Icon(Icons.clear),
                     )
@@ -258,13 +260,13 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
           child: DropdownButtonFormField<String>(
             initialValue: _statusFilter ?? '',
             isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Status',
-              prefixIcon: Icon(Icons.filter_alt_outlined),
+            decoration: InputDecoration(
+              labelText: loc.statusFieldLabel,
+              prefixIcon: const Icon(Icons.filter_alt_outlined),
             ),
             items: [
-              const DropdownMenuItem(value: '', child: Text('Svi')),
-              for (final entry in _statusOptions.entries)
+              DropdownMenuItem(value: '', child: Text(loc.allOption)),
+              for (final entry in _statusOptions(loc).entries)
                 DropdownMenuItem(value: entry.key, child: Text(entry.value)),
             ],
             onChanged: loading || mutating
@@ -273,7 +275,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
           ),
         ),
         IconButton.filledTonal(
-          tooltip: 'Primijeni filtere',
+          tooltip: loc.applyFiltersTooltip,
           onPressed: loading || mutating ? null : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
@@ -281,7 +283,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -294,10 +296,10 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
     if (items.isEmpty) {
       return EmptyStateView(
         icon: Icons.report_problem_outlined,
-        message: 'Nema prijava kvarova.',
+        message: loc.noFaultReportsMessage,
         hasFilters: _hasFilters,
         filteredIcon: Icons.search_off,
-        filteredMessage: 'Nema prijava kvarova za zadane filtere.',
+        filteredMessage: loc.faultReportsEmptyFilteredMessage,
       );
     }
 
@@ -323,14 +325,14 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
                   child: DataTable(
                     dataRowMinHeight: 60,
                     dataRowMaxHeight: 68,
-                    columns: const [
-                      DataColumn(label: Text('Naslov')),
-                      DataColumn(label: Text('Kupac')),
-                      DataColumn(label: Text('Adresa')),
-                      DataColumn(label: Text('Inkasant')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Datum')),
-                      DataColumn(label: Text('Akcije')),
+                    columns: [
+                      DataColumn(label: Text(loc.titleColumnLabel)),
+                      DataColumn(label: Text(loc.customerLabel)),
+                      DataColumn(label: Text(loc.addressLabel)),
+                      DataColumn(label: Text(loc.collectorNameColumnLabel)),
+                      DataColumn(label: Text(loc.statusFieldLabel)),
+                      DataColumn(label: Text(loc.dateColumnLabel)),
+                      DataColumn(label: Text(loc.actionsColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
@@ -349,13 +351,15 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
                             ),
                             // Empty when the reporter has no CustomerProfile
                             // (CustomerId is null - ownership is ReportedById).
-                            DataCell(Text(
-                              item.customerFullName.isEmpty
-                                  ? '-'
-                                  : item.customerFullName,
-                            )),
+                            DataCell(
+                              Text(
+                                item.customerFullName.isEmpty
+                                    ? '-'
+                                    : item.customerFullName,
+                              ),
+                            ),
                             DataCell(Text(_reportLocationLabel(item))),
-                            DataCell(Text(_collectorLabel(item))),
+                            DataCell(Text(_collectorLabel(item, loc))),
                             DataCell(_StatusPill(status: item.status)),
                             DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
@@ -411,11 +415,11 @@ String _reportLocationLabel(AdminFaultReport report) {
 
 /// Table/detail label for the assigned collector: the flattened employee code,
 /// a `#id` fallback when the code is missing, or '-' while unassigned.
-String _collectorLabel(AdminFaultReport report) {
+String _collectorLabel(AdminFaultReport report, AppLocalizations loc) {
   final collectorId = report.assignedCollectorId;
   if (collectorId == null) return '-';
   final code = report.assignedCollectorEmployeeCode?.trim() ?? '';
-  return code.isEmpty ? 'Inkasant #$collectorId' : code;
+  return code.isEmpty ? loc.collectorNumberFallbackLabel(collectorId) : code;
 }
 
 IconData _statusIcon(String status) {
@@ -444,6 +448,7 @@ class _RowActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final next = _nextStatus(report.status);
     final canAssign = _canAssign(report.status);
 
@@ -453,16 +458,16 @@ class _RowActions extends StatelessWidget {
         IconButton(
           tooltip: canAssign
               ? (report.assignedCollectorId == null
-                    ? 'Dodijeli inkasantu'
-                    : 'Preraspodijeli drugom inkasantu')
-              : 'Dodjela više nije moguća',
+                    ? loc.assignToCollectorTooltip
+                    : loc.reassignTooltip)
+              : loc.assignmentNoLongerPossibleTooltip,
           onPressed: disabled || !canAssign ? null : onAssign,
           icon: const Icon(Icons.assignment_ind_outlined),
         ),
         IconButton(
           tooltip: next == null
-              ? 'Prijava je riješena'
-              : 'Promijeni status u "${_statusOptions[next] ?? next}"',
+              ? loc.reportResolvedTooltip
+              : loc.changeStatusToTooltip(_statusOptions(loc)[next] ?? next),
           onPressed: disabled || next == null ? null : onAdvanceStatus,
           icon: Icon(_statusIcon(next ?? report.status)),
         ),
@@ -480,20 +485,25 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final (label, color, icon) = switch (status) {
-      'New' => ('Nova', const Color(0xFF64748B), Icons.fiber_new_outlined),
+      'New' => (
+        loc.faultReportStatusNew,
+        const Color(0xFF64748B),
+        Icons.fiber_new_outlined,
+      ),
       'Assigned' => (
-        'Dodijeljena',
+        loc.faultReportStatusAssigned,
         const Color(0xFF1D4ED8),
         Icons.assignment_ind_outlined,
       ),
       'InProgress' => (
-        'U toku',
+        loc.faultReportStatusInProgress,
         const Color(0xFFB45309),
         Icons.engineering_outlined,
       ),
       'Resolved' => (
-        'Riješena',
+        loc.faultReportStatusResolved,
         const Color(0xFF2E7D32),
         Icons.check_circle_outline,
       ),
@@ -590,9 +600,10 @@ class _AssignDialogState extends State<_AssignDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
 
     return AlertDialog(
-      title: const Text('Dodijeli inkasantu'),
+      title: Text(loc.assignToCollectorTooltip),
       content: SizedBox(
         width: 820,
         child: Column(
@@ -619,12 +630,11 @@ class _AssignDialogState extends State<_AssignDialog> {
                           headingRowHeight: 44,
                           dataRowMinHeight: 58,
                           dataRowMaxHeight: 66,
-                          columns: const [
-                            DataColumn(label: Text('Izbor')),
-                            DataColumn(label: Text('Ime i prezime')),
-                            DataColumn(label: Text('Email')),
-                            DataColumn(label: Text('Telefon')),
-                            DataColumn(label: Text('Područje')),
+                          columns: [
+                            DataColumn(label: Text(loc.selectionColumnLabel)),
+                            DataColumn(label: Text(loc.fullNameColumnLabel)),
+                            DataColumn(label: Text(loc.fieldEmailLabel)),
+                            DataColumn(label: Text(loc.fieldPhoneLabel)),
                           ],
                           rows: [
                             for (final collector in widget.collectors)
@@ -642,10 +652,10 @@ class _AssignDialogState extends State<_AssignDialog> {
               controller: _noteCtrl,
               maxLength: 500,
               maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: 'Napomena (opcionalno)',
-                hintText: 'Razlog dodjele ili uputa inkasantu',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: loc.noteOptionalFieldLabel,
+                hintText: loc.assignmentNoteHint,
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -654,12 +664,12 @@ class _AssignDialogState extends State<_AssignDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: _collectorId == null ? null : _submit,
           icon: const Icon(Icons.assignment_ind_outlined),
-          label: const Text('Dodijeli'),
+          label: Text(loc.assignButtonLabel),
         ),
       ],
     );
@@ -736,7 +746,6 @@ class _AssignDialogState extends State<_AssignDialog> {
             ),
           ),
         ),
-        DataCell(Text(collector.areaLabel)),
       ],
     );
   }
@@ -744,7 +753,9 @@ class _AssignDialogState extends State<_AssignDialog> {
   String _profileLabel(AdminCollectorProfile collector) {
     final code = collector.employeeCode.trim();
     if (code.isNotEmpty) return code;
-    return 'Profil #${collector.id}';
+    return AppLocalizations.of(
+      context,
+    ).collectorProfileFallbackLabel(collector.id);
   }
 
   String _textOrDash(String value) {
@@ -815,6 +826,7 @@ class _FaultReportDetailDialogState extends State<_FaultReportDetailDialog> {
   Widget build(BuildContext context) {
     final report = widget.report;
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
 
     return AlertDialog(
       title: Text(report.title.isEmpty ? '-' : report.title),
@@ -828,30 +840,36 @@ class _FaultReportDetailDialogState extends State<_FaultReportDetailDialog> {
               _StatusPill(status: report.status),
               const SizedBox(height: 14),
               _KeyValueRow(
-                label: 'Kupac',
+                label: loc.customerLabel,
                 value: report.customerFullName.isEmpty
                     ? '-'
                     : report.customerFullName,
               ),
               const SizedBox(height: 6),
-              _KeyValueRow(label: 'Adresa', value: _reportLocationLabel(report)),
-              const SizedBox(height: 6),
-              _KeyValueRow(label: 'Inkasant', value: _collectorLabel(report)),
+              _KeyValueRow(
+                label: loc.addressLabel,
+                value: _reportLocationLabel(report),
+              ),
               const SizedBox(height: 6),
               _KeyValueRow(
-                label: 'Prijavljeno',
+                label: loc.collectorNameColumnLabel,
+                value: _collectorLabel(report, loc),
+              ),
+              const SizedBox(height: 6),
+              _KeyValueRow(
+                label: loc.reportedAtLabel,
                 value: _formatDateTime(report.createdAt),
               ),
               if (report.resolvedAt != null) ...[
                 const SizedBox(height: 6),
                 _KeyValueRow(
-                  label: 'Riješeno',
+                  label: loc.resolvedAtLabel,
                   value: _formatDateTime(report.resolvedAt),
                 ),
               ],
               const SizedBox(height: 14),
               Text(
-                'Opis',
+                loc.descriptionColumnLabel,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -863,7 +881,7 @@ class _FaultReportDetailDialogState extends State<_FaultReportDetailDialog> {
               ),
               const SizedBox(height: 14),
               Text(
-                'Fotografije',
+                loc.photosSectionHeading,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -877,7 +895,7 @@ class _FaultReportDetailDialogState extends State<_FaultReportDetailDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Zatvori'),
+          child: Text(loc.commonClose),
         ),
       ],
     );
@@ -898,7 +916,7 @@ class _FaultReportDetailDialogState extends State<_FaultReportDetailDialog> {
 
     if (_photos.isEmpty) {
       return Text(
-        'Nema priloženih fotografija.',
+        AppLocalizations.of(context).noPhotosMessage,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),

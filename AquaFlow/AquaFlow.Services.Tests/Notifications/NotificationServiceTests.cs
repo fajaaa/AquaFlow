@@ -506,8 +506,8 @@ public class NotificationServiceTests
             new CustomerProfile { Id = 3, UserId = InactiveCustomerUserId, CustomerCode = "C-3", SettlementId = 10 });
 
         context.CollectorProfiles.AddRange(
-            new CollectorProfile { Id = 1, UserId = CollectorUserId, EmployeeCode = "COL-1", AssignedAreaId = 10 },
-            new CollectorProfile { Id = 2, UserId = OtherCollectorUserId, EmployeeCode = "COL-2", AssignedAreaId = 20 });
+            new CollectorProfile { Id = 1, UserId = CollectorUserId, EmployeeCode = "COL-1" },
+            new CollectorProfile { Id = 2, UserId = OtherCollectorUserId, EmployeeCode = "COL-2" });
 
         context.SaveChanges();
     }

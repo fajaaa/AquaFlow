@@ -102,37 +102,22 @@ public class MeterReadingService
                 $"The next reading is allowed from {nextAllowedDate:yyyy-MM-dd}.");
         }
 
-        // IsMeterReplacement is the only way a ReadingValue below the last counting reading is ever
-        // accepted - without it this is ALWAYS a ClientException, no matter what the Note says. A
-        // physically replaced meter starts counting from 0 again, so the baseline is forced to 0
-        // instead (MeterReadingCollectorEntryValidator requires a non-empty Note in this branch as the
-        // audit trail for the reset).
-        decimal previousReading;
-        if (request.IsMeterReplacement)
+        // Baseline comes from the most recent counting reading, not straight off WaterMeter.LastReading:
+        // that field is reverted on cancel only when nothing newer has landed (belt and braces - see
+        // IssuedInvoiceState.CancelAsync), so it can lag behind reality. It is still the right fallback
+        // when the meter has no readings at all (e.g. a freshly seeded meter with only InitialReading).
+        var previousReading = lastCountingReading?.ReadingValue ?? waterMeter.LastReading;
+        if (request.ReadingValue < previousReading)
         {
-            previousReading = 0m;
-        }
-        else
-        {
-            // Baseline comes from the most recent counting reading, not straight off WaterMeter.LastReading:
-            // that field is reverted on cancel only when nothing newer has landed (belt and braces - see
-            // IssuedInvoiceState.CancelAsync), so it can lag behind reality. It is still the right fallback
-            // when the meter has no readings at all (e.g. a freshly seeded meter with only InitialReading).
-            previousReading = lastCountingReading?.ReadingValue ?? waterMeter.LastReading;
-            if (request.ReadingValue < previousReading)
-            {
-                throw new ClientException(
-                    $"Reading value {request.ReadingValue} is lower than the last recorded reading {previousReading} for this water meter. " +
-                    "If the meter was physically replaced, resubmit with IsMeterReplacement set.");
-            }
+            throw new ClientException(
+                $"Reading value {request.ReadingValue} is lower than the last recorded reading {previousReading} for this water meter.");
         }
 
         var consumption = request.ReadingValue - previousReading;
         if (consumption < 0)
         {
-            // Unreachable given the branches above (replacement always baselines at 0, and the
-            // non-replacement path already rejects a lower reading) - kept as a hard backstop so a
-            // negative-consumption invoice can never be priced, whatever future changes land here.
+            // Unreachable given the check above - kept as a hard backstop so a negative-consumption
+            // invoice can never be priced, whatever future changes land here.
             throw new ClientException("Computed consumption cannot be negative.");
         }
 
@@ -153,7 +138,6 @@ public class MeterReadingService
             PhotoUrl = request.PhotoUrl,
             Note = request.Note,
             ClientUuid = request.ClientUuid,
-            ReplacedMeterFinalReading = request.IsMeterReplacement ? request.ReplacedMeterFinalReading : null,
             CreatedAt = readingDate
         };
 

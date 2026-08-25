@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/app/unavailable_screen.dart';
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/screens/admin_dashboard_screen.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
 
@@ -21,11 +22,11 @@ class RoleGate extends StatelessWidget {
     if (role == 'admin') {
       return const AdminDashboardScreen();
     }
+    final loc = AppLocalizations.of(context);
     return UnavailableScreen(
       icon: Icons.phone_iphone,
-      title: 'Nedostupno na računaru',
-      message: 'Desktop aplikacija je namijenjena samo administratorima. '
-          'Za vašu ulogu koristite mobilnu aplikaciju.',
+      title: loc.desktopUnavailableTitle,
+      message: loc.desktopUnavailableMessage,
       onLogout: () => context.read<AuthProvider>().logout(),
     );
   }

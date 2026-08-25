@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_notification_draft.dart';
 import 'package:aquaflow_desktop/models/admin_notification_image.dart';
 import 'package:aquaflow_desktop/services/admin_notification_service.dart';
@@ -17,6 +18,7 @@ import 'package:aquaflow_desktop/shared/widgets/authenticated_image.dart';
 import 'package:aquaflow_desktop/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_desktop/shared/widgets/error_retry.dart';
 import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 
@@ -59,7 +61,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
   String describeError(Object error) {
     return error is NotificationException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   void _setTypeFilter(String value) {
@@ -84,7 +86,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
   Future<void> _openCreate() async {
     final createdById = context.read<AuthProvider>().session?.id;
     if (createdById == null || createdById <= 0) {
-      showError('Nije moguće odrediti admin korisnika.');
+      showError(AppLocalizations.of(context).cannotDetermineAdminUserError);
       return;
     }
 
@@ -95,7 +97,10 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     );
     if (!mounted || saved != true) return;
 
-    await runMutation(() async {}, 'Obavijest je dodana.');
+    await runMutation(
+      () async {},
+      AppLocalizations.of(context).notificationCreatedSuccess,
+    );
   }
 
   Future<void> _openEdit(AppNotification notification) async {
@@ -104,7 +109,9 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         ? notification.createdById
         : sessionUserId;
     if (createdById == null || createdById <= 0) {
-      showError('Nije moguće odrediti autora obavijesti.');
+      showError(
+        AppLocalizations.of(context).cannotDetermineNotificationAuthorError,
+      );
       return;
     }
 
@@ -118,27 +125,28 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     );
     if (!mounted || saved != true) return;
 
-    await runMutation(() async {}, 'Obavijest je sačuvana.');
+    await runMutation(
+      () async {},
+      AppLocalizations.of(context).notificationSavedSuccess,
+    );
   }
 
   Future<void> _confirmDelete(AppNotification notification) async {
+    final loc = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Obriši obavijest'),
-        content: Text(
-          'Da li želite obrisati obavijest "${notification.title}"? '
-          'Povezani zapisi korisničkih obavijesti će također biti uklonjeni.',
-        ),
+        title: Text(loc.deleteNotificationDialogTitle),
+        content: Text(loc.deleteNotificationDialogContent(notification.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Odustani'),
+            child: Text(loc.dialogDismissButton),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(true),
             icon: const Icon(Icons.delete_outline),
-            label: const Text('Obriši'),
+            label: Text(loc.commonDelete),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
@@ -153,7 +161,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       if (items.length == 1 && page > 1) {
         page -= 1;
       }
-    }, 'Obavijest je obrisana.');
+    }, AppLocalizations.of(context).notificationDeletedSuccess);
   }
 
   @override
@@ -165,6 +173,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -175,31 +184,26 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ScreenHeader(
-                  title: 'Obavijesti',
-                  subtitle:
-                      'Pregled, dodavanje, uređivanje i brisanje sistemskih obavijesti.',
+                  title: loc.tabNotifications,
+                  subtitle: loc.notificationsScreenSubtitle,
                   actions: [
-                    IconButton(
-                      tooltip: 'Osvježi',
-                      onPressed: loading || mutating ? null : () => load(),
-                      icon: const Icon(Icons.refresh),
-                    ),
+                    RefreshButton(onRefresh: () => load(), enabled: !mutating),
                     const SizedBox(width: 8),
                     FilledButton.icon(
                       onPressed: loading || mutating ? null : _openCreate,
                       icon: const Icon(Icons.add),
-                      label: const Text('Nova obavijest'),
+                      label: Text(loc.newNotificationButtonLabel),
                     ),
                   ],
                 ),
                 const SizedBox(height: 18),
-                _buildFilters(),
+                _buildFilters(loc),
               ],
             ),
           ),
           if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent()),
+          Expanded(child: _buildContent(loc)),
           if (!isInitialLoad && error == null)
             PagedTablePaginationBar(
               page: page,
@@ -215,7 +219,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     final hasSearch = searchController.text.trim().isNotEmpty;
 
     return Wrap(
@@ -231,12 +235,12 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
             onChanged: queueSearch,
             onSubmitted: submitSearch,
             decoration: InputDecoration(
-              labelText: 'Pretraga',
-              hintText: 'Naslov, sadržaj, tip ili publika',
+              labelText: loc.commonSearch,
+              hintText: loc.notificationSearchHint,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: hasSearch
                   ? IconButton(
-                      tooltip: 'Očisti pretragu',
+                      tooltip: loc.clearSearchTooltip,
                       onPressed: clearSearch,
                       icon: const Icon(Icons.clear),
                     )
@@ -248,13 +252,16 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
           width: 210,
           child: DropdownButtonFormField<String>(
             initialValue: _typeFilter ?? '',
-            decoration: const InputDecoration(
-              labelText: 'Tip',
-              prefixIcon: Icon(Icons.category_outlined),
+            decoration: InputDecoration(
+              labelText: loc.typeFieldLabel,
+              prefixIcon: const Icon(Icons.category_outlined),
             ),
             items: [
-              const DropdownMenuItem(value: '', child: Text('Svi tipovi')),
-              for (final option in _notificationTypeOptions)
+              DropdownMenuItem(
+                value: '',
+                child: Text(loc.notificationsAllTypesOption),
+              ),
+              for (final option in _notificationTypeOptions(loc))
                 DropdownMenuItem(
                   value: option.value,
                   child: Text(option.label),
@@ -269,13 +276,13 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
           width: 220,
           child: DropdownButtonFormField<String>(
             initialValue: _audienceFilter ?? '',
-            decoration: const InputDecoration(
-              labelText: 'Publika',
-              prefixIcon: Icon(Icons.group_outlined),
+            decoration: InputDecoration(
+              labelText: loc.audienceFieldLabel,
+              prefixIcon: const Icon(Icons.group_outlined),
             ),
             items: [
-              const DropdownMenuItem(value: '', child: Text('Sve publike')),
-              for (final option in _audienceOptions)
+              DropdownMenuItem(value: '', child: Text(loc.allAudiencesOption)),
+              for (final option in _audienceOptions(loc))
                 DropdownMenuItem(
                   value: option.value,
                   child: Text(option.label),
@@ -287,7 +294,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
           ),
         ),
         IconButton.filledTonal(
-          tooltip: 'Primijeni filtere',
+          tooltip: loc.applyFiltersTooltip,
           onPressed: loading || mutating ? null : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
@@ -295,7 +302,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -308,10 +315,10 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     if (items.isEmpty) {
       return EmptyStateView(
         icon: Icons.notifications_none,
-        message: 'Nema obavijesti.',
+        message: loc.notificationsEmptyMessage,
         hasFilters: _hasFilters,
         filteredIcon: Icons.search_off,
-        filteredMessage: 'Nema obavijesti za zadane filtere.',
+        filteredMessage: loc.notificationsFilteredEmptyMessage,
       );
     }
 
@@ -340,11 +347,13 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                     dataRowMinHeight: 64,
                     dataRowMaxHeight: 72,
                     columns: [
-                      const DataColumn(label: Text('Obavijest')),
-                      const DataColumn(label: Text('Tip')),
-                      if (!isSmallScreen) const DataColumn(label: Text('Publika')),
-                      if (!isSmallScreen) const DataColumn(label: Text('Kreirano')),
-                      const DataColumn(label: Text('Akcije')),
+                      DataColumn(label: Text(loc.notificationColumnLabel)),
+                      DataColumn(label: Text(loc.typeFieldLabel)),
+                      if (!isSmallScreen)
+                        DataColumn(label: Text(loc.audienceFieldLabel)),
+                      if (!isSmallScreen)
+                        DataColumn(label: Text(loc.createdAtColumnLabel)),
+                      DataColumn(label: Text(loc.actionsColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
@@ -355,7 +364,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                             DataCell(
                               _InfoPill(
                                 icon: _typeIcon(item.type),
-                                label: _typeLabel(item.type),
+                                label: _typeLabel(item.type, loc),
                                 color: _typeColor(
                                   item.type,
                                   Theme.of(context).colorScheme,
@@ -363,7 +372,9 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                               ),
                             ),
                             if (!isSmallScreen)
-                              DataCell(Text(_audienceLabel(item.audience))),
+                              DataCell(
+                                Text(_audienceLabel(item.audience, loc)),
+                              ),
                             if (!isSmallScreen)
                               DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
@@ -401,7 +412,7 @@ class _NotificationTitleCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final title = item.title.trim().isEmpty
-        ? 'Obavijest #${item.id}'
+        ? AppLocalizations.of(context).notificationFallbackTitle(item.id)
         : item.title.trim();
     final body = _truncate(item.body.trim(), 50);
 
@@ -654,14 +665,25 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final typeOptions = _optionsWithCurrent(_notificationTypeOptions, _type);
-    final audienceOptions = _optionsWithCurrent(_audienceOptions, _audience);
+    final loc = AppLocalizations.of(context);
+    final typeOptions = _optionsWithCurrent(
+      _notificationTypeOptions(loc),
+      _type,
+    );
+    final audienceOptions = _optionsWithCurrent(
+      _audienceOptions(loc),
+      _audience,
+    );
     final theme = Theme.of(context);
     final enabled = !_submitting;
     final atImageLimit = _totalImageCount >= _maxNotificationImages;
 
     return AlertDialog(
-      title: Text(_isEdit ? 'Uredi obavijest' : 'Nova obavijest'),
+      title: Text(
+        _isEdit
+            ? loc.editNotificationDialogTitle
+            : loc.newNotificationButtonLabel,
+      ),
       content: SizedBox(
         width: math.min(640, MediaQuery.sizeOf(context).width - 48),
         child: SingleChildScrollView(
@@ -676,10 +698,10 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                   enabled: enabled,
                   textInputAction: TextInputAction.next,
                   maxLength: 150,
-                  validator: _required,
-                  decoration: const InputDecoration(
-                    labelText: 'Naslov',
-                    prefixIcon: Icon(Icons.title),
+                  validator: (value) => _required(context, value),
+                  decoration: InputDecoration(
+                    labelText: loc.titleColumnLabel,
+                    prefixIcon: const Icon(Icons.title),
                     counterText: '',
                   ),
                 ),
@@ -689,11 +711,11 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                   enabled: enabled,
                   minLines: 4,
                   maxLines: 7,
-                  validator: _required,
-                  decoration: const InputDecoration(
-                    labelText: 'Sadržaj',
+                  validator: (value) => _required(context, value),
+                  decoration: InputDecoration(
+                    labelText: loc.contentFieldLabel,
                     alignLabelWithHint: true,
-                    prefixIcon: Icon(Icons.notes_outlined),
+                    prefixIcon: const Icon(Icons.notes_outlined),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -702,9 +724,9 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: _type,
-                        decoration: const InputDecoration(
-                          labelText: 'Tip',
-                          prefixIcon: Icon(Icons.category_outlined),
+                        decoration: InputDecoration(
+                          labelText: loc.typeFieldLabel,
+                          prefixIcon: const Icon(Icons.category_outlined),
                         ),
                         items: [
                           for (final option in typeOptions)
@@ -725,9 +747,9 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: _audience,
-                        decoration: const InputDecoration(
-                          labelText: 'Publika',
-                          prefixIcon: Icon(Icons.group_outlined),
+                        decoration: InputDecoration(
+                          labelText: loc.audienceFieldLabel,
+                          prefixIcon: const Icon(Icons.group_outlined),
                         ),
                         items: [
                           for (final option in audienceOptions)
@@ -751,16 +773,17 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Slike ($_totalImageCount/$_maxNotificationImages)',
+                        loc.imagesCountLabel(
+                          _totalImageCount,
+                          _maxNotificationImages,
+                        ),
                         style: theme.textTheme.bodyMedium,
                       ),
                     ),
                     TextButton.icon(
-                      onPressed: enabled && !atImageLimit
-                          ? _pickImage
-                          : null,
+                      onPressed: enabled && !atImageLimit ? _pickImage : null,
                       icon: const Icon(Icons.add_a_photo_outlined),
-                      label: const Text('Dodaj sliku'),
+                      label: Text(loc.addImageButtonLabel),
                     ),
                   ],
                 ),
@@ -785,7 +808,8 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                       ),
                     ),
                   ),
-                if (_existingImages.isNotEmpty || _selectedImages.isNotEmpty) ...[
+                if (_existingImages.isNotEmpty ||
+                    _selectedImages.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   SizedBox(
                     height: 84,
@@ -821,14 +845,18 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                     ),
                   ),
                 ],
-                if (_submitting && _uploadedImageCount < _selectedImages.length) ...[
+                if (_submitting &&
+                    _uploadedImageCount < _selectedImages.length) ...[
                   const SizedBox(height: 12),
                   LinearProgressIndicator(
                     value: _uploadedImageCount / _selectedImages.length,
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Slanje slike ${_uploadedImageCount + 1}/${_selectedImages.length}...',
+                    loc.uploadingImageLabel(
+                      _uploadedImageCount + 1,
+                      _selectedImages.length,
+                    ),
                     style: theme.textTheme.bodySmall,
                   ),
                 ],
@@ -849,7 +877,7 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
       actions: [
         TextButton(
           onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: enabled ? _save : null,
@@ -860,14 +888,16 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.save_outlined),
-          label: const Text('Sačuvaj'),
+          label: Text(loc.commonSave),
         ),
       ],
     );
   }
 
-  String? _required(String? value) {
-    return value == null || value.trim().isEmpty ? 'Obavezno polje.' : null;
+  String? _required(BuildContext context, String? value) {
+    return value == null || value.trim().isEmpty
+        ? AppLocalizations.of(context).fieldRequiredError
+        : null;
   }
 }
 
@@ -975,16 +1005,19 @@ class _SelectOption {
   final String label;
 }
 
-const List<_SelectOption> _notificationTypeOptions = [
-  _SelectOption(value: 'Info', label: 'Info'),
-  _SelectOption(value: 'PlannedWorks', label: 'Planirani radovi'),
-  _SelectOption(value: 'Warning', label: 'Upozorenje'),
+List<_SelectOption> _notificationTypeOptions(AppLocalizations loc) => [
+  _SelectOption(value: 'Info', label: loc.notificationTypeInfoLabel),
+  _SelectOption(
+    value: 'PlannedWorks',
+    label: loc.notificationTypePlannedWorksLabel,
+  ),
+  _SelectOption(value: 'Warning', label: loc.notificationTypeWarningLabel),
 ];
 
-const List<_SelectOption> _audienceOptions = [
-  _SelectOption(value: 'All', label: 'Svi korisnici'),
-  _SelectOption(value: 'Customers', label: 'Korisnici'),
-  _SelectOption(value: 'Collectors', label: 'Inkasanti'),
+List<_SelectOption> _audienceOptions(AppLocalizations loc) => [
+  _SelectOption(value: 'All', label: loc.allUsersAudienceLabel),
+  _SelectOption(value: 'Customers', label: loc.customersAudienceLabel),
+  _SelectOption(value: 'Collectors', label: loc.collectorsNavLabel),
 ];
 
 List<_SelectOption> _optionsWithCurrent(
@@ -1023,31 +1056,31 @@ Color _typeColor(String type, ColorScheme colorScheme) {
   }
 }
 
-String _typeLabel(String type) {
+String _typeLabel(String type, AppLocalizations loc) {
   switch (type.toLowerCase()) {
     case 'plannedworks':
-      return 'Planirani radovi';
+      return loc.notificationTypePlannedWorksLabel;
     case 'warning':
-      return 'Upozorenje';
+      return loc.notificationTypeWarningLabel;
     default:
-      return type.isEmpty ? 'Obavijest' : type;
+      return type.isEmpty ? loc.notificationTypeGenericLabel : type;
   }
 }
 
-String _audienceLabel(String audience) {
+String _audienceLabel(String audience, AppLocalizations loc) {
   switch (audience.toLowerCase()) {
     case 'all':
-      return 'Svi korisnici';
+      return loc.allUsersAudienceLabel;
     case 'settlement':
-      return 'Naselje';
+      return loc.settlementAudienceLabel;
     case 'customer':
     case 'customers':
-      return 'Korisnici';
+      return loc.customersAudienceLabel;
     case 'collector':
     case 'collectors':
-      return 'Inkasanti';
+      return loc.collectorsNavLabel;
     default:
-      return audience.isEmpty ? 'Publika' : audience;
+      return audience.isEmpty ? loc.audienceFieldLabel : audience;
   }
 }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show SocketException;
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -32,10 +33,12 @@ class CustomerInvoiceService {
 
   /// One page of the caller's invoices, newest first. The backend pins
   /// `CustomerId` to the caller from the JWT, so this only ever returns the
-  /// signed-in customer's own invoices (every status).
+  /// signed-in customer's own invoices (every status). Pass [waterMeterId]
+  /// to scope the page to a single water meter's invoices.
   Future<CustomerInvoicePage> fetchPage({
     required int page,
     int pageSize = 20,
+    int? waterMeterId,
   }) async {
     final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices').replace(
@@ -45,6 +48,7 @@ class CustomerInvoiceService {
         'IncludeTotalCount': 'true',
         'SortBy': 'CreatedAt',
         'SortDescending': 'true',
+        if (waterMeterId != null) 'WaterMeterId': '$waterMeterId',
       },
     );
 
@@ -81,6 +85,54 @@ class CustomerInvoiceService {
       items: items,
       totalCount: (decoded['totalCount'] as num?)?.toInt() ?? items.length,
     );
+  }
+
+  /// All of the caller's invoices for one water meter, newest first. The
+  /// backend pins `CustomerId` to the caller from the JWT, same as
+  /// [fetchPage] - this can never return another customer's invoices, water
+  /// meter included. Fetches a single page with `PageSize=100` instead of
+  /// paging through [fetchPage]; in practice that comfortably covers every
+  /// invoice a single water meter ever accumulates (one invoice per counted
+  /// meter reading).
+  Future<List<CustomerInvoice>> fetchAllForMeter(int waterMeterId) async {
+    final token = await _requireToken();
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices').replace(
+      queryParameters: {
+        'WaterMeterId': '$waterMeterId',
+        'PageSize': '100',
+        'SortBy': 'CreatedAt',
+        'SortDescending': 'true',
+      },
+    );
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw CustomerInvoiceException(
+        _messageFor(response, 'Račune nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const CustomerInvoiceException(
+        'Odgovor servera je u neispravnom formatu.',
+      );
+    }
+
+    final itemsJson = decoded['items'];
+    if (itemsJson is! List) {
+      throw const CustomerInvoiceException(
+        'Lista je u neispravnom formatu.',
+      );
+    }
+
+    return itemsJson
+        .whereType<Map<String, dynamic>>()
+        .map(CustomerInvoice.fromJson)
+        .toList();
   }
 
   /// Refetches a single one of the caller's own invoices (backend pins
@@ -187,6 +239,27 @@ class CustomerInvoiceService {
         .whereType<Map<String, dynamic>>()
         .map(CustomerPayment.fromJson)
         .toList();
+  }
+
+  /// PDF bytes for one of the caller's own invoices (backend pins
+  /// `CustomerId` to the caller, same as [fetchById] - a mismatched or
+  /// unknown id comes back as 404, which surfaces as
+  /// [CustomerInvoiceException] here).
+  Future<Uint8List> fetchPdfBytes(int invoiceId) async {
+    final token = await _requireToken();
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices/$invoiceId/pdf');
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw CustomerInvoiceException(
+        _messageFor(response, 'Račun nije moguće preuzeti'),
+      );
+    }
+
+    return response.bodyBytes;
   }
 
   Future<String> _requireToken() async {

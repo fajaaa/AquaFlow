@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
+
 import '../models/customer_profile.dart';
 import '../navigation/app_navigation.dart';
 import '../providers/auth_provider.dart';
 import '../services/profile_service.dart';
-import 'account_edit_screen.dart';
 import 'activity_log_screen.dart';
 import 'company_settings_screen.dart';
+import 'location_edit_screen.dart';
+import 'password_reset_screen.dart';
+import 'personal_details_edit_screen.dart';
 
 /// "Nalog" tab body: an account/about card for the signed-in user.
 ///
@@ -77,10 +81,11 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final session = context.watch<AuthProvider>().session;
     if (session == null) return const SizedBox.shrink();
 
-    final visual = _RoleVisual.forRole(session.userRole);
+    final visual = _RoleVisual.forRole(session.userRole, loc);
     final isRegularUser = _isRegularUser(session.userRole);
 
     return SafeArea(
@@ -115,6 +120,16 @@ class _AccountScreenState extends State<AccountScreen> {
                     );
                   },
                 ),
+                if (session.email.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    session.email,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
                 // Regular customers do not show a role label; every other role
                 // (admin, collector, ...) does.
                 if (!isRegularUser) ...[
@@ -122,22 +137,21 @@ class _AccountScreenState extends State<AccountScreen> {
                   _RoleChip(visual: visual),
                 ],
                 const SizedBox(height: 28),
-                Card(
-                  elevation: 2,
-                  shadowColor: Colors.black26,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: ListTile(
-                    leading: const Icon(Icons.email_outlined),
-                    title: const Text('Email'),
-                    subtitle: Text(
-                      session.email.isEmpty ? '-' : session.email,
+                // Every user - regardless of role - can edit their own
+                // profile data from here: personal details, location and
+                // password all live on the same underlying user/profile
+                // record, so they are grouped into one "Podaci o nalogu"
+                // section/card instead of three separate top-level cards.
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    loc.accountDataSectionTitle,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.primary,
                     ),
                   ),
                 ),
-                // Every user - regardless of role - can edit their own contact
-                // data (email/phone) from here.
                 const SizedBox(height: 12),
                 Card(
                   elevation: 2,
@@ -145,16 +159,45 @@ class _AccountScreenState extends State<AccountScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: ListTile(
-                    leading: const Icon(Icons.manage_accounts_outlined),
-                    title: const Text('Uredi nalog'),
-                    subtitle: const Text(
-                      'Izmjena email adrese, telefona, imena i prezimena',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.pushScreen(const AccountEditScreen()),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.manage_accounts_outlined),
+                        title: Text(loc.personalDetailsTitle),
+                        subtitle: Text(loc.accountPersonalDetailsSubtitle),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context
+                            .pushScreen(const PersonalDetailsEditScreen()),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: const Icon(Icons.location_on_outlined),
+                        title: Text(loc.locationTitle),
+                        subtitle: Text(loc.accountLocationSubtitle),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            context.pushScreen(const LocationEditScreen()),
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: const Icon(Icons.lock_outline),
+                        title: Text(loc.passwordResetTitle),
+                        subtitle: Text(loc.accountPasswordSubtitle),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            context.pushScreen(const PasswordResetScreen()),
+                      ),
+                    ],
                   ),
                 ),
+                // Role-specific entries injected by the shell (e.g. the
+                // customer's "Podrška"), rendered with the same card styling,
+                // before "Moje aktivnosti".
+                for (final entry in widget.extraEntries) ...[
+                  const SizedBox(height: 12),
+                  _AccountActionCard(entry: entry),
+                ],
                 // Every user can view their own security/audit history.
                 const SizedBox(height: 12),
                 Card(
@@ -165,18 +208,12 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   child: ListTile(
                     leading: const Icon(Icons.history),
-                    title: const Text('Moje aktivnosti'),
-                    subtitle: const Text('Historija prijava i izmjena naloga'),
+                    title: Text(loc.accountActivityLogTitle),
+                    subtitle: Text(loc.accountActivityLogSubtitle),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.pushScreen(const ActivityLogScreen()),
                   ),
                 ),
-                // Role-specific entries injected by the shell (e.g. the
-                // customer's "Podrška"), rendered with the same card styling.
-                for (final entry in widget.extraEntries) ...[
-                  const SizedBox(height: 12),
-                  _AccountActionCard(entry: entry),
-                ],
                 // Admins can manage the company-wide settings; regular users
                 // and collectors never see this entry.
                 if (_isAdmin(session.userRole)) ...[
@@ -189,8 +226,8 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                     child: ListTile(
                       leading: const Icon(Icons.business_outlined),
-                      title: const Text('Postavke firme'),
-                      subtitle: const Text('Upravljanje podacima firme'),
+                      title: Text(loc.accountCompanySettingsTitle),
+                      subtitle: Text(loc.accountCompanySettingsSubtitle),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () =>
                           context.pushScreen(const CompanySettingsScreen()),
@@ -237,31 +274,31 @@ class _RoleVisual {
   final Color color;
   final String label;
 
-  factory _RoleVisual.forRole(String role) {
+  factory _RoleVisual.forRole(String role, AppLocalizations loc) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return const _RoleVisual(
+        return _RoleVisual(
           icon: Icons.admin_panel_settings,
-          color: Color(0xFF6A1B9A),
-          label: 'Administrator',
+          color: const Color(0xFF6A1B9A),
+          label: loc.roleAdmin,
         );
       case 'collector':
-        return const _RoleVisual(
+        return _RoleVisual(
           icon: Icons.route,
-          color: Color(0xFF00838F),
-          label: 'Inkasant',
+          color: const Color(0xFF00838F),
+          label: loc.roleCollector,
         );
       case 'customer':
-        return const _RoleVisual(
+        return _RoleVisual(
           icon: Icons.person,
-          color: Color(0xFF0277BD),
-          label: 'Korisnik',
+          color: const Color(0xFF0277BD),
+          label: loc.roleCustomer,
         );
       default:
         return _RoleVisual(
           icon: Icons.account_circle,
           color: Colors.blueGrey.shade600,
-          label: role.isEmpty ? 'Korisnik' : role,
+          label: role.isEmpty ? loc.roleCustomer : role,
         );
     }
   }

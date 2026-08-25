@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
+
 import '../models/activity_log_item.dart';
 import '../models/activity_log_page.dart';
 import '../providers/auth_provider.dart';
@@ -8,6 +10,8 @@ import '../services/activity_log_exception.dart';
 import '../services/activity_log_service.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/error_retry.dart';
+import '../widgets/paged_table_pagination_bar.dart';
+import '../widgets/refresh_button.dart';
 
 class ActivityLogScreen extends StatefulWidget {
   const ActivityLogScreen({super.key});
@@ -23,7 +27,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
   bool _loading = true;
   String? _error;
   int _page = 1;
-  final int _pageSize = 10;
+  int _pageSize = 10;
   int _requestSerial = 0;
 
   @override
@@ -37,7 +41,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     if (session == null) {
       setState(() {
         _loading = false;
-        _error = 'Niste prijavljeni.';
+        _error = AppLocalizations.of(context).notLoggedInError;
       });
       return;
     }
@@ -50,7 +54,10 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     });
 
     try {
-      final pageData = await _service.fetchMine(page: _page, pageSize: _pageSize);
+      final pageData = await _service.fetchMine(
+        page: _page,
+        pageSize: _pageSize,
+      );
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
         _pageData = pageData;
@@ -64,6 +71,15 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
         _error = e.message;
       });
     }
+  }
+
+  void _setPageSize(int? value) {
+    if (value == null || value == _pageSize || _loading) return;
+    setState(() {
+      _pageSize = value;
+      _page = 1;
+    });
+    _load();
   }
 
   void _goToPage(int page) {
@@ -86,16 +102,29 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
   @override
   Widget build(BuildContext context) {
     final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
+
+    // Docked below the list rather than as its last scrollable item, so it
+    // stays visible at the bottom of the screen regardless of scroll
+    // position or item count - same treatment as NotificationsScreen.
+    final pagination = pageData != null && _error == null
+        ? PagedTablePaginationBar(
+            page: _page,
+            totalPages: _totalPages(pageData.totalCount),
+            totalCount: pageData.totalCount,
+            pageSize: _pageSize,
+            loading: _loading,
+            onPageChanged: _goToPage,
+            onPageSizeChanged: _setPageSize,
+          )
+        : null;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Moje aktivnosti'),
+        title: Text(AppLocalizations.of(context).accountActivityLogTitle),
         actions: [
-          IconButton(
-            tooltip: 'Osvježi',
-            onPressed: _loading ? null : () => _load(),
-            icon: const Icon(Icons.refresh),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: RefreshButton(enabled: !_loading, onRefresh: () => _load()),
           ),
         ],
       ),
@@ -105,14 +134,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
             if (_loading && pageData != null)
               const LinearProgressIndicator(minHeight: 2),
             Expanded(child: _buildContent()),
-            if (pageData != null && _error == null)
-              _PaginationBar(
-                page: _page,
-                totalPages: totalPages,
-                totalCount: pageData.totalCount,
-                loading: _loading,
-                onPageChanged: _goToPage,
-              ),
+            ?pagination,
           ],
         ),
       ),
@@ -138,9 +160,9 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
           padding: const EdgeInsets.all(24),
           children: [
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-            const EmptyStateView(
+            EmptyStateView(
               icon: Icons.history_toggle_off,
-              message: 'Nema zabilježenih aktivnosti.',
+              message: AppLocalizations.of(context).activityLogEmptyMessage,
             ),
           ],
         ),
@@ -168,6 +190,7 @@ class _ActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final accent = _typeColor(item.eventType, theme.colorScheme);
     final description = item.description?.trim();
 
@@ -197,7 +220,7 @@ class _ActivityCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _typeLabel(item.eventType),
+                    _typeLabel(item.eventType, loc),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -290,30 +313,30 @@ class _ActivityCard extends StatelessWidget {
     }
   }
 
-  static String _typeLabel(String type) {
+  static String _typeLabel(String type, AppLocalizations loc) {
     switch (type) {
       case 'LoginSuccess':
-        return 'Uspješna prijava';
+        return loc.activityTypeLoginSuccess;
       case 'LoginFailed':
-        return 'Neuspješna prijava';
+        return loc.activityTypeLoginFailed;
       case 'TokenRefreshed':
-        return 'Obnova sesije';
+        return loc.activityTypeTokenRefreshed;
       case 'Registered':
-        return 'Registracija';
+        return loc.registerTitle;
       case 'PasswordChanged':
-        return 'Promjena lozinke';
+        return loc.activityTypePasswordChanged;
       case 'AccountUpdated':
-        return 'Izmjena naloga';
+        return loc.activityTypeAccountUpdated;
       case 'UserRoleChanged':
-        return 'Promjena role';
+        return loc.activityTypeUserRoleChanged;
       case 'UserActivated':
-        return 'Korisnik aktiviran';
+        return loc.activityTypeUserActivated;
       case 'UserDeactivated':
-        return 'Korisnik deaktiviran';
+        return loc.activityTypeUserDeactivated;
       case 'UserDeleted':
-        return 'Korisnik obrisan';
+        return loc.activityTypeUserDeleted;
       default:
-        return type.isEmpty ? 'Aktivnost' : type;
+        return type.isEmpty ? loc.activityTypeGenericLabel : type;
     }
   }
 
@@ -324,74 +347,3 @@ class _ActivityCard extends StatelessWidget {
         '${two(date.hour)}:${two(date.minute)}';
   }
 }
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.loading,
-    required this.onPageChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Prethodna stranica',
-              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Stranica $page od $totalPages',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelLarge,
-                  ),
-                  Text(
-                    '$totalCount ukupno',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: 'Sljedeća stranica',
-              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-

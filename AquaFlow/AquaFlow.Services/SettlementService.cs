@@ -61,9 +61,8 @@ public class SettlementService
     }
 
     // A settlement still referenced by customer profiles, water meters, fault reports, water meter
-    // requests, collector assigned areas, or notifications cannot be hard-deleted (those FKs are
-    // Restrict, so the raw delete would fail anyway) - list every blocker so the caller knows what
-    // to reassign first.
+    // requests, or notifications cannot be hard-deleted (those FKs are Restrict, so the raw delete
+    // would fail anyway) - list every blocker so the caller knows what to reassign first.
     public override async Task DeleteAsync(int id)
     {
         var entity = await DbSet.FirstOrDefaultAsync(settlement => settlement.Id == id)
@@ -89,11 +88,6 @@ public class SettlementService
         if (await _dbContext.WaterMeterRequests.AnyAsync(request => request.SettlementId == id))
         {
             blockers.Add("water meter requests");
-        }
-
-        if (await _dbContext.CollectorProfiles.AnyAsync(profile => profile.AssignedAreaId == id))
-        {
-            blockers.Add("collector profiles");
         }
 
         if (blockers.Count > 0)

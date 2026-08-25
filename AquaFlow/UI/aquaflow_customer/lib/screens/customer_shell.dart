@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:aquaflow_customer/screens/customer_invoices_screen.dart';
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
+import 'package:aquaflow_customer/screens/customer_fault_reports_screen.dart';
 import 'package:aquaflow_customer/screens/customer_support_tickets_screen.dart';
 import 'package:aquaflow_customer/screens/customer_water_meters_screen.dart';
 import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
@@ -12,8 +13,10 @@ import 'package:aquaflow_customer/shared/screens/notifications_screen.dart';
 
 /// Mobile home for the `customer` (Kupac) role.
 ///
-/// Configures the shared [MobileShell] with the customer-facing tabs. The
-/// last tab is the shared [AccountScreen] ("Nalog").
+/// Configures the shared [MobileShell] with the customer-facing tabs, in
+/// order: "Obavijesti" ([NotificationsScreen]), "Vodomjeri"
+/// ([CustomerWaterMetersScreen]), "Prijave kvarova"
+/// ([CustomerFaultReportsScreen]), and "Nalog" (the shared [AccountScreen]).
 ///
 /// The "Obavijesti" tab is always index 0, i.e. [MobileShell] builds it
 /// immediately on mount regardless of which tab the user later selects, so
@@ -29,41 +32,41 @@ class CustomerShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unreadCount = context.watch<NotificationBadgeProvider>().unreadCount;
+    final loc = AppLocalizations.of(context);
 
     return MobileShell(
       tabs: [
         MobileTab(
           icon: Icons.notifications_outlined,
           selectedIcon: Icons.notifications,
-          label: 'Obavijesti',
+          label: loc.tabNotifications,
           badgeCount: unreadCount,
           body: const NotificationsScreen(),
         ),
-        const MobileTab(
-          icon: Icons.receipt_long_outlined,
-          selectedIcon: Icons.receipt_long,
-          label: 'Računi',
-          body: CustomerInvoicesScreen(),
-        ),
-        const MobileTab(
+        MobileTab(
           icon: Icons.water_drop_outlined,
           selectedIcon: Icons.water_drop,
-          label: 'Vodomjeri',
-          body: CustomerWaterMetersScreen(),
+          label: loc.tabWaterMeters,
+          body: const CustomerWaterMetersScreen(),
+        ),
+        MobileTab(
+          icon: Icons.report_problem_outlined,
+          selectedIcon: Icons.report_problem,
+          label: loc.tabFaultReports,
+          body: const CustomerFaultReportsScreen(),
         ),
         MobileTab(
           icon: Icons.person_outline,
           selectedIcon: Icons.person,
-          label: 'Nalog',
+          label: loc.tabAccount,
           body: AccountScreen(
             extraEntries: [
               AccountEntry(
                 icon: Icons.support_agent_outlined,
-                title: 'Podrška',
-                subtitle: 'Vaši tiketi i poruke podršci',
-                onTap: (context) => context.pushScreen(
-                  const CustomerSupportTicketsScreen(),
-                ),
+                title: loc.supportTitle,
+                subtitle: loc.supportSubtitle,
+                onTap: (context) =>
+                    context.pushScreen(const CustomerSupportTicketsScreen()),
               ),
             ],
           ),

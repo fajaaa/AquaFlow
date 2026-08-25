@@ -1,52 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:aquaflow_desktop/models/admin_city.dart';
-import 'package:aquaflow_desktop/models/admin_customer_profile.dart';
-import 'package:aquaflow_desktop/models/admin_customer_profile_draft.dart';
-import 'package:aquaflow_desktop/models/admin_municipality.dart';
-import 'package:aquaflow_desktop/models/admin_settlement.dart';
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/services/admin_account_service.dart';
-import 'package:aquaflow_desktop/services/admin_city_exception.dart';
-import 'package:aquaflow_desktop/services/admin_city_service.dart';
-import 'package:aquaflow_desktop/services/admin_municipality_exception.dart';
-import 'package:aquaflow_desktop/services/admin_municipality_service.dart';
-import 'package:aquaflow_desktop/services/admin_settlement_exception.dart';
-import 'package:aquaflow_desktop/services/admin_settlement_service.dart';
 import 'package:aquaflow_desktop/shared/models/account_details.dart';
 import 'package:aquaflow_desktop/shared/models/user_preferences.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
+import 'package:aquaflow_desktop/shared/providers/locale_provider.dart';
 import 'package:aquaflow_desktop/shared/providers/theme_provider.dart';
 import 'package:aquaflow_desktop/shared/services/account_exception.dart';
 import 'package:aquaflow_desktop/shared/services/account_service.dart';
 import 'package:aquaflow_desktop/shared/services/preferences_api_service.dart';
 import 'package:aquaflow_desktop/shared/services/preferences_exception.dart';
+import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 
 /// Admin-only "Moj nalog" screen (embedded directly in
 /// [AdminDashboardScreen], not pushed as a route - unlike the shared
-/// `AccountEditScreen` used by the mobile customer/collector "Nalog" tab).
+/// `PersonalDetailsEditScreen`/`LocationEditScreen`/`PasswordResetScreen`
+/// used by the mobile customer/collector "Nalog" tab).
 ///
-/// Edits the signed-in admin's own account with the same depth as the
-/// "Korisnici" editor dialog (email, phone, profile name/language,
-/// password) - minus role and active status, which stay off-limits for
-/// self-editing everywhere in this app to avoid privilege escalation.
+/// Edits the signed-in admin's own account with the same fields as the
+/// "Administratori" -> "Uredi administratora" editor dialog (email, phone,
+/// name, password) - minus role and active status, which stay off-limits for
+/// self-editing everywhere in this app to avoid privilege escalation. Like
+/// that dialog, there is no Adresa/Jezik section here: the Admin role has no
+/// CustomerProfile at all (see `AdminUsersScreenMode.usesCustomerProfile` in
+/// `admin_users_screen.dart`), so `firstName`/`lastName` live directly on
+/// `User` and are edited through `PUT /Account/me` alongside email/phone.
 ///
 /// App theme ("Izgled") is separate from the profile fields: it reads/writes
 /// `UserPreference.Theme` via `GET`/`PUT /Account/preferences`
 /// ([PreferencesApiService]) and applies immediately to the shared
 /// [ThemeProvider] on change, rather than being part of the deferred-save
-/// form below. It is intentionally not the same as the CustomerProfile
-/// `Theme` column ([AdminCustomerProfileDraft.theme]/[_profileTheme]), a
-/// legacy field the app itself never reads.
+/// form below.
 ///
-/// Three independent writes happen on save, each only when relevant data
-/// changed: `PUT /Account/me` (email/phone, via [AccountService]), a
-/// create-or-update of the caller's own CustomerProfile (name/language, via
-/// [AdminAccountService]) only when a name was entered, and
+/// Two independent writes happen on save: `PUT /Account/me`
+/// (email/phone/firstName/lastName, via [AccountService]) always, and
 /// `PUT /Account/me/password` (via [AdminAccountService]) only when the
 /// password fields were filled in - which requires the current password for
 /// confirmation, unlike an admin resetting another user's password from the
-/// Korisnici tab.
+/// Administratori tab.
 class AdminAccountEditScreen extends StatefulWidget {
   const AdminAccountEditScreen({super.key});
 
@@ -56,10 +49,7 @@ class AdminAccountEditScreen extends StatefulWidget {
 
 class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   final AccountService _accountService = AccountService();
-  final AdminAccountService _profileService = AdminAccountService();
-  final AdminCityService _cityService = AdminCityService();
-  final AdminMunicipalityService _municipalityService = AdminMunicipalityService();
-  final AdminSettlementService _settlementService = AdminSettlementService();
+  final AdminAccountService _passwordService = AdminAccountService();
   final PreferencesApiService _preferencesService = PreferencesApiService();
   final _formKey = GlobalKey<FormState>();
 
@@ -67,50 +57,21 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   final _phoneCtrl = TextEditingController();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
-  final _streetCtrl = TextEditingController();
-  final _houseNumberCtrl = TextEditingController();
   final _currentPasswordCtrl = TextEditingController();
   final _newPasswordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
 
   AccountDetails? _details;
-  int? _existingProfileId;
-  String? _customerCode;
-  String _defaultLanguage = 'bs';
-  // CustomerProfile.Theme: legacy field on the profile row, unrelated to the
-  // app's actual theme (that's UserPreference.Theme / [_preferences] below).
-  // Kept only so `saveProfile` echoes back whatever was already stored - no
-  // UI edits it anymore.
-  String _profileTheme = 'light';
   UserPreferences? _preferences;
-
-  List<AdminCity> _cities = const [];
-  List<AdminMunicipality> _municipalities = const [];
-  List<AdminSettlement> _settlements = const [];
-  int? _selectedCityId;
-  int? _selectedMunicipalityId;
-  int? _selectedSettlementId;
 
   bool _loading = true;
   String? _loadError;
   bool _saving = false;
 
-  bool get _hasProfileInput =>
-      _firstNameCtrl.text.trim().isNotEmpty || _lastNameCtrl.text.trim().isNotEmpty;
-
   bool get _hasPasswordInput =>
       _currentPasswordCtrl.text.isNotEmpty ||
       _newPasswordCtrl.text.isNotEmpty ||
       _confirmPasswordCtrl.text.isNotEmpty;
-
-  int? get _userId => context.read<AuthProvider>().session?.id;
-
-  List<AdminMunicipality> get _municipalitiesForSelectedCity =>
-      _municipalities.where((m) => m.cityId == _selectedCityId).toList();
-
-  List<AdminSettlement> get _settlementsForSelectedMunicipality => _settlements
-      .where((s) => s.municipalityId == _selectedMunicipalityId)
-      .toList();
 
   @override
   void initState() {
@@ -124,64 +85,26 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
       _loadError = null;
     });
 
-    final userId = _userId;
-    if (userId == null) {
+    if (context.read<AuthProvider>().session?.id == null) {
       setState(() {
         _loading = false;
-        _loadError = 'Niste prijavljeni.';
+        _loadError = AppLocalizations.of(context).notLoggedInError;
       });
       return;
     }
 
     try {
-      final results = await Future.wait([
-        _accountService.fetch(),
-        _profileService.fetchProfile(userId),
-        _cityService.fetchAll(),
-        _municipalityService.fetchAll(),
-        _settlementService.fetchAll(),
-      ]);
+      final details = await _accountService.fetch();
       if (!mounted) return;
-
-      final details = results[0] as AccountDetails;
-      final profile = results[1] as AdminCustomerProfile?;
-      _cities = results[2] as List<AdminCity>;
-      _municipalities = results[3] as List<AdminMunicipality>;
-      _settlements = results[4] as List<AdminSettlement>;
 
       _details = details;
       _emailCtrl.text = details.email;
       _phoneCtrl.text = details.phone;
-      _existingProfileId = profile?.id;
-      _customerCode = profile?.customerCode;
-      _firstNameCtrl.text = profile?.firstName ?? '';
-      _lastNameCtrl.text = profile?.lastName ?? '';
-      _defaultLanguage = profile?.defaultLanguage ?? 'bs';
-      _profileTheme = profile?.theme ?? 'light';
-      _streetCtrl.text = profile?.street ?? '';
-      _houseNumberCtrl.text = profile?.houseNumber ?? '';
-      _applySettlement(profile?.settlementId);
+      _firstNameCtrl.text = details.firstName;
+      _lastNameCtrl.text = details.lastName;
       setState(() => _loading = false);
       _loadPreferences();
     } on AccountException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _loadError = e.message;
-      });
-    } on AdminCityException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _loadError = e.message;
-      });
-    } on AdminMunicipalityException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _loadError = e.message;
-      });
-    } on AdminSettlementException catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -209,7 +132,8 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   /// failure the app theme stays changed (better than reverting under the
   /// admin), but a snackbar reports that the choice wasn't saved.
   Future<void> _setTheme(bool isDark) async {
-    final current = _preferences ??
+    final current =
+        _preferences ??
         const UserPreferences(
           theme: 'light',
           language: 'bs',
@@ -219,7 +143,9 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     final updated = current.copyWith(theme: isDark ? 'dark' : 'light');
 
     setState(() => _preferences = updated);
-    context.read<ThemeProvider>().setThemeMode(isDark ? ThemeMode.dark : ThemeMode.light);
+    context.read<ThemeProvider>().setThemeMode(
+      isDark ? ThemeMode.dark : ThemeMode.light,
+    );
 
     try {
       final saved = await _preferencesService.updatePreferences(updated);
@@ -228,99 +154,72 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Tema nije sačuvana: ${e.message}'),
+          content: Text(
+            AppLocalizations.of(context).themeSaveFailedError(e.message),
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
   }
 
-  /// Resolves the Grad -> Općina chain for a prefilled [settlementId], so the
-  /// two parent dropdowns start selected too, not just the leaf Naselje.
-  void _applySettlement(int? settlementId) {
-    if (settlementId == null) return;
-    AdminSettlement? settlement;
-    for (final s in _settlements) {
-      if (s.id == settlementId) {
-        settlement = s;
-        break;
-      }
+  /// Applies [code] ('bs'/'en') to the shared [LocaleProvider] immediately,
+  /// then persists it via `PUT /Account/preferences` in the background. On
+  /// save failure the app language stays changed (better than reverting under
+  /// the admin), but a snackbar reports that the choice wasn't saved.
+  Future<void> _setLanguage(String code) async {
+    final current =
+        _preferences ??
+        const UserPreferences(
+          theme: 'light',
+          language: 'bs',
+          receiveEmailNotifications: true,
+          receivePushNotifications: true,
+        );
+    final updated = current.copyWith(language: code);
+
+    setState(() => _preferences = updated);
+    context.read<LocaleProvider>().setLanguageCode(code);
+
+    try {
+      final saved = await _preferencesService.updatePreferences(updated);
+      if (mounted) setState(() => _preferences = saved);
+    } on PreferencesException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).languageSaveFailedError(e.message),
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
-    if (settlement == null) return;
-
-    _selectedSettlementId = settlement.id;
-    _selectedMunicipalityId = settlement.municipalityId;
-    for (final m in _municipalities) {
-      if (m.id == settlement.municipalityId) {
-        _selectedCityId = m.cityId;
-        break;
-      }
-    }
-  }
-
-  void _onCityChanged(int? cityId) {
-    setState(() {
-      _selectedCityId = cityId;
-      if (_selectedMunicipalityId != null &&
-          !_municipalitiesForSelectedCity.any((m) => m.id == _selectedMunicipalityId)) {
-        _selectedMunicipalityId = null;
-        _selectedSettlementId = null;
-      }
-    });
-  }
-
-  void _onMunicipalityChanged(int? municipalityId) {
-    setState(() {
-      _selectedMunicipalityId = municipalityId;
-      if (_selectedSettlementId != null &&
-          !_settlementsForSelectedMunicipality.any((s) => s.id == _selectedSettlementId)) {
-        _selectedSettlementId = null;
-      }
-    });
-  }
-
-  void _onSettlementChanged(int? settlementId) {
-    setState(() => _selectedSettlementId = settlementId);
   }
 
   Future<void> _save() async {
     final form = _formKey.currentState;
     final current = _details;
-    final userId = _userId;
-    if (form == null || !form.validate() || current == null || userId == null) {
+    if (form == null || !form.validate() || current == null) {
       return;
     }
 
     setState(() => _saving = true);
     try {
-      await _accountService.update(AccountDetails(
-        id: current.id,
-        email: _emailCtrl.text.trim(),
-        phone: _phoneCtrl.text.trim(),
-        userRole: current.userRole,
-        isActive: current.isActive,
-      ));
-
-      if (_hasProfileInput) {
-        final street = _streetCtrl.text.trim();
-        final houseNumber = _houseNumberCtrl.text.trim();
-        await _profileService.saveProfile(
-          userId,
-          AdminCustomerProfileDraft(
-            firstName: _firstNameCtrl.text.trim(),
-            lastName: _lastNameCtrl.text.trim(),
-            defaultLanguage: _defaultLanguage,
-            theme: _profileTheme,
-            settlementId: _selectedSettlementId,
-            street: street.isEmpty ? null : street,
-            houseNumber: houseNumber.isEmpty ? null : houseNumber,
-          ),
-          existingProfileId: _existingProfileId,
-        );
-      }
+      await _accountService.update(
+        AccountDetails(
+          id: current.id,
+          email: _emailCtrl.text.trim(),
+          phone: _phoneCtrl.text.trim(),
+          userRole: current.userRole,
+          isActive: current.isActive,
+          firstName: _firstNameCtrl.text.trim(),
+          lastName: _lastNameCtrl.text.trim(),
+        ),
+      );
 
       if (_hasPasswordInput) {
-        await _profileService.changePassword(
+        await _passwordService.changePassword(
           currentPassword: _currentPasswordCtrl.text,
           newPassword: _newPasswordCtrl.text,
         );
@@ -331,7 +230,9 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Podaci naloga su sačuvani.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).accountDetailsSaveSuccess),
+        ),
       );
       await _load();
     } on AccountException catch (e) {
@@ -350,17 +251,12 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   @override
   void dispose() {
     _accountService.dispose();
-    _profileService.dispose();
-    _cityService.dispose();
-    _municipalityService.dispose();
-    _settlementService.dispose();
+    _passwordService.dispose();
     _preferencesService.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
-    _streetCtrl.dispose();
-    _houseNumberCtrl.dispose();
     _currentPasswordCtrl.dispose();
     _newPasswordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
@@ -369,10 +265,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Moj nalog')),
-      body: _buildBody(),
-    );
+    return SafeArea(child: _buildBody());
   }
 
   Widget _buildBody() {
@@ -382,227 +275,186 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     if (_loadError != null) {
       return _ErrorRetry(message: _loadError!, onRetry: _load);
     }
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Form(
+    final loc = AppLocalizations.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ScreenHeader(
+              title: loc.myAccountTitle,
+              subtitle: loc.myAccountSubtitle,
+              actions: const [],
+            ),
+            const SizedBox(height: 24),
+            Form(
               key: _formKey,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _SectionLabel('Podaci naloga'),
-                  _field(
-                    controller: _emailCtrl,
-                    label: 'Email',
-                    icon: Icons.email_outlined,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: _emailValidator,
-                    maxLength: 150,
-                  ),
-                  _field(
-                    controller: _phoneCtrl,
-                    label: 'Telefon',
-                    icon: Icons.phone_outlined,
-                    keyboardType: TextInputType.phone,
-                    validator: _phoneValidator,
-                    maxLength: 30,
-                  ),
-                  const SizedBox(height: 8),
-                  const _SectionLabel('Izgled'),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: SegmentedButton<bool>(
-                      segments: const [
-                        ButtonSegment(
-                          value: false,
-                          label: Text('Svijetla'),
-                          icon: Icon(Icons.light_mode_outlined),
+                  _SectionLabel(loc.profileSectionLabel),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _field(
+                          controller: _firstNameCtrl,
+                          label: loc.fieldFirstNameLabel,
+                          validator: _firstNameValidator,
+                          onChanged: () => setState(() {}),
+                          maxLength: 80,
                         ),
-                        ButtonSegment(
-                          value: true,
-                          label: Text('Tamna'),
-                          icon: Icon(Icons.dark_mode_outlined),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _field(
+                          controller: _lastNameCtrl,
+                          label: loc.fieldLastNameLabel,
+                          validator: _lastNameValidator,
+                          onChanged: () => setState(() {}),
+                          maxLength: 80,
                         ),
-                      ],
-                      selected: {_preferences?.isDarkTheme ?? false},
-                      onSelectionChanged: (selection) => _setTheme(selection.first),
-                    ),
-                  ),
-                  const _SectionLabel('Profil'),
-                  if (_customerCode != null) ...[
-                    TextFormField(
-                      key: ValueKey(_customerCode),
-                      initialValue: _customerCode,
-                      enabled: false,
-                      decoration: const InputDecoration(
-                        labelText: 'Šifra korisnika (automatski dodijeljena)',
-                        prefixIcon: Icon(Icons.badge_outlined),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  _field(
-                    controller: _firstNameCtrl,
-                    label: 'Ime',
-                    icon: Icons.person_outline,
-                    validator: _firstNameValidator,
-                    onChanged: () => setState(() {}),
-                    maxLength: 80,
+                    ],
                   ),
-                  _field(
-                    controller: _lastNameCtrl,
-                    label: 'Prezime',
-                    icon: Icons.person_outline,
-                    validator: _lastNameValidator,
-                    onChanged: () => setState(() {}),
-                    maxLength: 80,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _defaultLanguage,
-                      decoration: const InputDecoration(
-                        labelText: 'Jezik',
-                        prefixIcon: Icon(Icons.language_outlined),
+                  const SizedBox(height: 22),
+
+                  _SectionLabel(loc.contactSectionLabel),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _field(
+                          controller: _emailCtrl,
+                          label: loc.fieldEmailLabel,
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: _emailValidator,
+                          maxLength: 150,
+                        ),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'bs', child: Text('Bosanski')),
-                        DropdownMenuItem(value: 'en', child: Text('Engleski')),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => _defaultLanguage = value);
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const _SectionLabel('Adresa'),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _selectedCityId ?? 0,
-                      decoration: const InputDecoration(
-                        labelText: 'Grad',
-                        prefixIcon: Icon(Icons.location_city_outlined),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _field(
+                          controller: _phoneCtrl,
+                          label: loc.fieldPhoneLabel,
+                          icon: Icons.phone_outlined,
+                          keyboardType: TextInputType.phone,
+                          validator: _phoneValidator,
+                          maxLength: 30,
+                        ),
                       ),
-                      items: [
-                        const DropdownMenuItem(value: 0, child: Text('Bez grada')),
-                        for (final city in _cities)
-                          DropdownMenuItem(value: city.id, child: Text(city.name)),
-                      ],
-                      onChanged: (value) => _onCityChanged(value == 0 ? null : value),
-                    ),
+                    ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _selectedMunicipalityId ?? 0,
-                      decoration: const InputDecoration(
-                        labelText: 'Općina',
-                        prefixIcon: Icon(Icons.map_outlined),
+                  const SizedBox(height: 22),
+
+                  _SectionLabel(loc.personalDetailsAppearanceSectionTitle),
+                  SegmentedButton<bool>(
+                    segments: [
+                      ButtonSegment(
+                        value: false,
+                        label: Text(loc.themeLightOption),
+                        icon: const Icon(Icons.light_mode_outlined),
                       ),
-                      items: [
-                        const DropdownMenuItem(value: 0, child: Text('Bez općine')),
-                        for (final municipality in _municipalitiesForSelectedCity)
-                          DropdownMenuItem(
-                            value: municipality.id,
-                            child: Text(municipality.name),
-                          ),
-                      ],
-                      onChanged: _selectedCityId == null
-                          ? null
-                          : (value) => _onMunicipalityChanged(value == 0 ? null : value),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _selectedSettlementId ?? 0,
-                      decoration: const InputDecoration(
-                        labelText: 'Naselje',
-                        prefixIcon: Icon(Icons.holiday_village_outlined),
+                      ButtonSegment(
+                        value: true,
+                        label: Text(loc.themeDarkOption),
+                        icon: const Icon(Icons.dark_mode_outlined),
                       ),
-                      items: [
-                        const DropdownMenuItem(value: 0, child: Text('Bez naselja')),
-                        for (final settlement in _settlementsForSelectedMunicipality)
-                          DropdownMenuItem(
-                            value: settlement.id,
-                            child: Text(settlement.name),
-                          ),
-                      ],
-                      validator: _settlementValidator,
-                      onChanged: _selectedMunicipalityId == null
-                          ? null
-                          : (value) => _onSettlementChanged(value == 0 ? null : value),
-                    ),
+                    ],
+                    selected: {_preferences?.isDarkTheme ?? false},
+                    onSelectionChanged: (selection) =>
+                        _setTheme(selection.first),
                   ),
-                  _field(
-                    controller: _streetCtrl,
-                    label: 'Ulica',
-                    icon: Icons.signpost_outlined,
-                    maxLength: 120,
+                  const SizedBox(height: 14),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'bs', label: Text('Bosanski')),
+                      ButtonSegment(value: 'en', label: Text('English')),
+                    ],
+                    selected: {_preferences?.language ?? 'bs'},
+                    onSelectionChanged: (selection) =>
+                        _setLanguage(selection.first),
                   ),
-                  _field(
-                    controller: _houseNumberCtrl,
-                    label: 'Broj',
-                    icon: Icons.pin_outlined,
-                    maxLength: 20,
-                  ),
-                  const SizedBox(height: 8),
-                  const _SectionLabel('Promjena lozinke'),
+                  const SizedBox(height: 22),
+
+                  _SectionLabel(loc.passwordResetTitle),
                   Text(
-                    'Ostavite prazno ako ne mijenjate lozinku.',
+                    loc.passwordOptionalHint,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   _field(
                     controller: _currentPasswordCtrl,
-                    label: 'Trenutna lozinka',
+                    label: loc.passwordResetCurrentLabel,
                     icon: Icons.lock_outline,
                     obscureText: true,
                     validator: _currentPasswordValidator,
                     onChanged: () => setState(() {}),
                   ),
-                  _field(
-                    controller: _newPasswordCtrl,
-                    label: 'Nova lozinka',
-                    icon: Icons.lock_outline,
-                    obscureText: true,
-                    validator: _newPasswordValidator,
-                    onChanged: () => setState(() {}),
+                  const SizedBox(height: 14),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _field(
+                          controller: _newPasswordCtrl,
+                          label: loc.passwordResetNewLabel,
+                          icon: Icons.lock_outline,
+                          obscureText: true,
+                          validator: _newPasswordValidator,
+                          onChanged: () => setState(() {}),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _field(
+                          controller: _confirmPasswordCtrl,
+                          label: loc.passwordResetConfirmLabel,
+                          icon: Icons.lock_outline,
+                          obscureText: true,
+                          validator: _confirmPasswordValidator,
+                          onChanged: () => setState(() {}),
+                        ),
+                      ),
+                    ],
                   ),
-                  _field(
-                    controller: _confirmPasswordCtrl,
-                    label: 'Potvrda nove lozinke',
-                    icon: Icons.lock_outline,
-                    obscureText: true,
-                    validator: _confirmPasswordValidator,
-                    onChanged: () => setState(() {}),
-                  ),
-                  const SizedBox(height: 8),
-                  FilledButton.icon(
-                    onPressed: _saving ? null : _save,
-                    icon: _saving
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.save_outlined),
-                    label: Text(_saving ? 'Spašavanje...' : 'Sačuvaj'),
+                  const SizedBox(height: 22),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: _saving ? null : _load,
+                        child: Text(loc.dialogDismissButton),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: _saving ? null : _save,
+                        icon: _saving
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.save_outlined),
+                        label: Text(
+                          _saving ? loc.commonSaving : loc.commonSave,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -611,36 +463,34 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   Widget _field({
     required TextEditingController controller,
     required String label,
-    required IconData icon,
+    IconData? icon,
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     int? maxLength,
     bool obscureText = false,
     VoidCallback? onChanged,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        validator: validator,
-        maxLength: maxLength,
-        obscureText: obscureText,
-        onChanged: onChanged == null ? null : (_) => onChanged(),
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon),
-          counterText: '',
-        ),
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      maxLength: maxLength,
+      obscureText: obscureText,
+      onChanged: onChanged == null ? null : (_) => onChanged(),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: icon == null ? null : Icon(icon),
+        counterText: '',
       ),
     );
   }
 
   String? _emailValidator(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    final loc = AppLocalizations.of(context);
+    if (text.isEmpty) return loc.fieldRequiredError;
     final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailPattern.hasMatch(text)) return 'Unesite ispravan email.';
+    if (!emailPattern.hasMatch(text)) return loc.emailInvalidError;
     return null;
   }
 
@@ -650,30 +500,17 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     final phonePattern = RegExp(r'^[0-9+\-\s()]+$');
     if (!phonePattern.hasMatch(text) ||
         text.replaceAll(RegExp(r'[^0-9]'), '').length < 6) {
-      return 'Unesite ispravan broj telefona.';
+      return AppLocalizations.of(context).phoneInvalidNumberError;
     }
     return null;
   }
 
   // Ime/Prezime are optional, but if either is filled in, both are required -
-  // CustomerProfile needs both (mirrors the Korisnici editor dialog).
+  // mirrors the "Uredi administratora" editor dialog's validators.
   String? _firstNameValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _lastNameCtrl.text.trim().isNotEmpty) {
-      return 'Obavezno ako unosite ime i prezime.';
-    }
-    return null;
-  }
-
-  // Creating a brand new CustomerProfile requires a name (backend
-  // CustomerProfileInsertValidator), so address input alone can't be saved
-  // for an admin who doesn't have a profile yet.
-  String? _settlementValidator(int? _) {
-    final hasAddressInput = _selectedSettlementId != null ||
-        _streetCtrl.text.trim().isNotEmpty ||
-        _houseNumberCtrl.text.trim().isNotEmpty;
-    if (hasAddressInput && !_hasProfileInput) {
-      return 'Unesite ime i prezime da biste sačuvali adresu.';
+      return AppLocalizations.of(context).nameRequiredTogetherError;
     }
     return null;
   }
@@ -681,7 +518,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   String? _lastNameValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _firstNameCtrl.text.trim().isNotEmpty) {
-      return 'Obavezno ako unosite ime i prezime.';
+      return AppLocalizations.of(context).nameRequiredTogetherError;
     }
     return null;
   }
@@ -691,28 +528,33 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   // password to verify alongside the new one.
   String? _currentPasswordValidator(String? value) {
     if ((value ?? '').isEmpty && _hasPasswordInput) {
-      return 'Unesite trenutnu lozinku.';
+      return AppLocalizations.of(context).passwordResetCurrentRequiredError;
     }
     return null;
   }
 
   String? _newPasswordValidator(String? value) {
     final text = value ?? '';
+    final loc = AppLocalizations.of(context);
     if (text.isEmpty) {
-      return _hasPasswordInput ? 'Unesite novu lozinku.' : null;
+      return _hasPasswordInput ? loc.passwordResetNewRequiredError : null;
     }
-    if (text.length < 6) return 'Lozinka mora imati najmanje 6 znakova.';
+    if (text.length < 6) return loc.passwordTooShortError;
     return null;
   }
 
   String? _confirmPasswordValidator(String? value) {
     if (_newPasswordCtrl.text.isEmpty) return null;
-    if (value != _newPasswordCtrl.text) return 'Lozinke se ne podudaraju.';
+    if (value != _newPasswordCtrl.text) {
+      return AppLocalizations.of(context).passwordMismatchError;
+    }
     return null;
   }
 }
 
-/// Small muted heading that separates the form into sections.
+/// Small uppercase-weight heading that separates the form into sections -
+/// mirrors `_FormSectionHeader` in `admin_users_screen.dart`'s "Uredi
+/// administratora" dialog so this screen reads consistently with it.
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
 
@@ -721,13 +563,15 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+          color: Color(0xFF64748B),
+        ),
       ),
     );
   }
@@ -757,7 +601,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

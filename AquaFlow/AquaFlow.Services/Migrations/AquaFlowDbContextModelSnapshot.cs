@@ -157,9 +157,6 @@ namespace AquaFlow.Services.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AssignedAreaId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -176,8 +173,6 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AssignedAreaId");
-
                     b.HasIndex("EmployeeCode")
                         .IsUnique();
 
@@ -190,10 +185,16 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 1,
-                            AssignedAreaId = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             EmployeeCode = "COL-0001",
                             UserId = 2
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            EmployeeCode = "COL-0002",
+                            UserId = 3
                         });
                 });
 
@@ -346,13 +347,41 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerCode = "CUS-0001",
                             DefaultLanguage = "bs",
-                            FirstName = "Amina",
-                            HouseNumber = "12",
-                            LastName = "Hadziabdic",
-                            SettlementId = 1,
-                            Street = "Zmaja od Bosne",
+                            FirstName = "Denis",
+                            HouseNumber = "15",
+                            LastName = "Music",
+                            SettlementId = 8,
+                            Street = "Ozrenska",
                             Theme = "light",
-                            UserId = 3
+                            UserId = 4
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerCode = "CUS-0002",
+                            DefaultLanguage = "bs",
+                            FirstName = "Elmir",
+                            HouseNumber = "7",
+                            LastName = "Babovic",
+                            SettlementId = 6,
+                            Street = "Dobrinjske bolnice",
+                            Theme = "light",
+                            UserId = 5
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerCode = "CUS-0003",
+                            DefaultLanguage = "bs",
+                            FirstName = "Adil",
+                            HouseNumber = "22",
+                            LastName = "Joldic",
+                            SettlementId = 11,
+                            Street = "Saraci",
+                            Theme = "light",
+                            UserId = 6
                         });
                 });
 
@@ -514,8 +543,8 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             Description = "Pritisak vode je nizak u jutarnjim satima.",
-                            ReportedById = 3,
-                            SettlementId = 1,
+                            ReportedById = 4,
+                            SettlementId = 8,
                             Status = "New",
                             Title = "Slab pritisak vode",
                             WaterMeterId = 1
@@ -682,19 +711,512 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 1,
-                            BillingPeriodFrom = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            BillingPeriodTo = new DateTime(2026, 5, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 12.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 92.20m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0001",
+                            PreviousReading = 80.00m,
+                            Status = "Paid",
+                            Subtotal = 19.9700m,
+                            TotalAmount = 19.9700m,
+                            WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 15.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 108.00m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0002",
+                            PreviousReading = 92.20m,
+                            Status = "Paid",
+                            Subtotal = 24.8300m,
+                            TotalAmount = 24.8300m,
+                            WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 3,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 10.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 118.40m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0003",
+                            PreviousReading = 108.00m,
+                            Status = "Paid",
+                            Subtotal = 17.5400m,
+                            TotalAmount = 17.5400m,
+                            WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 4,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 16.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 135.00m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0004",
+                            PreviousReading = 118.40m,
+                            Status = "Paid",
+                            Subtotal = 25.9100m,
+                            TotalAmount = 25.9100m,
+                            WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 5,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 14.20m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CreatedById = 1,
-                            CurrentReading = 168.40m,
+                            CurrentReading = 149.20m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0001",
-                            PreviousReading = 154.20m,
+                            InvoiceNumber = "INV-2026-0005",
+                            PreviousReading = 135.00m,
                             Status = "Issued",
-                            Subtotal = 22.67m,
-                            TotalAmount = 22.67m,
+                            Subtotal = 22.6700m,
+                            TotalAmount = 22.6700m,
                             WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 6,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 8.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 68.20m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0006",
+                            PreviousReading = 60.00m,
+                            Status = "Paid",
+                            Subtotal = 14.5700m,
+                            TotalAmount = 14.5700m,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 7,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 11.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 79.60m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0007",
+                            PreviousReading = 68.20m,
+                            Status = "Paid",
+                            Subtotal = 18.8900m,
+                            TotalAmount = 18.8900m,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 8,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 9.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 89.40m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0008",
+                            PreviousReading = 79.60m,
+                            Status = "Paid",
+                            Subtotal = 16.7300m,
+                            TotalAmount = 16.7300m,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 9,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 7.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 97.00m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0009",
+                            PreviousReading = 89.40m,
+                            Status = "Paid",
+                            Subtotal = 13.7600m,
+                            TotalAmount = 13.7600m,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 10,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 10.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 107.60m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0010",
+                            PreviousReading = 97.00m,
+                            Status = "Issued",
+                            Subtotal = 17.8100m,
+                            TotalAmount = 17.8100m,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 11,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 13.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 108.00m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0011",
+                            PreviousReading = 95.00m,
+                            Status = "Paid",
+                            Subtotal = 21.0500m,
+                            TotalAmount = 21.0500m,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 12,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 9.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 117.40m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0012",
+                            PreviousReading = 108.00m,
+                            Status = "Paid",
+                            Subtotal = 16.1900m,
+                            TotalAmount = 16.1900m,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 13,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 12.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 130.20m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0013",
+                            PreviousReading = 117.40m,
+                            Status = "Paid",
+                            Subtotal = 20.7800m,
+                            TotalAmount = 20.7800m,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 14,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 14.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 144.80m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0014",
+                            PreviousReading = 130.20m,
+                            Status = "Paid",
+                            Subtotal = 23.2100m,
+                            TotalAmount = 23.2100m,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 15,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 10.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 155.00m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0015",
+                            PreviousReading = 144.80m,
+                            Status = "Issued",
+                            Subtotal = 17.2700m,
+                            TotalAmount = 17.2700m,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 16,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 11.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 81.80m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0016",
+                            PreviousReading = 70.00m,
+                            Status = "Paid",
+                            Subtotal = 19.4300m,
+                            TotalAmount = 19.4300m,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 17,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 14.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 96.00m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0017",
+                            PreviousReading = 81.80m,
+                            Status = "Paid",
+                            Subtotal = 22.6700m,
+                            TotalAmount = 22.6700m,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 18,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 12.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 108.60m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0018",
+                            PreviousReading = 96.00m,
+                            Status = "Paid",
+                            Subtotal = 20.5100m,
+                            TotalAmount = 20.5100m,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 19,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 15.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 124.00m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0019",
+                            PreviousReading = 108.60m,
+                            Status = "Paid",
+                            Subtotal = 24.2900m,
+                            TotalAmount = 24.2900m,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 20,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 10.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 134.00m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0020",
+                            PreviousReading = 124.00m,
+                            Status = "Issued",
+                            Subtotal = 17.0000m,
+                            TotalAmount = 17.0000m,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 21,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 9.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 64.00m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0021",
+                            PreviousReading = 55.00m,
+                            Status = "Paid",
+                            Subtotal = 15.6500m,
+                            TotalAmount = 15.6500m,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 22,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 11.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 75.60m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0022",
+                            PreviousReading = 64.00m,
+                            Status = "Paid",
+                            Subtotal = 19.1600m,
+                            TotalAmount = 19.1600m,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 23,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 8.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 84.00m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0023",
+                            PreviousReading = 75.60m,
+                            Status = "Paid",
+                            Subtotal = 14.8400m,
+                            TotalAmount = 14.8400m,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 24,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 12.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 96.20m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0024",
+                            PreviousReading = 84.00m,
+                            Status = "Paid",
+                            Subtotal = 19.9700m,
+                            TotalAmount = 19.9700m,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 25,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 10.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 107.00m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0025",
+                            PreviousReading = 96.20m,
+                            Status = "Paid",
+                            Subtotal = 18.0800m,
+                            TotalAmount = 18.0800m,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 26,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 10.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 50.60m,
+                            CustomerId = 3,
+                            InvoiceNumber = "INV-2026-0026",
+                            PreviousReading = 40.00m,
+                            Status = "Paid",
+                            Subtotal = 17.8100m,
+                            TotalAmount = 17.8100m,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 27,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 13.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 64.00m,
+                            CustomerId = 3,
+                            InvoiceNumber = "INV-2026-0027",
+                            PreviousReading = 50.60m,
+                            Status = "Paid",
+                            Subtotal = 21.5900m,
+                            TotalAmount = 21.5900m,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 28,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 11.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 75.20m,
+                            CustomerId = 3,
+                            InvoiceNumber = "INV-2026-0028",
+                            PreviousReading = 64.00m,
+                            Status = "Paid",
+                            Subtotal = 18.6200m,
+                            TotalAmount = 18.6200m,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 29,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 14.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 90.00m,
+                            CustomerId = 3,
+                            InvoiceNumber = "INV-2026-0029",
+                            PreviousReading = 75.20m,
+                            Status = "Issued",
+                            Subtotal = 23.4800m,
+                            TotalAmount = 23.4800m,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 30,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 9.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 99.60m,
+                            CustomerId = 3,
+                            InvoiceNumber = "INV-2026-0030",
+                            PreviousReading = 90.00m,
+                            Status = "Issued",
+                            Subtotal = 16.4600m,
+                            TotalAmount = 16.4600m,
+                            WaterMeterId = 6
                         });
                 });
 
@@ -744,11 +1266,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 1,
-                            Amount = 19.17m,
+                            Amount = 16.4700m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 1,
-                            Quantity = 14.20m,
+                            Quantity = 12.20m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -759,6 +1281,644 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Fiksna naknada",
                             InvoiceId = 1,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Amount = 21.3300m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 2,
+                            Quantity = 15.80m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 2,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Amount = 14.0400m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 3,
+                            Quantity = 10.40m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 3,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Amount = 22.4100m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 4,
+                            Quantity = 16.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 4,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Amount = 19.1700m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 5,
+                            Quantity = 14.20m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 5,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Amount = 11.0700m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 6,
+                            Quantity = 8.20m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 6,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Amount = 15.3900m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 7,
+                            Quantity = 11.40m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 7,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Amount = 13.2300m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 8,
+                            Quantity = 9.80m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 8,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 17,
+                            Amount = 10.2600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 9,
+                            Quantity = 7.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 18,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 9,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 19,
+                            Amount = 14.3100m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 10,
+                            Quantity = 10.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 10,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 21,
+                            Amount = 17.5500m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 11,
+                            Quantity = 13.00m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 22,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 11,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 23,
+                            Amount = 12.6900m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 12,
+                            Quantity = 9.40m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 24,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 12,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Amount = 17.2800m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 13,
+                            Quantity = 12.80m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 26,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 13,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 27,
+                            Amount = 19.7100m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 14,
+                            Quantity = 14.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 28,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 14,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 29,
+                            Amount = 13.7700m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 15,
+                            Quantity = 10.20m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 30,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 15,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 31,
+                            Amount = 15.9300m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 16,
+                            Quantity = 11.80m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 32,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 16,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 33,
+                            Amount = 19.1700m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 17,
+                            Quantity = 14.20m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 34,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 17,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 35,
+                            Amount = 17.0100m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 18,
+                            Quantity = 12.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 36,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 18,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 37,
+                            Amount = 20.7900m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 19,
+                            Quantity = 15.40m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 38,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 19,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 39,
+                            Amount = 13.5000m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 20,
+                            Quantity = 10.00m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 40,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 20,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 41,
+                            Amount = 12.1500m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 21,
+                            Quantity = 9.00m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 42,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 21,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 43,
+                            Amount = 15.6600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 22,
+                            Quantity = 11.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 44,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 22,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 45,
+                            Amount = 11.3400m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 23,
+                            Quantity = 8.40m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 46,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 23,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 47,
+                            Amount = 16.4700m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 24,
+                            Quantity = 12.20m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 48,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 24,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 49,
+                            Amount = 14.5800m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 25,
+                            Quantity = 10.80m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 50,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 25,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 51,
+                            Amount = 14.3100m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 26,
+                            Quantity = 10.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 52,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 26,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 53,
+                            Amount = 18.0900m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 27,
+                            Quantity = 13.40m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 54,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 27,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 55,
+                            Amount = 15.1200m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 28,
+                            Quantity = 11.20m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 56,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 28,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 57,
+                            Amount = 19.9800m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 29,
+                            Quantity = 14.80m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 58,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 29,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 59,
+                            Amount = 12.9600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 30,
+                            Quantity = 9.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 60,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 30,
                             Quantity = 1m,
                             TariffId = 1,
                             UnitPrice = 3.50m
@@ -887,9 +2047,6 @@ namespace AquaFlow.Services.Migrations
                     b.Property<decimal>("ReadingValue")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal?>("ReplacedMeterFinalReading")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -933,67 +2090,543 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 1,
-                            ClientUuid = "reading-demo-0001",
+                            ClientUuid = "reading-wm0001-h01",
                             CollectorId = 1,
-                            ConsumptionM3 = 14.20m,
+                            ConsumptionM3 = 12.20m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Note = "Redovno mjesecno ocitanje.",
-                            PreviousReadingValue = 154.20m,
+                            InvoiceId = 1,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 80.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 168.40m,
+                            ReadingValue = 92.20m,
                             Source = "Collector",
                             SyncStatus = "Synced",
                             SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            ClientUuid = "reading-wm0001-h02",
+                            CollectorId = 1,
+                            ConsumptionM3 = 15.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 2,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 92.20m,
+                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 108.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 3,
+                            ClientUuid = "reading-wm0001-h03",
+                            CollectorId = 1,
+                            ConsumptionM3 = 10.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 3,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 108.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 118.40m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 4,
+                            ClientUuid = "reading-wm0001-h04",
+                            CollectorId = 1,
+                            ConsumptionM3 = 16.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 4,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 118.40m,
+                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 135.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 5,
+                            ClientUuid = "reading-wm0001-h05",
+                            CollectorId = 1,
+                            ConsumptionM3 = 14.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 5,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 135.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 149.20m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 6,
+                            ClientUuid = "reading-wm0002-h01",
+                            CollectorId = 1,
+                            ConsumptionM3 = 8.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 6,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 60.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 68.20m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 7,
+                            ClientUuid = "reading-wm0002-h02",
+                            CollectorId = 1,
+                            ConsumptionM3 = 11.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 7,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 68.20m,
+                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 79.60m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 8,
+                            ClientUuid = "reading-wm0002-h03",
+                            CollectorId = 1,
+                            ConsumptionM3 = 9.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 8,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 79.60m,
+                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 89.40m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 9,
+                            ClientUuid = "reading-wm0002-h04",
+                            CollectorId = 1,
+                            ConsumptionM3 = 7.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 9,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 89.40m,
+                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 97.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 10,
+                            ClientUuid = "reading-wm0002-h05",
+                            CollectorId = 1,
+                            ConsumptionM3 = 10.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 10,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 97.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 107.60m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 11,
+                            ClientUuid = "reading-wm0003-h01",
+                            CollectorId = 1,
+                            ConsumptionM3 = 13.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 11,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 95.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 108.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 12,
+                            ClientUuid = "reading-wm0003-h02",
+                            CollectorId = 1,
+                            ConsumptionM3 = 9.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 12,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 108.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 117.40m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 13,
+                            ClientUuid = "reading-wm0003-h03",
+                            CollectorId = 1,
+                            ConsumptionM3 = 12.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 13,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 117.40m,
+                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 130.20m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 14,
+                            ClientUuid = "reading-wm0003-h04",
+                            CollectorId = 1,
+                            ConsumptionM3 = 14.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 14,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 130.20m,
+                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 144.80m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 15,
+                            ClientUuid = "reading-wm0003-h05",
+                            CollectorId = 1,
+                            ConsumptionM3 = 10.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 15,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 144.80m,
+                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 155.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 16,
+                            ClientUuid = "reading-wm0004-h01",
+                            CollectorId = 2,
+                            ConsumptionM3 = 11.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 16,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 70.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 81.80m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 17,
+                            ClientUuid = "reading-wm0004-h02",
+                            CollectorId = 2,
+                            ConsumptionM3 = 14.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 17,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 81.80m,
+                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 96.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 18,
+                            ClientUuid = "reading-wm0004-h03",
+                            CollectorId = 2,
+                            ConsumptionM3 = 12.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 18,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 96.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 108.60m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 19,
+                            ClientUuid = "reading-wm0004-h04",
+                            CollectorId = 2,
+                            ConsumptionM3 = 15.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 19,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 108.60m,
+                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 124.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 20,
+                            ClientUuid = "reading-wm0004-h05",
+                            CollectorId = 2,
+                            ConsumptionM3 = 10.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 20,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 124.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 134.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 21,
+                            ClientUuid = "reading-wm0005-h01",
+                            CollectorId = 2,
+                            ConsumptionM3 = 9.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 21,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 55.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 64.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 22,
+                            ClientUuid = "reading-wm0005-h02",
+                            CollectorId = 2,
+                            ConsumptionM3 = 11.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 22,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 64.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 75.60m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 23,
+                            ClientUuid = "reading-wm0005-h03",
+                            CollectorId = 2,
+                            ConsumptionM3 = 8.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 23,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 75.60m,
+                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 84.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 24,
+                            ClientUuid = "reading-wm0005-h04",
+                            CollectorId = 2,
+                            ConsumptionM3 = 12.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 24,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 84.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 96.20m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 25,
+                            ClientUuid = "reading-wm0005-h05",
+                            CollectorId = 2,
+                            ConsumptionM3 = 10.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 25,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 96.20m,
+                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 107.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 26,
+                            ClientUuid = "reading-wm0006-h01",
+                            CollectorId = 2,
+                            ConsumptionM3 = 10.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 26,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 40.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 50.60m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 27,
+                            ClientUuid = "reading-wm0006-h02",
+                            CollectorId = 2,
+                            ConsumptionM3 = 13.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 27,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 50.60m,
+                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 64.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 28,
+                            ClientUuid = "reading-wm0006-h03",
+                            CollectorId = 2,
+                            ConsumptionM3 = 11.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 28,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 64.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 75.20m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 29,
+                            ClientUuid = "reading-wm0006-h04",
+                            CollectorId = 2,
+                            ConsumptionM3 = 14.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 29,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 75.20m,
+                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 90.00m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 30,
+                            ClientUuid = "reading-wm0006-h05",
+                            CollectorId = 2,
+                            ConsumptionM3 = 9.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 30,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 90.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 99.60m,
+                            Source = "Collector",
+                            SyncStatus = "Synced",
+                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                            TariffId = 1,
+                            WaterMeterId = 6
                         });
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.MeterReplacement", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("NewInitialReading")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("NewWaterMeterId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("OldFinalReading")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("OldWaterMeterId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ReplacedById")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("ReplacementDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NewWaterMeterId");
-
-                    b.HasIndex("OldWaterMeterId");
-
-                    b.HasIndex("ReplacedById");
-
-                    b.ToTable("MeterReplacements");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Municipality", b =>
@@ -1305,14 +2938,313 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 1,
-                            Amount = 26.52m,
+                            Amount = 19.9700m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             InvoiceId = 1,
-                            PaidAt = new DateTime(2026, 6, 2, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "BankTransfer",
                             Provider = "Manual",
-                            ProviderTransactionId = "BT-2026-0001",
+                            ProviderTransactionId = "PAY-2026-0001",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Amount = 24.8300m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 2,
+                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0002",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Amount = 17.5400m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 3,
+                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0003",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Amount = 25.9100m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 4,
+                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "BankTransfer",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0004",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Amount = 14.5700m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 6,
+                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0005",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Amount = 18.8900m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 7,
+                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0006",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Amount = 16.7300m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 8,
+                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "BankTransfer",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0007",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Amount = 13.7600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 9,
+                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0008",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Amount = 21.0500m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 11,
+                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0009",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Amount = 16.1900m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 12,
+                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "BankTransfer",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0010",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Amount = 20.7800m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 13,
+                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0011",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Amount = 23.2100m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 14,
+                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0012",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Amount = 19.4300m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 16,
+                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "BankTransfer",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0013",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Amount = 22.6700m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 17,
+                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0014",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Amount = 20.5100m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 18,
+                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0015",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Amount = 24.2900m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 19,
+                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "BankTransfer",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0016",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            Amount = 15.6500m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 21,
+                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0017",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            Amount = 19.1600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 22,
+                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0018",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            Amount = 14.8400m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 23,
+                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "BankTransfer",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0019",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Amount = 19.9700m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 24,
+                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0020",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            Amount = 18.0800m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 25,
+                            PaidAt = new DateTime(2026, 6, 1, 14, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0021",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 22,
+                            Amount = 17.8100m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 3,
+                            InvoiceId = 26,
+                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "BankTransfer",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0022",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 23,
+                            Amount = 21.5900m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 3,
+                            InvoiceId = 27,
+                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0023",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            Amount = 18.6200m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 3,
+                            InvoiceId = 28,
+                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0024",
                             Status = "Completed"
                         });
                 });
@@ -2170,6 +4102,11 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -2178,6 +4115,11 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -2213,36 +4155,84 @@ namespace AquaFlow.Services.Migrations
                         {
                             Id = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "admin@aquaflow.ba",
+                            Email = "kenan.fajic@aquaflow.ba",
+                            FirstName = "Kenan",
                             IsActive = true,
                             IsDeleted = false,
+                            LastName = "Fajic",
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
-                            Phone = "+38733111222",
+                            Phone = "+38762111000",
                             UserRoleId = 1
                         },
                         new
                         {
                             Id = 2,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "collector@aquaflow.ba",
+                            Email = "amel.fajic@aquaflow.ba",
+                            FirstName = "Amel",
                             IsActive = true,
                             IsDeleted = false,
+                            LastName = "Fajic",
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
-                            Phone = "+38761111222",
+                            Phone = "+38761111001",
                             UserRoleId = 2
                         },
                         new
                         {
                             Id = 3,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "customer@aquaflow.ba",
+                            Email = "kemal.fajic@aquaflow.ba",
+                            FirstName = "Kemal",
                             IsActive = true,
                             IsDeleted = false,
+                            LastName = "Fajic",
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
-                            Phone = "+38762111222",
+                            Phone = "+38761111002",
+                            UserRoleId = 2
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "denis.music@aquaflow.ba",
+                            FirstName = "",
+                            IsActive = true,
+                            IsDeleted = false,
+                            LastName = "",
+                            PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
+                            PasswordSalt = "AquaFlowSalt2026==",
+                            Phone = "+38762111004",
+                            UserRoleId = 3
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "elmir.babovic@aquaflow.ba",
+                            FirstName = "",
+                            IsActive = true,
+                            IsDeleted = false,
+                            LastName = "",
+                            PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
+                            PasswordSalt = "AquaFlowSalt2026==",
+                            Phone = "+38762111005",
+                            UserRoleId = 3
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "adil.joldic@aquaflow.ba",
+                            FirstName = "",
+                            IsActive = true,
+                            IsDeleted = false,
+                            LastName = "",
+                            PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
+                            PasswordSalt = "AquaFlowSalt2026==",
+                            Phone = "+38762111006",
                             UserRoleId = 3
                         });
                 });
@@ -2285,7 +4275,7 @@ namespace AquaFlow.Services.Migrations
                             Id = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             NotificationId = 1,
-                            UserId = 3
+                            UserId = 4
                         });
                 });
 
@@ -2691,12 +4681,84 @@ namespace AquaFlow.Services.Migrations
                             Id = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
-                            InitialReading = 120.50m,
+                            HouseNumber = "15",
+                            InitialReading = 80.00m,
                             InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            LastReading = 168.40m,
+                            LastReading = 149.20m,
                             SerialNumber = "WM-2026-0001",
+                            SettlementId = 8,
+                            Status = "Active",
+                            Street = "Ozrenska"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            HouseNumber = "4",
+                            InitialReading = 60.00m,
+                            InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            LastReading = 107.60m,
+                            SerialNumber = "WM-2026-0002",
+                            SettlementId = 9,
+                            Status = "Active",
+                            Street = "Behdzeta Mutevelica"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            HouseNumber = "9",
+                            InitialReading = 95.00m,
+                            InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            LastReading = 155.00m,
+                            SerialNumber = "WM-2026-0003",
                             SettlementId = 1,
-                            Status = "Active"
+                            Status = "Active",
+                            Street = "Mali Behar"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            HouseNumber = "7",
+                            InitialReading = 70.00m,
+                            InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            LastReading = 134.00m,
+                            SerialNumber = "WM-2026-0004",
+                            SettlementId = 6,
+                            Status = "Active",
+                            Street = "Dobrinjske bolnice"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            HouseNumber = "3",
+                            InitialReading = 55.00m,
+                            InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            LastReading = 107.00m,
+                            SerialNumber = "WM-2026-0005",
+                            SettlementId = 7,
+                            Status = "Active",
+                            Street = "Trg Oslobodjenja"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 3,
+                            HouseNumber = "22",
+                            InitialReading = 40.00m,
+                            InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            LastReading = 99.60m,
+                            SerialNumber = "WM-2026-0006",
+                            SettlementId = 11,
+                            Status = "Active",
+                            Street = "Saraci"
                         });
                 });
 
@@ -2873,18 +4935,11 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.CollectorProfile", b =>
                 {
-                    b.HasOne("AquaFlow.Services.Database.Settlement", "AssignedArea")
-                        .WithMany("CollectorProfiles")
-                        .HasForeignKey("AssignedAreaId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("AquaFlow.Services.Database.User", "User")
                         .WithOne("CollectorProfile")
                         .HasForeignKey("AquaFlow.Services.Database.CollectorProfile", "UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("AssignedArea");
 
                     b.Navigation("User");
                 });
@@ -3114,33 +5169,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Tariff");
 
                     b.Navigation("WaterMeter");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.MeterReplacement", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.WaterMeter", "NewWaterMeter")
-                        .WithMany()
-                        .HasForeignKey("NewWaterMeterId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AquaFlow.Services.Database.WaterMeter", "OldWaterMeter")
-                        .WithMany()
-                        .HasForeignKey("OldWaterMeterId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AquaFlow.Services.Database.User", "ReplacedBy")
-                        .WithMany()
-                        .HasForeignKey("ReplacedById")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("NewWaterMeter");
-
-                    b.Navigation("OldWaterMeter");
-
-                    b.Navigation("ReplacedBy");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Municipality", b =>
@@ -3527,8 +5555,6 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.Settlement", b =>
                 {
-                    b.Navigation("CollectorProfiles");
-
                     b.Navigation("CustomerProfiles");
 
                     b.Navigation("FaultReports");

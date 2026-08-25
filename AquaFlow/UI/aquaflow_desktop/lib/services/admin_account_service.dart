@@ -4,18 +4,15 @@ import 'dart:io' show SocketException;
 
 import 'package:http/http.dart' as http;
 
-import 'package:aquaflow_desktop/models/admin_customer_profile.dart';
-import 'package:aquaflow_desktop/models/admin_customer_profile_draft.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
 import 'package:aquaflow_desktop/shared/services/account_exception.dart';
 import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 
-/// Backs the admin-only "Moj nalog" screen for everything beyond email/phone
-/// (which already goes through the shared `AccountService`/`/Account/me`):
-/// the signed-in admin's own CustomerProfile (name/language/theme) and a
-/// password change. Kept separate from `AdminUserService` (which manages
-/// *other* users through `/Users` and needs `Users.Manage`) since every call
-/// here only ever acts on the caller's own id/profile.
+/// Backs the admin-only "Moj nalog" screen for the one thing that doesn't go
+/// through the shared `AccountService`/`/Account/me`: a password change.
+/// Kept separate from `AdminUserService` (which manages *other* users through
+/// `/Users` and needs `Users.Manage`) since this only ever acts on the
+/// caller's own password.
 ///
 /// The bearer token is read from [TokenStorage] and attached to every request.
 /// Failures throw [AccountException] with a user-safe message. The base URL
@@ -32,65 +29,6 @@ class AdminAccountService {
   final http.Client _client;
   final TokenStorage _tokenStorage;
   final Duration _timeout;
-
-  /// Fetches the CustomerProfile owned by [userId], or null if they don't have
-  /// one yet (the common case for admins, who have no customer profile).
-  Future<AdminCustomerProfile?> fetchProfile(int userId) async {
-    final token = await _requireToken();
-    final uri = Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles').replace(
-      queryParameters: {'UserId': '$userId', 'PageSize': '1'},
-    );
-
-    final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
-    );
-
-    if (response.statusCode != 200) {
-      throw AccountException(
-        _messageFor(response, 'Profil nije moguće učitati'),
-      );
-    }
-
-    final decoded = jsonDecode(response.body);
-    final itemsJson = decoded is Map<String, dynamic> ? decoded['items'] : null;
-    if (itemsJson is! List || itemsJson.isEmpty) return null;
-
-    final first = itemsJson.first;
-    if (first is! Map<String, dynamic>) return null;
-    return AdminCustomerProfile.fromJson(first);
-  }
-
-  /// Creates or updates the caller's own CustomerProfile. [existingProfileId]
-  /// must be the id from [fetchProfile], or null to create a new one.
-  Future<void> saveProfile(
-    int userId,
-    AdminCustomerProfileDraft draft, {
-    int? existingProfileId,
-  }) async {
-    final token = await _requireToken();
-    final isCreate = existingProfileId == null;
-    final uri = isCreate
-        ? Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles')
-        : Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles/$existingProfileId');
-    final headers = {
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    };
-    final body = jsonEncode(draft.toJson(userId));
-
-    final response = await _send(
-      () => isCreate
-          ? _client.post(uri, headers: headers, body: body)
-          : _client.patch(uri, headers: headers, body: body),
-    );
-
-    final expectedStatus = isCreate ? 201 : 200;
-    if (response.statusCode != expectedStatus) {
-      throw AccountException(
-        _messageFor(response, 'Profil nije moguće sačuvati'),
-      );
-    }
-  }
 
   /// Changes the signed-in user's own password via `PUT /Account/me/password`.
   /// The backend rejects the call (400) if [currentPassword] does not match.

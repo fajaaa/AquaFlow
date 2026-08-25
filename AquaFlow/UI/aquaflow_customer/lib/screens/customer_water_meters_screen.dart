@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
-import 'package:aquaflow_customer/screens/customer_fault_reports_screen.dart';
+import 'package:aquaflow_customer/models/customer_water_meter_page.dart';
 import 'package:aquaflow_customer/screens/customer_requests_screen.dart';
+import 'package:aquaflow_customer/screens/customer_water_meter_detail_screen.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_exception.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_service.dart';
 import 'package:aquaflow_customer/widgets/new_water_meter_request_dialog.dart';
@@ -11,16 +13,27 @@ import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_customer/shared/widgets/async_state_view.dart';
 import 'package:aquaflow_customer/shared/widgets/empty_state_view.dart';
 import 'package:aquaflow_customer/shared/widgets/list_skeleton.dart';
+import 'package:aquaflow_customer/shared/widgets/paged_table_pagination_bar.dart';
+import 'package:aquaflow_customer/shared/widgets/refresh_button.dart';
 
 /// "Vodomjeri" tab body: lists the signed-in customer's own water meters and
 /// lets them file a new-meter request (the "+" action) or open the full
 /// [CustomerRequestsScreen] (the "Zahtjevi" action). The requests themselves no
 /// longer render inline here - they live on their own screen.
 ///
-/// Card styling mirrors `NotificationsScreen`/`CustomerInvoicesScreen`: a
-/// branded gradient bar keyed to the meter's status, an accent-tinted status
-/// pill, and the same loading/empty/error scaffolding
-/// (`AsyncStateView`/`ListSkeleton`/`EmptyStateView`).
+/// Card styling mirrors `NotificationsScreen`: a branded gradient bar keyed
+/// to the meter's status, an accent-tinted status pill, and the same
+/// loading/empty/error scaffolding (`AsyncStateView`/`ListSkeleton`/
+/// `EmptyStateView`). Cards are tappable, pushing
+/// [CustomerWaterMeterDetailScreen] and reloading on return so the status/
+/// last-reading reflect anything that changed there (e.g. a payment).
+///
+/// Uses real server-side pagination
+/// (`GET /WaterMeters?Page=&PageSize=&IncludeTotalCount=true&SortBy=InstalledAt&SortDescending=true`;
+/// the backend pins the filter to the caller's CustomerProfile). Pagination
+/// is docked below the list rather than scrolled with it - same treatment as
+/// `NotificationsScreen` - so it stays reachable at the bottom of the tab on
+/// every device regardless of scroll position or item count.
 ///
 /// Rendered inside [MobileShell], so it has no Scaffold/AppBar of its own.
 class CustomerWaterMetersScreen extends StatefulWidget {
@@ -34,9 +47,12 @@ class CustomerWaterMetersScreen extends StatefulWidget {
 class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
   final CustomerWaterMeterService _service = CustomerWaterMeterService();
 
+  CustomerWaterMeterPage? _pageData;
   bool _loading = true;
   String? _error;
-  List<CustomerWaterMeter> _meters = const [];
+  int _page = 1;
+  int _pageSize = 10;
+  int _requestSerial = 0;
 
   @override
   void initState() {
@@ -44,21 +60,23 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool resetPage = false}) async {
+    final requestId = ++_requestSerial;
     setState(() {
+      if (resetPage) _page = 1;
       _loading = true;
       _error = null;
     });
 
     try {
-      final meters = await _service.fetchMine();
-      if (!mounted) return;
+      final pageData = await _service.fetchPage(page: _page, pageSize: _pageSize);
+      if (!mounted || requestId != _requestSerial) return;
       setState(() {
-        _meters = meters;
+        _pageData = pageData;
         _loading = false;
       });
     } on CustomerWaterMeterException catch (e) {
-      if (!mounted) return;
+      if (!mounted || requestId != _requestSerial) return;
       setState(() {
         _error = e.message;
         _loading = false;
@@ -66,13 +84,35 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
     }
   }
 
+  void _setPageSize(int? value) {
+    if (value == null || value == _pageSize || _loading) return;
+    setState(() {
+      _pageSize = value;
+      _page = 1;
+    });
+    _load();
+  }
+
+  void _goToPage(int page) {
+    if (page == _page || _loading) return;
+    setState(() => _page = page);
+    _load();
+  }
+
+  int _totalPages(int totalCount) {
+    if (totalCount <= 0) return 1;
+    return ((totalCount + _pageSize - 1) / _pageSize).floor();
+  }
+
   Future<void> _openNewRequestDialog() async {
     final created = await showNewWaterMeterRequestDialog(context);
     if (created == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Zahtjev za novi vodomjer je poslan.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).newWaterMeterRequestSuccess),
+        ),
       );
-      await _load();
+      await _load(resetPage: true);
     }
   }
 
@@ -80,8 +120,10 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
     await context.pushScreen(const CustomerRequestsScreen());
   }
 
-  Future<void> _openFaultReports() async {
-    await context.pushScreen(const CustomerFaultReportsScreen());
+  Future<void> _openMeterDetail(CustomerWaterMeter meter) async {
+    await context.pushScreen(CustomerWaterMeterDetailScreen(meter: meter));
+    if (!mounted) return;
+    await _load();
   }
 
   @override
@@ -92,6 +134,24 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pageData = _pageData;
+    final loc = AppLocalizations.of(context);
+
+    // Docked below the list rather than as its last scrollable item, so it
+    // stays visible and reachable at the bottom of the tab on every device
+    // regardless of scroll position or item count.
+    final pagination = pageData != null && _error == null
+        ? PagedTablePaginationBar(
+            page: _page,
+            totalPages: _totalPages(pageData.totalCount),
+            totalCount: pageData.totalCount,
+            pageSize: _pageSize,
+            loading: _loading,
+            onPageChanged: _goToPage,
+            onPageSizeChanged: _setPageSize,
+          )
+        : null;
+
     return SafeArea(
       child: Column(
         children: [
@@ -101,38 +161,30 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Vodomjeri',
+                    loc.tabWaterMeters,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Zahtjevi',
+                  tooltip: loc.requestsTitle,
                   onPressed: _openRequests,
                   icon: const Icon(Icons.receipt_long_outlined),
                 ),
                 IconButton(
-                  tooltip: 'Prijave kvarova',
-                  onPressed: _openFaultReports,
-                  icon: const Icon(Icons.report_problem_outlined),
-                ),
-                IconButton(
-                  tooltip: 'Dodaj vodomjer',
+                  tooltip: loc.addWaterMeterTooltip,
                   onPressed: _loading ? null : _openNewRequestDialog,
                   icon: const Icon(Icons.add),
                 ),
-                IconButton(
-                  tooltip: 'Osvježi',
-                  onPressed: _loading ? null : _load,
-                  icon: const Icon(Icons.refresh),
-                ),
+                RefreshButton(onRefresh: () => _load(), enabled: !_loading),
               ],
             ),
           ),
-          if (_loading && _meters.isNotEmpty)
+          if (_loading && pageData != null)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildBody()),
+          ?pagination,
         ],
       ),
     );
@@ -140,24 +192,26 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
 
   Widget _buildBody() {
     return AsyncStateView(
-      loading: _loading && _meters.isEmpty,
+      loading: _loading && _pageData == null,
       error: _error,
-      onRetry: _load,
+      onRetry: () => _load(),
       loadingBuilder: (context) => ListSkeleton(
         itemBuilder: (context, index) => _WaterMeterCard(meter: _skeletonMeter),
       ),
       builder: (context) {
-        if (_meters.isEmpty) {
+        final meters = _pageData!.items;
+
+        if (meters.isEmpty) {
           return RefreshIndicator(
-            onRefresh: _load,
+            onRefresh: () => _load(),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(24),
               children: [
                 SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-                const EmptyStateView(
+                EmptyStateView(
                   icon: Icons.water_drop_outlined,
-                  message: 'Trenutno nemate evidentiranih vodomjera.',
+                  message: AppLocalizations.of(context).waterMetersEmptyMessage,
                 ),
               ],
             ),
@@ -165,14 +219,16 @@ class _CustomerWaterMetersScreenState extends State<CustomerWaterMetersScreen> {
         }
 
         return RefreshIndicator(
-          onRefresh: _load,
+          onRefresh: () => _load(),
           child: ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            itemCount: _meters.length,
+            itemCount: meters.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) =>
-                _WaterMeterCard(meter: _meters[index]),
+            itemBuilder: (context, index) => _WaterMeterCard(
+              meter: meters[index],
+              onTap: () => _openMeterDetail(meters[index]),
+            ),
           ),
         );
       },
@@ -194,163 +250,178 @@ final _skeletonMeter = CustomerWaterMeter(
 );
 
 class _WaterMeterCard extends StatelessWidget {
-  const _WaterMeterCard({required this.meter});
+  const _WaterMeterCard({required this.meter, this.onTap});
 
   final CustomerWaterMeter meter;
+
+  /// Null for the skeleton placeholder card, which isn't tappable.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
+    final loc = AppLocalizations.of(context);
 
-    final meta = WaterMeterStatusMeta.of(meter.status);
+    final meta = WaterMeterStatusMeta.of(meter.status, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     // Inactive is the meter's "needs attention" state, same role
     // `isPayable` plays for an invoice card / `!isRead` plays for a
     // notification card.
     final needsAttention = meter.status.toLowerCase() == 'inactive';
 
-    final subtitle = [meter.settlementName, meter.address]
-        .where((part) => part.trim().isNotEmpty)
-        .join(', ');
+    final subtitle = [
+      meter.settlementName,
+      meter.address,
+    ].where((part) => part.trim().isNotEmpty).join(', ');
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isLight ? Colors.white : colorScheme.surfaceContainerHighest,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: needsAttention
-              ? accent.withValues(alpha: 0.35)
-              : (isLight
-                    ? const Color(0x121F2937)
-                    : colorScheme.outlineVariant.withValues(alpha: 0.5)),
-          width: needsAttention ? 1.5 : 1,
-        ),
-        boxShadow: isLight
-            ? const [
-                BoxShadow(
-                  color: Color(0x14062845),
-                  blurRadius: 24,
-                  offset: Offset(0, 10),
-                ),
-              ]
-            : null,
-      ),
-      // A ListView gives each row unbounded height, so a bare stretched
-      // Row would force an infinite-height constraint on its children and
-      // crash. IntrinsicHeight bounds the row to its tallest child, letting
-      // the color bar stretch to the card's height.
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Colored status bar - branded gradient with a white glyph.
-            Container(
-              width: 58,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    _shade(meta.color, 0.16),
-                    _shade(meta.color, -0.20),
-                  ],
-                ),
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(18),
-                ),
-              ),
-              child: Center(
-                child: Icon(meta.icon, color: Colors.white, size: 20),
-              ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isLight ? Colors.white : colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: needsAttention
+                  ? accent.withValues(alpha: 0.35)
+                  : (isLight
+                        ? const Color(0x121F2937)
+                        : colorScheme.outlineVariant.withValues(alpha: 0.5)),
+              width: needsAttention ? 1.5 : 1,
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            meter.serialNumber,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: needsAttention
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                              color: colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        if (needsAttention) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: accent,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ],
+            boxShadow: isLight
+                ? const [
+                    BoxShadow(
+                      color: Color(0x14062845),
+                      blurRadius: 24,
+                      offset: Offset(0, 10),
+                    ),
+                  ]
+                : null,
+          ),
+          // A ListView gives each row unbounded height, so a bare stretched
+          // Row would force an infinite-height constraint on its children and
+          // crash. IntrinsicHeight bounds the row to its tallest child, letting
+          // the color bar stretch to the card's height.
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Colored status bar - branded gradient with a white glyph.
+                Container(
+                  width: 58,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        _shade(meta.color, 0.16),
+                        _shade(meta.color, -0.20),
                       ],
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle.isEmpty ? '-' : subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        height: 1.4,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(18),
                     ),
-                    const SizedBox(height: 9),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
+                  ),
+                  child: Center(
+                    child: Icon(meta.icon, color: Colors.white, size: 20),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            meta.label,
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: accent,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                meter.serialNumber,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: needsAttention
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (needsAttention) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: accent,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
+                        const SizedBox(height: 3),
                         Text(
-                          'Zadnje očitanje: ${meter.lastReading.toStringAsFixed(2)} m³',
+                          subtitle.isEmpty ? '-' : subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 12.5,
+                            height: 1.4,
                             color: colorScheme.onSurfaceVariant,
                           ),
                         ),
+                        const SizedBox(height: 9),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                meta.label,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: accent,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              loc.lastReadingLabel(
+                                meter.lastReading.toStringAsFixed(2),
+                              ),
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_request_exception.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_request_service.dart';
 import 'package:aquaflow_customer/shared/models/city_lookup.dart';
@@ -212,13 +213,14 @@ class _NewWaterMeterRequestDialogState
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Zahtjev za novi vodomjer'),
+      title: Text(loc.newWaterMeterRequestTitle),
       content: SizedBox(width: 420, child: _buildContent()),
       actions: [
         TextButton(
           onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton(
           onPressed: _submitting || _loading || _loadError != null
@@ -230,7 +232,7 @@ class _NewWaterMeterRequestDialogState
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Pošalji zahtjev'),
+              : Text(loc.newWaterMeterRequestSubmitButton),
         ),
       ],
     );
@@ -238,6 +240,7 @@ class _NewWaterMeterRequestDialogState
 
   Widget _buildContent() {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
 
     if (_loading) {
       return const SizedBox(
@@ -261,7 +264,7 @@ class _NewWaterMeterRequestDialogState
               FilledButton.icon(
                 onPressed: _load,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Pokušaj ponovo'),
+                label: Text(loc.commonRetry),
               ),
             ],
           ),
@@ -277,9 +280,9 @@ class _NewWaterMeterRequestDialogState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _CascadingDropdown(
-              label: 'Grad',
+              label: loc.locationCityLabel,
               icon: Icons.location_city_outlined,
-              emptyLabel: 'Bez grada',
+              emptyLabel: loc.locationNoCityOption,
               value: _selectedCityId,
               items: [
                 for (final city in _cities) (city.id, city.name),
@@ -288,9 +291,9 @@ class _NewWaterMeterRequestDialogState
             ),
             const SizedBox(height: 16),
             _CascadingDropdown(
-              label: 'Općina',
+              label: loc.locationMunicipalityLabel,
               icon: Icons.map_outlined,
-              emptyLabel: 'Bez općine',
+              emptyLabel: loc.locationNoMunicipalityOption,
               value: _selectedMunicipalityId,
               items: [
                 for (final m in _municipalitiesForSelectedCity) (m.id, m.name),
@@ -299,9 +302,9 @@ class _NewWaterMeterRequestDialogState
             ),
             const SizedBox(height: 16),
             _CascadingDropdown(
-              label: 'Naselje',
+              label: loc.locationSettlementLabel,
               icon: Icons.holiday_village_outlined,
-              emptyLabel: 'Bez naselja',
+              emptyLabel: loc.locationNoSettlementOption,
               value: _selectedSettlementId,
               items: [
                 for (final s in _settlementsForSelectedMunicipality)
@@ -317,11 +320,11 @@ class _NewWaterMeterRequestDialogState
               enabled: !_submitting,
               maxLength: 120,
               validator: _requiredValidator,
-              decoration: const InputDecoration(
-                labelText: 'Ulica',
-                prefixIcon: Icon(Icons.signpost_outlined),
+              decoration: InputDecoration(
+                labelText: loc.locationStreetLabel,
+                prefixIcon: const Icon(Icons.signpost_outlined),
                 counterText: '',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -330,11 +333,11 @@ class _NewWaterMeterRequestDialogState
               enabled: !_submitting,
               maxLength: 20,
               validator: _requiredValidator,
-              decoration: const InputDecoration(
-                labelText: 'Broj',
-                prefixIcon: Icon(Icons.pin_outlined),
+              decoration: InputDecoration(
+                labelText: loc.locationHouseNumberLabel,
+                prefixIcon: const Icon(Icons.pin_outlined),
                 counterText: '',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -343,9 +346,9 @@ class _NewWaterMeterRequestDialogState
               enabled: !_submitting,
               maxLines: 3,
               maxLength: 500,
-              decoration: const InputDecoration(
-                labelText: 'Napomena (opciono)',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: loc.newWaterMeterRequestNoteLabel,
+                border: const OutlineInputBorder(),
               ),
             ),
             if (_error != null) ...[
@@ -364,12 +367,16 @@ class _NewWaterMeterRequestDialogState
   }
 
   String? _settlementValidator(int? value) {
-    if (value == null || value == 0) return 'Odaberite naselje.';
+    if (value == null || value == 0) {
+      return AppLocalizations.of(context).settlementRequiredError;
+    }
     return null;
   }
 
   String? _requiredValidator(String? value) {
-    if ((value ?? '').trim().isEmpty) return 'Obavezno polje.';
+    if ((value ?? '').trim().isEmpty) {
+      return AppLocalizations.of(context).fieldRequiredError;
+    }
     return null;
   }
 }

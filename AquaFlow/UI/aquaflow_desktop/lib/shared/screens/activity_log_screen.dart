@@ -8,6 +8,7 @@ import '../services/activity_log_exception.dart';
 import '../services/activity_log_service.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/error_retry.dart';
+import '../widgets/paged_table_pagination_bar.dart';
 
 class ActivityLogScreen extends StatefulWidget {
   const ActivityLogScreen({super.key});
@@ -23,7 +24,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
   bool _loading = true;
   String? _error;
   int _page = 1;
-  final int _pageSize = 10;
+  int _pageSize = 10;
   int _requestSerial = 0;
 
   @override
@@ -66,6 +67,15 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     }
   }
 
+  void _setPageSize(int? value) {
+    if (value == null || value == _pageSize || _loading) return;
+    setState(() {
+      _pageSize = value;
+      _page = 1;
+    });
+    _load();
+  }
+
   void _goToPage(int page) {
     if (page == _page || _loading) return;
     setState(() => _page = page);
@@ -106,12 +116,14 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
               const LinearProgressIndicator(minHeight: 2),
             Expanded(child: _buildContent()),
             if (pageData != null && _error == null)
-              _PaginationBar(
+              PagedTablePaginationBar(
                 page: _page,
                 totalPages: totalPages,
                 totalCount: pageData.totalCount,
+                pageSize: _pageSize,
                 loading: _loading,
                 onPageChanged: _goToPage,
+                onPageSizeChanged: _setPageSize,
               ),
           ],
         ),
@@ -324,74 +336,3 @@ class _ActivityCard extends StatelessWidget {
         '${two(date.hour)}:${two(date.minute)}';
   }
 }
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.totalCount,
-    required this.loading,
-    required this.onPageChanged,
-  });
-
-  final int page;
-  final int totalPages;
-  final int totalCount;
-  final bool loading;
-  final ValueChanged<int> onPageChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGoBack = page > 1 && !loading;
-    final canGoForward = page < totalPages && !loading;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.35)),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Prethodna stranica',
-              onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Stranica $page od $totalPages',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelLarge,
-                  ),
-                  Text(
-                    '$totalCount ukupno',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: 'Sljedeća stranica',
-              onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-

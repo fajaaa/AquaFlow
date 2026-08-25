@@ -10,6 +10,7 @@ import '../services/auth_exception.dart';
 import '../services/preferences_api_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/token_storage.dart';
+import 'locale_provider.dart';
 import 'theme_provider.dart';
 
 /// Where the app is in the auth lifecycle. [unknown] is the initial state while
@@ -25,11 +26,13 @@ class AuthProvider extends ChangeNotifier {
     PushNotificationService? pushNotificationService,
     PreferencesApiService? preferencesService,
     ThemeProvider? themeProvider,
+    LocaleProvider? localeProvider,
   }) : _authService = authService ?? AuthApiService(),
        _tokenStorage = tokenStorage ?? TokenStorage(),
        _pushService = pushNotificationService ?? PushNotificationService(),
        _preferencesService = preferencesService ?? PreferencesApiService(),
-       _themeProvider = themeProvider ?? ThemeProvider();
+       _themeProvider = themeProvider ?? ThemeProvider(),
+       _localeProvider = localeProvider ?? LocaleProvider();
 
   final AuthApiService _authService;
   final TokenStorage _tokenStorage;
@@ -38,6 +41,8 @@ class AuthProvider extends ChangeNotifier {
   // Shared with `main.dart`'s widget tree (passed in, not created there) so
   // applying the fetched theme here actually repaints the app.
   final ThemeProvider _themeProvider;
+  // Same reasoning as [_themeProvider], for `UserPreference.Language`.
+  final LocaleProvider _localeProvider;
 
   AuthStatus _status = AuthStatus.unknown;
   AuthSession? _session;
@@ -60,6 +65,7 @@ class AuthProvider extends ChangeNotifier {
       _setStatus(AuthStatus.authenticated);
       _registerPushToken();
       _applyThemePreference();
+      _applyLanguagePreference();
       return;
     }
 
@@ -179,6 +185,7 @@ class AuthProvider extends ChangeNotifier {
     _setStatus(AuthStatus.authenticated);
     _registerPushToken();
     _applyThemePreference();
+    _applyLanguagePreference();
   }
 
   /// Fire-and-forget: fetches `UserPreference.Theme` and applies it to the
@@ -193,6 +200,20 @@ class AuthProvider extends ChangeNotifier {
         );
       }).catchError((e) {
         debugPrint('Failed to load theme preference: $e');
+      }),
+    );
+  }
+
+  /// Fire-and-forget: fetches `UserPreference.Language` and applies it to the
+  /// shared [LocaleProvider]. Same reasoning as [_applyThemePreference] - must
+  /// never block sign-in, and a failure just leaves [LocaleProvider] at its
+  /// current (Bosnian by default) locale.
+  void _applyLanguagePreference() {
+    unawaited(
+      _preferencesService.getPreferences().then((preferences) {
+        _localeProvider.setLanguageCode(preferences.language);
+      }).catchError((e) {
+        debugPrint('Failed to load language preference: $e');
       }),
     );
   }

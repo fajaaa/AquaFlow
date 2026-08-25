@@ -1,0 +1,685 @@
+import 'package:flutter/material.dart';
+
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
+import 'package:aquaflow_customer/models/customer_invoice.dart';
+import 'package:aquaflow_customer/models/customer_water_meter.dart';
+import 'package:aquaflow_customer/models/customer_water_meter_stats.dart';
+import 'package:aquaflow_customer/screens/customer_invoices_screen.dart';
+import 'package:aquaflow_customer/services/customer_invoice_exception.dart';
+import 'package:aquaflow_customer/services/customer_invoice_service.dart';
+import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
+import 'package:aquaflow_customer/shared/theme/app_theme.dart';
+import 'package:aquaflow_customer/shared/utils/money_format.dart';
+import 'package:aquaflow_customer/shared/widgets/async_state_view.dart';
+import 'package:aquaflow_customer/shared/widgets/list_skeleton.dart';
+import 'package:aquaflow_customer/widgets/water_meter_status_pill.dart';
+
+/// Detail view of a single water meter belonging to the signed-in customer,
+/// pushed as its own Scaffold+AppBar route - same push pattern as
+/// `CustomerInvoiceDetailScreen`. Loads that meter's own invoices
+/// (`CustomerInvoiceService.fetchAllForMeter`, backend pins `CustomerId` to
+/// the caller) and derives every consumption/billing figure from them via
+/// `CustomerWaterMeterStats.from` - there is no separate stats endpoint.
+class CustomerWaterMeterDetailScreen extends StatefulWidget {
+  const CustomerWaterMeterDetailScreen({super.key, required this.meter});
+
+  final CustomerWaterMeter meter;
+
+  @override
+  State<CustomerWaterMeterDetailScreen> createState() =>
+      _CustomerWaterMeterDetailScreenState();
+}
+
+class _CustomerWaterMeterDetailScreenState
+    extends State<CustomerWaterMeterDetailScreen> {
+  final CustomerInvoiceService _service = CustomerInvoiceService();
+
+  bool _loading = true;
+  String? _error;
+  List<CustomerInvoice> _invoices = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _service.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final invoices = await _service.fetchAllForMeter(widget.meter.id);
+      if (!mounted) return;
+      setState(() {
+        _invoices = invoices;
+        _loading = false;
+      });
+    } on CustomerInvoiceException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    }
+  }
+
+  // CustomerInvoicesScreen -> CustomerInvoiceDetailScreen never returns a
+  // result through pop (payment completion isn't signalled that way), so an
+  // unconditional reload here is the only way this screen's stats/
+  // "Neplaćeno" figures pick up a payment made from that flow.
+  Future<void> _openInvoices() async {
+    await context.pushScreen(
+      CustomerInvoicesScreen(
+        waterMeterId: widget.meter.id,
+        meterSerialNumber: widget.meter.serialNumber,
+      ),
+    );
+    if (!mounted) return;
+    await _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final meter = widget.meter;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final loc = AppLocalizations.of(context);
+
+    final meta = WaterMeterStatusMeta.of(meter.status, loc);
+    final accent = _readableAccent(meta.color, theme.brightness);
+    final onAccent =
+        ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
+        ? Colors.white
+        : AppColors.textDark;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(meter.serialNumber)),
+      body: SafeArea(
+        child: AsyncStateView(
+          loading: _loading,
+          error: _error,
+          onRetry: _load,
+          loadingBuilder: (context) => ListSkeleton(
+            itemCount: 4,
+            itemBuilder: (context, index) => const _SkeletonCard(),
+          ),
+          builder: (context) {
+            final stats = CustomerWaterMeterStats.from(
+              meter: meter,
+              invoices: _invoices,
+            );
+
+            return RefreshIndicator(
+              onRefresh: _load,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Status banner - full-width strip across the top, same
+                    // treatment as the status banner on
+                    // CustomerInvoiceDetailScreen.
+                    Container(
+                      width: double.infinity,
+                      color: accent.withValues(alpha: 0.10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: accent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(meta.icon, color: onAccent, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                meter.serialNumber,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                meta.label,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                  color: accent,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _MeterInfoCard(meter: meter, accent: accent),
+                          const SizedBox(height: 16),
+                          _StatsCard(stats: stats, accent: accent),
+                          const SizedBox(height: 16),
+                          _ConsumptionChartCard(stats: stats, accent: accent),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: accent,
+                                foregroundColor: onAccent,
+                              ),
+                              onPressed: _openInvoices,
+                              icon: const Icon(Icons.receipt_long_outlined),
+                              label: Text(loc.showInvoicesButton),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Mirrors `_readableAccent` in customer_invoice_detail_screen.dart: any
+  /// accent dark enough to blend into the dark theme's background is lifted
+  /// toward white there. Light theme and the brighter accents are returned
+  /// unchanged.
+  static Color _readableAccent(Color base, Brightness brightness) {
+    if (brightness == Brightness.dark && base.computeLuminance() < 0.2) {
+      return Color.lerp(base, Colors.white, 0.6)!;
+    }
+    return base;
+  }
+}
+
+class _MeterInfoCard extends StatelessWidget {
+  const _MeterInfoCard({required this.meter, required this.accent});
+
+  final CustomerWaterMeter meter;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeading(
+            loc.meterInfoSectionHeading,
+            icon: Icons.info_outline,
+            color: accent,
+          ),
+          const SizedBox(height: 10),
+          _KeyValueRow(
+            label: loc.locationSettlementLabel,
+            value: meter.settlementName.trim().isEmpty
+                ? '-'
+                : meter.settlementName,
+          ),
+          const SizedBox(height: 6),
+          _KeyValueRow(
+            label: loc.addressLabel,
+            value: meter.address.isEmpty ? '-' : meter.address,
+          ),
+          const SizedBox(height: 6),
+          _KeyValueRow(
+            label: loc.installedAtLabel,
+            value: meter.installedAt != null
+                ? _formatDate(meter.installedAt!)
+                : '-',
+          ),
+          const SizedBox(height: 6),
+          _KeyValueRow(
+            label: loc.initialReadingLabel,
+            value: '${meter.initialReading.toStringAsFixed(2)} m³',
+          ),
+          const SizedBox(height: 6),
+          _KeyValueRow(
+            label: loc.lastReadingFieldLabel,
+            value: '${meter.lastReading.toStringAsFixed(2)} m³',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsCard extends StatelessWidget {
+  const _StatsCard({required this.stats, required this.accent});
+
+  final CustomerWaterMeterStats stats;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final hasUnpaid = stats.unpaidCount > 0;
+    final period =
+        stats.lastBillingPeriodFrom != null && stats.lastBillingPeriodTo != null
+        ? '${_formatDate(stats.lastBillingPeriodFrom!)} - ${_formatDate(stats.lastBillingPeriodTo!)}'
+        : '-';
+
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeading(
+            loc.statisticsSectionHeading,
+            icon: Icons.insights_outlined,
+            color: accent,
+          ),
+          const SizedBox(height: 10),
+          _KeyValueRow(
+            label: loc.lastReadingM3Label,
+            value: '${stats.lastReading.toStringAsFixed(2)} m³',
+          ),
+          const SizedBox(height: 6),
+          _KeyValueRow(
+            label: loc.averageConsumptionLabel,
+            value: '${stats.averageConsumptionM3.toStringAsFixed(2)} m³',
+          ),
+          const SizedBox(height: 6),
+          _KeyValueRow(
+            label: loc.totalConsumptionLabel,
+            value: loc.totalConsumptionValue(
+              stats.totalConsumptionM3.toStringAsFixed(2),
+              stats.invoiceCount,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _KeyValueRow(
+            label: loc.unpaidLabel,
+            value: loc.unpaidValue(
+              stats.unpaidCount,
+              formatMoney(stats.unpaidAmount),
+            ),
+            valueColor: hasUnpaid ? AppColors.warning : null,
+            emphasize: hasUnpaid,
+          ),
+          const SizedBox(height: 6),
+          _KeyValueRow(label: loc.lastBillingPeriodLabel, value: period),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConsumptionChartCard extends StatefulWidget {
+  const _ConsumptionChartCard({required this.stats, required this.accent});
+
+  final CustomerWaterMeterStats stats;
+  final Color accent;
+
+  @override
+  State<_ConsumptionChartCard> createState() => _ConsumptionChartCardState();
+}
+
+class _ConsumptionChartCardState extends State<_ConsumptionChartCard> {
+  static const double _barAreaHeight = 120;
+
+  /// Cycled per bar so each month reads as a distinct color, same brand
+  /// palette used elsewhere in the app (no colors outside `AppColors`).
+  static const List<Color> _barColors = [
+    AppColors.secondary,
+    AppColors.success,
+    AppColors.warning,
+    AppColors.primary,
+  ];
+
+  int? _selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
+    final items = widget.stats.recentForChart;
+    final maxConsumption = items.fold<double>(
+      0,
+      (max, invoice) =>
+          invoice.consumptionM3 > max ? invoice.consumptionM3 : max,
+    );
+
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeading(
+            loc.consumptionByPeriodHeading,
+            icon: Icons.bar_chart_outlined,
+            color: widget.accent,
+          ),
+          const SizedBox(height: 14),
+          if (items.isEmpty || maxConsumption <= 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.bar_chart_outlined,
+                      size: 40,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      loc.noConsumptionDataMessage,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (var i = 0; i < items.length; i++)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: _ConsumptionBar(
+                        invoice: items[i],
+                        color: _barColors[i % _barColors.length],
+                        heightFactor: (items[i].consumptionM3 / maxConsumption)
+                            .clamp(0.02, 1.0),
+                        barAreaHeight: _barAreaHeight,
+                        selected: _selectedIndex == i,
+                        onTap: () => setState(
+                          () => _selectedIndex = _selectedIndex == i
+                              ? null
+                              : i,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A single month's bar. Tapping it toggles a tooltip-style badge above the
+/// bar showing the exact consumption for that period, mirroring the
+/// press-to-reveal-value chart the customer asked for.
+class _ConsumptionBar extends StatelessWidget {
+  const _ConsumptionBar({
+    required this.invoice,
+    required this.color,
+    required this.heightFactor,
+    required this.barAreaHeight,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final CustomerInvoice invoice;
+  final Color color;
+  final double heightFactor;
+  final double barAreaHeight;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (selected) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.inverseSurface,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${invoice.consumptionM3.toStringAsFixed(1)} m³',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onInverseSurface,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
+          SizedBox(
+            height: barAreaHeight,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: FractionallySizedBox(
+                heightFactor: heightFactor,
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [_shade(color, 0.16), _shade(color, -0.20)],
+                    ),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(6),
+                    ),
+                    border: selected
+                        ? Border.all(color: theme.colorScheme.onSurface, width: 1.5)
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _formatMonthYear(invoice.billingPeriodFrom),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+              color: selected
+                  ? theme.colorScheme.onSurface
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Tints [c] toward white for a positive [percent] or toward black for a
+  /// negative one - same approach as `_shade` in
+  /// customer_water_meters_screen.dart, used here for the bar gradient.
+  static Color _shade(Color c, double percent) {
+    if (percent >= 0) return Color.lerp(c, Colors.white, percent)!;
+    return Color.lerp(c, Colors.black, -percent)!;
+  }
+
+  static String _formatMonthYear(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final year = (date.year % 100).toString().padLeft(2, '0');
+    return '$month/$year';
+  }
+}
+
+/// Mirrors `_SectionCard` in customer_invoice_detail_screen.dart so this
+/// screen's sections use the same rounded/bordered/shadowed card.
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isLight
+            ? Colors.white
+            : theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isLight
+              ? const Color(0xFFE1EDF7)
+              : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+        boxShadow: isLight
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Mirrors `_SectionHeading` in customer_invoice_detail_screen.dart.
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading(this.text, {required this.icon, required this.color});
+
+  final String text;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 6),
+        Text(
+          text.toUpperCase(),
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _KeyValueRow extends StatelessWidget {
+  const _KeyValueRow({
+    required this.label,
+    required this.value,
+    this.emphasize = false,
+    this.valueColor,
+  });
+
+  final String label;
+  final String value;
+  final bool emphasize;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          value,
+          textAlign: TextAlign.end,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: emphasize ? FontWeight.w700 : FontWeight.w600,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Placeholder card shown by `ListSkeleton` while the meter's invoices are
+/// loading - shimmered by `Skeletonizer`, so the exact text does not matter,
+/// only the layout shape.
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          _SectionHeading(
+            'Učitavanje',
+            icon: Icons.info_outline,
+            color: Colors.grey,
+          ),
+          SizedBox(height: 10),
+          _KeyValueRow(label: 'Naselje', value: 'Naselje Primjer'),
+          SizedBox(height: 6),
+          _KeyValueRow(label: 'Adresa', value: 'Ulica 12'),
+          SizedBox(height: 6),
+          _KeyValueRow(label: 'Datum ugradnje', value: '01.01.2024.'),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatDate(DateTime date) {
+  String two(int value) => value.toString().padLeft(2, '0');
+  return '${two(date.day)}.${two(date.month)}.${date.year}.';
+}

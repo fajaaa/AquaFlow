@@ -1,9 +1,10 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/api_config.dart';
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
+
 import '../providers/auth_provider.dart';
+import '../providers/locale_provider.dart';
 import '../theme/app_theme.dart';
 
 /// Email + password login form, pushed on top of [WelcomeScreen]. On success
@@ -64,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final message = auth.errorMessage ?? 'Login failed.';
+    final message = auth.errorMessage ?? AppLocalizations.of(context).loginFailedError;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
@@ -73,9 +74,12 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isBusy = context.select<AuthProvider, bool>((a) => a.isBusy);
+    final loc = AppLocalizations.of(context);
 
     return Scaffold(
-      body: Container(
+      body: Stack(
+        children: [
+          Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -102,11 +106,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.white,
                           ),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'Prijava',
+                            loc.loginTitle,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -135,10 +139,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         'assets/images/logo.png',
                         height: 56,
                         fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => const Text(
-                          'AquaFlow',
+                        errorBuilder: (context, error, stackTrace) => Text(
+                          loc.appTitle,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -148,17 +152,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // DEBUG-ONLY: shows which backend host the app targets, so
-                    // connectivity issues on a device are easy to diagnose.
-                    if (kDebugMode)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          ApiConfig.baseUrl,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white70),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        loc.loginWelcomeBack,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
+                    ),
                     const SizedBox(height: 28),
                     Card(
                       elevation: 8,
@@ -180,15 +185,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const [AutofillHints.email],
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: loc.fieldEmailLabel,
+                      prefixIcon: const Icon(Icons.email_outlined),
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (value) {
                       final email = value?.trim() ?? '';
-                      if (email.isEmpty) return 'Email is required.';
-                      if (!email.contains('@')) return 'Enter a valid email.';
+                      if (email.isEmpty) return loc.emailRequiredError;
+                      if (!email.contains('@')) return loc.emailInvalidError;
                       return null;
                     },
                   ),
@@ -201,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => isBusy ? null : _submit(),
                     decoration: InputDecoration(
-                      labelText: 'Password',
+                      labelText: loc.fieldPasswordLabel,
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
@@ -217,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     validator: (value) =>
                         (value == null || value.isEmpty)
-                            ? 'Password is required.'
+                            ? loc.passwordRequiredError
                             : null,
                   ),
                   CheckboxListTile(
@@ -229,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controlAffinity: ListTileControlAffinity.leading,
                     contentPadding: EdgeInsets.zero,
                     dense: true,
-                    title: const Text('Zapamti me'),
+                    title: Text(loc.loginRememberMe),
                   ),
                   const SizedBox(height: 20),
                   DecoratedBox(
@@ -262,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('Sign in'),
+                            : Text(loc.authLoginButton),
                       ),
                     ),
                   ),
@@ -277,6 +282,46 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+          const Positioned(
+            top: 8,
+            right: 8,
+            child: SafeArea(child: _LanguageToggle()),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small BS/EN switch, independent of any account/login state and with no
+/// backend call - the only way to change language before authenticating.
+/// Nothing here persists: a fresh app launch defaults back to
+/// [LocaleProvider]'s own `Locale('bs')` until a logged-in user's
+/// `UserPreference.Language` is fetched in `AuthProvider.bootstrap()`.
+class _LanguageToggle extends StatelessWidget {
+  const _LanguageToggle();
+
+  @override
+  Widget build(BuildContext context) {
+    final languageCode = context.watch<LocaleProvider>().locale.languageCode;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: SegmentedButton<String>(
+        style: SegmentedButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+        ),
+        segments: const [
+          ButtonSegment(value: 'bs', label: Text('BS')),
+          ButtonSegment(value: 'en', label: Text('EN')),
+        ],
+        selected: {languageCode},
+        onSelectionChanged: (selection) =>
+            context.read<LocaleProvider>().setLanguageCode(selection.first),
       ),
     );
   }

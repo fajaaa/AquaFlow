@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
+
 import '../navigation/app_navigation.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
 
 /// First screen shown to a signed-out user, before the login form. Purely
-/// navigational - offers "Registruj se" / "Prijavi se" and pushes the
+/// navigational - offers "Prijavi se" / "Registruj se" and pushes the
 /// matching screen.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -49,10 +52,10 @@ class WelcomeScreen extends StatelessWidget {
                         'assets/images/logo.png',
                         height: 56,
                         fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => const Text(
-                          'AquaFlow',
+                        errorBuilder: (context, error, stackTrace) => Text(
+                          loc.appTitle,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -62,39 +65,26 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    const Text(
-                      'Svaka kap, evidentirana.',
+                    Text(
+                      loc.welcomeTagline,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 26,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Mali koraci u štednji vode prave velike valove promjena.',
+                    Text(
+                      loc.welcomeSubtitle,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white70,
                         fontStyle: FontStyle.italic,
                         fontSize: 14,
                       ),
                     ),
                     const SizedBox(height: 40),
-                    FilledButton(
-                      onPressed: () => context.pushScreen(const RegisterScreen()),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Registruj se'),
-                    ),
-                    const SizedBox(height: 12),
                     OutlinedButton(
                       onPressed: () => context.pushScreen(const LoginScreen()),
                       style: OutlinedButton.styleFrom(
@@ -105,7 +95,21 @@ class WelcomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Prijavi se'),
+                      child: Text(loc.authLoginButton),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () =>
+                          context.pushScreen(const RegisterScreen()),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(loc.authRegisterButton),
                     ),
                   ],
                 ),

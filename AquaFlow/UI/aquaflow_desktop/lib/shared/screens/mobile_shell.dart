@@ -72,7 +72,7 @@ class _MobileShellState extends State<MobileShell> {
 
   /// Fetches `GET /Account/preferences` just to have a base object (language/
   /// notification flags) for the `PUT` in [_saveTheme] - a failure here (e.g.
-  /// offline) is silently ignored, same as [AccountEditScreen]; the theme
+  /// offline) is silently ignored, same as `PersonalDetailsEditScreen`; the theme
   /// toggle still works locally via [ThemeProvider], it just won't have the
   /// user's other saved preferences to echo back until this succeeds.
   Future<void> _loadPreferences() async {

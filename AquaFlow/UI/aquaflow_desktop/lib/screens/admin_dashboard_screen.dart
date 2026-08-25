@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/screens/admin_account_edit_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_codebook_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_collectors_screen.dart';
@@ -22,17 +23,25 @@ import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
 ///
 /// Classic admin layout: a fixed left [_Sidebar] (brand on top, a vertical menu
 /// below with the active item highlighted in blue and a left indicator bar) and
-/// a content area on the right that swaps with the selected menu item. The
-/// "Obavijesti", "Šifarnik", "Tarife", "Računi", "Prijave kvarova",
-/// "Postavke firme", and "Moj nalog" sections embed their existing screens; the rest are placeholders
-/// until wired up. There is no "Aktivnosti" section - a user's activity log is
-/// reached per-row from "Korisnici"/"Administratori" (see
-/// [AdminUserActivityLogsScreen]). "Moj nalog" uses
-/// the admin-only [AdminAccountEditScreen] (not the shared `AccountEditScreen`
-/// used by the mobile customer/collector "Nalog" tab), since it edits more than
-/// contact data here. The nav list is built per-session (`_buildNavItems`,
-/// not a static const list) because "Podrška" only appears for a caller
-/// holding `SupportTickets.Manage` - see [AdminSupportTicketsScreen].
+/// a content area on the right that swaps with the selected menu item. The menu
+/// mixes standalone entries ("Dashboard", "Obavijesti", "Moj nalog") with
+/// collapsible category groups ("Korisnici", "Finansije", "Podrška",
+/// "Sistem"); at most one group is expanded at a time (accordion - see
+/// [_SidebarState]). The "Obavijesti", "Šifarnik", "Tarife", "Računi",
+/// "Prijave kvarova", "Zahtjevi" (water meter requests, grouped under
+/// "Podrška" alongside fault reports rather than under its own "Vodomjeri"
+/// category), "Postavke firme", and "Moj nalog" sections embed their
+/// existing screens; the rest are placeholders until wired up. There is no
+/// "Aktivnosti" section - a user's activity log is reached per-row from
+/// "Korisnici"/"Administratori" (see [AdminUserActivityLogsScreen]). "Moj
+/// nalog" uses the admin-only [AdminAccountEditScreen] (not the shared
+/// `AccountEditScreen` used by the mobile customer/collector "Nalog" tab),
+/// since it edits more than contact data here. The nav tree is built
+/// per-session (`_buildNavEntries`, not a static const list) because
+/// "Podrška" only appears for a caller holding `SupportTickets.Manage` - see
+/// [AdminSupportTicketsScreen]. Selection is tracked as a single flat index
+/// into the tree's leaf items in display order (see `_flattenNavItems`), so
+/// existing per-session selection/clamping logic didn't need to change shape.
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -40,9 +49,9 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-/// A single entry in the admin sidebar menu. [builder] renders the content
-/// area for this item; left null for a section that isn't wired up yet, in
-/// which case `_buildContent` falls back to `_SectionPlaceholder`.
+/// A single leaf entry in the admin sidebar menu. [builder] renders the
+/// content area for this item; left null for a section that isn't wired up
+/// yet, in which case `_buildContent` falls back to `_SectionPlaceholder`.
 class _AdminNavItem {
   const _AdminNavItem({
     required this.icon,
@@ -57,118 +66,188 @@ class _AdminNavItem {
   final WidgetBuilder? builder;
 }
 
-/// The menu, in display order. Built per-session (rather than a static const
-/// list) because "Podrška" only appears for a caller holding
+/// One entry in the top-level sidebar tree: either a standalone leaf (e.g.
+/// "Dashboard") or a collapsible category group of related leaves. Sealed so
+/// `_flattenNavItems` and `_SidebarState` can switch over the two shapes
+/// exhaustively.
+sealed class _AdminNavEntry {
+  const _AdminNavEntry();
+}
+
+class _AdminNavLeaf extends _AdminNavEntry {
+  const _AdminNavLeaf(this.item);
+
+  final _AdminNavItem item;
+}
+
+/// A collapsible category header in the sidebar (e.g. "Korisnici") grouping
+/// related leaf items under it. At most one group is expanded at a time - see
+/// [_SidebarState].
+class _AdminNavGroup extends _AdminNavEntry {
+  const _AdminNavGroup({
+    required this.label,
+    required this.icon,
+    required this.items,
+  });
+
+  final String label;
+  final IconData icon;
+  final List<_AdminNavItem> items;
+}
+
+/// The menu tree, in display order. Built per-session (rather than a static
+/// const list) because "Podrška" only appears for a caller holding
 /// `SupportTickets.Manage` - everyone else never sees the entry, same
 /// "hide what you can't use" precedent as `AccountScreen`'s admin-only
 /// "Postavke firme" card.
-List<_AdminNavItem> _buildNavItems(AuthSession? session) {
+List<_AdminNavEntry> _buildNavEntries(
+  AuthSession? session,
+  AppLocalizations loc,
+) {
   final canManageSupportTickets =
       session?.hasPermission('SupportTickets.Manage') ?? false;
 
   return [
-    _AdminNavItem(
-      icon: Icons.grid_view_outlined,
-      selectedIcon: Icons.grid_view,
-      label: 'Dashboard',
-      builder: (_) => const _DashboardOverview(),
-    ),
-    _AdminNavItem(
-      icon: Icons.notifications_outlined,
-      selectedIcon: Icons.notifications,
-      label: 'Obavijesti',
-      builder: (_) => const AdminNotificationsScreen(),
-    ),
-    _AdminNavItem(
-      icon: Icons.people_outline,
-      selectedIcon: Icons.people,
-      label: 'Korisnici',
-      // "Korisnici" and "Administratori" are the same widget type in the
-      // same tree position, so they need distinct keys - otherwise switching
-      // between them reuses the State and keeps the other tab's loaded rows.
-      builder: (_) => const AdminUsersScreen(key: ValueKey('users-customers')),
-    ),
-    _AdminNavItem(
-      icon: Icons.assignment_ind_outlined,
-      selectedIcon: Icons.assignment_ind,
-      label: 'Inkasanti',
-      builder: (_) => const AdminCollectorsScreen(),
-    ),
-    const _AdminNavItem(
-      icon: Icons.water_drop_outlined,
-      selectedIcon: Icons.water_drop,
-      label: 'Vodomjeri',
-    ),
-    const _AdminNavItem(
-      icon: Icons.speed_outlined,
-      selectedIcon: Icons.speed,
-      label: 'Očitanja',
-    ),
-    _AdminNavItem(
-      icon: Icons.receipt_long_outlined,
-      selectedIcon: Icons.receipt_long,
-      label: 'Računi',
-      builder: (_) => const AdminInvoicesScreen(),
-    ),
-    _AdminNavItem(
-      icon: Icons.payments_outlined,
-      selectedIcon: Icons.payments,
-      label: 'Plaćanja',
-      builder: (_) => const AdminPaymentsScreen(),
-    ),
-    _AdminNavItem(
-      icon: Icons.report_problem_outlined,
-      selectedIcon: Icons.report_problem,
-      label: 'Prijave kvarova',
-      builder: (_) => const AdminFaultReportsScreen(),
-    ),
-    if (canManageSupportTickets)
+    _AdminNavLeaf(
       _AdminNavItem(
-        icon: Icons.support_agent_outlined,
-        selectedIcon: Icons.support_agent,
-        label: 'Podrška',
-        builder: (_) => const AdminSupportTicketsScreen(),
-      ),
-    _AdminNavItem(
-      icon: Icons.admin_panel_settings_outlined,
-      selectedIcon: Icons.admin_panel_settings,
-      label: 'Administratori',
-      builder: (_) => const AdminUsersScreen(
-        key: ValueKey('users-admins'),
-        mode: AdminUsersScreenMode.admins,
+        icon: Icons.grid_view_outlined,
+        selectedIcon: Icons.grid_view,
+        label: loc.dashboardLabel,
+        builder: (_) => const _DashboardOverview(),
       ),
     ),
-    _AdminNavItem(
-      icon: Icons.location_city_outlined,
-      selectedIcon: Icons.location_city,
-      label: 'Šifarnik',
-      builder: (_) => const AdminCodebookScreen(),
+    _AdminNavLeaf(
+      _AdminNavItem(
+        icon: Icons.notifications_outlined,
+        selectedIcon: Icons.notifications,
+        label: loc.tabNotifications,
+        builder: (_) => const AdminNotificationsScreen(),
+      ),
     ),
-    _AdminNavItem(
-      icon: Icons.request_quote_outlined,
-      selectedIcon: Icons.request_quote,
-      label: 'Tarife',
-      builder: (_) => const AdminTariffsScreen(),
+    _AdminNavGroup(
+      label: loc.usersLabel,
+      icon: Icons.groups_outlined,
+      items: [
+        _AdminNavItem(
+          icon: Icons.people_outline,
+          selectedIcon: Icons.people,
+          label: loc.usersLabel,
+          // "Korisnici" and "Administratori" are the same widget type in the
+          // same tree position, so they need distinct keys - otherwise
+          // switching between them reuses the State and keeps the other
+          // tab's loaded rows.
+          builder: (_) =>
+              const AdminUsersScreen(key: ValueKey('users-customers')),
+        ),
+        _AdminNavItem(
+          icon: Icons.assignment_ind_outlined,
+          selectedIcon: Icons.assignment_ind,
+          label: loc.collectorsNavLabel,
+          builder: (_) => const AdminCollectorsScreen(),
+        ),
+        _AdminNavItem(
+          icon: Icons.admin_panel_settings_outlined,
+          selectedIcon: Icons.admin_panel_settings,
+          label: loc.administratorsLabel,
+          builder: (_) => const AdminUsersScreen(
+            key: ValueKey('users-admins'),
+            mode: AdminUsersScreenMode.admins,
+          ),
+        ),
+      ],
     ),
-    _AdminNavItem(
-      icon: Icons.business_outlined,
-      selectedIcon: Icons.business,
-      label: 'Postavke firme',
-      builder: (_) => const CompanySettingsScreen(),
+    _AdminNavGroup(
+      label: loc.financeGroupLabel,
+      icon: Icons.account_balance_wallet_outlined,
+      items: [
+        _AdminNavItem(
+          icon: Icons.receipt_long_outlined,
+          selectedIcon: Icons.receipt_long,
+          label: loc.invoicesLabel,
+          builder: (_) => const AdminInvoicesScreen(),
+        ),
+        _AdminNavItem(
+          icon: Icons.payments_outlined,
+          selectedIcon: Icons.payments,
+          label: loc.paymentsLabel,
+          builder: (_) => const AdminPaymentsScreen(),
+        ),
+        _AdminNavItem(
+          icon: Icons.request_quote_outlined,
+          selectedIcon: Icons.request_quote,
+          label: loc.tariffsNavLabel,
+          builder: (_) => const AdminTariffsScreen(),
+        ),
+      ],
     ),
-    _AdminNavItem(
-      icon: Icons.manage_accounts_outlined,
-      selectedIcon: Icons.manage_accounts,
-      label: 'Moj nalog',
-      builder: (_) => const AdminAccountEditScreen(),
+    _AdminNavGroup(
+      label: loc.supportGroupLabel,
+      icon: Icons.headset_mic_outlined,
+      items: [
+        _AdminNavItem(
+          icon: Icons.report_problem_outlined,
+          selectedIcon: Icons.report_problem,
+          label: loc.faultReportsScreenTitle,
+          builder: (_) => const AdminFaultReportsScreen(),
+        ),
+        _AdminNavItem(
+          icon: Icons.assignment_outlined,
+          selectedIcon: Icons.assignment,
+          label: loc.waterMeterRequestsNavLabel,
+          builder: (_) => const AdminWaterMeterRequestsScreen(),
+        ),
+        if (canManageSupportTickets)
+          _AdminNavItem(
+            icon: Icons.support_agent_outlined,
+            selectedIcon: Icons.support_agent,
+            label: loc.supportGroupLabel,
+            builder: (_) => const AdminSupportTicketsScreen(),
+          ),
+      ],
     ),
-    _AdminNavItem(
-      icon: Icons.assignment_outlined,
-      selectedIcon: Icons.assignment,
-      label: 'Zahtjevi',
-      builder: (_) => const AdminWaterMeterRequestsScreen(),
+    _AdminNavGroup(
+      label: loc.systemGroupLabel,
+      icon: Icons.settings_outlined,
+      items: [
+        _AdminNavItem(
+          icon: Icons.location_city_outlined,
+          selectedIcon: Icons.location_city,
+          label: loc.codebookLabel,
+          builder: (_) => const AdminCodebookScreen(),
+        ),
+        _AdminNavItem(
+          icon: Icons.business_outlined,
+          selectedIcon: Icons.business,
+          label: loc.companySettingsScreenTitle,
+          builder: (_) => const CompanySettingsScreen(),
+        ),
+      ],
+    ),
+    _AdminNavLeaf(
+      _AdminNavItem(
+        icon: Icons.manage_accounts_outlined,
+        selectedIcon: Icons.manage_accounts,
+        label: loc.myAccountTitle,
+        builder: (_) => const AdminAccountEditScreen(),
+      ),
     ),
   ];
+}
+
+/// Flattens [entries] into their leaf items, in the same display order used
+/// to index `_selectedIndex` - a group contributes all of its items in place,
+/// a standalone leaf contributes itself.
+List<_AdminNavItem> _flattenNavItems(List<_AdminNavEntry> entries) {
+  final result = <_AdminNavItem>[];
+  for (final entry in entries) {
+    switch (entry) {
+      case _AdminNavLeaf(:final item):
+        result.add(item);
+      case _AdminNavGroup(:final items):
+        result.addAll(items);
+    }
+  }
+  return result;
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
@@ -179,7 +258,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<AuthProvider>().session;
-    final items = _buildNavItems(session);
+    final loc = AppLocalizations.of(context);
+    final entries = _buildNavEntries(session, loc);
+    final items = _flattenNavItems(entries);
     // The item count only changes when SupportTickets.Manage flips (a full
     // re-login), but guard anyway so a stale index can never run off the end.
     final selectedIndex = _selectedIndex.clamp(0, items.length - 1);
@@ -189,7 +270,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Sidebar(
-            items: items,
+            entries: entries,
             selectedIndex: selectedIndex,
             onSelect: _select,
           ),
@@ -214,24 +295,131 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 }
 
-/// Fixed left navigation column: brand, scrollable menu, and a footer with the
-/// signed-in admin's email and a logout action.
-class _Sidebar extends StatelessWidget {
+/// Fixed left navigation column: brand, scrollable menu (standalone items and
+/// collapsible category groups), and a footer with the signed-in admin's
+/// email and a logout action.
+class _Sidebar extends StatefulWidget {
   const _Sidebar({
-    required this.items,
+    required this.entries,
     required this.selectedIndex,
     required this.onSelect,
   });
 
-  final List<_AdminNavItem> items;
+  final List<_AdminNavEntry> entries;
   final int selectedIndex;
   final ValueChanged<int> onSelect;
 
   @override
+  State<_Sidebar> createState() => _SidebarState();
+}
+
+/// Accordion state for the category groups: at most one is expanded at a
+/// time, so opening a group auto-collapses whichever was open before. Starts
+/// expanded on whichever group (if any) contains the initial selection, so a
+/// pre-selected item is never hidden inside a collapsed group on first paint.
+class _SidebarState extends State<_Sidebar> {
+  late String? _expandedGroup = _groupContaining(
+    widget.entries,
+    widget.selectedIndex,
+  );
+
+  static String? _groupContaining(
+    List<_AdminNavEntry> entries,
+    int selectedIndex,
+  ) {
+    var index = 0;
+    for (final entry in entries) {
+      switch (entry) {
+        case _AdminNavLeaf():
+          index++;
+        case _AdminNavGroup(:final label, :final items):
+          if (selectedIndex >= index && selectedIndex < index + items.length) {
+            return label;
+          }
+          index += items.length;
+      }
+    }
+    return null;
+  }
+
+  void _toggleGroup(String label) {
+    setState(() => _expandedGroup = _expandedGroup == label ? null : label);
+  }
+
+  /// Builds the scrollable menu tiles for every entry except the trailing
+  /// "Moj nalog" leaf, which is rendered in the footer instead (see `build`),
+  /// directly above the logout tile.
+  List<Widget> _buildMenuChildren() {
+    final children = <Widget>[];
+    var flatIndex = 0;
+    final entries = widget.entries;
+    for (var e = 0; e < entries.length; e++) {
+      final entry = entries[e];
+      final isTrailingAccountLeaf = e == entries.length - 1;
+      switch (entry) {
+        case _AdminNavLeaf(:final item):
+          if (isTrailingAccountLeaf) {
+            break;
+          }
+          final index = flatIndex;
+          children.add(
+            _AdminNavTile(
+              item: item,
+              selected: index == widget.selectedIndex,
+              onTap: () => widget.onSelect(index),
+            ),
+          );
+          flatIndex++;
+        case _AdminNavGroup(:final label, :final icon, :final items):
+          final startIndex = flatIndex;
+          final expanded = _expandedGroup == label;
+          final containsSelection =
+              widget.selectedIndex >= startIndex &&
+              widget.selectedIndex < startIndex + items.length;
+          children.add(
+            _AdminNavGroupHeader(
+              label: label,
+              icon: icon,
+              expanded: expanded,
+              containsSelection: containsSelection,
+              onTap: () => _toggleGroup(label),
+            ),
+          );
+          children.add(
+            _AdminNavGroupBody(
+              expanded: expanded,
+              children: [
+                for (var i = 0; i < items.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 14),
+                    child: _AdminNavTile(
+                      item: items[i],
+                      selected: startIndex + i == widget.selectedIndex,
+                      onTap: () => widget.onSelect(startIndex + i),
+                    ),
+                  ),
+              ],
+            ),
+          );
+          flatIndex += items.length;
+      }
+    }
+    return children;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final email =
-        context.select<AuthProvider, String>((a) => a.session?.email ?? '');
+    final loc = AppLocalizations.of(context);
+    final email = context.select<AuthProvider, String>(
+      (a) => a.session?.email ?? '',
+    );
+    // "Moj nalog" is always the trailing leaf in `_buildNavEntries` - pulled
+    // out here so it can render in the footer, right above logout, instead
+    // of inside the scrollable menu.
+    final flatItems = _flattenNavItems(widget.entries);
+    final accountIndex = flatItems.length - 1;
+    final accountItem = flatItems[accountIndex];
 
     return Container(
       width: 248,
@@ -251,11 +439,14 @@ class _Sidebar extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 errorBuilder: (context, error, stackTrace) => Row(
                   children: [
-                    Icon(Icons.water_drop,
-                        color: theme.colorScheme.primary, size: 26),
+                    Icon(
+                      Icons.water_drop,
+                      color: theme.colorScheme.primary,
+                      size: 26,
+                    ),
                     const SizedBox(width: 10),
                     Text(
-                      'AquaFlow',
+                      loc.appTitle,
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF1E293B),
@@ -269,16 +460,7 @@ class _Sidebar extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Column(
-                  children: [
-                    for (var i = 0; i < items.length; i++)
-                      _AdminNavTile(
-                        item: items[i],
-                        selected: i == selectedIndex,
-                        onTap: () => onSelect(i),
-                      ),
-                  ],
-                ),
+                child: Column(children: _buildMenuChildren()),
               ),
             ),
             const Divider(height: 1),
@@ -288,17 +470,26 @@ class _Sidebar extends StatelessWidget {
                 child: Text(
                   email,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: const Color(0xFF94A3B8)),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF94A3B8),
+                  ),
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
               child: _AdminNavTile(
-                item: const _AdminNavItem(
+                item: accountItem,
+                selected: accountIndex == widget.selectedIndex,
+                onTap: () => widget.onSelect(accountIndex),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: _AdminNavTile(
+                item: _AdminNavItem(
                   icon: Icons.logout,
                   selectedIcon: Icons.logout,
-                  label: 'Odjava',
+                  label: loc.logoutLabel,
                 ),
                 selected: false,
                 danger: true,
@@ -363,8 +554,11 @@ class _AdminNavTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Icon(selected ? item.selectedIcon : item.icon,
-                    size: 20, color: color),
+                Icon(
+                  selected ? item.selectedIcon : item.icon,
+                  size: 20,
+                  color: color,
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
@@ -373,14 +567,107 @@ class _AdminNavTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       color: color,
-                      fontWeight:
-                          selected ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A collapsible category header in the sidebar menu ("Korisnici",
+/// "Finansije", ...). Tapping toggles which group is expanded - see
+/// [_SidebarState]. Recolors to the accent when [containsSelection], even
+/// while collapsed, so the active section is never fully hidden from view.
+class _AdminNavGroupHeader extends StatelessWidget {
+  const _AdminNavGroupHeader({
+    required this.label,
+    required this.icon,
+    required this.expanded,
+    required this.containsSelection,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool expanded;
+  final bool containsSelection;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final color = containsSelection ? primary : _AdminNavTile._inactive;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Material(
+        color: containsSelection
+            ? primary.withValues(alpha: 0.06)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: SizedBox(
+            height: 42,
+            child: Row(
+              children: [
+                const SizedBox(width: 16),
+                Icon(icon, size: 19, color: color),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: color,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+                AnimatedRotation(
+                  duration: const Duration(milliseconds: 150),
+                  turns: expanded ? 0.5 : 0,
+                  child: Icon(Icons.expand_more, size: 18, color: color),
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Animates a group's sub-items open/closed as [expanded] toggles, using the
+/// standard `Align(heightFactor:)` + `AnimatedSize` trick so no explicit
+/// height computation is needed.
+class _AdminNavGroupBody extends StatelessWidget {
+  const _AdminNavGroupBody({required this.expanded, required this.children});
+
+  final bool expanded;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeInOut,
+      alignment: Alignment.topCenter,
+      child: ClipRect(
+        child: Align(
+          alignment: Alignment.topCenter,
+          heightFactor: expanded ? 1 : 0,
+          child: Column(children: children),
         ),
       ),
     );
@@ -395,29 +682,41 @@ class _DashboardOverview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Dashboard',
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w600),
+            loc.dashboardLabel,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Pregled ključnih pokazatelja (demo podaci)',
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: theme.colorScheme.outline),
+            loc.dashboardOverviewSubtitle,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
           ),
           const SizedBox(height: 24),
           LayoutBuilder(
             builder: (context, constraints) {
-              const cards = [
-                _ChartCard(title: 'Line Chart', child: _LineChartView()),
-                _ChartCard(title: 'Donut Chart', child: _DonutChartView()),
-                _ChartCard(title: 'Bar Chart', child: _BarChartView()),
+              final cards = [
+                _ChartCard(
+                  title: loc.lineChartTitle,
+                  child: const _LineChartView(),
+                ),
+                _ChartCard(
+                  title: loc.donutChartTitle,
+                  child: const _DonutChartView(),
+                ),
+                _ChartCard(
+                  title: loc.barChartTitle,
+                  child: const _BarChartView(),
+                ),
               ];
               // Side by side when there is room, otherwise stacked.
               if (constraints.maxWidth >= 900) {
@@ -545,12 +844,22 @@ class _LineChartPainter extends CustomPainter {
     for (final t in _ticks) {
       final y = chart.bottom - (t / _maxY) * chart.height;
       canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), gridPaint);
-      _drawChartText(canvas, t.toInt().toString(),
-          Offset(chart.left - 6, y), color: _muted, size: 10,
-          anchor: Alignment.centerRight);
+      _drawChartText(
+        canvas,
+        t.toInt().toString(),
+        Offset(chart.left - 6, y),
+        color: _muted,
+        size: 10,
+        anchor: Alignment.centerRight,
+      );
     }
-    canvas.drawLine(chart.bottomLeft, chart.bottomRight,
-        Paint()..color = _axis..strokeWidth = 1);
+    canvas.drawLine(
+      chart.bottomLeft,
+      chart.bottomRight,
+      Paint()
+        ..color = _axis
+        ..strokeWidth = 1,
+    );
 
     final pts = <Offset>[
       for (var i = 0; i < _values.length; i++)
@@ -567,8 +876,14 @@ class _LineChartPainter extends CustomPainter {
       final p1 = pts[i];
       final p2 = pts[i + 1];
       final p3 = pts[i + 2 >= pts.length ? pts.length - 1 : i + 2];
-      final c1 = Offset(p1.dx + (p2.dx - p0.dx) / 6, p1.dy + (p2.dy - p0.dy) / 6);
-      final c2 = Offset(p2.dx - (p3.dx - p1.dx) / 6, p2.dy - (p3.dy - p1.dy) / 6);
+      final c1 = Offset(
+        p1.dx + (p2.dx - p0.dx) / 6,
+        p1.dy + (p2.dy - p0.dy) / 6,
+      );
+      final c2 = Offset(
+        p2.dx - (p3.dx - p1.dx) / 6,
+        p2.dy - (p3.dy - p1.dy) / 6,
+      );
       path.cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, p2.dx, p2.dy);
     }
     canvas.drawPath(
@@ -594,9 +909,14 @@ class _LineChartPainter extends CustomPainter {
       );
     }
     for (var i = 0; i < _years.length; i++) {
-      _drawChartText(canvas, '${_years[i]}',
-          Offset(pts[i].dx, chart.bottom + 6), color: _muted, size: 10,
-          anchor: Alignment.topCenter);
+      _drawChartText(
+        canvas,
+        '${_years[i]}',
+        Offset(pts[i].dx, chart.bottom + 6),
+        color: _muted,
+        size: 10,
+        anchor: Alignment.topCenter,
+      );
     }
   }
 
@@ -645,9 +965,15 @@ class _DonutChartPainter extends CustomPainter {
       final mid = start + sweep / 2;
       final labelPos =
           center + Offset(math.cos(mid), math.sin(mid)) * ringRadius;
-      _drawChartText(canvas, '${value.toInt()}%', labelPos,
-          color: Colors.white, size: 12, weight: FontWeight.w700,
-          anchor: Alignment.center);
+      _drawChartText(
+        canvas,
+        '${value.toInt()}%',
+        labelPos,
+        color: Colors.white,
+        size: 12,
+        weight: FontWeight.w700,
+        anchor: Alignment.center,
+      );
       start += sweep;
     }
   }
@@ -662,6 +988,7 @@ class _BarChartView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -670,10 +997,10 @@ class _BarChartView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Row(
-          children: const [
-            _LegendDot(color: _series1, label: 'Serija A'),
-            SizedBox(width: 16),
-            _LegendDot(color: _series2, label: 'Serija B'),
+          children: [
+            _LegendDot(color: _series1, label: loc.seriesALabel),
+            const SizedBox(width: 16),
+            _LegendDot(color: _series2, label: loc.seriesBLabel),
           ],
         ),
       ],
@@ -706,9 +1033,14 @@ class _BarChartPainter extends CustomPainter {
     for (final t in _ticks) {
       final y = chart.bottom - (t / _maxY) * chart.height;
       canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), gridPaint);
-      _drawChartText(canvas, t.toInt().toString(),
-          Offset(chart.left - 6, y), color: _muted, size: 10,
-          anchor: Alignment.centerRight);
+      _drawChartText(
+        canvas,
+        t.toInt().toString(),
+        Offset(chart.left - 6, y),
+        color: _muted,
+        size: 10,
+        anchor: Alignment.centerRight,
+      );
     }
 
     final groups = _years.length;
@@ -731,12 +1063,22 @@ class _BarChartPainter extends CustomPainter {
           Paint()..color = _colors[s],
         );
       }
-      _drawChartText(canvas, '${_years[g]}',
-          Offset(chart.left + g * groupWidth + groupWidth / 2, chart.bottom + 5),
-          color: _muted, size: 9, anchor: Alignment.topCenter);
+      _drawChartText(
+        canvas,
+        '${_years[g]}',
+        Offset(chart.left + g * groupWidth + groupWidth / 2, chart.bottom + 5),
+        color: _muted,
+        size: 9,
+        anchor: Alignment.topCenter,
+      );
     }
-    canvas.drawLine(chart.bottomLeft, chart.bottomRight,
-        Paint()..color = _axis..strokeWidth = 1);
+    canvas.drawLine(
+      chart.bottomLeft,
+      chart.bottomRight,
+      Paint()
+        ..color = _axis
+        ..strokeWidth = 1,
+    );
   }
 
   @override
@@ -794,8 +1136,9 @@ class _SectionPlaceholder extends StatelessWidget {
         children: [
           Text(
             item.label,
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           Expanded(
             child: Center(
@@ -808,14 +1151,20 @@ class _SectionPlaceholder extends StatelessWidget {
                       color: theme.colorScheme.primaryContainer,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(item.selectedIcon,
-                        size: 48, color: theme.colorScheme.onPrimaryContainer),
+                    child: Icon(
+                      item.selectedIcon,
+                      size: 48,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Sekcija "${item.label}" još nije implementirana.',
-                    style: theme.textTheme.bodyLarge
-                        ?.copyWith(color: theme.colorScheme.outline),
+                    AppLocalizations.of(
+                      context,
+                    ).sectionNotImplementedMessage(item.label),
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
                   ),
                 ],
               ),

@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
 import 'package:aquaflow_collector/shared/models/user_preferences.dart';
 import 'package:aquaflow_collector/shared/providers/auth_provider.dart';
 import 'package:aquaflow_collector/shared/providers/theme_provider.dart';
 import 'package:aquaflow_collector/shared/services/preferences_api_service.dart';
 import 'package:aquaflow_collector/shared/services/preferences_exception.dart';
 import 'package:aquaflow_collector/shared/theme/app_theme.dart';
+import 'package:aquaflow_collector/shared/widgets/circle_icon_button.dart';
 
 /// One entry in a [MobileShell]'s bottom navigation: the destination shown in
 /// the bar plus the body rendered when it is selected.
@@ -72,7 +74,7 @@ class _MobileShellState extends State<MobileShell> {
 
   /// Fetches `GET /Account/preferences` just to have a base object (language/
   /// notification flags) for the `PUT` in [_saveTheme] - a failure here (e.g.
-  /// offline) is silently ignored, same as [AccountEditScreen]; the theme
+  /// offline) is silently ignored, same as `PersonalDetailsEditScreen`; the theme
   /// toggle still works locally via [ThemeProvider], it just won't have the
   /// user's other saved preferences to echo back until this succeeds.
   Future<void> _loadPreferences() async {
@@ -90,23 +92,30 @@ class _MobileShellState extends State<MobileShell> {
   /// rapid taps only trigger a single save of the final theme.
   void _onThemeToggle() {
     final themeProvider = context.read<ThemeProvider>();
-    final newMode =
-        themeProvider.themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    final newMode = themeProvider.themeMode == ThemeMode.dark
+        ? ThemeMode.light
+        : ThemeMode.dark;
     themeProvider.setThemeMode(newMode);
 
     _themeSaveDebounce?.cancel();
-    _themeSaveDebounce = Timer(const Duration(seconds: 3), () => _saveTheme(newMode));
+    _themeSaveDebounce = Timer(
+      const Duration(seconds: 3),
+      () => _saveTheme(newMode),
+    );
   }
 
   Future<void> _saveTheme(ThemeMode mode) async {
-    final current = _preferences ??
+    final current =
+        _preferences ??
         const UserPreferences(
           theme: 'light',
           language: 'bs',
           receiveEmailNotifications: true,
           receivePushNotifications: true,
         );
-    final updated = current.copyWith(theme: mode == ThemeMode.dark ? 'dark' : 'light');
+    final updated = current.copyWith(
+      theme: mode == ThemeMode.dark ? 'dark' : 'light',
+    );
 
     try {
       final saved = await _preferencesService.updatePreferences(updated);
@@ -115,7 +124,9 @@ class _MobileShellState extends State<MobileShell> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Tema nije sačuvana: ${e.message}'),
+          content: Text(
+            AppLocalizations.of(context).themeSaveFailedError(e.message),
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -125,29 +136,37 @@ class _MobileShellState extends State<MobileShell> {
   @override
   Widget build(BuildContext context) {
     final tabs = widget.tabs;
-    final themeMode = context.select<ThemeProvider, ThemeMode>((p) => p.themeMode);
+    final themeMode = context.select<ThemeProvider, ThemeMode>(
+      (p) => p.themeMode,
+    );
     final isDark = themeMode == ThemeMode.dark;
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: isDark ? null : AppColors.background,
         foregroundColor: isDark ? null : AppColors.primary,
-        leading: IconButton(
-          icon: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined),
-          tooltip: 'Promijeni temu',
-          onPressed: _onThemeToggle,
+        leading: Center(
+          child: CircleIconButton(
+            icon: isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+            tooltip: loc.mobileShellThemeTooltip,
+            onTap: _onThemeToggle,
+          ),
         ),
         title: Image.asset(
           'assets/images/logo.png',
           height: 32,
           fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => const Text('AquaFlow'),
+          errorBuilder: (context, error, stackTrace) => Text(loc.appTitle),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Odjava',
-            onPressed: () => context.read<AuthProvider>().logout(),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: CircleIconButton(
+              icon: Icons.logout,
+              tooltip: loc.mobileShellLogoutTooltip,
+              onTap: () => context.read<AuthProvider>().logout(),
+            ),
           ),
         ],
       ),

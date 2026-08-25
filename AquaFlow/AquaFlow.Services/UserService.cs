@@ -65,8 +65,9 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         if (!string.IsNullOrWhiteSpace(search.Name))
         {
             query = query.Where(u =>
-                u.CustomerProfile != null &&
-                (u.CustomerProfile.FirstName.Contains(search.Name) || u.CustomerProfile.LastName.Contains(search.Name)));
+                (u.CustomerProfile != null &&
+                 (u.CustomerProfile.FirstName.Contains(search.Name) || u.CustomerProfile.LastName.Contains(search.Name))) ||
+                u.FirstName.Contains(search.Name) || u.LastName.Contains(search.Name));
         }
 
         return query;
@@ -174,6 +175,14 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         // left untouched so a user can never escalate their own privileges here.
         entity.Email = request.Email;
         entity.Phone = request.Phone;
+        if (request.FirstName != null)
+        {
+            entity.FirstName = request.FirstName;
+        }
+        if (request.LastName != null)
+        {
+            entity.LastName = request.LastName;
+        }
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();

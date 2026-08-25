@@ -1,9 +1,13 @@
 using System.Security.Claims;
+using AquaFlow.Model;
+using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
+using AquaFlow.Services;
 using AquaFlow.WebAPI.Controllers;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.Services.AccessManager;
+using AquaFlow.WebAPI.Tests.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -16,6 +20,7 @@ namespace AquaFlow.WebAPI.Tests.WaterMeters;
 public class WaterMetersControllerTests
 {
     private const string ManagePermission = "WaterMeters.Manage";
+    private const string ReadingsManagePermission = "MeterReadings.Manage";
     private const string CustomerRole = "Customer";
     private const string AdminRole = "Admin";
     private const string CollectorRole = "Collector";
@@ -263,6 +268,81 @@ public class WaterMetersControllerTests
         Assert.IsType<UnauthorizedResult>(context.Result);
     }
 
+    // MarkBroken is a collector action, so it is deliberately gated by MeterReadings.Manage - not
+    // WaterMeters.Manage (admin-only) - or collectors could never reach it.
+    [Fact]
+    public void MarkBroken_RequiresMeterReadingsManagePermission()
+    {
+        var method = typeof(WaterMetersController)
+            .GetMethods()
+            .Single(m => m.Name == nameof(WaterMetersController.MarkBroken) && m.DeclaringType == typeof(WaterMetersController));
+
+        var attribute = method
+            .GetCustomAttributes(typeof(RequirePermissionAttribute), inherit: false)
+            .Cast<RequirePermissionAttribute>()
+            .SingleOrDefault();
+
+        Assert.NotNull(attribute);
+        var codes = Assert.IsType<string[]>(attribute!.Arguments![0]);
+        Assert.Contains(ReadingsManagePermission, codes);
+    }
+
+    [Fact]
+    public void MarkBroken_WithoutReadingsManagePermission_IsForbidden()
+    {
+        var context = AuthorizeWriteAction(
+            nameof(WaterMetersController.MarkBroken),
+            BuildUser(userId: 1, role: CustomerRole));
+
+        Assert.IsType<ForbidResult>(context.Result);
+    }
+
+    [Fact]
+    public void MarkBroken_WithReadingsManagePermission_IsAllowed()
+    {
+        var context = AuthorizeWriteAction(
+            nameof(WaterMetersController.MarkBroken),
+            BuildUser(userId: 5, role: CollectorRole, permissions: [ReadingsManagePermission]));
+
+        Assert.Null(context.Result);
+    }
+
+    [Fact]
+    public async Task MarkBroken_KnownMeter_ReturnsOkAndLogsUnderOwningCustomer()
+    {
+        var activityLog = new SpyActivityLogService();
+        var controller = CreateController(
+            BuildUser(userId: 5, role: CollectorRole, permissions: [ReadingsManagePermission]),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
+            meters: [new WaterMeterResponse { Id = 1, CustomerId = 10, SerialNumber = "WM-1", Status = "Active" }],
+            activityLogService: activityLog);
+
+        var result = await controller.MarkBroken(1, new WaterMeterMarkBrokenRequest { Reason = "Vodomjer ne registruje potrosnju." });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<WaterMeterResponse>(ok.Value);
+        Assert.Equal("Removed", response.Status);
+
+        var call = Assert.Single(activityLog.Calls);
+        Assert.Equal(1, call.UserId); // logged under the owning customer's UserId, not the collector's
+        Assert.Equal(ActivityEventTypes.WaterMeterMarkedBroken, call.EventType);
+        Assert.Contains("WM-1", call.Description);
+        Assert.Contains("Vodomjer ne registruje potrosnju.", call.Description);
+    }
+
+    [Fact]
+    public async Task MarkBroken_UnknownMeter_ReturnsNotFound()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5, role: CollectorRole, permissions: [ReadingsManagePermission]),
+            profiles: [],
+            meters: []);
+
+        var result = await controller.MarkBroken(999, new WaterMeterMarkBrokenRequest { Reason = "Vodomjer ne registruje potrosnju." });
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
     // Instantiates the [RequirePermission] filter declared on the given action and runs it
     // against a request carrying the given principal, returning the filter context so the
     // caller can assert on the short-circuit result (null = passed through).
@@ -298,11 +378,12 @@ public class WaterMetersControllerTests
     private static WaterMetersController CreateController(
         ClaimsPrincipal user,
         IEnumerable<CustomerProfileResponse> profiles,
-        IEnumerable<WaterMeterResponse> meters)
+        IEnumerable<WaterMeterResponse> meters,
+        IActivityLogService? activityLogService = null)
     {
         var service = new FakeWaterMeterCrudService(meters);
         var profileService = new FakeCustomerProfileCrudService(profiles);
-        return new WaterMetersController(service, profileService)
+        return new WaterMetersController(service, profileService, activityLogService ?? new SpyActivityLogService())
         {
             ControllerContext = new ControllerContext
             {

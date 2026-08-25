@@ -1,3 +1,4 @@
+using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -9,16 +10,50 @@ using Microsoft.EntityFrameworkCore;
 namespace AquaFlow.Services;
 
 public class WaterMeterService
-    : EfCrudService<WaterMeter, WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>
+    : EfCrudService<WaterMeter, WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>,
+      IWaterMeterService
 {
+    private readonly IValidator<WaterMeterMarkBrokenRequest>? _markBrokenValidator;
+
     public WaterMeterService(
         AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<WaterMeterInsertRequest>> insertValidators,
         IEnumerable<IValidator<WaterMeterUpdateRequest>> updateValidators,
-        IEnumerable<IValidator<WaterMeterPatchRequest>> patchValidators)
+        IEnumerable<IValidator<WaterMeterPatchRequest>> patchValidators,
+        IEnumerable<IValidator<WaterMeterMarkBrokenRequest>> markBrokenValidators)
         : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
+        _markBrokenValidator = markBrokenValidators.FirstOrDefault();
+    }
+
+    public async Task<WaterMeterResponse> MarkBrokenAsync(int id, WaterMeterMarkBrokenRequest request)
+    {
+        if (_markBrokenValidator != null)
+        {
+            var validationResult = await _markBrokenValidator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                throw new ValidationException(validationResult.Errors);
+            }
+        }
+
+        var waterMeter = await DbContext.WaterMeters.FirstOrDefaultAsync(m => m.Id == id);
+        if (waterMeter == null)
+        {
+            throw new KeyNotFoundException($"Water meter with id {id} was not found.");
+        }
+
+        if (string.Equals(waterMeter.Status, WaterMeterStatus.Removed, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ClientException($"Water meter with id {id} is already marked as Removed.");
+        }
+
+        waterMeter.Status = WaterMeterStatus.Removed;
+        waterMeter.UpdatedAt = DateTime.UtcNow;
+        await DbContext.SaveChangesAsync();
+
+        return await GetByIdAsync(id);
     }
 
     protected override IQueryable<WaterMeter> IncludeForRead(IQueryable<WaterMeter> query) =>
