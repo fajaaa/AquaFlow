@@ -175,6 +175,14 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         // left untouched so a user can never escalate their own privileges here.
         entity.Email = request.Email;
         entity.Phone = request.Phone;
+        if (request.FirstName != null)
+        {
+            entity.FirstName = request.FirstName;
+        }
+        if (request.LastName != null)
+        {
+            entity.LastName = request.LastName;
+        }
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();

@@ -10,5 +10,7 @@ public class AccountUpdateValidator : AbstractValidator<AccountUpdateRequest>
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(150);
         RuleFor(x => x.Phone).MaximumLength(30).Matches(@"^[0-9+\-\s()]*$")
             .WithMessage("Telefon smije sadržavati samo brojeve i simbole + - ( ).");
+        RuleFor(x => x.FirstName).MaximumLength(80).When(x => x.FirstName != null);
+        RuleFor(x => x.LastName).MaximumLength(80).When(x => x.LastName != null);
     }
 }

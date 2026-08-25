@@ -1,18 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:aquaflow_desktop/models/admin_city.dart';
-import 'package:aquaflow_desktop/models/admin_customer_profile.dart';
-import 'package:aquaflow_desktop/models/admin_customer_profile_draft.dart';
-import 'package:aquaflow_desktop/models/admin_municipality.dart';
-import 'package:aquaflow_desktop/models/admin_settlement.dart';
 import 'package:aquaflow_desktop/services/admin_account_service.dart';
-import 'package:aquaflow_desktop/services/admin_city_exception.dart';
-import 'package:aquaflow_desktop/services/admin_city_service.dart';
-import 'package:aquaflow_desktop/services/admin_municipality_exception.dart';
-import 'package:aquaflow_desktop/services/admin_municipality_service.dart';
-import 'package:aquaflow_desktop/services/admin_settlement_exception.dart';
-import 'package:aquaflow_desktop/services/admin_settlement_service.dart';
 import 'package:aquaflow_desktop/shared/models/account_details.dart';
 import 'package:aquaflow_desktop/shared/models/user_preferences.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
@@ -28,27 +17,27 @@ import 'package:aquaflow_desktop/shared/widgets/screen_header.dart';
 /// `PersonalDetailsEditScreen`/`LocationEditScreen`/`PasswordResetScreen`
 /// used by the mobile customer/collector "Nalog" tab).
 ///
-/// Edits the signed-in admin's own account with the same depth as the
-/// "Korisnici" editor dialog (email, phone, profile name/language,
-/// password) - minus role and active status, which stay off-limits for
-/// self-editing everywhere in this app to avoid privilege escalation.
+/// Edits the signed-in admin's own account with the same fields as the
+/// "Administratori" -> "Uredi administratora" editor dialog (email, phone,
+/// name, password) - minus role and active status, which stay off-limits for
+/// self-editing everywhere in this app to avoid privilege escalation. Like
+/// that dialog, there is no Adresa/Jezik section here: the Admin role has no
+/// CustomerProfile at all (see `AdminUsersScreenMode.usesCustomerProfile` in
+/// `admin_users_screen.dart`), so `firstName`/`lastName` live directly on
+/// `User` and are edited through `PUT /Account/me` alongside email/phone.
 ///
 /// App theme ("Izgled") is separate from the profile fields: it reads/writes
 /// `UserPreference.Theme` via `GET`/`PUT /Account/preferences`
 /// ([PreferencesApiService]) and applies immediately to the shared
 /// [ThemeProvider] on change, rather than being part of the deferred-save
-/// form below. It is intentionally not the same as the CustomerProfile
-/// `Theme` column ([AdminCustomerProfileDraft.theme]/[_profileTheme]), a
-/// legacy field the app itself never reads.
+/// form below.
 ///
-/// Three independent writes happen on save, each only when relevant data
-/// changed: `PUT /Account/me` (email/phone, via [AccountService]), a
-/// create-or-update of the caller's own CustomerProfile (name/language, via
-/// [AdminAccountService]) only when a name was entered, and
+/// Two independent writes happen on save: `PUT /Account/me`
+/// (email/phone/firstName/lastName, via [AccountService]) always, and
 /// `PUT /Account/me/password` (via [AdminAccountService]) only when the
 /// password fields were filled in - which requires the current password for
 /// confirmation, unlike an admin resetting another user's password from the
-/// Korisnici tab.
+/// Administratori tab.
 class AdminAccountEditScreen extends StatefulWidget {
   const AdminAccountEditScreen({super.key});
 
@@ -58,10 +47,7 @@ class AdminAccountEditScreen extends StatefulWidget {
 
 class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   final AccountService _accountService = AccountService();
-  final AdminAccountService _profileService = AdminAccountService();
-  final AdminCityService _cityService = AdminCityService();
-  final AdminMunicipalityService _municipalityService = AdminMunicipalityService();
-  final AdminSettlementService _settlementService = AdminSettlementService();
+  final AdminAccountService _passwordService = AdminAccountService();
   final PreferencesApiService _preferencesService = PreferencesApiService();
   final _formKey = GlobalKey<FormState>();
 
@@ -69,50 +55,21 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   final _phoneCtrl = TextEditingController();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
-  final _streetCtrl = TextEditingController();
-  final _houseNumberCtrl = TextEditingController();
   final _currentPasswordCtrl = TextEditingController();
   final _newPasswordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
 
   AccountDetails? _details;
-  int? _existingProfileId;
-  String? _customerCode;
-  String _defaultLanguage = 'bs';
-  // CustomerProfile.Theme: legacy field on the profile row, unrelated to the
-  // app's actual theme (that's UserPreference.Theme / [_preferences] below).
-  // Kept only so `saveProfile` echoes back whatever was already stored - no
-  // UI edits it anymore.
-  String _profileTheme = 'light';
   UserPreferences? _preferences;
-
-  List<AdminCity> _cities = const [];
-  List<AdminMunicipality> _municipalities = const [];
-  List<AdminSettlement> _settlements = const [];
-  int? _selectedCityId;
-  int? _selectedMunicipalityId;
-  int? _selectedSettlementId;
 
   bool _loading = true;
   String? _loadError;
   bool _saving = false;
 
-  bool get _hasProfileInput =>
-      _firstNameCtrl.text.trim().isNotEmpty || _lastNameCtrl.text.trim().isNotEmpty;
-
   bool get _hasPasswordInput =>
       _currentPasswordCtrl.text.isNotEmpty ||
       _newPasswordCtrl.text.isNotEmpty ||
       _confirmPasswordCtrl.text.isNotEmpty;
-
-  int? get _userId => context.read<AuthProvider>().session?.id;
-
-  List<AdminMunicipality> get _municipalitiesForSelectedCity =>
-      _municipalities.where((m) => m.cityId == _selectedCityId).toList();
-
-  List<AdminSettlement> get _settlementsForSelectedMunicipality => _settlements
-      .where((s) => s.municipalityId == _selectedMunicipalityId)
-      .toList();
 
   @override
   void initState() {
@@ -126,8 +83,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
       _loadError = null;
     });
 
-    final userId = _userId;
-    if (userId == null) {
+    if (context.read<AuthProvider>().session?.id == null) {
       setState(() {
         _loading = false;
         _loadError = 'Niste prijavljeni.';
@@ -136,54 +92,17 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     }
 
     try {
-      final results = await Future.wait([
-        _accountService.fetch(),
-        _profileService.fetchProfile(userId),
-        _cityService.fetchAll(),
-        _municipalityService.fetchAll(),
-        _settlementService.fetchAll(),
-      ]);
+      final details = await _accountService.fetch();
       if (!mounted) return;
-
-      final details = results[0] as AccountDetails;
-      final profile = results[1] as AdminCustomerProfile?;
-      _cities = results[2] as List<AdminCity>;
-      _municipalities = results[3] as List<AdminMunicipality>;
-      _settlements = results[4] as List<AdminSettlement>;
 
       _details = details;
       _emailCtrl.text = details.email;
       _phoneCtrl.text = details.phone;
-      _existingProfileId = profile?.id;
-      _customerCode = profile?.customerCode;
-      _firstNameCtrl.text = profile?.firstName ?? '';
-      _lastNameCtrl.text = profile?.lastName ?? '';
-      _defaultLanguage = profile?.defaultLanguage ?? 'bs';
-      _profileTheme = profile?.theme ?? 'light';
-      _streetCtrl.text = profile?.street ?? '';
-      _houseNumberCtrl.text = profile?.houseNumber ?? '';
-      _applySettlement(profile?.settlementId);
+      _firstNameCtrl.text = details.firstName;
+      _lastNameCtrl.text = details.lastName;
       setState(() => _loading = false);
       _loadPreferences();
     } on AccountException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _loadError = e.message;
-      });
-    } on AdminCityException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _loadError = e.message;
-      });
-    } on AdminMunicipalityException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _loadError = e.message;
-      });
-    } on AdminSettlementException catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -237,59 +156,10 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     }
   }
 
-  /// Resolves the Grad -> Općina chain for a prefilled [settlementId], so the
-  /// two parent dropdowns start selected too, not just the leaf Naselje.
-  void _applySettlement(int? settlementId) {
-    if (settlementId == null) return;
-    AdminSettlement? settlement;
-    for (final s in _settlements) {
-      if (s.id == settlementId) {
-        settlement = s;
-        break;
-      }
-    }
-    if (settlement == null) return;
-
-    _selectedSettlementId = settlement.id;
-    _selectedMunicipalityId = settlement.municipalityId;
-    for (final m in _municipalities) {
-      if (m.id == settlement.municipalityId) {
-        _selectedCityId = m.cityId;
-        break;
-      }
-    }
-  }
-
-  void _onCityChanged(int? cityId) {
-    setState(() {
-      _selectedCityId = cityId;
-      if (_selectedMunicipalityId != null &&
-          !_municipalitiesForSelectedCity.any((m) => m.id == _selectedMunicipalityId)) {
-        _selectedMunicipalityId = null;
-        _selectedSettlementId = null;
-      }
-    });
-  }
-
-  void _onMunicipalityChanged(int? municipalityId) {
-    setState(() {
-      _selectedMunicipalityId = municipalityId;
-      if (_selectedSettlementId != null &&
-          !_settlementsForSelectedMunicipality.any((s) => s.id == _selectedSettlementId)) {
-        _selectedSettlementId = null;
-      }
-    });
-  }
-
-  void _onSettlementChanged(int? settlementId) {
-    setState(() => _selectedSettlementId = settlementId);
-  }
-
   Future<void> _save() async {
     final form = _formKey.currentState;
     final current = _details;
-    final userId = _userId;
-    if (form == null || !form.validate() || current == null || userId == null) {
+    if (form == null || !form.validate() || current == null) {
       return;
     }
 
@@ -301,28 +171,12 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
         phone: _phoneCtrl.text.trim(),
         userRole: current.userRole,
         isActive: current.isActive,
+        firstName: _firstNameCtrl.text.trim(),
+        lastName: _lastNameCtrl.text.trim(),
       ));
 
-      if (_hasProfileInput) {
-        final street = _streetCtrl.text.trim();
-        final houseNumber = _houseNumberCtrl.text.trim();
-        await _profileService.saveProfile(
-          userId,
-          AdminCustomerProfileDraft(
-            firstName: _firstNameCtrl.text.trim(),
-            lastName: _lastNameCtrl.text.trim(),
-            defaultLanguage: _defaultLanguage,
-            theme: _profileTheme,
-            settlementId: _selectedSettlementId,
-            street: street.isEmpty ? null : street,
-            houseNumber: houseNumber.isEmpty ? null : houseNumber,
-          ),
-          existingProfileId: _existingProfileId,
-        );
-      }
-
       if (_hasPasswordInput) {
-        await _profileService.changePassword(
+        await _passwordService.changePassword(
           currentPassword: _currentPasswordCtrl.text,
           newPassword: _newPasswordCtrl.text,
         );
@@ -352,17 +206,12 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   @override
   void dispose() {
     _accountService.dispose();
-    _profileService.dispose();
-    _cityService.dispose();
-    _municipalityService.dispose();
-    _settlementService.dispose();
+    _passwordService.dispose();
     _preferencesService.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
-    _streetCtrl.dispose();
-    _houseNumberCtrl.dispose();
     _currentPasswordCtrl.dispose();
     _newPasswordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
@@ -400,18 +249,6 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const _SectionLabel('Profil'),
-                  if (_customerCode != null) ...[
-                    TextFormField(
-                      key: ValueKey(_customerCode),
-                      initialValue: _customerCode,
-                      enabled: false,
-                      decoration: const InputDecoration(
-                        labelText: 'Šifra korisnika (automatski dodijeljena)',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                  ],
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -435,19 +272,6 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 14),
-                  DropdownButtonFormField<String>(
-                    initialValue: _defaultLanguage,
-                    decoration: const InputDecoration(labelText: 'Jezik'),
-                    items: const [
-                      DropdownMenuItem(value: 'bs', child: Text('Bosanski')),
-                      DropdownMenuItem(value: 'en', child: Text('Engleski')),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => _defaultLanguage = value);
-                    },
                   ),
                   const SizedBox(height: 22),
 
@@ -496,84 +320,6 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                     ],
                     selected: {_preferences?.isDarkTheme ?? false},
                     onSelectionChanged: (selection) => _setTheme(selection.first),
-                  ),
-                  const SizedBox(height: 22),
-
-                  const _SectionLabel('Adresa'),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _selectedCityId ?? 0,
-                          decoration: const InputDecoration(labelText: 'Grad'),
-                          items: [
-                            const DropdownMenuItem(
-                                value: 0, child: Text('Bez grada')),
-                            for (final city in _cities)
-                              DropdownMenuItem(
-                                  value: city.id, child: Text(city.name)),
-                          ],
-                          onChanged: (value) =>
-                              _onCityChanged(value == 0 ? null : value),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _selectedMunicipalityId ?? 0,
-                          decoration: const InputDecoration(labelText: 'Općina'),
-                          items: [
-                            const DropdownMenuItem(
-                                value: 0, child: Text('Bez općine')),
-                            for (final municipality in _municipalitiesForSelectedCity)
-                              DropdownMenuItem(
-                                value: municipality.id,
-                                child: Text(municipality.name),
-                              ),
-                          ],
-                          onChanged: _selectedCityId == null
-                              ? null
-                              : (value) =>
-                                  _onMunicipalityChanged(value == 0 ? null : value),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _selectedSettlementId ?? 0,
-                          decoration: const InputDecoration(labelText: 'Naselje'),
-                          items: [
-                            const DropdownMenuItem(
-                                value: 0, child: Text('Bez naselja')),
-                            for (final settlement in _settlementsForSelectedMunicipality)
-                              DropdownMenuItem(
-                                value: settlement.id,
-                                child: Text(settlement.name),
-                              ),
-                          ],
-                          validator: _settlementValidator,
-                          onChanged: _selectedMunicipalityId == null
-                              ? null
-                              : (value) =>
-                                  _onSettlementChanged(value == 0 ? null : value),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: _field(controller: _streetCtrl, label: 'Ulica', maxLength: 120),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _field(controller: _houseNumberCtrl, label: 'Broj', maxLength: 20),
-                      ),
-                    ],
                   ),
                   const SizedBox(height: 22),
 
@@ -700,24 +446,11 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   }
 
   // Ime/Prezime are optional, but if either is filled in, both are required -
-  // CustomerProfile needs both (mirrors the Korisnici editor dialog).
+  // mirrors the "Uredi administratora" editor dialog's validators.
   String? _firstNameValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _lastNameCtrl.text.trim().isNotEmpty) {
       return 'Obavezno ako unosite ime i prezime.';
-    }
-    return null;
-  }
-
-  // Creating a brand new CustomerProfile requires a name (backend
-  // CustomerProfileInsertValidator), so address input alone can't be saved
-  // for an admin who doesn't have a profile yet.
-  String? _settlementValidator(int? _) {
-    final hasAddressInput = _selectedSettlementId != null ||
-        _streetCtrl.text.trim().isNotEmpty ||
-        _houseNumberCtrl.text.trim().isNotEmpty;
-    if (hasAddressInput && !_hasProfileInput) {
-      return 'Unesite ime i prezime da biste sačuvali adresu.';
     }
     return null;
   }
