@@ -678,6 +678,13 @@ class AppLocalizationsBs extends AppLocalizations {
   String get remainingToPayLabel => 'Preostalo za platiti';
 
   @override
+  String get downloadInvoicePdfButton => 'Preuzmi PDF';
+
+  @override
+  String get invoicePdfDownloadFailedMessage =>
+      'Preuzimanje racuna nije uspjelo. Pokusajte ponovo.';
+
+  @override
   String get faultReportSubmitSuccess => 'Prijava kvara je poslana.';
 
   @override

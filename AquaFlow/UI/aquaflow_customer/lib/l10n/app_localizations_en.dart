@@ -681,6 +681,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get remainingToPayLabel => 'Remaining to pay';
 
   @override
+  String get downloadInvoicePdfButton => 'Download PDF';
+
+  @override
+  String get invoicePdfDownloadFailedMessage =>
+      'Failed to download the invoice. Please try again.';
+
+  @override
   String get faultReportSubmitSuccess => 'Fault report submitted.';
 
   @override

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show SocketException;
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -238,6 +239,27 @@ class CustomerInvoiceService {
         .whereType<Map<String, dynamic>>()
         .map(CustomerPayment.fromJson)
         .toList();
+  }
+
+  /// PDF bytes for one of the caller's own invoices (backend pins
+  /// `CustomerId` to the caller, same as [fetchById] - a mismatched or
+  /// unknown id comes back as 404, which surfaces as
+  /// [CustomerInvoiceException] here).
+  Future<Uint8List> fetchPdfBytes(int invoiceId) async {
+    final token = await _requireToken();
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices/$invoiceId/pdf');
+
+    final response = await _send(
+      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw CustomerInvoiceException(
+        _messageFor(response, 'Račun nije moguće preuzeti'),
+      );
+    }
+
+    return response.bodyBytes;
   }
 
   Future<String> _requireToken() async {

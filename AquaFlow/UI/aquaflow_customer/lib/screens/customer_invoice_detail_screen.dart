@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart' as stripe;
+import 'package:printing/printing.dart';
 
 import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_invoice.dart';
@@ -45,6 +46,7 @@ class _CustomerInvoiceDetailScreenState
   String? _error;
   List<CustomerPayment> _payments = const [];
   bool _paying = false;
+  bool _downloadingPdf = false;
 
   @override
   void initState() {
@@ -171,6 +173,25 @@ class _CustomerInvoiceDetailScreenState
                     _AmountCard(invoice: invoice, accent: accent),
                     const SizedBox(height: 16),
                     _buildPaymentsSection(invoice, accent),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _downloadingPdf
+                            ? null
+                            : () => _downloadPdf(invoice),
+                        icon: _downloadingPdf
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.picture_as_pdf_outlined),
+                        label: Text(loc.downloadInvoicePdfButton),
+                      ),
+                    ),
                     if (invoice.isPayable) ...[
                       const SizedBox(height: 16),
                       SizedBox(
@@ -211,6 +232,33 @@ class _CustomerInvoiceDetailScreenState
       return Color.lerp(base, Colors.white, 0.6)!;
     }
     return base;
+  }
+
+  Future<void> _downloadPdf(CustomerInvoice invoice) async {
+    setState(() => _downloadingPdf = true);
+    try {
+      final bytes = await _service.fetchPdfBytes(invoice.id);
+      await Printing.layoutPdf(
+        onLayout: (format) async => bytes,
+        name: '${invoice.invoiceNumber}.pdf',
+      );
+    } on CustomerInvoiceException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).invoicePdfDownloadFailedMessage),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _downloadingPdf = false);
+      }
+    }
   }
 
   // Checkout only opens a payment session - it never completes the payment

@@ -239,6 +239,8 @@
   "paymentsEmptyMessage": "No recorded payments.",
   "totalPaidLabel": "Total paid",
   "remainingToPayLabel": "Remaining to pay",
+  "downloadInvoicePdfButton": "Download PDF",
+  "invoicePdfDownloadFailedMessage": "Failed to download the invoice. Please try again.",
 
   "faultReportSubmitSuccess": "Fault report submitted.",
   "newFaultReportTooltip": "New report",

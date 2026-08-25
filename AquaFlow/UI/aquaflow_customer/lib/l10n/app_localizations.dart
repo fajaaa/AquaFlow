@@ -1350,6 +1350,18 @@ abstract class AppLocalizations {
   /// **'Preostalo za platiti'**
   String get remainingToPayLabel;
 
+  /// Button label on the invoice detail screen that downloads the invoice PDF and opens the native print/share preview.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preuzmi PDF'**
+  String get downloadInvoicePdfButton;
+
+  /// Fallback snackbar error message shown when downloading or opening the invoice PDF fails.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preuzimanje racuna nije uspjelo. Pokusajte ponovo.'**
+  String get invoicePdfDownloadFailedMessage;
+
   /// Snackbar message shown after a new fault report is submitted successfully.
   ///
   /// In bs, this message translates to:

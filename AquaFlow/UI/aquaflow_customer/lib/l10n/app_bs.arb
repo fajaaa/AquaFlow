@@ -953,6 +953,14 @@
   "@remainingToPayLabel": {
     "description": "Label for the remaining-to-pay field on the invoice detail screen's payments card."
   },
+  "downloadInvoicePdfButton": "Preuzmi PDF",
+  "@downloadInvoicePdfButton": {
+    "description": "Button label on the invoice detail screen that downloads the invoice PDF and opens the native print/share preview."
+  },
+  "invoicePdfDownloadFailedMessage": "Preuzimanje racuna nije uspjelo. Pokusajte ponovo.",
+  "@invoicePdfDownloadFailedMessage": {
+    "description": "Fallback snackbar error message shown when downloading or opening the invoice PDF fails."
+  },
 
   "faultReportSubmitSuccess": "Prijava kvara je poslana.",
   "@faultReportSubmitSuccess": {
