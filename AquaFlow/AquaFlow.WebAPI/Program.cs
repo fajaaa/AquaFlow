@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using AquaFlow.Common.Services.CryptoService;
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
@@ -135,6 +136,21 @@ if (firebaseApp is not null)
 else
 {
     builder.Services.AddScoped<IPushNotificationSender, NoOpPushNotificationSender>();
+}
+
+// RabbitMQ message publishing is optional infrastructure, just like Firebase above: a missing
+// connection string must not stop the API from starting, and a dead broker must not block
+// requests. When no connection string is configured, a no-op IMessagePublisher is registered
+// instead (logs a warning and publishes nothing) rather than throwing.
+var rabbitMqConnectionString = builder.Configuration["RabbitMQ:ConnectionString"];
+if (!string.IsNullOrWhiteSpace(rabbitMqConnectionString))
+{
+    builder.Services.AddSingleton<EasyNetQ.IBus>(_ => EasyNetQ.RabbitHutch.CreateBus(rabbitMqConnectionString));
+    builder.Services.AddSingleton<IMessagePublisher, EasyNetQMessagePublisher>();
+}
+else
+{
+    builder.Services.AddSingleton<IMessagePublisher, NoOpMessagePublisher>();
 }
 
 builder.Services.AddDbContext<AquaFlowDbContext>(options => options.UseSqlServer(connectionString));
