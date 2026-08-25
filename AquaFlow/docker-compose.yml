@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   aquaflow-db:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -13,6 +11,16 @@ services:
       - "1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
+
+  aquaflow-rabbitmq:
+    image: rabbitmq:3-management
+    container_name: aquaflow-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    ports:
+      - "5672:5672"
+      - "15672:15672"
 
 volumes:
   sqlserver_data:
