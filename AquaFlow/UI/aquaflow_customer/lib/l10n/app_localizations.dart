@@ -146,6 +146,24 @@ abstract class AppLocalizations {
   /// **'Pokušaj ponovo'**
   String get commonRetry;
 
+  /// Generic logout button label, used e.g. by UnavailableScreen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Odjava'**
+  String get commonLogout;
+
+  /// Title shown when an authenticated user's role isn't supported by this app.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nepoznata uloga'**
+  String get unknownRoleTitle;
+
+  /// Explanatory message shown alongside unknownRoleTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Vaš nalog nema podržanu ulogu za ovu aplikaciju. Obratite se administratoru.'**
+  String get unknownRoleMessage;
+
   /// Generic send action tooltip/button label, e.g. for a chat message composer.
   ///
   /// In bs, this message translates to:
@@ -319,6 +337,54 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Email'**
   String get fieldEmailLabel;
+
+  /// App bar title for the company settings screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Postavke firme'**
+  String get companySettingsScreenTitle;
+
+  /// Label for the company name field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Naziv firme'**
+  String get companyNameLabel;
+
+  /// Label for the tax number field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Porezni broj'**
+  String get taxNumberLabel;
+
+  /// Label for the bank account field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Bankovni račun'**
+  String get bankAccountLabel;
+
+  /// Label for the optional logo URL field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'URL logotipa (opcionalno)'**
+  String get logoUrlOptionalLabel;
+
+  /// Label for the default language field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Jezik'**
+  String get defaultLanguageLabel;
+
+  /// Label for the default currency field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Valuta'**
+  String get defaultCurrencyLabel;
+
+  /// Snackbar message shown after company settings are saved successfully.
+  ///
+  /// In bs, this message translates to:
+  /// **'Postavke firme su sačuvane.'**
+  String get companySettingsSaveSuccess;
 
   /// Shared label for a phone input field (registration, personal details).
   ///
@@ -1296,6 +1362,72 @@ abstract class AppLocalizations {
   /// **'Nova prijava'**
   String get newFaultReportTooltip;
 
+  /// Title of the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova prijava kvara'**
+  String get newFaultReportDialogTitle;
+
+  /// Label for a short title/subject text field, e.g. on the new fault report and new support ticket dialogs.
+  ///
+  /// In bs, this message translates to:
+  /// **'Naslov'**
+  String get titleFieldLabel;
+
+  /// Label for the description field on the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Opis'**
+  String get descriptionFieldLabel;
+
+  /// Label for the optional water meter dropdown on the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Vodomjer (opciono)'**
+  String get waterMeterOptionalLabel;
+
+  /// Option in the water meter dropdown meaning no water meter selected.
+  ///
+  /// In bs, this message translates to:
+  /// **'Bez vodomjera'**
+  String get noWaterMeterOption;
+
+  /// Label for the optional street field on the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ulica (opciono)'**
+  String get streetOptionalLabel;
+
+  /// Label for the optional house number field on the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Broj (opciono)'**
+  String get houseNumberOptionalLabel;
+
+  /// Photo count summary shown above the photo picker on the new fault report and new support ticket dialogs.
+  ///
+  /// In bs, this message translates to:
+  /// **'Fotografije ({current}/{max})'**
+  String photoCountLabel(int current, int max);
+
+  /// Button label to add a photo, on the new fault report and new support ticket dialogs.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dodaj sliku'**
+  String get addImageButtonLabel;
+
+  /// Progress message shown while uploading photos on the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Slanje fotografije {current}/{total}...'**
+  String sendingPhotoLabel(int current, int total);
+
+  /// Submit button label on the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pošalji prijavu'**
+  String get newFaultReportSubmitButton;
+
   /// Empty-state message shown when the customer has no fault reports.
   ///
   /// In bs, this message translates to:
@@ -1379,6 +1511,18 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Novi tiket'**
   String get newSupportTicketTooltip;
+
+  /// Title of the new support ticket dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Novi tiket'**
+  String get newSupportTicketDialogTitle;
+
+  /// Label for the opening message field on the new support ticket dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Poruka'**
+  String get messageFieldLabel;
 
   /// Snackbar message shown after a new support ticket is submitted successfully.
   ///

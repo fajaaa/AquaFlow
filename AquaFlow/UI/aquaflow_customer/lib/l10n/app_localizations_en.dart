@@ -33,6 +33,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonRetry => 'Try again';
 
   @override
+  String get commonLogout => 'Log out';
+
+  @override
+  String get unknownRoleTitle => 'Unknown role';
+
+  @override
+  String get unknownRoleMessage =>
+      'Your account doesn\'t have a supported role for this app. Contact your administrator.';
+
+  @override
   String get commonSend => 'Send';
 
   @override
@@ -124,6 +134,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fieldEmailLabel => 'Email';
+
+  @override
+  String get companySettingsScreenTitle => 'Company settings';
+
+  @override
+  String get companyNameLabel => 'Company name';
+
+  @override
+  String get taxNumberLabel => 'Tax number';
+
+  @override
+  String get bankAccountLabel => 'Bank account';
+
+  @override
+  String get logoUrlOptionalLabel => 'Logo URL (optional)';
+
+  @override
+  String get defaultLanguageLabel => 'Language';
+
+  @override
+  String get defaultCurrencyLabel => 'Currency';
+
+  @override
+  String get companySettingsSaveSuccess => 'Company settings saved.';
 
   @override
   String get fieldPhoneLabel => 'Phone';
@@ -653,6 +687,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newFaultReportTooltip => 'New report';
 
   @override
+  String get newFaultReportDialogTitle => 'New fault report';
+
+  @override
+  String get titleFieldLabel => 'Title';
+
+  @override
+  String get descriptionFieldLabel => 'Description';
+
+  @override
+  String get waterMeterOptionalLabel => 'Water meter (optional)';
+
+  @override
+  String get noWaterMeterOption => 'No water meter';
+
+  @override
+  String get streetOptionalLabel => 'Street (optional)';
+
+  @override
+  String get houseNumberOptionalLabel => 'House number (optional)';
+
+  @override
+  String photoCountLabel(int current, int max) {
+    return 'Photos ($current/$max)';
+  }
+
+  @override
+  String get addImageButtonLabel => 'Add image';
+
+  @override
+  String sendingPhotoLabel(int current, int total) {
+    return 'Sending photo $current/$total...';
+  }
+
+  @override
+  String get newFaultReportSubmitButton => 'Submit report';
+
+  @override
   String get faultReportsEmptyMessage => 'You have no submitted fault reports.';
 
   @override
@@ -693,6 +764,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newSupportTicketTooltip => 'New ticket';
+
+  @override
+  String get newSupportTicketDialogTitle => 'New ticket';
+
+  @override
+  String get messageFieldLabel => 'Message';
 
   @override
   String get supportTicketCreateSuccess => 'Ticket created.';

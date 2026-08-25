@@ -33,6 +33,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonRetry => 'Try again';
 
   @override
+  String get commonLogout => 'Log out';
+
+  @override
+  String get unknownRoleTitle => 'Unknown role';
+
+  @override
+  String get unknownRoleMessage =>
+      'Your account doesn\'t have a supported role for this app. Contact your administrator.';
+
+  @override
   String get stateLoading => 'Loading...';
 
   @override
@@ -112,6 +122,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fieldEmailLabel => 'Email';
+
+  @override
+  String get companySettingsScreenTitle => 'Company settings';
+
+  @override
+  String get companyNameLabel => 'Company name';
+
+  @override
+  String get taxNumberLabel => 'Tax number';
+
+  @override
+  String get bankAccountLabel => 'Bank account';
+
+  @override
+  String get logoUrlOptionalLabel => 'Logo URL (optional)';
+
+  @override
+  String get defaultLanguageLabel => 'Language';
+
+  @override
+  String get defaultCurrencyLabel => 'Currency';
+
+  @override
+  String get companySettingsSaveSuccess => 'Company settings saved.';
 
   @override
   String get fieldPhoneLabel => 'Phone';
@@ -389,6 +423,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationHouseNumberLabel => 'House number';
 
   @override
+  String get locationNameRequiredError =>
+      'Enter your first and last name in \"Personal details\" to save the address.';
+
+  @override
+  String get locationSaveSuccess => 'Location saved.';
+
+  @override
   String get settlementRequiredError => 'Select a settlement.';
 
   @override
@@ -560,4 +601,71 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pricePerM3Label => 'Price per m³';
+
+  @override
+  String get faultReportStatusNew => 'New';
+
+  @override
+  String get faultReportStatusAssigned => 'Assigned';
+
+  @override
+  String get faultReportStatusInProgress => 'In progress';
+
+  @override
+  String get faultReportStatusResolved => 'Resolved';
+
+  @override
+  String get faultReportStatusFieldLabel => 'Report status';
+
+  @override
+  String get photosSectionHeading => 'Photos';
+
+  @override
+  String get noPhotosMessage => 'No photos attached.';
+
+  @override
+  String get faultReportInfoSectionHeading => 'Report information';
+
+  @override
+  String get reportedAtLabel => 'Reported';
+
+  @override
+  String get resolvedAtLabel => 'Resolved';
+
+  @override
+  String get addressLabel => 'Address';
+
+  @override
+  String get customerLabel => 'Customer';
+
+  @override
+  String get faultReportsScreenTitle => 'Fault reports';
+
+  @override
+  String get faultReportSearchHint => 'Title or customer name';
+
+  @override
+  String get collectorFaultReportsEmptyMessage => 'No fault reports.';
+
+  @override
+  String reportedAtInlineLabel(String date) {
+    return 'Reported: $date';
+  }
+
+  @override
+  String get allStatusesOption => 'All statuses';
+
+  @override
+  String get statusChangeDialogTitle => 'Status change';
+
+  @override
+  String statusChangeDialogContent(String status) {
+    return 'Set the report status to \"$status\"?';
+  }
+
+  @override
+  String get startActionButton => 'Start';
+
+  @override
+  String get resolveActionButton => 'Resolve';
 }

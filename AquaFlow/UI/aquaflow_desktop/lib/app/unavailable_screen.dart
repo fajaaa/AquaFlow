@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
+
 /// Generic full-screen info state used for the platform/role dead-ends the app
 /// can reach: opened in a web browser, a non-admin signed in on desktop, or an
 /// unrecognised role on mobile.
@@ -51,8 +53,9 @@ class UnavailableScreen extends StatelessWidget {
                   Text(
                     title,
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -65,7 +68,7 @@ class UnavailableScreen extends StatelessWidget {
                     FilledButton.icon(
                       onPressed: onLogout,
                       icon: const Icon(Icons.logout),
-                      label: const Text('Odjava'),
+                      label: Text(AppLocalizations.of(context).commonLogout),
                     ),
                   ],
                 ],

@@ -34,6 +34,18 @@
   "@commonRetry": {
     "description": "Retry button label shown by ErrorRetry."
   },
+  "commonLogout": "Odjava",
+  "@commonLogout": {
+    "description": "Generic logout button label, used e.g. by UnavailableScreen."
+  },
+  "unknownRoleTitle": "Nepoznata uloga",
+  "@unknownRoleTitle": {
+    "description": "Title shown when an authenticated user's role isn't supported by this app."
+  },
+  "unknownRoleMessage": "Vaš nalog nema podržanu ulogu za ovu aplikaciju. Obratite se administratoru.",
+  "@unknownRoleMessage": {
+    "description": "Explanatory message shown alongside unknownRoleTitle."
+  },
   "commonSend": "Pošalji",
   "@commonSend": {
     "description": "Generic send action tooltip/button label, e.g. for a chat message composer."
@@ -169,6 +181,38 @@
   "fieldEmailLabel": "Email",
   "@fieldEmailLabel": {
     "description": "Shared label for an email input field (login, registration, personal details)."
+  },
+  "companySettingsScreenTitle": "Postavke firme",
+  "@companySettingsScreenTitle": {
+    "description": "App bar title for the company settings screen."
+  },
+  "companyNameLabel": "Naziv firme",
+  "@companyNameLabel": {
+    "description": "Label for the company name field on the company settings form."
+  },
+  "taxNumberLabel": "Porezni broj",
+  "@taxNumberLabel": {
+    "description": "Label for the tax number field on the company settings form."
+  },
+  "bankAccountLabel": "Bankovni račun",
+  "@bankAccountLabel": {
+    "description": "Label for the bank account field on the company settings form."
+  },
+  "logoUrlOptionalLabel": "URL logotipa (opcionalno)",
+  "@logoUrlOptionalLabel": {
+    "description": "Label for the optional logo URL field on the company settings form."
+  },
+  "defaultLanguageLabel": "Jezik",
+  "@defaultLanguageLabel": {
+    "description": "Label for the default language field on the company settings form."
+  },
+  "defaultCurrencyLabel": "Valuta",
+  "@defaultCurrencyLabel": {
+    "description": "Label for the default currency field on the company settings form."
+  },
+  "companySettingsSaveSuccess": "Postavke firme su sačuvane.",
+  "@companySettingsSaveSuccess": {
+    "description": "Snackbar message shown after company settings are saved successfully."
   },
   "fieldPhoneLabel": "Telefon",
   "@fieldPhoneLabel": {
@@ -918,6 +962,66 @@
   "@newFaultReportTooltip": {
     "description": "Tooltip for the '+' icon button that opens the new fault report dialog."
   },
+  "newFaultReportDialogTitle": "Nova prijava kvara",
+  "@newFaultReportDialogTitle": {
+    "description": "Title of the new fault report dialog."
+  },
+  "titleFieldLabel": "Naslov",
+  "@titleFieldLabel": {
+    "description": "Label for a short title/subject text field, e.g. on the new fault report and new support ticket dialogs."
+  },
+  "descriptionFieldLabel": "Opis",
+  "@descriptionFieldLabel": {
+    "description": "Label for the description field on the new fault report dialog."
+  },
+  "waterMeterOptionalLabel": "Vodomjer (opciono)",
+  "@waterMeterOptionalLabel": {
+    "description": "Label for the optional water meter dropdown on the new fault report dialog."
+  },
+  "noWaterMeterOption": "Bez vodomjera",
+  "@noWaterMeterOption": {
+    "description": "Option in the water meter dropdown meaning no water meter selected."
+  },
+  "streetOptionalLabel": "Ulica (opciono)",
+  "@streetOptionalLabel": {
+    "description": "Label for the optional street field on the new fault report dialog."
+  },
+  "houseNumberOptionalLabel": "Broj (opciono)",
+  "@houseNumberOptionalLabel": {
+    "description": "Label for the optional house number field on the new fault report dialog."
+  },
+  "photoCountLabel": "Fotografije ({current}/{max})",
+  "@photoCountLabel": {
+    "description": "Photo count summary shown above the photo picker on the new fault report and new support ticket dialogs.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "addImageButtonLabel": "Dodaj sliku",
+  "@addImageButtonLabel": {
+    "description": "Button label to add a photo, on the new fault report and new support ticket dialogs."
+  },
+  "sendingPhotoLabel": "Slanje fotografije {current}/{total}...",
+  "@sendingPhotoLabel": {
+    "description": "Progress message shown while uploading photos on the new fault report dialog.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "newFaultReportSubmitButton": "Pošalji prijavu",
+  "@newFaultReportSubmitButton": {
+    "description": "Submit button label on the new fault report dialog."
+  },
   "faultReportsEmptyMessage": "Nemate poslanih prijava kvarova.",
   "@faultReportsEmptyMessage": {
     "description": "Empty-state message shown when the customer has no fault reports."
@@ -974,6 +1078,14 @@
   "newSupportTicketTooltip": "Novi tiket",
   "@newSupportTicketTooltip": {
     "description": "Tooltip for the '+' icon button that opens the new support ticket dialog."
+  },
+  "newSupportTicketDialogTitle": "Novi tiket",
+  "@newSupportTicketDialogTitle": {
+    "description": "Title of the new support ticket dialog."
+  },
+  "messageFieldLabel": "Poruka",
+  "@messageFieldLabel": {
+    "description": "Label for the opening message field on the new support ticket dialog."
   },
   "supportTicketCreateSuccess": "Tiket je kreiran.",
   "@supportTicketCreateSuccess": {

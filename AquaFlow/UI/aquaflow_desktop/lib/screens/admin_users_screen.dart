@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_city.dart';
 import 'package:aquaflow_desktop/models/admin_customer_profile.dart';
 import 'package:aquaflow_desktop/models/admin_customer_profile_draft.dart';
@@ -39,30 +40,13 @@ import 'package:aquaflow_desktop/shared/widgets/table_row_actions.dart';
 enum AdminUsersScreenMode {
   customers(
     roleName: 'Customer',
-    title: 'Korisnici',
-    subtitle: 'Pregled, dodavanje, uređivanje i brisanje korisničkih naloga.',
-    singular: 'Korisnik',
-    singularAccusative: 'korisnika',
     showWaterMeters: true,
     usesCustomerProfile: true,
   ),
-  admins(
-    roleName: 'Admin',
-    title: 'Administratori',
-    subtitle:
-        'Pregled, dodavanje, uređivanje i brisanje administratorskih naloga.',
-    singular: 'Administrator',
-    singularAccusative: 'administratora',
-    showWaterMeters: false,
-    usesCustomerProfile: false,
-  );
+  admins(roleName: 'Admin', showWaterMeters: false, usesCustomerProfile: false);
 
   const AdminUsersScreenMode({
     required this.roleName,
-    required this.title,
-    required this.subtitle,
-    required this.singular,
-    required this.singularAccusative,
     required this.showWaterMeters,
     required this.usesCustomerProfile,
   });
@@ -70,10 +54,6 @@ enum AdminUsersScreenMode {
   /// Backend `UserRole` name, sent as the `UserRole=` filter and used to
   /// resolve the role id for the editor dialog.
   final String roleName;
-  final String title;
-  final String subtitle;
-  final String singular;
-  final String singularAccusative;
 
   /// Customers have water meters; admins do not, so the action is hidden.
   final bool showWaterMeters;
@@ -84,6 +64,73 @@ enum AdminUsersScreenMode {
   /// `User.FirstName/LastName` instead, hiding the Adresa/Jezik/Tema fields
   /// that only make sense for a CustomerProfile.
   final bool usesCustomerProfile;
+}
+
+/// Localized display text for [AdminUsersScreenMode], kept as an extension
+/// (rather than fields on the enum) since a const enum constructor can't call
+/// `AppLocalizations.of(context)`. Bosnian's grammatical cases mean most of
+/// these are independent per-mode sentences, not a single template with a
+/// word substituted in - e.g. "Nema korisnika."/"No customers." doesn't
+/// compose from a shared "customer(s)" fragment the way the English side
+/// would suggest.
+extension AdminUsersScreenModeText on AdminUsersScreenMode {
+  String title(AppLocalizations loc) => switch (this) {
+    AdminUsersScreenMode.customers => loc.usersLabel,
+    AdminUsersScreenMode.admins => loc.administratorsLabel,
+  };
+
+  String subtitle(AppLocalizations loc) => switch (this) {
+    AdminUsersScreenMode.customers => loc.usersScreenSubtitle,
+    AdminUsersScreenMode.admins => loc.administratorsScreenSubtitle,
+  };
+
+  String newButtonLabel(AppLocalizations loc) => switch (this) {
+    AdminUsersScreenMode.customers => loc.newUserButtonLabel,
+    AdminUsersScreenMode.admins => loc.newAdministratorButtonLabel,
+  };
+
+  String editDialogTitle(AppLocalizations loc) => switch (this) {
+    AdminUsersScreenMode.customers => loc.editUserDialogTitle,
+    AdminUsersScreenMode.admins => loc.editAdministratorDialogTitle,
+  };
+
+  String createdSuccessMessage(AppLocalizations loc) => switch (this) {
+    AdminUsersScreenMode.customers => loc.userCreatedSuccess,
+    AdminUsersScreenMode.admins => loc.administratorCreatedSuccess,
+  };
+
+  String savedSuccessMessage(AppLocalizations loc) => switch (this) {
+    AdminUsersScreenMode.customers => loc.userSavedSuccess,
+    AdminUsersScreenMode.admins => loc.administratorSavedSuccess,
+  };
+
+  String deleteDialogTitle(AppLocalizations loc) => switch (this) {
+    AdminUsersScreenMode.customers => loc.deleteUserDialogTitle,
+    AdminUsersScreenMode.admins => loc.deleteAdministratorDialogTitle,
+  };
+
+  String deleteDialogContent(AppLocalizations loc, String email) =>
+      switch (this) {
+        AdminUsersScreenMode.customers => loc.deleteUserDialogContent(email),
+        AdminUsersScreenMode.admins => loc.deleteAdministratorDialogContent(
+          email,
+        ),
+      };
+
+  String deletedSuccessMessage(AppLocalizations loc) => switch (this) {
+    AdminUsersScreenMode.customers => loc.userDeletedSuccess,
+    AdminUsersScreenMode.admins => loc.administratorDeletedSuccess,
+  };
+
+  String emptyMessage(AppLocalizations loc) => switch (this) {
+    AdminUsersScreenMode.customers => loc.usersEmptyMessage,
+    AdminUsersScreenMode.admins => loc.administratorsEmptyMessage,
+  };
+
+  String emptyFilteredMessage(AppLocalizations loc) => switch (this) {
+    AdminUsersScreenMode.customers => loc.usersEmptyFilteredMessage,
+    AdminUsersScreenMode.admins => loc.administratorsEmptyFilteredMessage,
+  };
 }
 
 class AdminUsersScreen extends StatefulWidget {
@@ -142,7 +189,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
     // Restrict message when a user has related records), not a generic one.
     return error is AdminUserException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   // The settlement-name lookup has to refresh after every load (search, page
@@ -235,11 +282,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
   /// pins the whole screen to one role), or null with an error snackbar when
   /// the roles can't be loaded or the role name doesn't exist on the backend.
   Future<int?> _resolvePinnedRoleId() async {
+    final loc = AppLocalizations.of(context);
     if (_roles.isEmpty) {
       await _loadRoles();
       if (!mounted) return null;
       if (_roles.isEmpty) {
-        showError('Uloge nisu učitane. Pokušajte ponovo.');
+        showError(loc.rolesNotLoadedError);
         return null;
       }
     }
@@ -248,7 +296,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
     for (final role in _roles) {
       if (role.name.toLowerCase() == roleName) return role.id;
     }
-    showError('Rola "${widget.mode.roleName}" nije pronađena.');
+    showError(loc.roleNotFoundError(widget.mode.roleName));
     return null;
   }
 
@@ -273,7 +321,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
 
     await runMutation(() async {
       await _service.create(draft);
-    }, '${widget.mode.singular} je dodan.');
+    }, widget.mode.createdSuccessMessage(AppLocalizations.of(context)));
   }
 
   Future<void> _openEdit(AdminUser user) async {
@@ -316,7 +364,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
         draft,
         existingProfileId: existingProfile?.id,
       );
-    }, '${widget.mode.singular} je sačuvan.');
+    }, widget.mode.savedSuccessMessage(AppLocalizations.of(context)));
   }
 
   void _openWaterMeters(AdminUser user) {
@@ -334,23 +382,21 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
   }
 
   Future<void> _confirmDelete(AdminUser user) async {
+    final loc = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Obriši ${widget.mode.singularAccusative}'),
-        content: Text(
-          'Da li želite obrisati ${widget.mode.singularAccusative} '
-          '"${user.email}"? Ova radnja se ne može poništiti.',
-        ),
+        title: Text(widget.mode.deleteDialogTitle(loc)),
+        content: Text(widget.mode.deleteDialogContent(loc, user.email)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Odustani'),
+            child: Text(loc.dialogDismissButton),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(true),
             icon: const Icon(Icons.delete_outline),
-            label: const Text('Obriši'),
+            label: Text(loc.commonDelete),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
@@ -365,7 +411,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
       if (items.length == 1 && page > 1) {
         page -= 1;
       }
-    }, '${widget.mode.singular} je obrisan.');
+    }, widget.mode.deletedSuccessMessage(AppLocalizations.of(context)));
   }
 
   @override
@@ -380,6 +426,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -390,8 +437,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ScreenHeader(
-                  title: widget.mode.title,
-                  subtitle: widget.mode.subtitle,
+                  title: widget.mode.title(loc),
+                  subtitle: widget.mode.subtitle(loc),
                   actions: [
                     RefreshButton(
                       onRefresh: () async {
@@ -404,18 +451,18 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                     FilledButton.icon(
                       onPressed: loading || mutating ? null : _openCreate,
                       icon: const Icon(Icons.add),
-                      label: Text('Novi ${widget.mode.singular.toLowerCase()}'),
+                      label: Text(widget.mode.newButtonLabel(loc)),
                     ),
                   ],
                 ),
                 const SizedBox(height: 18),
-                _buildFilters(),
+                _buildFilters(loc),
               ],
             ),
           ),
           if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent()),
+          Expanded(child: _buildContent(loc)),
           if (!isInitialLoad && error == null)
             PagedTablePaginationBar(
               page: page,
@@ -431,7 +478,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     final hasSearch = searchController.text.trim().isNotEmpty;
     final activeValue = _activeFilter == null
         ? ''
@@ -450,12 +497,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
             onChanged: queueSearch,
             onSubmitted: submitSearch,
             decoration: InputDecoration(
-              labelText: 'Pretraga',
-              hintText: 'Ime ili prezime',
+              labelText: loc.commonSearch,
+              hintText: loc.nameSearchHint,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: hasSearch
                   ? IconButton(
-                      tooltip: 'Očisti pretragu',
+                      tooltip: loc.clearSearchTooltip,
                       onPressed: clearSearch,
                       icon: const Icon(Icons.clear),
                     )
@@ -467,14 +514,17 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
           width: 200,
           child: DropdownButtonFormField<String>(
             initialValue: activeValue,
-            decoration: const InputDecoration(
-              labelText: 'Status',
-              prefixIcon: Icon(Icons.toggle_on_outlined),
+            decoration: InputDecoration(
+              labelText: loc.statusFieldLabel,
+              prefixIcon: const Icon(Icons.toggle_on_outlined),
             ),
-            items: const [
-              DropdownMenuItem(value: '', child: Text('Svi')),
-              DropdownMenuItem(value: 'active', child: Text('Aktivan')),
-              DropdownMenuItem(value: 'inactive', child: Text('Neaktivan')),
+            items: [
+              DropdownMenuItem(value: '', child: Text(loc.allOption)),
+              DropdownMenuItem(value: 'active', child: Text(loc.statusActive)),
+              DropdownMenuItem(
+                value: 'inactive',
+                child: Text(loc.statusInactive),
+              ),
             ],
             onChanged: loading || mutating
                 ? null
@@ -482,17 +532,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
           ),
         ),
         IconButton.filledTonal(
-          tooltip: 'Primijeni filtere',
-          onPressed: loading || mutating
-              ? null
-              : () => load(resetPage: true),
+          tooltip: loc.applyFiltersTooltip,
+          onPressed: loading || mutating ? null : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
       ],
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -505,10 +553,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
     if (items.isEmpty) {
       return EmptyStateView(
         icon: Icons.people_outline,
-        message: 'Nema ${widget.mode.singularAccusative}.',
+        message: widget.mode.emptyMessage(loc),
         hasFilters: _hasFilters,
         filteredIcon: Icons.search_off,
-        filteredMessage: 'Nema ${widget.mode.singularAccusative} za zadane filtere.',
+        filteredMessage: widget.mode.emptyFilteredMessage(loc),
       );
     }
 
@@ -537,14 +585,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                     dataRowMinHeight: 64,
                     dataRowMaxHeight: 72,
                     columns: [
-                      const DataColumn(label: Text('Ime i prezime')),
-                      const DataColumn(label: Text('Email')),
-                      const DataColumn(label: Text('Telefon')),
+                      DataColumn(label: Text(loc.fullNameColumnLabel)),
+                      DataColumn(label: Text(loc.fieldEmailLabel)),
+                      DataColumn(label: Text(loc.fieldPhoneLabel)),
                       if (widget.mode == AdminUsersScreenMode.customers)
-                        const DataColumn(label: Text('Naselje')),
-                      const DataColumn(label: Text('Status')),
-                      const DataColumn(label: Text('Kreiran')),
-                      const DataColumn(label: Text('Akcije')),
+                        DataColumn(label: Text(loc.locationSettlementLabel)),
+                      DataColumn(label: Text(loc.statusFieldLabel)),
+                      DataColumn(label: Text(loc.createdColumnLabel)),
+                      DataColumn(label: Text(loc.actionsColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
@@ -573,7 +621,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                                 disabled: mutating,
                                 extraActions: [
                                   IconButton(
-                                    tooltip: 'Uredi',
+                                    tooltip: loc.commonEdit,
                                     onPressed: mutating
                                         ? null
                                         : () => _openEdit(item),
@@ -581,7 +629,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                                   ),
                                   if (widget.mode.showWaterMeters)
                                     IconButton(
-                                      tooltip: 'Vodomjeri',
+                                      tooltip: loc.waterMetersTooltip,
                                       onPressed: mutating
                                           ? null
                                           : () => _openWaterMeters(item),
@@ -590,7 +638,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                                       ),
                                     ),
                                   IconButton(
-                                    tooltip: 'Aktivnosti',
+                                    tooltip: loc.activitiesTooltip,
                                     onPressed: mutating
                                         ? null
                                         : () => _openActivityLogs(item),
@@ -598,8 +646,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                                   ),
                                   IconButton(
                                     tooltip: item.id == currentUserId
-                                        ? 'Ne možete obrisati vlastiti korisnički nalog.'
-                                        : 'Obriši',
+                                        ? loc.cannotDeleteOwnAccountError
+                                        : loc.commonDelete,
                                     onPressed:
                                         mutating || item.id == currentUserId
                                         ? null
@@ -634,8 +682,9 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final color = isActive ? const Color(0xFF2E7D32) : const Color(0xFF64748B);
-    final label = isActive ? 'Aktivan' : 'Neaktivan';
+    final label = isActive ? loc.statusActive : loc.statusInactive;
     final icon = isActive ? Icons.check_circle_outline : Icons.cancel_outlined;
 
     return Container(
@@ -716,7 +765,8 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   // persisted profile always has a non-empty name), so this is already true
   // whenever an address-only change is made to an existing profile.
   bool get _hasProfileInput =>
-      _firstNameCtrl.text.trim().isNotEmpty || _lastNameCtrl.text.trim().isNotEmpty;
+      _firstNameCtrl.text.trim().isNotEmpty ||
+      _lastNameCtrl.text.trim().isNotEmpty;
 
   List<AdminMunicipality> get _municipalitiesForSelectedCity => widget
       .municipalities
@@ -725,7 +775,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
 
   List<AdminSettlement> get _settlementsForSelectedMunicipality => widget
       .settlements
-      .where((settlement) => settlement.municipalityId == _selectedMunicipalityId)
+      .where(
+        (settlement) => settlement.municipalityId == _selectedMunicipalityId,
+      )
       .toList();
 
   @override
@@ -848,11 +900,12 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return AlertDialog(
       title: Text(
         _isEdit
-            ? 'Uredi ${widget.mode.singularAccusative}'
-            : 'Novi ${widget.mode.singular.toLowerCase()}',
+            ? widget.mode.editDialogTitle(loc)
+            : widget.mode.newButtonLabel(loc),
       ),
       content: SizedBox(
         width: math.min(760, MediaQuery.sizeOf(context).width - 48),
@@ -867,7 +920,7 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _FormSectionHeader('Profil'),
+                _FormSectionHeader(loc.profileSectionLabel),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -877,7 +930,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                         textInputAction: TextInputAction.next,
                         validator: _firstNameValidator,
                         onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(labelText: 'Ime'),
+                        decoration: InputDecoration(
+                          labelText: loc.fieldFirstNameLabel,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -887,7 +942,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                         textInputAction: TextInputAction.next,
                         validator: _lastNameValidator,
                         onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(labelText: 'Prezime'),
+                        decoration: InputDecoration(
+                          labelText: loc.fieldLastNameLabel,
+                        ),
                       ),
                     ),
                   ],
@@ -899,9 +956,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                     initialValue: widget.existingProfile!.customerCode,
                     enabled: false,
                     style: const TextStyle(letterSpacing: 0.6),
-                    decoration: const InputDecoration(
-                      labelText: 'Šifra korisnika (automatski dodijeljena)',
-                      prefixIcon: Icon(Icons.lock_outline),
+                    decoration: InputDecoration(
+                      labelText: loc.customerCodeFieldLabel,
+                      prefixIcon: const Icon(Icons.lock_outline),
                     ),
                   ),
                 ],
@@ -909,10 +966,18 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
                     initialValue: _theme,
-                    decoration: const InputDecoration(labelText: 'Tema'),
-                    items: const [
-                      DropdownMenuItem(value: 'light', child: Text('Svijetla')),
-                      DropdownMenuItem(value: 'dark', child: Text('Tamna')),
+                    decoration: InputDecoration(
+                      labelText: loc.registerThemeLabel,
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'light',
+                        child: Text(loc.themeLightOption),
+                      ),
+                      DropdownMenuItem(
+                        value: 'dark',
+                        child: Text(loc.themeDarkOption),
+                      ),
                     ],
                     onChanged: (value) {
                       if (value == null) return;
@@ -922,7 +987,7 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                 ],
                 const SizedBox(height: 22),
 
-                const _FormSectionHeader('Kontakt'),
+                _FormSectionHeader(loc.contactSectionLabel),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -932,9 +997,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                         textInputAction: TextInputAction.next,
                         keyboardType: TextInputType.emailAddress,
                         validator: _emailValidator,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined),
+                        decoration: InputDecoration(
+                          labelText: loc.fieldEmailLabel,
+                          prefixIcon: const Icon(Icons.email_outlined),
                         ),
                       ),
                     ),
@@ -945,9 +1010,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                         textInputAction: TextInputAction.next,
                         keyboardType: TextInputType.phone,
                         validator: _phoneValidator,
-                        decoration: const InputDecoration(
-                          labelText: 'Telefon',
-                          prefixIcon: Icon(Icons.phone_outlined),
+                        decoration: InputDecoration(
+                          labelText: loc.fieldPhoneLabel,
+                          prefixIcon: const Icon(Icons.phone_outlined),
                         ),
                       ),
                     ),
@@ -956,19 +1021,25 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                 const SizedBox(height: 22),
 
                 if (widget.mode.usesCustomerProfile) ...[
-                  const _FormSectionHeader('Adresa'),
+                  _FormSectionHeader(loc.addressLabel),
                   Row(
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           initialValue: _selectedCityId ?? 0,
-                          decoration: const InputDecoration(labelText: 'Grad'),
+                          decoration: InputDecoration(
+                            labelText: loc.locationCityLabel,
+                          ),
                           items: [
-                            const DropdownMenuItem(
-                                value: 0, child: Text('Bez grada')),
+                            DropdownMenuItem(
+                              value: 0,
+                              child: Text(loc.locationNoCityOption),
+                            ),
                             for (final city in widget.cities)
                               DropdownMenuItem(
-                                  value: city.id, child: Text(city.name)),
+                                value: city.id,
+                                child: Text(city.name),
+                              ),
                           ],
                           onChanged: (value) =>
                               _onCityChanged(value == 0 ? null : value),
@@ -978,11 +1049,13 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           initialValue: _selectedMunicipalityId ?? 0,
-                          decoration: const InputDecoration(labelText: 'Općina'),
+                          decoration: InputDecoration(
+                            labelText: loc.locationMunicipalityLabel,
+                          ),
                           items: [
-                            const DropdownMenuItem(
+                            DropdownMenuItem(
                               value: 0,
-                              child: Text('Bez općine'),
+                              child: Text(loc.locationNoMunicipalityOption),
                             ),
                             for (final municipality
                                 in _municipalitiesForSelectedCity)
@@ -994,7 +1067,8 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                           onChanged: _selectedCityId == null
                               ? null
                               : (value) => _onMunicipalityChanged(
-                                  value == 0 ? null : value),
+                                  value == 0 ? null : value,
+                                ),
                         ),
                       ),
                     ],
@@ -1007,11 +1081,13 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                         flex: 2,
                         child: DropdownButtonFormField<int>(
                           initialValue: _selectedSettlementId ?? 0,
-                          decoration: const InputDecoration(labelText: 'Naselje'),
+                          decoration: InputDecoration(
+                            labelText: loc.locationSettlementLabel,
+                          ),
                           items: [
-                            const DropdownMenuItem(
+                            DropdownMenuItem(
                               value: 0,
-                              child: Text('Bez naselja'),
+                              child: Text(loc.locationNoSettlementOption),
                             ),
                             for (final settlement
                                 in _settlementsForSelectedMunicipality)
@@ -1024,7 +1100,8 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                           onChanged: _selectedMunicipalityId == null
                               ? null
                               : (value) => _onSettlementChanged(
-                                  value == 0 ? null : value),
+                                  value == 0 ? null : value,
+                                ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1033,7 +1110,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                         child: TextFormField(
                           controller: _streetCtrl,
                           textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(labelText: 'Ulica'),
+                          decoration: InputDecoration(
+                            labelText: loc.locationStreetLabel,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1041,7 +1120,9 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                         child: TextFormField(
                           controller: _houseNumberCtrl,
                           textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(labelText: 'Broj'),
+                          decoration: InputDecoration(
+                            labelText: loc.locationHouseNumberLabel,
+                          ),
                         ),
                       ),
                     ],
@@ -1049,14 +1130,14 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                   const SizedBox(height: 22),
                 ],
 
-                const _FormSectionHeader('Nalog'),
+                _FormSectionHeader(loc.accountSectionLabel),
                 _StatusSwitchField(
                   value: _isActive,
                   onChanged: widget.disableDeactivate
                       ? null
                       : (value) => setState(() => _isActive = value),
                   disabledHint: widget.disableDeactivate
-                      ? 'Ne možete deaktivirati vlastiti nalog.'
+                      ? loc.cannotDeactivateOwnAccountError
                       : null,
                 ),
                 const SizedBox(height: 14),
@@ -1068,8 +1149,8 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                   onFieldSubmitted: (_) => _save(),
                   decoration: InputDecoration(
                     labelText: _isEdit
-                        ? 'Nova lozinka (ostavi prazno da zadržiš postojeću)'
-                        : 'Lozinka',
+                        ? loc.newPasswordOptionalLabel
+                        : loc.fieldPasswordLabel,
                     prefixIcon: const Icon(Icons.password_outlined),
                   ),
                 ),
@@ -1081,12 +1162,12 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: _save,
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Sačuvaj'),
+          label: Text(loc.commonSave),
         ),
       ],
     );
@@ -1094,9 +1175,10 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
 
   String? _emailValidator(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    final loc = AppLocalizations.of(context);
+    if (text.isEmpty) return loc.fieldRequiredError;
     final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailPattern.hasMatch(text)) return 'Unesite ispravan email.';
+    if (!emailPattern.hasMatch(text)) return loc.emailInvalidError;
     return null;
   }
 
@@ -1106,7 +1188,7 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
     final phonePattern = RegExp(r'^[0-9+\-\s()]+$');
     if (!phonePattern.hasMatch(text) ||
         text.replaceAll(RegExp(r'[^0-9]'), '').length < 6) {
-      return 'Unesite ispravan broj telefona.';
+      return AppLocalizations.of(context).phoneInvalidNumberError;
     }
     return null;
   }
@@ -1114,7 +1196,7 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   String? _passwordValidator(String? value) {
     if (_isEdit) return null;
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    if (text.isEmpty) return AppLocalizations.of(context).fieldRequiredError;
     return null;
   }
 
@@ -1123,7 +1205,7 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   String? _firstNameValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _lastNameCtrl.text.trim().isNotEmpty) {
-      return 'Obavezno ako unosite ime i prezime.';
+      return AppLocalizations.of(context).nameRequiredTogetherError;
     }
     return null;
   }
@@ -1131,7 +1213,7 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   String? _lastNameValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _firstNameCtrl.text.trim().isNotEmpty) {
-      return 'Obavezno ako unosite ime i prezime.';
+      return AppLocalizations.of(context).nameRequiredTogetherError;
     }
     return null;
   }
@@ -1141,11 +1223,12 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   // for a user who doesn't have a profile yet - guard against silently
   // dropping it instead of just leaving it unsent.
   String? _settlementValidator(int? _) {
-    final hasAddressInput = _selectedSettlementId != null ||
+    final hasAddressInput =
+        _selectedSettlementId != null ||
         _streetCtrl.text.trim().isNotEmpty ||
         _houseNumberCtrl.text.trim().isNotEmpty;
     if (hasAddressInput && !_hasProfileInput) {
-      return 'Unesite ime i prezime da biste sačuvali adresu.';
+      return AppLocalizations.of(context).nameRequiredForAddressError;
     }
     return null;
   }
@@ -1191,6 +1274,7 @@ class _StatusSwitchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final switchWidget = Switch(value: value, onChanged: onChanged);
 
     final field = Container(
@@ -1209,7 +1293,7 @@ class _StatusSwitchField extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              value ? 'Aktivan' : 'Neaktivan',
+              value ? loc.statusActive : loc.statusInactive,
               style: theme.textTheme.bodyMedium,
             ),
           ),

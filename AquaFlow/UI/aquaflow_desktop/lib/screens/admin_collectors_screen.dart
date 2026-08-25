@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_collector_profile.dart';
 import 'package:aquaflow_desktop/models/admin_customer_profile.dart';
 import 'package:aquaflow_desktop/screens/admin_user_activity_logs_screen.dart';
@@ -47,7 +48,7 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
   String describeError(Object error) {
     return error is AdminCollectorException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   void _openActivityLogs(AdminCollectorProfile profile) {
@@ -77,7 +78,7 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
           lastName: draft.lastName,
         );
       },
-      'Inkasant je dodan.',
+      AppLocalizations.of(context).collectorCreatedSuccess,
       resetPageAfterSuccess: true,
     );
   }
@@ -111,7 +112,7 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
         lastName: draft.lastName,
         existingProfileId: existingProfile?.id,
       );
-    }, 'Profil inkasanta je sačuvan.');
+    }, AppLocalizations.of(context).collectorProfileSavedSuccess);
   }
 
   // The shared `runMutation` doesn't support an optional page reset, which
@@ -147,6 +148,7 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -154,22 +156,22 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
           Padding(
             padding: const EdgeInsets.fromLTRB(28, 24, 28, 12),
             child: ScreenHeader(
-              title: 'Inkasanti',
-              subtitle: 'Pregled i uređivanje profila inkasanata za terenski rad.',
+              title: loc.collectorsNavLabel,
+              subtitle: loc.collectorsScreenSubtitle,
               actions: [
                 RefreshButton(onRefresh: load, enabled: !mutating),
                 const SizedBox(width: 8),
                 FilledButton.icon(
                   onPressed: loading || mutating ? null : _openCreate,
                   icon: const Icon(Icons.add),
-                  label: const Text('Dodaj inkasanta'),
+                  label: Text(loc.addCollectorButtonLabel),
                 ),
               ],
             ),
           ),
           if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent()),
+          Expanded(child: _buildContent(loc)),
           if (!isInitialLoad && error == null)
             PagedTablePaginationBar(
               page: page,
@@ -185,7 +187,7 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -196,9 +198,9 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
     }
 
     if (items.isEmpty) {
-      return const EmptyStateView(
+      return EmptyStateView(
         icon: Icons.assignment_ind_outlined,
-        message: 'Nema profila inkasanata.',
+        message: loc.collectorsEmptyMessage,
       );
     }
 
@@ -224,13 +226,13 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
                   child: DataTable(
                     dataRowMinHeight: 64,
                     dataRowMaxHeight: 72,
-                    columns: const [
-                      DataColumn(label: Text('Ime i prezime')),
-                      DataColumn(label: Text('Email')),
-                      DataColumn(label: Text('Telefon')),
-                      DataColumn(label: Text('Šifra inkasanta')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Akcije')),
+                    columns: [
+                      DataColumn(label: Text(loc.fullNameColumnLabel)),
+                      DataColumn(label: Text(loc.fieldEmailLabel)),
+                      DataColumn(label: Text(loc.fieldPhoneLabel)),
+                      DataColumn(label: Text(loc.collectorCodeColumnLabel)),
+                      DataColumn(label: Text(loc.statusFieldLabel)),
+                      DataColumn(label: Text(loc.actionsColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
@@ -249,14 +251,14 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
                                 disabled: mutating,
                                 extraActions: [
                                   IconButton(
-                                    tooltip: 'Uredi profil',
+                                    tooltip: loc.editProfileTooltip,
                                     onPressed: mutating
                                         ? null
                                         : () => _openEdit(item),
                                     icon: const Icon(Icons.edit_outlined),
                                   ),
                                   IconButton(
-                                    tooltip: 'Aktivnosti',
+                                    tooltip: loc.activitiesTooltip,
                                     onPressed: mutating
                                         ? null
                                         : () => _openActivityLogs(item),
@@ -286,8 +288,9 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final color = isActive ? const Color(0xFF2E7D32) : const Color(0xFF64748B);
-    final label = isActive ? 'Aktivan' : 'Neaktivan';
+    final label = isActive ? loc.statusActive : loc.statusInactive;
     final icon = isActive ? Icons.check_circle_outline : Icons.cancel_outlined;
 
     return Container(
@@ -372,8 +375,9 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Dodaj inkasanta'),
+      title: Text(loc.addCollectorButtonLabel),
       content: SizedBox(
         width: math.min(560, MediaQuery.sizeOf(context).width - 48),
         child: SingleChildScrollView(
@@ -389,9 +393,9 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
                   textInputAction: TextInputAction.next,
                   validator: _firstNameValidator,
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    labelText: 'Ime',
-                    prefixIcon: Icon(Icons.person_outline),
+                  decoration: InputDecoration(
+                    labelText: loc.fieldFirstNameLabel,
+                    prefixIcon: const Icon(Icons.person_outline),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -400,9 +404,9 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
                   textInputAction: TextInputAction.next,
                   validator: _lastNameValidator,
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    labelText: 'Prezime',
-                    prefixIcon: Icon(Icons.person_outline),
+                  decoration: InputDecoration(
+                    labelText: loc.fieldLastNameLabel,
+                    prefixIcon: const Icon(Icons.person_outline),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -411,9 +415,9 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
                   textInputAction: TextInputAction.next,
                   keyboardType: TextInputType.emailAddress,
                   validator: _emailValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  decoration: InputDecoration(
+                    labelText: loc.fieldEmailLabel,
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -422,9 +426,9 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
                   textInputAction: TextInputAction.next,
                   keyboardType: TextInputType.phone,
                   validator: _phoneValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Telefon',
-                    prefixIcon: Icon(Icons.phone_outlined),
+                  decoration: InputDecoration(
+                    labelText: loc.fieldPhoneLabel,
+                    prefixIcon: const Icon(Icons.phone_outlined),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -433,9 +437,9 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
                   obscureText: true,
                   textInputAction: TextInputAction.next,
                   validator: _passwordValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Lozinka',
-                    prefixIcon: Icon(Icons.lock_outline),
+                  decoration: InputDecoration(
+                    labelText: loc.fieldPasswordLabel,
+                    prefixIcon: const Icon(Icons.lock_outline),
                   ),
                 ),
               ],
@@ -446,12 +450,12 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: _save,
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Sačuvaj'),
+          label: Text(loc.commonSave),
         ),
       ],
     );
@@ -459,9 +463,10 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
 
   String? _emailValidator(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    final loc = AppLocalizations.of(context);
+    if (text.isEmpty) return loc.fieldRequiredError;
     final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailPattern.hasMatch(text)) return 'Unesite ispravan email.';
+    if (!emailPattern.hasMatch(text)) return loc.emailInvalidError;
     return null;
   }
 
@@ -471,21 +476,21 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
     final phonePattern = RegExp(r'^[0-9+\-\s()]+$');
     if (!phonePattern.hasMatch(text) ||
         text.replaceAll(RegExp(r'[^0-9]'), '').length < 6) {
-      return 'Unesite ispravan broj telefona.';
+      return AppLocalizations.of(context).phoneInvalidNumberError;
     }
     return null;
   }
 
   String? _passwordValidator(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    if (text.isEmpty) return AppLocalizations.of(context).fieldRequiredError;
     return null;
   }
 
   String? _firstNameValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _lastNameCtrl.text.trim().isNotEmpty) {
-      return 'Obavezno ako unosite ime i prezime.';
+      return AppLocalizations.of(context).nameRequiredTogetherError;
     }
     return null;
   }
@@ -493,7 +498,7 @@ class _CollectorCreateDialogState extends State<_CollectorCreateDialog> {
   String? _lastNameValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _firstNameCtrl.text.trim().isNotEmpty) {
-      return 'Obavezno ako unosite ime i prezime.';
+      return AppLocalizations.of(context).nameRequiredTogetherError;
     }
     return null;
   }
@@ -582,9 +587,10 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final collector = widget.collector;
+    final loc = AppLocalizations.of(context);
 
     return AlertDialog(
-      title: const Text('Uredi profil inkasanta'),
+      title: Text(loc.editCollectorProfileDialogTitle),
       content: SizedBox(
         width: math.min(560, MediaQuery.sizeOf(context).width - 48),
         height: math.min(560, MediaQuery.sizeOf(context).height - 120),
@@ -595,7 +601,7 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _CollectorFormSectionHeader('Profil'),
+                _CollectorFormSectionHeader(loc.profileSectionLabel),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -604,7 +610,9 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
                         controller: _firstNameCtrl,
                         textInputAction: TextInputAction.next,
                         validator: _requiredValidator,
-                        decoration: const InputDecoration(labelText: 'Ime'),
+                        decoration: InputDecoration(
+                          labelText: loc.fieldFirstNameLabel,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -613,7 +621,9 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
                         controller: _lastNameCtrl,
                         textInputAction: TextInputAction.next,
                         validator: _requiredValidator,
-                        decoration: const InputDecoration(labelText: 'Prezime'),
+                        decoration: InputDecoration(
+                          labelText: loc.fieldLastNameLabel,
+                        ),
                       ),
                     ),
                   ],
@@ -624,14 +634,14 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
                   initialValue: collector.employeeCode,
                   enabled: false,
                   style: const TextStyle(letterSpacing: 0.6),
-                  decoration: const InputDecoration(
-                    labelText: 'Šifra inkasanta (automatski dodijeljena)',
-                    prefixIcon: Icon(Icons.lock_outline),
+                  decoration: InputDecoration(
+                    labelText: loc.collectorCodeFieldLabel,
+                    prefixIcon: const Icon(Icons.lock_outline),
                   ),
                 ),
                 const SizedBox(height: 22),
 
-                const _CollectorFormSectionHeader('Kontakt'),
+                _CollectorFormSectionHeader(loc.contactSectionLabel),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -641,9 +651,9 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
                         textInputAction: TextInputAction.next,
                         keyboardType: TextInputType.emailAddress,
                         validator: _emailValidator,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined),
+                        decoration: InputDecoration(
+                          labelText: loc.fieldEmailLabel,
+                          prefixIcon: const Icon(Icons.email_outlined),
                         ),
                       ),
                     ),
@@ -654,9 +664,9 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
                         textInputAction: TextInputAction.next,
                         keyboardType: TextInputType.phone,
                         validator: _phoneValidator,
-                        decoration: const InputDecoration(
-                          labelText: 'Telefon',
-                          prefixIcon: Icon(Icons.phone_outlined),
+                        decoration: InputDecoration(
+                          labelText: loc.fieldPhoneLabel,
+                          prefixIcon: const Icon(Icons.phone_outlined),
                         ),
                       ),
                     ),
@@ -664,7 +674,7 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
                 ),
                 const SizedBox(height: 22),
 
-                const _CollectorFormSectionHeader('Nalog'),
+                _CollectorFormSectionHeader(loc.accountSectionLabel),
                 _CollectorStatusSwitchField(
                   value: _isActive,
                   onChanged: (value) => setState(() => _isActive = value),
@@ -675,9 +685,9 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
                   obscureText: true,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _save(),
-                  decoration: const InputDecoration(
-                    labelText: 'Nova lozinka (ostavi prazno da zadržiš postojeću)',
-                    prefixIcon: Icon(Icons.password_outlined),
+                  decoration: InputDecoration(
+                    labelText: loc.newPasswordOptionalLabel,
+                    prefixIcon: const Icon(Icons.password_outlined),
                   ),
                 ),
               ],
@@ -688,12 +698,12 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: _save,
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Sačuvaj'),
+          label: Text(loc.commonSave),
         ),
       ],
     );
@@ -701,15 +711,16 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
 
   String? _requiredValidator(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    if (text.isEmpty) return AppLocalizations.of(context).fieldRequiredError;
     return null;
   }
 
   String? _emailValidator(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    final loc = AppLocalizations.of(context);
+    if (text.isEmpty) return loc.fieldRequiredError;
     final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailPattern.hasMatch(text)) return 'Unesite ispravan email.';
+    if (!emailPattern.hasMatch(text)) return loc.emailInvalidError;
     return null;
   }
 
@@ -719,7 +730,7 @@ class _CollectorEditorDialogState extends State<_CollectorEditorDialog> {
     final phonePattern = RegExp(r'^[0-9+\-\s()]+$');
     if (!phonePattern.hasMatch(text) ||
         text.replaceAll(RegExp(r'[^0-9]'), '').length < 6) {
-      return 'Unesite ispravan broj telefona.';
+      return AppLocalizations.of(context).phoneInvalidNumberError;
     }
     return null;
   }
@@ -762,6 +773,7 @@ class _CollectorStatusSwitchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -779,7 +791,7 @@ class _CollectorStatusSwitchField extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              value ? 'Aktivan' : 'Neaktivan',
+              value ? loc.statusActive : loc.statusInactive,
               style: theme.textTheme.bodyMedium,
             ),
           ),
@@ -812,7 +824,7 @@ class _GeneratedCodeInfo extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Šifra inkasanta se automatski kreira nakon spremanja, npr. COL-0002.',
+              AppLocalizations.of(context).collectorCodeGeneratedHint,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

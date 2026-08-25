@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_collector_profile.dart';
 import 'package:aquaflow_desktop/models/admin_meter_reading.dart';
 import 'package:aquaflow_desktop/services/admin_meter_reading_exception.dart';
@@ -52,12 +53,13 @@ class _AdminMeterReadingsScreenState extends State<AdminMeterReadingsScreen>
     for (final collector in _collectors) {
       if (collector.id == collectorId) return collector.label;
     }
-    return 'Inkasant #$collectorId';
+    return AppLocalizations.of(
+      context,
+    ).collectorNumberFallbackLabel(collectorId);
   }
 
   @override
-  Future<({List<AdminMeterReading> items, int totalCount})>
-  fetchPage() async {
+  Future<({List<AdminMeterReading> items, int totalCount})> fetchPage() async {
     final pageData = await _service.fetchForWaterMeter(
       waterMeterId: widget.waterMeterId,
       page: page,
@@ -70,7 +72,7 @@ class _AdminMeterReadingsScreenState extends State<AdminMeterReadingsScreen>
   String describeError(Object error) {
     return error is AdminMeterReadingException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   @override
@@ -82,9 +84,10 @@ class _AdminMeterReadingsScreenState extends State<AdminMeterReadingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Očitanja - ${widget.waterMeterSerialNumber}'),
+        title: Text(loc.meterReadingsTitle(widget.waterMeterSerialNumber)),
         actions: [
           RefreshButton(onRefresh: () => load(), enabled: !loading),
           const SizedBox(width: 8),
@@ -96,7 +99,7 @@ class _AdminMeterReadingsScreenState extends State<AdminMeterReadingsScreen>
           children: [
             if (loading && !isInitialLoad)
               const LinearProgressIndicator(minHeight: 2),
-            Expanded(child: _buildContent()),
+            Expanded(child: _buildContent(loc)),
             if (!isInitialLoad && error == null)
               PagedTablePaginationBar(
                 page: page,
@@ -113,7 +116,7 @@ class _AdminMeterReadingsScreenState extends State<AdminMeterReadingsScreen>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -124,9 +127,9 @@ class _AdminMeterReadingsScreenState extends State<AdminMeterReadingsScreen>
     }
 
     if (items.isEmpty) {
-      return const EmptyStateView(
+      return EmptyStateView(
         icon: Icons.speed_outlined,
-        message: 'Za ovaj vodomjer još nema evidentiranih očitanja.',
+        message: loc.noReadingsForMeterMessage,
       );
     }
 
@@ -152,13 +155,22 @@ class _AdminMeterReadingsScreenState extends State<AdminMeterReadingsScreen>
                   child: DataTable(
                     dataRowMinHeight: 56,
                     dataRowMaxHeight: 64,
-                    columns: const [
-                      DataColumn(label: Text('Datum očitanja')),
-                      DataColumn(label: Text('Prethodno (m³)'), numeric: true),
-                      DataColumn(label: Text('Novo (m³)'), numeric: true),
-                      DataColumn(label: Text('Potrošnja (m³)'), numeric: true),
-                      DataColumn(label: Text('Inkasant')),
-                      DataColumn(label: Text('Sinhronizacija')),
+                    columns: [
+                      DataColumn(label: Text(loc.readingDateColumnLabel)),
+                      DataColumn(
+                        label: Text(loc.previousReadingColumnLabel),
+                        numeric: true,
+                      ),
+                      DataColumn(
+                        label: Text(loc.newReadingColumnLabel),
+                        numeric: true,
+                      ),
+                      DataColumn(
+                        label: Text(loc.consumptionColumnLabel),
+                        numeric: true,
+                      ),
+                      DataColumn(label: Text(loc.collectorNameColumnLabel)),
+                      DataColumn(label: Text(loc.syncColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
@@ -169,12 +181,8 @@ class _AdminMeterReadingsScreenState extends State<AdminMeterReadingsScreen>
                               Text(_formatReading(item.previousReadingValue)),
                             ),
                             DataCell(Text(_formatReading(item.readingValue))),
-                            DataCell(
-                              Text(_formatReading(item.consumptionM3)),
-                            ),
-                            DataCell(
-                              Text(_collectorLabel(item.collectorId)),
-                            ),
+                            DataCell(Text(_formatReading(item.consumptionM3))),
+                            DataCell(Text(_collectorLabel(item.collectorId))),
                             DataCell(_SyncStatusPill(status: item.syncStatus)),
                           ],
                         ),
@@ -197,19 +205,20 @@ class _SyncStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final (label, color, icon) = switch (status.toLowerCase()) {
       'synced' => (
-        'Sinhronizovano',
+        loc.syncStatusSynced,
         const Color(0xFF2E7D32),
         Icons.cloud_done_outlined,
       ),
       'pending' => (
-        'Na čekanju',
+        loc.requestStatusPending,
         const Color(0xFFB45309),
         Icons.cloud_upload_outlined,
       ),
       'failed' => (
-        'Neuspješno',
+        loc.syncStatusFailed,
         const Color(0xFFB91C1C),
         Icons.cloud_off_outlined,
       ),

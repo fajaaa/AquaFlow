@@ -153,7 +153,9 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
     setState(() {
       _selectedCityId = cityId;
       if (_selectedMunicipalityId != null &&
-          !_municipalitiesForSelectedCity.any((m) => m.id == _selectedMunicipalityId)) {
+          !_municipalitiesForSelectedCity.any(
+            (m) => m.id == _selectedMunicipalityId,
+          )) {
         _selectedMunicipalityId = null;
         _selectedSettlementId = null;
       }
@@ -164,7 +166,9 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
     setState(() {
       _selectedMunicipalityId = municipalityId;
       if (_selectedSettlementId != null &&
-          !_settlementsForSelectedMunicipality.any((s) => s.id == _selectedSettlementId)) {
+          !_settlementsForSelectedMunicipality.any(
+            (s) => s.id == _selectedSettlementId,
+          )) {
         _selectedSettlementId = null;
       }
     });
@@ -206,7 +210,9 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).locationSaveSuccess)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).locationSaveSuccess),
+        ),
       );
       await _load();
     } on ProfileException catch (e) {
@@ -270,11 +276,18 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
                         prefixIcon: const Icon(Icons.location_city_outlined),
                       ),
                       items: [
-                        DropdownMenuItem(value: 0, child: Text(loc.locationNoCityOption)),
+                        DropdownMenuItem(
+                          value: 0,
+                          child: Text(loc.locationNoCityOption),
+                        ),
                         for (final city in _cities)
-                          DropdownMenuItem(value: city.id, child: Text(city.name)),
+                          DropdownMenuItem(
+                            value: city.id,
+                            child: Text(city.name),
+                          ),
                       ],
-                      onChanged: (value) => _onCityChanged(value == 0 ? null : value),
+                      onChanged: (value) =>
+                          _onCityChanged(value == 0 ? null : value),
                     ),
                   ),
                   Padding(
@@ -290,7 +303,8 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
                           value: 0,
                           child: Text(loc.locationNoMunicipalityOption),
                         ),
-                        for (final municipality in _municipalitiesForSelectedCity)
+                        for (final municipality
+                            in _municipalitiesForSelectedCity)
                           DropdownMenuItem(
                             value: municipality.id,
                             child: Text(municipality.name),
@@ -298,7 +312,9 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
                       ],
                       onChanged: _selectedCityId == null
                           ? null
-                          : (value) => _onMunicipalityChanged(value == 0 ? null : value),
+                          : (value) => _onMunicipalityChanged(
+                              value == 0 ? null : value,
+                            ),
                     ),
                   ),
                   Padding(
@@ -314,7 +330,8 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
                           value: 0,
                           child: Text(loc.locationNoSettlementOption),
                         ),
-                        for (final settlement in _settlementsForSelectedMunicipality)
+                        for (final settlement
+                            in _settlementsForSelectedMunicipality)
                           DropdownMenuItem(
                             value: settlement.id,
                             child: Text(settlement.name),
@@ -322,7 +339,8 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
                       ],
                       onChanged: _selectedMunicipalityId == null
                           ? null
-                          : (value) => _onSettlementChanged(value == 0 ? null : value),
+                          : (value) =>
+                                _onSettlementChanged(value == 0 ? null : value),
                     ),
                   ),
                   _field(

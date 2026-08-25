@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_support_ticket.dart';
 import 'package:aquaflow_desktop/models/admin_support_ticket_page.dart';
 import 'package:aquaflow_desktop/screens/admin_support_ticket_detail_screen.dart';
@@ -14,9 +15,9 @@ import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 
 const Color _awaitingReplyColor = Color(0xFFF9A825);
 
-const _statusOptions = <String, String>{
-  'Open': 'Otvoreni',
-  'Closed': 'Zatvoreni',
+Map<String, String> _statusOptions(AppLocalizations loc) => <String, String>{
+  'Open': loc.supportTicketFilterOpen,
+  'Closed': loc.supportTicketFilterClosed,
 };
 
 /// Admin table over `/SupportTickets` (`AdminSupportTicketService`/`AdminSupportTicket`
@@ -41,8 +42,7 @@ class AdminSupportTicketsScreen extends StatefulWidget {
       _AdminSupportTicketsScreenState();
 }
 
-class _AdminSupportTicketsScreenState
-    extends State<AdminSupportTicketsScreen> {
+class _AdminSupportTicketsScreenState extends State<AdminSupportTicketsScreen> {
   final AdminSupportTicketService _service = AdminSupportTicketService();
   final TextEditingController _searchCtrl = TextEditingController();
 
@@ -137,7 +137,9 @@ class _AdminSupportTicketsScreenState
   }
 
   Future<void> _openDetail(AdminSupportTicket ticket) async {
-    await context.pushScreen(AdminSupportTicketDetailScreen(ticketId: ticket.id));
+    await context.pushScreen(
+      AdminSupportTicketDetailScreen(ticketId: ticket.id),
+    );
     // A reply or a status change on the detail screen may have moved the
     // ticket in the sort order or its awaiting-reply state, so refresh.
     if (mounted) await _load();
@@ -153,6 +155,7 @@ class _AdminSupportTicketsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final pageData = _pageData;
     final totalPages = _totalPages(pageData?.totalCount ?? 0);
 
@@ -167,13 +170,13 @@ class _AdminSupportTicketsScreenState
               children: [
                 _Header(loading: _loading, onRefresh: () => _load()),
                 const SizedBox(height: 18),
-                _buildFilters(),
+                _buildFilters(loc),
               ],
             ),
           ),
           if (_loading && pageData != null)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent()),
+          Expanded(child: _buildContent(loc)),
           if (pageData != null && _error == null)
             PagedTablePaginationBar(
               page: _page,
@@ -189,7 +192,7 @@ class _AdminSupportTicketsScreenState
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     final hasSearch = _searchCtrl.text.trim().isNotEmpty;
 
     return Wrap(
@@ -205,12 +208,12 @@ class _AdminSupportTicketsScreenState
             onChanged: _queueSearch,
             onSubmitted: _submitSearch,
             decoration: InputDecoration(
-              labelText: 'Pretraga',
-              hintText: 'Predmet tiketa',
+              labelText: loc.commonSearch,
+              hintText: loc.ticketSubjectSearchHint,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: hasSearch
                   ? IconButton(
-                      tooltip: 'Očisti pretragu',
+                      tooltip: loc.clearSearchTooltip,
                       onPressed: _clearSearch,
                       icon: const Icon(Icons.clear),
                     )
@@ -222,20 +225,22 @@ class _AdminSupportTicketsScreenState
           width: 200,
           child: DropdownButtonFormField<String>(
             initialValue: _statusFilter ?? '',
-            decoration: const InputDecoration(
-              labelText: 'Status',
-              prefixIcon: Icon(Icons.filter_alt_outlined),
+            decoration: InputDecoration(
+              labelText: loc.statusFieldLabel,
+              prefixIcon: const Icon(Icons.filter_alt_outlined),
             ),
             items: [
-              const DropdownMenuItem(value: '', child: Text('Svi')),
-              for (final entry in _statusOptions.entries)
+              DropdownMenuItem(value: '', child: Text(loc.allOption)),
+              for (final entry in _statusOptions(loc).entries)
                 DropdownMenuItem(value: entry.key, child: Text(entry.value)),
             ],
-            onChanged: _loading ? null : (value) => _setStatusFilter(value ?? ''),
+            onChanged: _loading
+                ? null
+                : (value) => _setStatusFilter(value ?? ''),
           ),
         ),
         IconButton.filledTonal(
-          tooltip: 'Primijeni filtere',
+          tooltip: loc.applyFiltersTooltip,
           onPressed: _loading ? null : () => _load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
@@ -243,7 +248,7 @@ class _AdminSupportTicketsScreenState
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (_loading && _pageData == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -283,11 +288,12 @@ class _AdminSupportTicketsScreenState
                     dataRowMinHeight: 60,
                     dataRowMaxHeight: 72,
                     columns: [
-                      const DataColumn(label: Text('Predmet')),
-                      if (!isSmallScreen) const DataColumn(label: Text('Kupac')),
-                      const DataColumn(label: Text('Status')),
-                      const DataColumn(label: Text('Poruke')),
-                      const DataColumn(label: Text('Zadnja poruka')),
+                      DataColumn(label: Text(loc.subjectColumnLabel)),
+                      if (!isSmallScreen)
+                        DataColumn(label: Text(loc.customerLabel)),
+                      DataColumn(label: Text(loc.statusFieldLabel)),
+                      DataColumn(label: Text(loc.messagesColumnLabel)),
+                      DataColumn(label: Text(loc.lastMessageColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
@@ -308,7 +314,9 @@ class _AdminSupportTicketsScreenState
                                       : '#${item.customerId}',
                                 ),
                               ),
-                            DataCell(SupportTicketStatusPill(status: item.status)),
+                            DataCell(
+                              SupportTicketStatusPill(status: item.status),
+                            ),
                             DataCell(Text('${item.messageCount}')),
                             DataCell(Text(_formatDate(item.lastMessageAt))),
                           ],
@@ -342,20 +350,20 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
 
     final title = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Podrška',
+          loc.supportGroupLabel,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Svi korisnički tiketi podrške. Tiketi označeni narandžastom '
-          'čekaju odgovor - zadnja poruka u niti nije od podrške.',
+          loc.supportTicketsScreenSubtitle,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -394,7 +402,7 @@ class _SubjectCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final subject = item.subject.trim().isEmpty
-        ? 'Tiket #${item.id}'
+        ? AppLocalizations.of(context).ticketFallbackTitle(item.id)
         : item.subject.trim();
 
     return SizedBox(
@@ -426,6 +434,7 @@ class _SubjectCell extends StatelessWidget {
     );
   }
 }
+
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.hasFilters});
 
@@ -445,7 +454,9 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            hasFilters ? 'Nema tiketa za zadane filtere.' : 'Nema tiketa.',
+            hasFilters
+                ? AppLocalizations.of(context).noTicketsFilteredMessage
+                : AppLocalizations.of(context).noTicketsMessage,
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium,
           ),
@@ -477,7 +488,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

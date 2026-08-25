@@ -33,6 +33,16 @@ class AppLocalizationsBs extends AppLocalizations {
   String get commonRetry => 'Pokušaj ponovo';
 
   @override
+  String get commonLogout => 'Odjava';
+
+  @override
+  String get unknownRoleTitle => 'Nepoznata uloga';
+
+  @override
+  String get unknownRoleMessage =>
+      'Vaš nalog nema podržanu ulogu za ovu aplikaciju. Obratite se administratoru.';
+
+  @override
   String get stateLoading => 'Učitavanje...';
 
   @override
@@ -112,6 +122,30 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get fieldEmailLabel => 'Email';
+
+  @override
+  String get companySettingsScreenTitle => 'Postavke firme';
+
+  @override
+  String get companyNameLabel => 'Naziv firme';
+
+  @override
+  String get taxNumberLabel => 'Porezni broj';
+
+  @override
+  String get bankAccountLabel => 'Bankovni račun';
+
+  @override
+  String get logoUrlOptionalLabel => 'URL logotipa (opcionalno)';
+
+  @override
+  String get defaultLanguageLabel => 'Jezik';
+
+  @override
+  String get defaultCurrencyLabel => 'Valuta';
+
+  @override
+  String get companySettingsSaveSuccess => 'Postavke firme su sačuvane.';
 
   @override
   String get fieldPhoneLabel => 'Telefon';
@@ -386,6 +420,13 @@ class AppLocalizationsBs extends AppLocalizations {
   String get locationHouseNumberLabel => 'Broj';
 
   @override
+  String get locationNameRequiredError =>
+      'Unesite ime i prezime u \"Lični podaci\" da biste sačuvali adresu.';
+
+  @override
+  String get locationSaveSuccess => 'Lokacija je sačuvana.';
+
+  @override
   String get settlementRequiredError => 'Odaberite naselje.';
 
   @override
@@ -556,4 +597,71 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get pricePerM3Label => 'Cijena po m³';
+
+  @override
+  String get faultReportStatusNew => 'Nova';
+
+  @override
+  String get faultReportStatusAssigned => 'Dodijeljena';
+
+  @override
+  String get faultReportStatusInProgress => 'U toku';
+
+  @override
+  String get faultReportStatusResolved => 'Riješena';
+
+  @override
+  String get faultReportStatusFieldLabel => 'Status prijave';
+
+  @override
+  String get photosSectionHeading => 'Fotografije';
+
+  @override
+  String get noPhotosMessage => 'Nema priloženih fotografija.';
+
+  @override
+  String get faultReportInfoSectionHeading => 'Podaci o prijavi';
+
+  @override
+  String get reportedAtLabel => 'Prijavljeno';
+
+  @override
+  String get resolvedAtLabel => 'Riješeno';
+
+  @override
+  String get addressLabel => 'Adresa';
+
+  @override
+  String get customerLabel => 'Kupac';
+
+  @override
+  String get faultReportsScreenTitle => 'Prijave kvarova';
+
+  @override
+  String get faultReportSearchHint => 'Naslov ili ime kupca';
+
+  @override
+  String get collectorFaultReportsEmptyMessage => 'Nema prijava kvarova.';
+
+  @override
+  String reportedAtInlineLabel(String date) {
+    return 'Prijavljeno: $date';
+  }
+
+  @override
+  String get allStatusesOption => 'Svi statusi';
+
+  @override
+  String get statusChangeDialogTitle => 'Promjena statusa';
+
+  @override
+  String statusChangeDialogContent(String status) {
+    return 'Postaviti status prijave na \"$status\"?';
+  }
+
+  @override
+  String get startActionButton => 'Započni';
+
+  @override
+  String get resolveActionButton => 'Riješi';
 }

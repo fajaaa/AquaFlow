@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_support_ticket.dart';
 import 'package:aquaflow_desktop/models/admin_support_ticket_message.dart';
 import 'package:aquaflow_desktop/models/admin_support_ticket_photo.dart';
@@ -125,7 +126,9 @@ class _AdminSupportTicketDetailScreenState
     final body = _replyCtrl.text.trim();
     if (body.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unesite tekst poruke.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).enterMessageTextError),
+        ),
       );
       return;
     }
@@ -164,9 +167,9 @@ class _AdminSupportTicketDetailScreenState
     } on AdminSupportTicketException catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     }
   }
 
@@ -198,19 +201,22 @@ class _AdminSupportTicketDetailScreenState
         );
         _togglingStatus = false;
       });
+      final loc = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            updated.isClosed ? 'Tiket je zatvoren.' : 'Tiket je ponovo otvoren.',
+            updated.isClosed
+                ? loc.ticketClosedSuccess
+                : loc.ticketReopenedSuccess,
           ),
         ),
       );
     } on AdminSupportTicketException catch (e) {
       if (!mounted) return;
       setState(() => _togglingStatus = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     }
   }
 
@@ -227,10 +233,13 @@ class _AdminSupportTicketDetailScreenState
   @override
   Widget build(BuildContext context) {
     final ticket = _ticket;
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          ticket == null || ticket.subject.isEmpty ? 'Tiket' : ticket.subject,
+          ticket == null || ticket.subject.isEmpty
+              ? loc.ticketFallbackLabel
+              : ticket.subject,
         ),
         actions: [
           if (ticket != null)
@@ -248,9 +257,15 @@ class _AdminSupportTicketDetailScreenState
                 : TextButton.icon(
                     onPressed: _toggleStatus,
                     icon: Icon(
-                      ticket.isClosed ? Icons.lock_open_outlined : Icons.lock_outline,
+                      ticket.isClosed
+                          ? Icons.lock_open_outlined
+                          : Icons.lock_outline,
                     ),
-                    label: Text(ticket.isClosed ? 'Ponovo otvori' : 'Zatvori'),
+                    label: Text(
+                      ticket.isClosed
+                          ? loc.reopenTicketButtonLabel
+                          : loc.commonClose,
+                    ),
                   ),
           RefreshButton(onRefresh: _load, enabled: !_loading),
         ],
@@ -288,7 +303,7 @@ class _AdminSupportTicketDetailScreenState
     if (ticket.messages.isEmpty) {
       return Center(
         child: Text(
-          'Nema poruka.',
+          AppLocalizations.of(context).noMessagesMessage,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
@@ -305,11 +320,8 @@ class _AdminSupportTicketDetailScreenState
         return _MessageBubble(
           message: message,
           onPhotoTap: (photo) => _openFullscreen(message.id, photo),
-          photoBytes: (photo) => _service.fetchPhotoBytes(
-            widget.ticketId,
-            message.id,
-            photo.id,
-          ),
+          photoBytes: (photo) =>
+              _service.fetchPhotoBytes(widget.ticketId, message.id, photo.id),
         );
       },
     );
@@ -317,6 +329,7 @@ class _AdminSupportTicketDetailScreenState
 
   Widget _buildComposer() {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final atPhotoLimit = _selectedImages.length >= _maxPhotosPerMessage;
     final enabled = !_sending;
 
@@ -351,7 +364,7 @@ class _AdminSupportTicketDetailScreenState
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               IconButton(
-                tooltip: 'Dodaj sliku',
+                tooltip: loc.addImageButtonLabel,
                 onPressed: enabled && !atPhotoLimit ? _pickImages : null,
                 icon: const Icon(Icons.add_a_photo_outlined),
               ),
@@ -363,12 +376,12 @@ class _AdminSupportTicketDetailScreenState
                   maxLines: 4,
                   maxLength: 2000,
                   textInputAction: TextInputAction.newline,
-                  decoration: const InputDecoration(
-                    hintText: 'Napišite odgovor...',
+                  decoration: InputDecoration(
+                    hintText: loc.writeReplyHint,
                     counterText: '',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 10,
                     ),
@@ -386,7 +399,7 @@ class _AdminSupportTicketDetailScreenState
                       ),
                     )
                   : IconButton.filled(
-                      tooltip: 'Pošalji',
+                      tooltip: loc.sendButtonLabel,
                       onPressed: _sendReply,
                       icon: const Icon(Icons.send),
                     ),
@@ -406,6 +419,7 @@ class _StatusHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       child: Row(
@@ -416,7 +430,7 @@ class _StatusHeader extends StatelessWidget {
             child: Text(
               ticket.customerName?.trim().isNotEmpty == true
                   ? ticket.customerName!.trim()
-                  : 'Korisnik #${ticket.customerId}',
+                  : loc.requestCustomerFallbackLabel(ticket.customerId),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -431,7 +445,7 @@ class _StatusHeader extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            'Otvoren: ${_formatDate(ticket.createdAt)}',
+            loc.openedAtLabel(_formatDate(ticket.createdAt)),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -472,11 +486,12 @@ class _MessageBubble extends StatelessWidget {
       bottomLeft: Radius.circular(fromStaff ? 14 : 2),
       bottomRight: Radius.circular(fromStaff ? 2 : 14),
     );
+    final loc = AppLocalizations.of(context);
     final senderLabel = fromStaff
-        ? 'Podrška'
+        ? loc.supportGroupLabel
         : (message.senderName?.trim().isNotEmpty == true
-            ? message.senderName!.trim()
-            : 'Korisnik');
+              ? message.senderName!.trim()
+              : loc.genericCustomerLabel);
 
     return Align(
       alignment: alignment,
@@ -577,7 +592,7 @@ class _ClosedBanner extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'Tiket je zatvoren. Ponovo ga otvorite da odgovorite.',
+            AppLocalizations.of(context).ticketClosedBannerMessage,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w600,
@@ -647,7 +662,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

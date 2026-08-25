@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
+
 import '../models/city_lookup.dart';
 import '../models/customer_profile.dart';
 import '../models/municipality_lookup.dart';
@@ -151,7 +153,9 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
     setState(() {
       _selectedCityId = cityId;
       if (_selectedMunicipalityId != null &&
-          !_municipalitiesForSelectedCity.any((m) => m.id == _selectedMunicipalityId)) {
+          !_municipalitiesForSelectedCity.any(
+            (m) => m.id == _selectedMunicipalityId,
+          )) {
         _selectedMunicipalityId = null;
         _selectedSettlementId = null;
       }
@@ -162,7 +166,9 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
     setState(() {
       _selectedMunicipalityId = municipalityId;
       if (_selectedSettlementId != null &&
-          !_settlementsForSelectedMunicipality.any((s) => s.id == _selectedSettlementId)) {
+          !_settlementsForSelectedMunicipality.any(
+            (s) => s.id == _selectedSettlementId,
+          )) {
         _selectedSettlementId = null;
       }
     });
@@ -180,9 +186,7 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
     if (!_hasName) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'Unesite ime i prezime u "Lični podaci" da biste sačuvali adresu.',
-          ),
+          content: Text(AppLocalizations.of(context).locationNameRequiredError),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -206,7 +210,9 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lokacija je sačuvana.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).locationSaveSuccess),
+        ),
       );
       await _load();
     } on ProfileException catch (e) {
@@ -234,7 +240,7 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Lokacija')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).locationTitle)),
       body: _buildBody(),
     );
   }
@@ -249,6 +255,7 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
   }
 
   Widget _buildForm(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -264,29 +271,40 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
                     padding: const EdgeInsets.only(bottom: 16),
                     child: DropdownButtonFormField<int>(
                       initialValue: _selectedCityId ?? 0,
-                      decoration: const InputDecoration(
-                        labelText: 'Grad',
-                        prefixIcon: Icon(Icons.location_city_outlined),
+                      decoration: InputDecoration(
+                        labelText: loc.locationCityLabel,
+                        prefixIcon: const Icon(Icons.location_city_outlined),
                       ),
                       items: [
-                        const DropdownMenuItem(value: 0, child: Text('Bez grada')),
+                        DropdownMenuItem(
+                          value: 0,
+                          child: Text(loc.locationNoCityOption),
+                        ),
                         for (final city in _cities)
-                          DropdownMenuItem(value: city.id, child: Text(city.name)),
+                          DropdownMenuItem(
+                            value: city.id,
+                            child: Text(city.name),
+                          ),
                       ],
-                      onChanged: (value) => _onCityChanged(value == 0 ? null : value),
+                      onChanged: (value) =>
+                          _onCityChanged(value == 0 ? null : value),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: DropdownButtonFormField<int>(
                       initialValue: _selectedMunicipalityId ?? 0,
-                      decoration: const InputDecoration(
-                        labelText: 'Općina',
-                        prefixIcon: Icon(Icons.map_outlined),
+                      decoration: InputDecoration(
+                        labelText: loc.locationMunicipalityLabel,
+                        prefixIcon: const Icon(Icons.map_outlined),
                       ),
                       items: [
-                        const DropdownMenuItem(value: 0, child: Text('Bez općine')),
-                        for (final municipality in _municipalitiesForSelectedCity)
+                        DropdownMenuItem(
+                          value: 0,
+                          child: Text(loc.locationNoMunicipalityOption),
+                        ),
+                        for (final municipality
+                            in _municipalitiesForSelectedCity)
                           DropdownMenuItem(
                             value: municipality.id,
                             child: Text(municipality.name),
@@ -294,20 +312,26 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
                       ],
                       onChanged: _selectedCityId == null
                           ? null
-                          : (value) => _onMunicipalityChanged(value == 0 ? null : value),
+                          : (value) => _onMunicipalityChanged(
+                              value == 0 ? null : value,
+                            ),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: DropdownButtonFormField<int>(
                       initialValue: _selectedSettlementId ?? 0,
-                      decoration: const InputDecoration(
-                        labelText: 'Naselje',
-                        prefixIcon: Icon(Icons.holiday_village_outlined),
+                      decoration: InputDecoration(
+                        labelText: loc.locationSettlementLabel,
+                        prefixIcon: const Icon(Icons.holiday_village_outlined),
                       ),
                       items: [
-                        const DropdownMenuItem(value: 0, child: Text('Bez naselja')),
-                        for (final settlement in _settlementsForSelectedMunicipality)
+                        DropdownMenuItem(
+                          value: 0,
+                          child: Text(loc.locationNoSettlementOption),
+                        ),
+                        for (final settlement
+                            in _settlementsForSelectedMunicipality)
                           DropdownMenuItem(
                             value: settlement.id,
                             child: Text(settlement.name),
@@ -315,18 +339,19 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
                       ],
                       onChanged: _selectedMunicipalityId == null
                           ? null
-                          : (value) => _onSettlementChanged(value == 0 ? null : value),
+                          : (value) =>
+                                _onSettlementChanged(value == 0 ? null : value),
                     ),
                   ),
                   _field(
                     controller: _streetCtrl,
-                    label: 'Ulica',
+                    label: loc.locationStreetLabel,
                     icon: Icons.signpost_outlined,
                     maxLength: 120,
                   ),
                   _field(
                     controller: _houseNumberCtrl,
-                    label: 'Broj',
+                    label: loc.locationHouseNumberLabel,
                     icon: Icons.pin_outlined,
                     maxLength: 20,
                   ),
@@ -343,7 +368,7 @@ class _LocationEditScreenState extends State<LocationEditScreen> {
                             ),
                           )
                         : const Icon(Icons.save_outlined),
-                    label: Text(_saving ? 'Spašavanje...' : 'Sačuvaj'),
+                    label: Text(_saving ? loc.commonSaving : loc.commonSave),
                   ),
                 ],
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_payment.dart';
 import 'package:aquaflow_desktop/services/admin_payment_exception.dart';
 import 'package:aquaflow_desktop/services/admin_payment_service.dart';
@@ -25,9 +26,9 @@ class AdminPaymentsScreen extends StatefulWidget {
   State<AdminPaymentsScreen> createState() => _AdminPaymentsScreenState();
 }
 
-const _statusOptions = <String, String>{
-  'Pending': 'Na čekanju',
-  'Completed': 'Završena',
+Map<String, String> _statusOptions(AppLocalizations loc) => <String, String>{
+  'Pending': loc.requestStatusPending,
+  'Completed': loc.paymentStatusCompleted,
 };
 
 class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
@@ -57,7 +58,7 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
   String describeError(Object error) {
     return error is AdminPaymentException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   void _setStatusFilter(String value) {
@@ -76,6 +77,7 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -86,22 +88,18 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ScreenHeader(
-                  title: 'Plaćanja',
-                  subtitle:
-                      'Pregled evidentiranih uplata. Uplate se evidentiraju isključivo '
-                      'putem akcije "Evidentiraj uplatu" na ekranu Računi.',
-                  actions: [
-                    RefreshButton(onRefresh: () => load()),
-                  ],
+                  title: loc.paymentsLabel,
+                  subtitle: loc.paymentsScreenSubtitle,
+                  actions: [RefreshButton(onRefresh: () => load())],
                 ),
                 const SizedBox(height: 18),
-                _buildFilters(),
+                _buildFilters(loc),
               ],
             ),
           ),
           if (loading && !isInitialLoad)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent()),
+          Expanded(child: _buildContent(loc)),
           if (!isInitialLoad && error == null)
             PagedTablePaginationBar(
               page: page,
@@ -117,7 +115,7 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     final hasSearch = searchController.text.trim().isNotEmpty;
 
     return Wrap(
@@ -135,11 +133,11 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
             onChanged: queueSearch,
             onSubmitted: submitSearch,
             decoration: InputDecoration(
-              labelText: 'ID računa',
+              labelText: loc.invoiceIdFieldLabel,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: hasSearch
                   ? IconButton(
-                      tooltip: 'Očisti pretragu',
+                      tooltip: loc.clearSearchTooltip,
                       onPressed: clearSearch,
                       icon: const Icon(Icons.clear),
                     )
@@ -151,20 +149,22 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
           width: 200,
           child: DropdownButtonFormField<String>(
             initialValue: _statusFilter ?? '',
-            decoration: const InputDecoration(
-              labelText: 'Status',
-              prefixIcon: Icon(Icons.filter_alt_outlined),
+            decoration: InputDecoration(
+              labelText: loc.statusFieldLabel,
+              prefixIcon: const Icon(Icons.filter_alt_outlined),
             ),
             items: [
-              const DropdownMenuItem(value: '', child: Text('Svi')),
-              for (final entry in _statusOptions.entries)
+              DropdownMenuItem(value: '', child: Text(loc.allOption)),
+              for (final entry in _statusOptions(loc).entries)
                 DropdownMenuItem(value: entry.key, child: Text(entry.value)),
             ],
-            onChanged: loading ? null : (value) => _setStatusFilter(value ?? ''),
+            onChanged: loading
+                ? null
+                : (value) => _setStatusFilter(value ?? ''),
           ),
         ),
         IconButton.filledTonal(
-          tooltip: 'Primijeni filtere',
+          tooltip: loc.applyFiltersTooltip,
           onPressed: loading ? null : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
@@ -172,7 +172,7 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -185,10 +185,10 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
     if (items.isEmpty) {
       return EmptyStateView(
         icon: Icons.payments_outlined,
-        message: 'Nema uplata.',
+        message: loc.noPaymentsMessage,
         hasFilters: _hasFilters,
         filteredIcon: Icons.search_off,
-        filteredMessage: 'Nema uplata za zadane filtere.',
+        filteredMessage: loc.paymentsEmptyFilteredMessage,
       );
     }
 
@@ -214,23 +214,29 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
                   child: DataTable(
                     dataRowMinHeight: 60,
                     dataRowMaxHeight: 68,
-                    columns: const [
-                      DataColumn(label: Text('Datum uplate')),
-                      DataColumn(label: Text('Račun')),
-                      DataColumn(label: Text('Kupac')),
-                      DataColumn(label: Text('Iznos')),
-                      DataColumn(label: Text('Način')),
-                      DataColumn(label: Text('Status')),
+                    columns: [
+                      DataColumn(label: Text(loc.paymentDateColumnLabel)),
+                      DataColumn(label: Text(loc.invoiceColumnLabel)),
+                      DataColumn(label: Text(loc.customerLabel)),
+                      DataColumn(label: Text(loc.amountColumnLabel)),
+                      DataColumn(label: Text(loc.methodColumnLabel)),
+                      DataColumn(label: Text(loc.statusFieldLabel)),
                     ],
                     rows: [
                       for (final item in items)
                         DataRow(
                           cells: [
-                            DataCell(Text(_formatDate(item.paidAt ?? item.createdAt))),
+                            DataCell(
+                              Text(_formatDate(item.paidAt ?? item.createdAt)),
+                            ),
                             DataCell(Text('#${item.invoiceId}')),
                             DataCell(Text('#${item.customerId}')),
                             DataCell(Text('${formatMoney(item.amount)} BAM')),
-                            DataCell(Text(_paymentMethodLabel(item.paymentMethod))),
+                            DataCell(
+                              Text(
+                                _paymentMethodLabel(item.paymentMethod, loc),
+                              ),
+                            ),
                             DataCell(_PaymentStatusPill(status: item.status)),
                           ],
                         ),
@@ -256,10 +262,15 @@ class _PaymentStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final (label, color, icon) = status == 'Completed'
-        ? ('Završena', const Color(0xFF2E7D32), Icons.check_circle_outline)
+        ? (
+            loc.paymentStatusCompleted,
+            const Color(0xFF2E7D32),
+            Icons.check_circle_outline,
+          )
         : (
-            _statusOptions[status] ?? status,
+            _statusOptions(loc)[status] ?? status,
             const Color(0xFF64748B),
             Icons.hourglass_bottom_outlined,
           );
@@ -288,7 +299,8 @@ class _PaymentStatusPill extends StatelessWidget {
   }
 }
 
-String _paymentMethodLabel(String method) => method == 'Manual' ? 'Ručno' : method;
+String _paymentMethodLabel(String method, AppLocalizations loc) =>
+    method == 'Manual' ? loc.manualPaymentMethodLabel : method;
 
 String _formatDate(DateTime? date) {
   if (date == null) return '—';

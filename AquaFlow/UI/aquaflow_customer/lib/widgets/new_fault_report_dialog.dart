@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_fault_report.dart';
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
 import 'package:aquaflow_customer/services/customer_fault_report_exception.dart';
@@ -57,8 +58,10 @@ class NewFaultReportDialog extends StatefulWidget {
 }
 
 class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
-  final CustomerFaultReportService _reportService = CustomerFaultReportService();
-  final CustomerWaterMeterService _waterMeterService = CustomerWaterMeterService();
+  final CustomerFaultReportService _reportService =
+      CustomerFaultReportService();
+  final CustomerWaterMeterService _waterMeterService =
+      CustomerWaterMeterService();
   final ProfileService _profileService = ProfileService();
   final LocationLookupService _locationService = LocationLookupService();
   final ImagePicker _picker = ImagePicker();
@@ -192,8 +195,9 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
     setState(() {
       _selectedCityId = cityId;
       if (_selectedMunicipalityId != null &&
-          !_municipalitiesForSelectedCity
-              .any((m) => m.id == _selectedMunicipalityId)) {
+          !_municipalitiesForSelectedCity.any(
+            (m) => m.id == _selectedMunicipalityId,
+          )) {
         _selectedMunicipalityId = null;
         _selectedSettlementId = null;
       }
@@ -204,8 +208,9 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
     setState(() {
       _selectedMunicipalityId = municipalityId;
       if (_selectedSettlementId != null &&
-          !_settlementsForSelectedMunicipality
-              .any((s) => s.id == _selectedSettlementId)) {
+          !_settlementsForSelectedMunicipality.any(
+            (s) => s.id == _selectedSettlementId,
+          )) {
         _selectedSettlementId = null;
       }
     });
@@ -239,6 +244,7 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
   }
 
   Future<void> _showImageSourceSheet() async {
+    final loc = AppLocalizations.of(context);
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (context) => SafeArea(
@@ -247,12 +253,12 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Slikaj'),
+              title: Text(loc.commonTakePhoto),
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Iz galerije'),
+              title: Text(loc.commonChooseFromGallery),
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
           ],
@@ -318,24 +324,26 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Nova prijava kvara'),
+      title: Text(loc.newFaultReportDialogTitle),
       content: SizedBox(width: 420, child: _buildContent()),
       actions: [
         TextButton(
           onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton(
-          onPressed:
-              _submitting || _loading || _loadError != null ? null : _submit,
+          onPressed: _submitting || _loading || _loadError != null
+              ? null
+              : _submit,
           child: _submitting
               ? const SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Pošalji prijavu'),
+              : Text(loc.newFaultReportSubmitButton),
         ),
       ],
     );
@@ -343,6 +351,7 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
 
   Widget _buildContent() {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
 
     if (_loading) {
       return const SizedBox(
@@ -359,14 +368,18 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 40, color: theme.colorScheme.error),
+              Icon(
+                Icons.error_outline,
+                size: 40,
+                color: theme.colorScheme.error,
+              ),
               const SizedBox(height: 12),
               Text(loadError, textAlign: TextAlign.center),
               const SizedBox(height: 12),
               FilledButton.icon(
                 onPressed: _load,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Pokušaj ponovo'),
+                label: Text(loc.commonRetry),
               ),
             ],
           ),
@@ -389,12 +402,12 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
               controller: _titleCtrl,
               enabled: enabled && _createdReport == null,
               maxLength: 150,
-              validator: _requiredValidator,
-              decoration: const InputDecoration(
-                labelText: 'Naslov',
-                prefixIcon: Icon(Icons.title_outlined),
+              validator: (value) => _requiredValidator(context, value),
+              decoration: InputDecoration(
+                labelText: loc.titleFieldLabel,
+                prefixIcon: const Icon(Icons.title_outlined),
                 counterText: '',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -403,22 +416,22 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
               enabled: enabled && _createdReport == null,
               maxLines: 4,
               maxLength: 1000,
-              validator: _requiredValidator,
-              decoration: const InputDecoration(
-                labelText: 'Opis',
-                border: OutlineInputBorder(),
+              validator: (value) => _requiredValidator(context, value),
+              decoration: InputDecoration(
+                labelText: loc.descriptionFieldLabel,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<int>(
               initialValue: _selectedWaterMeterId ?? 0,
-              decoration: const InputDecoration(
-                labelText: 'Vodomjer (opciono)',
-                prefixIcon: Icon(Icons.water_drop_outlined),
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: loc.waterMeterOptionalLabel,
+                prefixIcon: const Icon(Icons.water_drop_outlined),
+                border: const OutlineInputBorder(),
               ),
               items: [
-                const DropdownMenuItem(value: 0, child: Text('Bez vodomjera')),
+                DropdownMenuItem(value: 0, child: Text(loc.noWaterMeterOption)),
                 for (final meter in _waterMeters)
                   DropdownMenuItem(
                     value: meter.id,
@@ -434,20 +447,18 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
             ),
             const SizedBox(height: 16),
             _CascadingDropdown(
-              label: 'Grad',
+              label: loc.locationCityLabel,
               icon: Icons.location_city_outlined,
-              emptyLabel: 'Bez grada',
+              emptyLabel: loc.locationNoCityOption,
               value: _selectedCityId,
-              items: [
-                for (final city in _cities) (city.id, city.name),
-              ],
+              items: [for (final city in _cities) (city.id, city.name)],
               onChanged: locationEditable ? _onCityChanged : null,
             ),
             const SizedBox(height: 16),
             _CascadingDropdown(
-              label: 'Općina',
+              label: loc.locationMunicipalityLabel,
               icon: Icons.map_outlined,
-              emptyLabel: 'Bez općine',
+              emptyLabel: loc.locationNoMunicipalityOption,
               value: _selectedMunicipalityId,
               items: [
                 for (final m in _municipalitiesForSelectedCity) (m.id, m.name),
@@ -458,15 +469,15 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
             ),
             const SizedBox(height: 16),
             _CascadingDropdown(
-              label: 'Naselje',
+              label: loc.locationSettlementLabel,
               icon: Icons.holiday_village_outlined,
-              emptyLabel: 'Bez naselja',
+              emptyLabel: loc.locationNoSettlementOption,
               value: _selectedSettlementId,
               items: [
                 for (final s in _settlementsForSelectedMunicipality)
                   (s.id, s.name),
               ],
-              validator: _settlementValidator,
+              validator: (value) => _settlementValidator(context, value),
               onChanged: locationEditable && _selectedMunicipalityId != null
                   ? _onSettlementChanged
                   : null,
@@ -476,11 +487,11 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
               controller: _streetCtrl,
               enabled: locationEditable,
               maxLength: 200,
-              decoration: const InputDecoration(
-                labelText: 'Ulica (opciono)',
-                prefixIcon: Icon(Icons.signpost_outlined),
+              decoration: InputDecoration(
+                labelText: loc.streetOptionalLabel,
+                prefixIcon: const Icon(Icons.signpost_outlined),
                 counterText: '',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -488,11 +499,11 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
               controller: _houseNumberCtrl,
               enabled: locationEditable,
               maxLength: 30,
-              decoration: const InputDecoration(
-                labelText: 'Broj (opciono)',
-                prefixIcon: Icon(Icons.pin_outlined),
+              decoration: InputDecoration(
+                labelText: loc.houseNumberOptionalLabel,
+                prefixIcon: const Icon(Icons.pin_outlined),
                 counterText: '',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -500,7 +511,7 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
               children: [
                 Expanded(
                   child: Text(
-                    'Fotografije (${_selectedImages.length}/$_maxPhotos)',
+                    loc.photoCountLabel(_selectedImages.length, _maxPhotos),
                     style: theme.textTheme.bodyMedium,
                   ),
                 ),
@@ -509,7 +520,7 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
                       ? _showImageSourceSheet
                       : null,
                   icon: const Icon(Icons.add_a_photo_outlined),
-                  label: const Text('Dodaj sliku'),
+                  label: Text(loc.addImageButtonLabel),
                 ),
               ],
             ),
@@ -540,7 +551,10 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Slanje fotografije ${_uploadedPhotoCount + 1}/${_selectedImages.length}...',
+                loc.sendingPhotoLabel(
+                  _uploadedPhotoCount + 1,
+                  _selectedImages.length,
+                ),
                 style: theme.textTheme.bodySmall,
               ),
             ],
@@ -559,16 +573,20 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
     );
   }
 
-  String? _settlementValidator(int? value) {
+  String? _settlementValidator(BuildContext context, int? value) {
     // Once the report row exists (photo-retry state) the location is already
     // stored server-side, so it no longer blocks resubmission.
     if (_createdReport != null) return null;
-    if (value == null || value == 0) return 'Odaberite naselje.';
+    if (value == null || value == 0) {
+      return AppLocalizations.of(context).settlementRequiredError;
+    }
     return null;
   }
 
-  String? _requiredValidator(String? value) {
-    if ((value ?? '').trim().isEmpty) return 'Obavezno polje.';
+  String? _requiredValidator(BuildContext context, String? value) {
+    if ((value ?? '').trim().isEmpty) {
+      return AppLocalizations.of(context).fieldRequiredError;
+    }
     return null;
   }
 }
@@ -636,12 +654,7 @@ class _PhotoThumbnail extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.file(
-            file,
-            width: 76,
-            height: 76,
-            fit: BoxFit.cover,
-          ),
+          child: Image.file(file, width: 76, height: 76, fit: BoxFit.cover),
         ),
         if (uploaded)
           Positioned(
@@ -653,11 +666,7 @@ class _PhotoThumbnail extends StatelessWidget {
                 color: Colors.black54,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.check,
-                size: 14,
-                color: Colors.white,
-              ),
+              child: const Icon(Icons.check, size: 14, color: Colors.white),
             ),
           ),
         if (onRemove != null)
@@ -673,11 +682,7 @@ class _PhotoThumbnail extends StatelessWidget {
                   color: Colors.black54,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.close,
-                  size: 14,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.close, size: 14, color: Colors.white),
               ),
             ),
           ),

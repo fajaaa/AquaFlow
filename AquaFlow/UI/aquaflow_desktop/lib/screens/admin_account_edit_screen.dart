@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/services/admin_account_service.dart';
 import 'package:aquaflow_desktop/shared/models/account_details.dart';
 import 'package:aquaflow_desktop/shared/models/user_preferences.dart';
@@ -87,7 +88,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     if (context.read<AuthProvider>().session?.id == null) {
       setState(() {
         _loading = false;
-        _loadError = 'Niste prijavljeni.';
+        _loadError = AppLocalizations.of(context).notLoggedInError;
       });
       return;
     }
@@ -131,7 +132,8 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   /// failure the app theme stays changed (better than reverting under the
   /// admin), but a snackbar reports that the choice wasn't saved.
   Future<void> _setTheme(bool isDark) async {
-    final current = _preferences ??
+    final current =
+        _preferences ??
         const UserPreferences(
           theme: 'light',
           language: 'bs',
@@ -141,7 +143,9 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     final updated = current.copyWith(theme: isDark ? 'dark' : 'light');
 
     setState(() => _preferences = updated);
-    context.read<ThemeProvider>().setThemeMode(isDark ? ThemeMode.dark : ThemeMode.light);
+    context.read<ThemeProvider>().setThemeMode(
+      isDark ? ThemeMode.dark : ThemeMode.light,
+    );
 
     try {
       final saved = await _preferencesService.updatePreferences(updated);
@@ -150,7 +154,9 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Tema nije sačuvana: ${e.message}'),
+          content: Text(
+            AppLocalizations.of(context).themeSaveFailedError(e.message),
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -162,7 +168,8 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   /// save failure the app language stays changed (better than reverting under
   /// the admin), but a snackbar reports that the choice wasn't saved.
   Future<void> _setLanguage(String code) async {
-    final current = _preferences ??
+    final current =
+        _preferences ??
         const UserPreferences(
           theme: 'light',
           language: 'bs',
@@ -181,7 +188,9 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Jezik nije sačuvan: ${e.message}'),
+          content: Text(
+            AppLocalizations.of(context).languageSaveFailedError(e.message),
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -197,15 +206,17 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
 
     setState(() => _saving = true);
     try {
-      await _accountService.update(AccountDetails(
-        id: current.id,
-        email: _emailCtrl.text.trim(),
-        phone: _phoneCtrl.text.trim(),
-        userRole: current.userRole,
-        isActive: current.isActive,
-        firstName: _firstNameCtrl.text.trim(),
-        lastName: _lastNameCtrl.text.trim(),
-      ));
+      await _accountService.update(
+        AccountDetails(
+          id: current.id,
+          email: _emailCtrl.text.trim(),
+          phone: _phoneCtrl.text.trim(),
+          userRole: current.userRole,
+          isActive: current.isActive,
+          firstName: _firstNameCtrl.text.trim(),
+          lastName: _lastNameCtrl.text.trim(),
+        ),
+      );
 
       if (_hasPasswordInput) {
         await _passwordService.changePassword(
@@ -219,7 +230,9 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Podaci naloga su sačuvani.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).accountDetailsSaveSuccess),
+        ),
       );
       await _load();
     } on AccountException catch (e) {
@@ -262,6 +275,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     if (_loadError != null) {
       return _ErrorRetry(message: _loadError!, onRetry: _load);
     }
+    final loc = AppLocalizations.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
       child: ConstrainedBox(
@@ -269,10 +283,10 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const ScreenHeader(
-              title: 'Moj nalog',
-              subtitle: 'Uredite svoje podatke, izgled aplikacije i lozinku.',
-              actions: [],
+            ScreenHeader(
+              title: loc.myAccountTitle,
+              subtitle: loc.myAccountSubtitle,
+              actions: const [],
             ),
             const SizedBox(height: 24),
             Form(
@@ -280,14 +294,14 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _SectionLabel('Profil'),
+                  _SectionLabel(loc.profileSectionLabel),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: _field(
                           controller: _firstNameCtrl,
-                          label: 'Ime',
+                          label: loc.fieldFirstNameLabel,
                           validator: _firstNameValidator,
                           onChanged: () => setState(() {}),
                           maxLength: 80,
@@ -297,7 +311,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                       Expanded(
                         child: _field(
                           controller: _lastNameCtrl,
-                          label: 'Prezime',
+                          label: loc.fieldLastNameLabel,
                           validator: _lastNameValidator,
                           onChanged: () => setState(() {}),
                           maxLength: 80,
@@ -307,14 +321,14 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                   ),
                   const SizedBox(height: 22),
 
-                  const _SectionLabel('Kontakt'),
+                  _SectionLabel(loc.contactSectionLabel),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: _field(
                           controller: _emailCtrl,
-                          label: 'Email',
+                          label: loc.fieldEmailLabel,
                           icon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
                           validator: _emailValidator,
@@ -325,7 +339,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                       Expanded(
                         child: _field(
                           controller: _phoneCtrl,
-                          label: 'Telefon',
+                          label: loc.fieldPhoneLabel,
                           icon: Icons.phone_outlined,
                           keyboardType: TextInputType.phone,
                           validator: _phoneValidator,
@@ -336,22 +350,23 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                   ),
                   const SizedBox(height: 22),
 
-                  const _SectionLabel('Izgled'),
+                  _SectionLabel(loc.personalDetailsAppearanceSectionTitle),
                   SegmentedButton<bool>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: false,
-                        label: Text('Svijetla'),
-                        icon: Icon(Icons.light_mode_outlined),
+                        label: Text(loc.themeLightOption),
+                        icon: const Icon(Icons.light_mode_outlined),
                       ),
                       ButtonSegment(
                         value: true,
-                        label: Text('Tamna'),
-                        icon: Icon(Icons.dark_mode_outlined),
+                        label: Text(loc.themeDarkOption),
+                        icon: const Icon(Icons.dark_mode_outlined),
                       ),
                     ],
                     selected: {_preferences?.isDarkTheme ?? false},
-                    onSelectionChanged: (selection) => _setTheme(selection.first),
+                    onSelectionChanged: (selection) =>
+                        _setTheme(selection.first),
                   ),
                   const SizedBox(height: 14),
                   SegmentedButton<String>(
@@ -360,21 +375,22 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                       ButtonSegment(value: 'en', label: Text('English')),
                     ],
                     selected: {_preferences?.language ?? 'bs'},
-                    onSelectionChanged: (selection) => _setLanguage(selection.first),
+                    onSelectionChanged: (selection) =>
+                        _setLanguage(selection.first),
                   ),
                   const SizedBox(height: 22),
 
-                  const _SectionLabel('Promjena lozinke'),
+                  _SectionLabel(loc.passwordResetTitle),
                   Text(
-                    'Ostavite prazno ako ne mijenjate lozinku.',
+                    loc.passwordOptionalHint,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   _field(
                     controller: _currentPasswordCtrl,
-                    label: 'Trenutna lozinka',
+                    label: loc.passwordResetCurrentLabel,
                     icon: Icons.lock_outline,
                     obscureText: true,
                     validator: _currentPasswordValidator,
@@ -387,7 +403,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                       Expanded(
                         child: _field(
                           controller: _newPasswordCtrl,
-                          label: 'Nova lozinka',
+                          label: loc.passwordResetNewLabel,
                           icon: Icons.lock_outline,
                           obscureText: true,
                           validator: _newPasswordValidator,
@@ -398,7 +414,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                       Expanded(
                         child: _field(
                           controller: _confirmPasswordCtrl,
-                          label: 'Potvrda nove lozinke',
+                          label: loc.passwordResetConfirmLabel,
                           icon: Icons.lock_outline,
                           obscureText: true,
                           validator: _confirmPasswordValidator,
@@ -414,7 +430,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                     children: [
                       TextButton(
                         onPressed: _saving ? null : _load,
-                        child: const Text('Odustani'),
+                        child: Text(loc.dialogDismissButton),
                       ),
                       const SizedBox(width: 12),
                       FilledButton.icon(
@@ -429,7 +445,9 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                                 ),
                               )
                             : const Icon(Icons.save_outlined),
-                        label: Text(_saving ? 'Spašavanje...' : 'Sačuvaj'),
+                        label: Text(
+                          _saving ? loc.commonSaving : loc.commonSave,
+                        ),
                       ),
                     ],
                   ),
@@ -469,9 +487,10 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
 
   String? _emailValidator(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Obavezno polje.';
+    final loc = AppLocalizations.of(context);
+    if (text.isEmpty) return loc.fieldRequiredError;
     final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailPattern.hasMatch(text)) return 'Unesite ispravan email.';
+    if (!emailPattern.hasMatch(text)) return loc.emailInvalidError;
     return null;
   }
 
@@ -481,7 +500,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     final phonePattern = RegExp(r'^[0-9+\-\s()]+$');
     if (!phonePattern.hasMatch(text) ||
         text.replaceAll(RegExp(r'[^0-9]'), '').length < 6) {
-      return 'Unesite ispravan broj telefona.';
+      return AppLocalizations.of(context).phoneInvalidNumberError;
     }
     return null;
   }
@@ -491,7 +510,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   String? _firstNameValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _lastNameCtrl.text.trim().isNotEmpty) {
-      return 'Obavezno ako unosite ime i prezime.';
+      return AppLocalizations.of(context).nameRequiredTogetherError;
     }
     return null;
   }
@@ -499,7 +518,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   String? _lastNameValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty && _firstNameCtrl.text.trim().isNotEmpty) {
-      return 'Obavezno ako unosite ime i prezime.';
+      return AppLocalizations.of(context).nameRequiredTogetherError;
     }
     return null;
   }
@@ -509,23 +528,26 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
   // password to verify alongside the new one.
   String? _currentPasswordValidator(String? value) {
     if ((value ?? '').isEmpty && _hasPasswordInput) {
-      return 'Unesite trenutnu lozinku.';
+      return AppLocalizations.of(context).passwordResetCurrentRequiredError;
     }
     return null;
   }
 
   String? _newPasswordValidator(String? value) {
     final text = value ?? '';
+    final loc = AppLocalizations.of(context);
     if (text.isEmpty) {
-      return _hasPasswordInput ? 'Unesite novu lozinku.' : null;
+      return _hasPasswordInput ? loc.passwordResetNewRequiredError : null;
     }
-    if (text.length < 6) return 'Lozinka mora imati najmanje 6 znakova.';
+    if (text.length < 6) return loc.passwordTooShortError;
     return null;
   }
 
   String? _confirmPasswordValidator(String? value) {
     if (_newPasswordCtrl.text.isEmpty) return null;
-    if (value != _newPasswordCtrl.text) return 'Lozinke se ne podudaraju.';
+    if (value != _newPasswordCtrl.text) {
+      return AppLocalizations.of(context).passwordMismatchError;
+    }
     return null;
   }
 }
@@ -579,7 +601,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

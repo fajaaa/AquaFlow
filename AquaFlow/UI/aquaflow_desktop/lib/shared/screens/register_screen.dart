@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
@@ -65,7 +66,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    final message = auth.errorMessage ?? 'Registration failed.';
+    final message =
+        auth.errorMessage ??
+        AppLocalizations.of(context).registrationFailedError;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
@@ -74,6 +77,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final isBusy = context.select<AuthProvider, bool>((a) => a.isBusy);
+    final loc = AppLocalizations.of(context);
 
     return Scaffold(
       body: Container(
@@ -105,11 +109,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             color: Colors.white,
                           ),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'Registracija',
+                            loc.registerTitle,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -141,14 +145,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       controller: _firstNameController,
                                       enabled: !isBusy,
                                       textInputAction: TextInputAction.next,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Ime',
-                                        border: OutlineInputBorder(),
+                                      decoration: InputDecoration(
+                                        labelText: loc.fieldFirstNameLabel,
+                                        border: const OutlineInputBorder(),
                                       ),
                                       validator: (value) =>
-                                          (value == null || value.trim().isEmpty)
-                                              ? 'Ime je obavezno.'
-                                              : null,
+                                          (value == null ||
+                                              value.trim().isEmpty)
+                                          ? loc.firstNameRequiredError
+                                          : null,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -157,14 +162,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       controller: _lastNameController,
                                       enabled: !isBusy,
                                       textInputAction: TextInputAction.next,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Prezime',
-                                        border: OutlineInputBorder(),
+                                      decoration: InputDecoration(
+                                        labelText: loc.fieldLastNameLabel,
+                                        border: const OutlineInputBorder(),
                                       ),
                                       validator: (value) =>
-                                          (value == null || value.trim().isEmpty)
-                                              ? 'Prezime je obavezno.'
-                                              : null,
+                                          (value == null ||
+                                              value.trim().isEmpty)
+                                          ? loc.lastNameRequiredError
+                                          : null,
                                     ),
                                   ),
                                 ],
@@ -176,16 +182,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 keyboardType: TextInputType.emailAddress,
                                 autofillHints: const [AutofillHints.email],
                                 textInputAction: TextInputAction.next,
-                                decoration: const InputDecoration(
-                                  labelText: 'Email',
-                                  prefixIcon: Icon(Icons.email_outlined),
-                                  border: OutlineInputBorder(),
+                                decoration: InputDecoration(
+                                  labelText: loc.fieldEmailLabel,
+                                  prefixIcon: const Icon(Icons.email_outlined),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 validator: (value) {
                                   final email = value?.trim() ?? '';
-                                  if (email.isEmpty) return 'Email je obavezan.';
+                                  if (email.isEmpty) {
+                                    return loc.emailRequiredError;
+                                  }
                                   if (!email.contains('@')) {
-                                    return 'Unesite ispravan email.';
+                                    return loc.emailInvalidError;
                                   }
                                   return null;
                                 },
@@ -195,20 +203,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _phoneController,
                                 enabled: !isBusy,
                                 keyboardType: TextInputType.phone,
-                                autofillHints: const [AutofillHints.telephoneNumber],
+                                autofillHints: const [
+                                  AutofillHints.telephoneNumber,
+                                ],
                                 textInputAction: TextInputAction.next,
-                                decoration: const InputDecoration(
-                                  labelText: 'Telefon',
-                                  prefixIcon: Icon(Icons.phone_outlined),
-                                  border: OutlineInputBorder(),
+                                decoration: InputDecoration(
+                                  labelText: loc.fieldPhoneLabel,
+                                  prefixIcon: const Icon(Icons.phone_outlined),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 validator: (value) {
                                   final phone = value?.trim() ?? '';
                                   if (phone.isEmpty) return null;
-                                  final validPattern = RegExp(r'^[0-9+\-\s()]*$');
+                                  final validPattern = RegExp(
+                                    r'^[0-9+\-\s()]*$',
+                                  );
                                   if (!validPattern.hasMatch(phone)) {
-                                    return 'Telefon smije sadržavati samo brojeve i '
-                                        'simbole + - ( ).';
+                                    return loc.phoneInvalidError;
                                   }
                                   return null;
                                 },
@@ -218,10 +229,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _passwordController,
                                 enabled: !isBusy,
                                 obscureText: _obscurePassword,
-                                autofillHints: const [AutofillHints.newPassword],
+                                autofillHints: const [
+                                  AutofillHints.newPassword,
+                                ],
                                 textInputAction: TextInputAction.next,
                                 decoration: InputDecoration(
-                                  labelText: 'Lozinka',
+                                  labelText: loc.fieldPasswordLabel,
                                   prefixIcon: const Icon(Icons.lock_outline),
                                   border: const OutlineInputBorder(),
                                   suffixIcon: IconButton(
@@ -231,15 +244,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           : Icons.visibility_off_outlined,
                                     ),
                                     onPressed: () => setState(
-                                      () => _obscurePassword = !_obscurePassword,
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
                                     ),
                                   ),
                                 ),
                                 validator: (value) {
                                   final password = value ?? '';
-                                  if (password.isEmpty) return 'Lozinka je obavezna.';
+                                  if (password.isEmpty) {
+                                    return loc.passwordRequiredError;
+                                  }
                                   if (password.length < 6) {
-                                    return 'Lozinka mora imati najmanje 6 znakova.';
+                                    return loc.passwordTooShortError;
                                   }
                                   return null;
                                 },
@@ -250,9 +266,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 enabled: !isBusy,
                                 obscureText: _obscureConfirmPassword,
                                 textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) => isBusy ? null : _submit(),
+                                onFieldSubmitted: (_) =>
+                                    isBusy ? null : _submit(),
                                 decoration: InputDecoration(
-                                  labelText: 'Potvrdi lozinku',
+                                  labelText: loc.fieldConfirmPasswordLabel,
                                   prefixIcon: const Icon(Icons.lock_outline),
                                   border: const OutlineInputBorder(),
                                   suffixIcon: IconButton(
@@ -269,7 +286,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 validator: (value) {
                                   if (value != _passwordController.text) {
-                                    return 'Lozinke se ne podudaraju.';
+                                    return loc.passwordMismatchError;
                                   }
                                   return null;
                                 },
@@ -278,22 +295,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               Align(
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  'Tema',
+                                  loc.registerThemeLabel,
                                   style: Theme.of(context).textTheme.labelLarge,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               SegmentedButton<ThemeMode>(
-                                segments: const [
+                                segments: [
                                   ButtonSegment(
                                     value: ThemeMode.light,
-                                    label: Text('Svijetla'),
-                                    icon: Icon(Icons.light_mode_outlined),
+                                    label: Text(loc.themeLightOption),
+                                    icon: const Icon(Icons.light_mode_outlined),
                                   ),
                                   ButtonSegment(
                                     value: ThemeMode.dark,
-                                    label: Text('Tamna'),
-                                    icon: Icon(Icons.dark_mode_outlined),
+                                    label: Text(loc.themeDarkOption),
+                                    icon: const Icon(Icons.dark_mode_outlined),
                                   ),
                                 ],
                                 selected: {_selectedTheme},
@@ -328,7 +345,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     shadowColor: Colors.transparent,
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
                                     child: isBusy
                                         ? const SizedBox(
                                             height: 20,
@@ -338,7 +357,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                               color: Colors.white,
                                             ),
                                           )
-                                        : const Text('Registruj se'),
+                                        : Text(loc.authRegisterButton),
                                   ),
                                 ),
                               ),

@@ -10,6 +10,9 @@
   "commonRefresh": "Refresh",
   "commonSearch": "Search",
   "commonRetry": "Try again",
+  "commonLogout": "Log out",
+  "unknownRoleTitle": "Unknown role",
+  "unknownRoleMessage": "Your account doesn't have a supported role for this app. Contact your administrator.",
 
   "stateLoading": "Loading...",
   "errorGeneric": "Error",
@@ -42,6 +45,14 @@
   "registrationFailedError": "Registration failed.",
 
   "fieldEmailLabel": "Email",
+  "companySettingsScreenTitle": "Company settings",
+  "companyNameLabel": "Company name",
+  "taxNumberLabel": "Tax number",
+  "bankAccountLabel": "Bank account",
+  "logoUrlOptionalLabel": "Logo URL (optional)",
+  "defaultLanguageLabel": "Language",
+  "defaultCurrencyLabel": "Currency",
+  "companySettingsSaveSuccess": "Company settings saved.",
   "fieldPhoneLabel": "Phone",
   "fieldFirstNameLabel": "First name",
   "fieldLastNameLabel": "Last name",
@@ -142,6 +153,8 @@
   "locationNoSettlementOption": "No settlement",
   "locationStreetLabel": "Street",
   "locationHouseNumberLabel": "House number",
+  "locationNameRequiredError": "Enter your first and last name in \"Personal details\" to save the address.",
+  "locationSaveSuccess": "Location saved.",
   "settlementRequiredError": "Select a settlement.",
 
   "requestCardTitle": "Request #{id}",
@@ -195,5 +208,28 @@
   "reasonLabel": "Reason",
   "reasonRequiredError": "Reason is required.",
   "priceSummaryHeading": "Price summary",
-  "pricePerM3Label": "Price per m³"
+  "pricePerM3Label": "Price per m³",
+
+  "faultReportStatusNew": "New",
+  "faultReportStatusAssigned": "Assigned",
+  "faultReportStatusInProgress": "In progress",
+  "faultReportStatusResolved": "Resolved",
+  "faultReportStatusFieldLabel": "Report status",
+  "photosSectionHeading": "Photos",
+  "noPhotosMessage": "No photos attached.",
+  "faultReportInfoSectionHeading": "Report information",
+  "reportedAtLabel": "Reported",
+  "resolvedAtLabel": "Resolved",
+  "addressLabel": "Address",
+  "customerLabel": "Customer",
+
+  "faultReportsScreenTitle": "Fault reports",
+  "faultReportSearchHint": "Title or customer name",
+  "collectorFaultReportsEmptyMessage": "No fault reports.",
+  "reportedAtInlineLabel": "Reported: {date}",
+  "allStatusesOption": "All statuses",
+  "statusChangeDialogTitle": "Status change",
+  "statusChangeDialogContent": "Set the report status to \"{status}\"?",
+  "startActionButton": "Start",
+  "resolveActionButton": "Resolve"
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
+
 /// Shared pagination footer used across every paginated list in the app -
 /// admin desktop tables and mobile lists alike: prev/next controls, a
 /// "Stranica X od Y" / "N ukupno" summary, and a 10/20/50 page-size
@@ -29,6 +31,7 @@ class PagedTablePaginationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final canGoBack = page > 1 && !loading;
     final canGoForward = page < totalPages && !loading;
 
@@ -44,7 +47,7 @@ class PagedTablePaginationBar extends StatelessWidget {
         child: Row(
           children: [
             IconButton(
-              tooltip: 'Prethodna stranica',
+              tooltip: loc.paginationPrevious,
               onPressed: canGoBack ? () => onPageChanged(page - 1) : null,
               icon: const Icon(Icons.chevron_left),
             ),
@@ -53,13 +56,13 @@ class PagedTablePaginationBar extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Stranica $page od $totalPages',
+                    loc.paginationPageOf(page, totalPages),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelLarge,
                   ),
                   Text(
-                    '$totalCount ukupno',
+                    loc.paginationTotalCount(totalCount),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelSmall?.copyWith(
@@ -70,7 +73,7 @@ class PagedTablePaginationBar extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Sljedeća stranica',
+              tooltip: loc.paginationNext,
               onPressed: canGoForward ? () => onPageChanged(page + 1) : null,
               icon: const Icon(Icons.chevron_right),
             ),

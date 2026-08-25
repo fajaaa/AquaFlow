@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/services/customer_support_ticket_exception.dart';
 import 'package:aquaflow_customer/services/customer_support_ticket_service.dart';
 
@@ -52,6 +53,7 @@ class _NewSupportTicketDialogState extends State<NewSupportTicketDialog> {
   }
 
   Future<void> _showImageSourceSheet() async {
+    final loc = AppLocalizations.of(context);
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (context) => SafeArea(
@@ -60,12 +62,12 @@ class _NewSupportTicketDialogState extends State<NewSupportTicketDialog> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Slikaj'),
+              title: Text(loc.commonTakePhoto),
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Iz galerije'),
+              title: Text(loc.commonChooseFromGallery),
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
           ],
@@ -115,11 +117,12 @@ class _NewSupportTicketDialogState extends State<NewSupportTicketDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final atPhotoLimit = _selectedImages.length >= _maxPhotos;
     final enabled = !_submitting;
 
     return AlertDialog(
-      title: const Text('Novi tiket'),
+      title: Text(loc.newSupportTicketDialogTitle),
       content: SizedBox(
         width: 420,
         child: Form(
@@ -133,12 +136,12 @@ class _NewSupportTicketDialogState extends State<NewSupportTicketDialog> {
                   controller: _subjectCtrl,
                   enabled: enabled,
                   maxLength: 150,
-                  validator: _requiredValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Naslov',
-                    prefixIcon: Icon(Icons.title_outlined),
+                  validator: (value) => _requiredValidator(context, value),
+                  decoration: InputDecoration(
+                    labelText: loc.titleFieldLabel,
+                    prefixIcon: const Icon(Icons.title_outlined),
                     counterText: '',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -147,11 +150,11 @@ class _NewSupportTicketDialogState extends State<NewSupportTicketDialog> {
                   enabled: enabled,
                   maxLines: 5,
                   maxLength: 2000,
-                  validator: _requiredValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Poruka',
+                  validator: (value) => _requiredValidator(context, value),
+                  decoration: InputDecoration(
+                    labelText: loc.messageFieldLabel,
                     alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -159,7 +162,7 @@ class _NewSupportTicketDialogState extends State<NewSupportTicketDialog> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Fotografije (${_selectedImages.length}/$_maxPhotos)',
+                        loc.photoCountLabel(_selectedImages.length, _maxPhotos),
                         style: theme.textTheme.bodyMedium,
                       ),
                     ),
@@ -168,7 +171,7 @@ class _NewSupportTicketDialogState extends State<NewSupportTicketDialog> {
                           ? _showImageSourceSheet
                           : null,
                       icon: const Icon(Icons.add_a_photo_outlined),
-                      label: const Text('Dodaj sliku'),
+                      label: Text(loc.addImageButtonLabel),
                     ),
                   ],
                 ),
@@ -204,7 +207,7 @@ class _NewSupportTicketDialogState extends State<NewSupportTicketDialog> {
       actions: [
         TextButton(
           onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton(
           onPressed: _submitting ? null : _submit,
@@ -214,14 +217,16 @@ class _NewSupportTicketDialogState extends State<NewSupportTicketDialog> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Pošalji'),
+              : Text(loc.commonSend),
         ),
       ],
     );
   }
 
-  String? _requiredValidator(String? value) {
-    if ((value ?? '').trim().isEmpty) return 'Obavezno polje.';
+  String? _requiredValidator(BuildContext context, String? value) {
+    if ((value ?? '').trim().isEmpty) {
+      return AppLocalizations.of(context).fieldRequiredError;
+    }
     return null;
   }
 }

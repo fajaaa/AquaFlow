@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_customer/app/unavailable_screen.dart';
+import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/screens/customer_shell.dart';
 import 'package:aquaflow_customer/shared/providers/auth_provider.dart';
 
@@ -20,11 +21,11 @@ class RoleGate extends StatelessWidget {
     if (role == 'customer') {
       return const CustomerShell();
     }
+    final loc = AppLocalizations.of(context);
     return UnavailableScreen(
       icon: Icons.help_outline,
-      title: 'Nepoznata uloga',
-      message: 'Vaš nalog nema podržanu ulogu za ovu aplikaciju. '
-          'Obratite se administratoru.',
+      title: loc.unknownRoleTitle,
+      message: loc.unknownRoleMessage,
       onLogout: () => context.read<AuthProvider>().logout(),
     );
   }

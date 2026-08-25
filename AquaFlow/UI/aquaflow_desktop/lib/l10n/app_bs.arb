@@ -34,6 +34,18 @@
   "@commonRetry": {
     "description": "Retry button label shown by ErrorRetry."
   },
+  "commonLogout": "Odjava",
+  "@commonLogout": {
+    "description": "Generic logout button label, used e.g. by UnavailableScreen."
+  },
+  "desktopUnavailableTitle": "Nedostupno na računaru",
+  "@desktopUnavailableTitle": {
+    "description": "Title shown when a non-admin account signs into the desktop app."
+  },
+  "desktopUnavailableMessage": "Desktop aplikacija je namijenjena samo administratorima. Za vašu ulogu koristite mobilnu aplikaciju.",
+  "@desktopUnavailableMessage": {
+    "description": "Explanatory message shown alongside desktopUnavailableTitle."
+  },
 
   "stateLoading": "Učitavanje...",
   "@stateLoading": {
@@ -46,6 +58,15 @@
   "emptyGeneric": "Nema podataka",
   "@emptyGeneric": {
     "description": "Generic empty-state message used by EmptyStateView."
+  },
+  "sectionNotImplementedMessage": "Sekcija \"{label}\" još nije implementirana.",
+  "@sectionNotImplementedMessage": {
+    "description": "Fallback message shown for a sidebar section with no screen wired up yet.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
   },
   "emptyList": "Prazna lista",
   "@emptyList": {
@@ -80,5 +101,1678 @@
         "type": "int"
       }
     }
+  },
+
+  "commonSaving": "Spašavanje...",
+  "@commonSaving": {
+    "description": "Generic saving-in-progress button label, shown while a save request is in flight."
+  },
+
+  "loginTitle": "Prijava",
+  "@loginTitle": {
+    "description": "Login screen header title."
+  },
+  "fieldEmailLabel": "Email",
+  "@fieldEmailLabel": {
+    "description": "Shared label for an email input field (login, registration, account edit, company settings)."
+  },
+  "emailRequiredError": "Email je obavezan.",
+  "@emailRequiredError": {
+    "description": "Shared validation error shown when an email field is left empty (login, registration)."
+  },
+  "emailInvalidError": "Unesite ispravan email.",
+  "@emailInvalidError": {
+    "description": "Shared validation error shown when an email field does not look like a valid email address (login, registration, company settings)."
+  },
+  "fieldPasswordLabel": "Lozinka",
+  "@fieldPasswordLabel": {
+    "description": "Shared label for a password input field (login, registration)."
+  },
+  "passwordRequiredError": "Lozinka je obavezna.",
+  "@passwordRequiredError": {
+    "description": "Shared validation error shown when a password field is left empty (login, registration)."
+  },
+  "loginRememberMe": "Zapamti me",
+  "@loginRememberMe": {
+    "description": "Label for the 'remember me' checkbox on the login form."
+  },
+  "welcomeTagline": "Svaka kap, evidentirana.",
+  "@welcomeTagline": {
+    "description": "Tagline shown under the logo on the welcome screen."
+  },
+  "welcomeSubtitle": "Mali koraci u štednji vode prave velike valove promjena.",
+  "@welcomeSubtitle": {
+    "description": "Subtitle/italic quote shown under the tagline on the welcome screen."
+  },
+  "authLoginButton": "Prijavi se",
+  "@authLoginButton": {
+    "description": "Login action button label."
+  },
+  "loginFailedError": "Prijava nije uspjela.",
+  "@loginFailedError": {
+    "description": "Fallback snackbar message shown when login fails without a specific server error message."
+  },
+
+  "registerTitle": "Registracija",
+  "@registerTitle": {
+    "description": "Registration screen header title."
+  },
+  "fieldFirstNameLabel": "Ime",
+  "@fieldFirstNameLabel": {
+    "description": "Shared label for a first-name input field (registration, account edit)."
+  },
+  "firstNameRequiredError": "Ime je obavezno.",
+  "@firstNameRequiredError": {
+    "description": "Validation error shown on the registration form when the first name field is left empty."
+  },
+  "fieldLastNameLabel": "Prezime",
+  "@fieldLastNameLabel": {
+    "description": "Shared label for a last-name input field (registration, account edit)."
+  },
+  "lastNameRequiredError": "Prezime je obavezno.",
+  "@lastNameRequiredError": {
+    "description": "Validation error shown on the registration form when the last name field is left empty."
+  },
+  "fieldPhoneLabel": "Telefon",
+  "@fieldPhoneLabel": {
+    "description": "Shared label for a phone input field (registration, account edit, company settings)."
+  },
+  "phoneInvalidError": "Telefon smije sadržavati samo brojeve i simbole + - ( ).",
+  "@phoneInvalidError": {
+    "description": "Validation error shown when the phone field contains characters other than digits and + - ( )."
+  },
+  "passwordTooShortError": "Lozinka mora imati najmanje 6 znakova.",
+  "@passwordTooShortError": {
+    "description": "Shared validation error shown when a new password is shorter than 6 characters (registration, password reset, account edit)."
+  },
+  "fieldConfirmPasswordLabel": "Potvrdi lozinku",
+  "@fieldConfirmPasswordLabel": {
+    "description": "Label for the confirm-password field on the registration form."
+  },
+  "passwordMismatchError": "Lozinke se ne podudaraju.",
+  "@passwordMismatchError": {
+    "description": "Shared validation error shown when a password confirmation field does not match (registration, password reset, account edit)."
+  },
+  "registerThemeLabel": "Tema",
+  "@registerThemeLabel": {
+    "description": "Section label above the theme picker on the registration form."
+  },
+  "themeLightOption": "Svijetla",
+  "@themeLightOption": {
+    "description": "Label for the light-theme option in a theme picker."
+  },
+  "themeDarkOption": "Tamna",
+  "@themeDarkOption": {
+    "description": "Label for the dark-theme option in a theme picker."
+  },
+  "authRegisterButton": "Registruj se",
+  "@authRegisterButton": {
+    "description": "Register action button label."
+  },
+  "registrationFailedError": "Registracija nije uspjela.",
+  "@registrationFailedError": {
+    "description": "Fallback snackbar message shown when registration fails without a specific server error message."
+  },
+
+  "passwordResetTitle": "Promjena lozinke",
+  "@passwordResetTitle": {
+    "description": "Password reset screen app bar title, also reused as the account edit screen's password section label."
+  },
+  "passwordResetDescription": "Unesite trenutnu i novu lozinku da biste je promijenili.",
+  "@passwordResetDescription": {
+    "description": "Instruction text shown above the password reset form."
+  },
+  "passwordResetCurrentLabel": "Trenutna lozinka",
+  "@passwordResetCurrentLabel": {
+    "description": "Label for the current-password field (password reset, account edit)."
+  },
+  "passwordResetNewLabel": "Nova lozinka",
+  "@passwordResetNewLabel": {
+    "description": "Label for the new-password field (password reset, account edit)."
+  },
+  "passwordResetConfirmLabel": "Potvrda nove lozinke",
+  "@passwordResetConfirmLabel": {
+    "description": "Label for the confirm-new-password field (password reset, account edit)."
+  },
+  "passwordResetSubmitButton": "Promijeni lozinku",
+  "@passwordResetSubmitButton": {
+    "description": "Submit button label on the password reset form."
+  },
+  "passwordResetSuccess": "Lozinka je promijenjena.",
+  "@passwordResetSuccess": {
+    "description": "Snackbar message shown after a successful password change."
+  },
+  "passwordResetCurrentRequiredError": "Unesite trenutnu lozinku.",
+  "@passwordResetCurrentRequiredError": {
+    "description": "Validation error shown when the current-password field is left empty."
+  },
+  "passwordResetNewRequiredError": "Unesite novu lozinku.",
+  "@passwordResetNewRequiredError": {
+    "description": "Validation error shown when the new-password field is left empty."
+  },
+  "fieldRequiredError": "Obavezno polje.",
+  "@fieldRequiredError": {
+    "description": "Generic validation error for a required field left empty."
+  },
+
+  "notLoggedInError": "Niste prijavljeni.",
+  "@notLoggedInError": {
+    "description": "Error shown when the account edit screen tries to load data with no signed-in session."
+  },
+  "themeSaveFailedError": "Tema nije sačuvana: {message}",
+  "@themeSaveFailedError": {
+    "description": "Snackbar message shown when saving the theme preference fails, with the server error appended.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "languageSaveFailedError": "Jezik nije sačuvan: {message}",
+  "@languageSaveFailedError": {
+    "description": "Snackbar message shown when saving the language preference fails, with the server error appended.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "personalDetailsAppearanceSectionTitle": "Izgled",
+  "@personalDetailsAppearanceSectionTitle": {
+    "description": "Section header above the theme/language pickers on the account edit form."
+  },
+  "nameRequiredTogetherError": "Obavezno ako unosite ime i prezime.",
+  "@nameRequiredTogetherError": {
+    "description": "Validation error shown when only one of first/last name is filled in."
+  },
+  "dialogDismissButton": "Odustani",
+  "@dialogDismissButton": {
+    "description": "Generic 'back out without acting' button label, distinct from commonCancel which cancels an in-progress action."
+  },
+  "addressLabel": "Adresa",
+  "@addressLabel": {
+    "description": "Label for the address field on the company settings form."
+  },
+  "tabNotifications": "Obavijesti",
+  "@tabNotifications": {
+    "description": "Sidebar menu label for the notifications section."
+  },
+  "faultReportsScreenTitle": "Prijave kvarova",
+  "@faultReportsScreenTitle": {
+    "description": "Sidebar menu label for the fault reports section."
+  },
+  "logoutLabel": "Odjava",
+  "@logoutLabel": {
+    "description": "Sidebar footer label for the logout action."
+  },
+
+  "companySettingsScreenTitle": "Postavke firme",
+  "@companySettingsScreenTitle": {
+    "description": "App bar title for the company settings screen, also used as the sidebar menu label for it."
+  },
+  "companyNameLabel": "Naziv firme",
+  "@companyNameLabel": {
+    "description": "Label for the company name field on the company settings form."
+  },
+  "taxNumberLabel": "Porezni broj",
+  "@taxNumberLabel": {
+    "description": "Label for the tax number field on the company settings form."
+  },
+  "bankAccountLabel": "Bankovni račun",
+  "@bankAccountLabel": {
+    "description": "Label for the bank account field on the company settings form."
+  },
+  "logoUrlOptionalLabel": "URL logotipa (opcionalno)",
+  "@logoUrlOptionalLabel": {
+    "description": "Label for the optional logo URL field on the company settings form."
+  },
+  "defaultLanguageLabel": "Jezik",
+  "@defaultLanguageLabel": {
+    "description": "Label for the default language field on the company settings form."
+  },
+  "defaultCurrencyLabel": "Valuta",
+  "@defaultCurrencyLabel": {
+    "description": "Label for the default currency field on the company settings form."
+  },
+  "companySettingsSaveSuccess": "Postavke firme su sačuvane.",
+  "@companySettingsSaveSuccess": {
+    "description": "Snackbar message shown after company settings are saved successfully."
+  },
+
+  "myAccountTitle": "Moj nalog",
+  "@myAccountTitle": {
+    "description": "Title for the admin's own account screen, used as its header title, the sidebar menu label, and the sidebar footer tile."
+  },
+  "myAccountSubtitle": "Uredite svoje podatke, izgled aplikacije i lozinku.",
+  "@myAccountSubtitle": {
+    "description": "Subtitle shown under the header on the admin account edit screen."
+  },
+  "profileSectionLabel": "Profil",
+  "@profileSectionLabel": {
+    "description": "Section label above the name fields on the admin account edit form."
+  },
+  "contactSectionLabel": "Kontakt",
+  "@contactSectionLabel": {
+    "description": "Section label above the email/phone fields on the admin account edit form."
+  },
+  "passwordOptionalHint": "Ostavite prazno ako ne mijenjate lozinku.",
+  "@passwordOptionalHint": {
+    "description": "Helper text above the password fields on the admin account edit form, noting they're optional."
+  },
+  "phoneInvalidNumberError": "Unesite ispravan broj telefona.",
+  "@phoneInvalidNumberError": {
+    "description": "Validation error shown when the phone field on the admin account edit form doesn't look like a valid phone number."
+  },
+  "accountDetailsSaveSuccess": "Podaci naloga su sačuvani.",
+  "@accountDetailsSaveSuccess": {
+    "description": "Snackbar message shown after the admin account edit form is saved successfully."
+  },
+
+  "dashboardLabel": "Dashboard",
+  "@dashboardLabel": {
+    "description": "Sidebar menu label for the dashboard section, also used as the dashboard overview's own heading."
+  },
+  "usersLabel": "Korisnici",
+  "@usersLabel": {
+    "description": "Sidebar menu label for the 'Korisnici' category group and its own customer-management leaf item."
+  },
+  "collectorsNavLabel": "Inkasanti",
+  "@collectorsNavLabel": {
+    "description": "Sidebar menu label for the collectors management section."
+  },
+  "administratorsLabel": "Administratori",
+  "@administratorsLabel": {
+    "description": "Sidebar menu label for the administrators management section."
+  },
+  "financeGroupLabel": "Finansije",
+  "@financeGroupLabel": {
+    "description": "Sidebar menu label for the 'Finansije' category group."
+  },
+  "invoicesLabel": "Računi",
+  "@invoicesLabel": {
+    "description": "Sidebar menu label for the invoices section."
+  },
+  "paymentsLabel": "Plaćanja",
+  "@paymentsLabel": {
+    "description": "Sidebar menu label for the payments section."
+  },
+  "tariffsNavLabel": "Tarife",
+  "@tariffsNavLabel": {
+    "description": "Sidebar menu label for the tariffs section."
+  },
+  "supportGroupLabel": "Podrška",
+  "@supportGroupLabel": {
+    "description": "Sidebar menu label for the 'Podrška' category group and its own support-tickets leaf item."
+  },
+  "waterMeterRequestsNavLabel": "Zahtjevi",
+  "@waterMeterRequestsNavLabel": {
+    "description": "Sidebar menu label for the water meter requests section."
+  },
+  "systemGroupLabel": "Sistem",
+  "@systemGroupLabel": {
+    "description": "Sidebar menu label for the 'Sistem' category group."
+  },
+  "codebookLabel": "Šifarnik",
+  "@codebookLabel": {
+    "description": "Sidebar menu label for the codebook (cities/municipalities/settlements) section."
+  },
+
+  "dashboardOverviewSubtitle": "Pregled ključnih pokazatelja (demo podaci)",
+  "@dashboardOverviewSubtitle": {
+    "description": "Subtitle under the dashboard overview heading, noting the charts show demo data."
+  },
+  "lineChartTitle": "Linijski grafikon",
+  "@lineChartTitle": {
+    "description": "Title for the demo line chart card on the dashboard overview."
+  },
+  "donutChartTitle": "Kružni grafikon",
+  "@donutChartTitle": {
+    "description": "Title for the demo donut chart card on the dashboard overview."
+  },
+  "barChartTitle": "Trakasti grafikon",
+  "@barChartTitle": {
+    "description": "Title for the demo bar chart card on the dashboard overview."
+  },
+  "seriesALabel": "Serija A",
+  "@seriesALabel": {
+    "description": "Legend label for the first series in the demo bar chart."
+  },
+  "seriesBLabel": "Serija B",
+  "@seriesBLabel": {
+    "description": "Legend label for the second series in the demo bar chart."
+  },
+
+  "statusFieldLabel": "Status",
+  "@statusFieldLabel": {
+    "description": "Label for a status filter/column, shared across the users, collectors, and water meters screens."
+  },
+  "allOption": "Svi",
+  "@allOption": {
+    "description": "Generic 'no filter' option meaning all values, shared by status/event-type filter dropdowns."
+  },
+  "statusActive": "Aktivan",
+  "@statusActive": {
+    "description": "Display label for an active status, shared by users, collectors, and water meters."
+  },
+  "statusInactive": "Neaktivan",
+  "@statusInactive": {
+    "description": "Display label for an inactive status, shared by users, collectors, and water meters."
+  },
+  "unexpectedError": "Došlo je do neočekivane greške.",
+  "@unexpectedError": {
+    "description": "Generic fallback error message shown when a caught error carries no specific server message."
+  },
+  "fullNameColumnLabel": "Ime i prezime",
+  "@fullNameColumnLabel": {
+    "description": "Table column header for a person's full name, shared by the users and collectors screens."
+  },
+  "createdColumnLabel": "Kreiran",
+  "@createdColumnLabel": {
+    "description": "Table column header for a row's creation date."
+  },
+  "actionsColumnLabel": "Akcije",
+  "@actionsColumnLabel": {
+    "description": "Table column header for the row actions column."
+  },
+  "activitiesTooltip": "Aktivnosti",
+  "@activitiesTooltip": {
+    "description": "Tooltip for the row action that opens a user's activity log."
+  },
+  "accountSectionLabel": "Nalog",
+  "@accountSectionLabel": {
+    "description": "Section label above the status/password fields in an editor dialog."
+  },
+  "newPasswordOptionalLabel": "Nova lozinka (ostavi prazno da zadržiš postojeću)",
+  "@newPasswordOptionalLabel": {
+    "description": "Label for the password field on an edit dialog, noting it's optional and blank keeps the current password."
+  },
+  "commonClose": "Zatvori",
+  "@commonClose": {
+    "description": "Generic close button label for a dialog."
+  },
+  "waterMeterStatusRemoved": "Uklonjen",
+  "@waterMeterStatusRemoved": {
+    "description": "Display label for the 'Removed' water meter status."
+  },
+  "initialReadingLabel": "Početno očitanje",
+  "@initialReadingLabel": {
+    "description": "Label for a water meter's initial reading value."
+  },
+
+  "usersScreenSubtitle": "Pregled, dodavanje, uređivanje i brisanje korisničkih naloga.",
+  "@usersScreenSubtitle": {
+    "description": "Subtitle on the 'Korisnici' (customers) screen header."
+  },
+  "administratorsScreenSubtitle": "Pregled, dodavanje, uređivanje i brisanje administratorskih naloga.",
+  "@administratorsScreenSubtitle": {
+    "description": "Subtitle on the 'Administratori' screen header."
+  },
+  "newUserButtonLabel": "Novi korisnik",
+  "@newUserButtonLabel": {
+    "description": "'New' button label and create-dialog title on the 'Korisnici' screen."
+  },
+  "newAdministratorButtonLabel": "Novi administrator",
+  "@newAdministratorButtonLabel": {
+    "description": "'New' button label and create-dialog title on the 'Administratori' screen."
+  },
+  "editUserDialogTitle": "Uredi korisnika",
+  "@editUserDialogTitle": {
+    "description": "Edit-dialog title on the 'Korisnici' screen."
+  },
+  "editAdministratorDialogTitle": "Uredi administratora",
+  "@editAdministratorDialogTitle": {
+    "description": "Edit-dialog title on the 'Administratori' screen."
+  },
+  "userCreatedSuccess": "Korisnik je dodan.",
+  "@userCreatedSuccess": {
+    "description": "Snackbar message shown after a customer user is created."
+  },
+  "administratorCreatedSuccess": "Administrator je dodan.",
+  "@administratorCreatedSuccess": {
+    "description": "Snackbar message shown after an administrator is created."
+  },
+  "userSavedSuccess": "Korisnik je sačuvan.",
+  "@userSavedSuccess": {
+    "description": "Snackbar message shown after a customer user is saved."
+  },
+  "administratorSavedSuccess": "Administrator je sačuvan.",
+  "@administratorSavedSuccess": {
+    "description": "Snackbar message shown after an administrator is saved."
+  },
+  "deleteUserDialogTitle": "Obriši korisnika",
+  "@deleteUserDialogTitle": {
+    "description": "Title of the delete-confirmation dialog on the 'Korisnici' screen."
+  },
+  "deleteAdministratorDialogTitle": "Obriši administratora",
+  "@deleteAdministratorDialogTitle": {
+    "description": "Title of the delete-confirmation dialog on the 'Administratori' screen."
+  },
+  "deleteUserDialogContent": "Da li želite obrisati korisnika \"{email}\"? Ova radnja se ne može poništiti.",
+  "@deleteUserDialogContent": {
+    "description": "Body text of the delete-confirmation dialog on the 'Korisnici' screen, with the user's email.",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAdministratorDialogContent": "Da li želite obrisati administratora \"{email}\"? Ova radnja se ne može poništiti.",
+  "@deleteAdministratorDialogContent": {
+    "description": "Body text of the delete-confirmation dialog on the 'Administratori' screen, with the user's email.",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "userDeletedSuccess": "Korisnik je obrisan.",
+  "@userDeletedSuccess": {
+    "description": "Snackbar message shown after a customer user is deleted."
+  },
+  "administratorDeletedSuccess": "Administrator je obrisan.",
+  "@administratorDeletedSuccess": {
+    "description": "Snackbar message shown after an administrator is deleted."
+  },
+  "usersEmptyMessage": "Nema korisnika.",
+  "@usersEmptyMessage": {
+    "description": "Empty-state message on the 'Korisnici' screen when there are no rows."
+  },
+  "administratorsEmptyMessage": "Nema administratora.",
+  "@administratorsEmptyMessage": {
+    "description": "Empty-state message on the 'Administratori' screen when there are no rows."
+  },
+  "usersEmptyFilteredMessage": "Nema korisnika za zadane filtere.",
+  "@usersEmptyFilteredMessage": {
+    "description": "Empty-state message on the 'Korisnici' screen when filters exclude every row."
+  },
+  "administratorsEmptyFilteredMessage": "Nema administratora za zadane filtere.",
+  "@administratorsEmptyFilteredMessage": {
+    "description": "Empty-state message on the 'Administratori' screen when filters exclude every row."
+  },
+  "nameSearchHint": "Ime ili prezime",
+  "@nameSearchHint": {
+    "description": "Hint text for the name search field on the users screen."
+  },
+  "clearSearchTooltip": "Očisti pretragu",
+  "@clearSearchTooltip": {
+    "description": "Tooltip for the button that clears the search field on the users screen."
+  },
+  "applyFiltersTooltip": "Primijeni filtere",
+  "@applyFiltersTooltip": {
+    "description": "Tooltip for the button that applies the current filters on the users screen."
+  },
+  "rolesNotLoadedError": "Uloge nisu učitane. Pokušajte ponovo.",
+  "@rolesNotLoadedError": {
+    "description": "Error shown when the user roles lookup fails to load before opening the create/edit dialog."
+  },
+  "roleNotFoundError": "Rola \"{roleName}\" nije pronađena.",
+  "@roleNotFoundError": {
+    "description": "Error shown when the screen's pinned role name has no matching role on the backend.",
+    "placeholders": {
+      "roleName": {
+        "type": "String"
+      }
+    }
+  },
+  "waterMetersTooltip": "Vodomjeri",
+  "@waterMetersTooltip": {
+    "description": "Tooltip for the row action that opens a customer's water meters."
+  },
+  "cannotDeleteOwnAccountError": "Ne možete obrisati vlastiti korisnički nalog.",
+  "@cannotDeleteOwnAccountError": {
+    "description": "Tooltip shown on the delete action when it targets the signed-in admin's own account."
+  },
+  "customerCodeFieldLabel": "Šifra korisnika (automatski dodijeljena)",
+  "@customerCodeFieldLabel": {
+    "description": "Read-only label for the auto-assigned customer code field on the user editor dialog."
+  },
+  "cannotDeactivateOwnAccountError": "Ne možete deaktivirati vlastiti nalog.",
+  "@cannotDeactivateOwnAccountError": {
+    "description": "Hint shown when the status switch is disabled because it targets the signed-in admin's own account."
+  },
+  "nameRequiredForAddressError": "Unesite ime i prezime da biste sačuvali adresu.",
+  "@nameRequiredForAddressError": {
+    "description": "Validation error shown when an address is entered without a first/last name on the user editor dialog."
+  },
+
+  "collectorsScreenSubtitle": "Pregled i uređivanje profila inkasanata za terenski rad.",
+  "@collectorsScreenSubtitle": {
+    "description": "Subtitle on the 'Inkasanti' screen header."
+  },
+  "addCollectorButtonLabel": "Dodaj inkasanta",
+  "@addCollectorButtonLabel": {
+    "description": "'Add' button label and create-dialog title on the 'Inkasanti' screen."
+  },
+  "collectorCreatedSuccess": "Inkasant je dodan.",
+  "@collectorCreatedSuccess": {
+    "description": "Snackbar message shown after a collector is created."
+  },
+  "collectorProfileSavedSuccess": "Profil inkasanta je sačuvan.",
+  "@collectorProfileSavedSuccess": {
+    "description": "Snackbar message shown after a collector profile is saved."
+  },
+  "collectorsEmptyMessage": "Nema profila inkasanata.",
+  "@collectorsEmptyMessage": {
+    "description": "Empty-state message on the 'Inkasanti' screen when there are no rows."
+  },
+  "collectorCodeColumnLabel": "Šifra inkasanta",
+  "@collectorCodeColumnLabel": {
+    "description": "Table column header for a collector's employee code."
+  },
+  "editProfileTooltip": "Uredi profil",
+  "@editProfileTooltip": {
+    "description": "Tooltip for the row action that opens the collector profile editor."
+  },
+  "collectorCodeGeneratedHint": "Šifra inkasanta se automatski kreira nakon spremanja, npr. COL-0002.",
+  "@collectorCodeGeneratedHint": {
+    "description": "Info banner on the collector create dialog, explaining the employee code is auto-generated."
+  },
+  "editCollectorProfileDialogTitle": "Uredi profil inkasanta",
+  "@editCollectorProfileDialogTitle": {
+    "description": "Title of the collector profile editor dialog."
+  },
+  "collectorCodeFieldLabel": "Šifra inkasanta (automatski dodijeljena)",
+  "@collectorCodeFieldLabel": {
+    "description": "Read-only label for the auto-assigned collector code field on the collector editor dialog."
+  },
+
+  "activityLogTitle": "Aktivnosti - {displayName}",
+  "@activityLogTitle": {
+    "description": "App bar title on the user activity log screen, with the user's display name.",
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
+  "eventTypeFieldLabel": "Događaj",
+  "@eventTypeFieldLabel": {
+    "description": "Label for the event-type filter dropdown on the activity log screen."
+  },
+  "activityTypeLoginSuccess": "Uspješna prijava",
+  "@activityTypeLoginSuccess": {
+    "description": "Display label for the 'LoginSuccess' activity log event type."
+  },
+  "activityTypeLoginFailed": "Neuspješna prijava",
+  "@activityTypeLoginFailed": {
+    "description": "Display label for the 'LoginFailed' activity log event type."
+  },
+  "activityTypeTokenRefreshed": "Obnova sesije",
+  "@activityTypeTokenRefreshed": {
+    "description": "Display label for the 'TokenRefreshed' activity log event type."
+  },
+  "activityTypePasswordChanged": "Promjena lozinke",
+  "@activityTypePasswordChanged": {
+    "description": "Display label for the 'PasswordChanged' activity log event type."
+  },
+  "activityTypeAccountUpdated": "Izmjena naloga",
+  "@activityTypeAccountUpdated": {
+    "description": "Display label for the 'AccountUpdated' activity log event type."
+  },
+  "activityTypeUserRoleChanged": "Promjena role",
+  "@activityTypeUserRoleChanged": {
+    "description": "Display label for the 'UserRoleChanged' activity log event type."
+  },
+  "activityTypeUserActivated": "Korisnik aktiviran",
+  "@activityTypeUserActivated": {
+    "description": "Display label for the 'UserActivated' activity log event type."
+  },
+  "activityTypeUserDeactivated": "Korisnik deaktiviran",
+  "@activityTypeUserDeactivated": {
+    "description": "Display label for the 'UserDeactivated' activity log event type."
+  },
+  "activityTypeUserDeleted": "Korisnik obrisan",
+  "@activityTypeUserDeleted": {
+    "description": "Display label for the 'UserDeleted' activity log event type."
+  },
+  "activityTypeGenericLabel": "Aktivnost",
+  "@activityTypeGenericLabel": {
+    "description": "Generic singular fallback label for an activity log event of unknown/empty type."
+  },
+  "userNoActivityMessage": "Korisnik nema zabilježenih aktivnosti.",
+  "@userNoActivityMessage": {
+    "description": "Empty-state message on the activity log screen when the user has no recorded activity."
+  },
+  "activitiesEmptyFilteredMessage": "Nema aktivnosti za zadane filtere.",
+  "@activitiesEmptyFilteredMessage": {
+    "description": "Empty-state message on the activity log screen when filters exclude every row."
+  },
+  "descriptionColumnLabel": "Opis",
+  "@descriptionColumnLabel": {
+    "description": "Table column header and detail-dialog label for an activity log entry's description."
+  },
+  "ipAddressColumnLabel": "IP adresa",
+  "@ipAddressColumnLabel": {
+    "description": "Table column header and detail-dialog label for an activity log entry's IP address."
+  },
+  "timeColumnLabel": "Vrijeme",
+  "@timeColumnLabel": {
+    "description": "Table column header and detail-dialog label for an activity log entry's timestamp."
+  },
+
+  "waterMetersTitle": "Vodomjeri - {displayName}",
+  "@waterMetersTitle": {
+    "description": "App bar title on the user water meters screen, with the user's display name.",
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
+  "userNoProfileMessage": "Korisnik nema kreiran profil pa ni vodomjere.",
+  "@userNoProfileMessage": {
+    "description": "Empty-state message on the user water meters screen when the user has no CustomerProfile."
+  },
+  "userNoWaterMetersMessage": "Korisnik trenutno nema evidentiranih vodomjera.",
+  "@userNoWaterMetersMessage": {
+    "description": "Empty-state message on the user water meters screen when the user has a profile but no water meters."
+  },
+  "installedLabel": "Instaliran",
+  "@installedLabel": {
+    "description": "Label for a water meter's installation date."
+  },
+  "lastReadingLabel": "Zadnje očitanje",
+  "@lastReadingLabel": {
+    "description": "Label for a water meter's last reading value."
+  },
+
+  "locationCityLabel": "Grad",
+  "@locationCityLabel": {
+    "description": "Label for the city dropdown on a location/address form."
+  },
+  "locationNoCityOption": "Bez grada",
+  "@locationNoCityOption": {
+    "description": "Option in the city dropdown meaning no city selected."
+  },
+  "locationMunicipalityLabel": "Općina",
+  "@locationMunicipalityLabel": {
+    "description": "Label for the municipality dropdown on a location/address form."
+  },
+  "locationNoMunicipalityOption": "Bez općine",
+  "@locationNoMunicipalityOption": {
+    "description": "Option in the municipality dropdown meaning no municipality selected."
+  },
+  "locationSettlementLabel": "Naselje",
+  "@locationSettlementLabel": {
+    "description": "Label for the settlement dropdown/column on a location/address form."
+  },
+  "locationNoSettlementOption": "Bez naselja",
+  "@locationNoSettlementOption": {
+    "description": "Option in the settlement dropdown meaning no settlement selected."
+  },
+  "locationStreetLabel": "Ulica",
+  "@locationStreetLabel": {
+    "description": "Label for the street field on a location/address form."
+  },
+  "locationHouseNumberLabel": "Broj",
+  "@locationHouseNumberLabel": {
+    "description": "Label for the house number field on a location/address form."
+  },
+
+  "codebookSubtitle": "Administrativni šifarnik lokacija: gradovi, općine i naselja.",
+  "@codebookSubtitle": {
+    "description": "Subtitle under the codebook screen's 'Šifarnik' heading."
+  },
+  "backTooltip": "Nazad",
+  "@backTooltip": {
+    "description": "Tooltip for the back button in the codebook screen's breadcrumb row."
+  },
+  "citiesLabel": "Gradovi",
+  "@citiesLabel": {
+    "description": "Display label for the cities level - the breadcrumb root and the cities screen's own header title."
+  },
+  "openTooltip": "Otvori",
+  "@openTooltip": {
+    "description": "Tooltip for a clickable breadcrumb segment."
+  },
+  "citiesScreenSubtitle": "Pregled, dodavanje, uređivanje i brisanje gradova.",
+  "@citiesScreenSubtitle": {
+    "description": "Subtitle on the cities screen header."
+  },
+  "newCityButtonLabel": "Novi grad",
+  "@newCityButtonLabel": {
+    "description": "'New' button label and create-dialog title on the cities screen."
+  },
+  "cityCreatedSuccess": "Grad je dodan.",
+  "@cityCreatedSuccess": {
+    "description": "Snackbar message shown after a city is created."
+  },
+  "citySavedSuccess": "Grad je sačuvan.",
+  "@citySavedSuccess": {
+    "description": "Snackbar message shown after a city is saved."
+  },
+  "deleteCityDialogTitle": "Obriši grad",
+  "@deleteCityDialogTitle": {
+    "description": "Title of the delete-confirmation dialog on the cities screen."
+  },
+  "deleteCityDialogContent": "Da li želite obrisati grad \"{name}\"? Ova radnja se ne može poništiti.",
+  "@deleteCityDialogContent": {
+    "description": "Body text of the delete-confirmation dialog on the cities screen, with the city's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cityDeletedSuccess": "Grad je obrisan.",
+  "@cityDeletedSuccess": {
+    "description": "Snackbar message shown after a city is deleted."
+  },
+  "citySearchHint": "Naziv grada",
+  "@citySearchHint": {
+    "description": "Hint text for the search field on the cities screen."
+  },
+  "citiesEmptyMessage": "Nema gradova.",
+  "@citiesEmptyMessage": {
+    "description": "Empty-state message on the cities screen when there are no rows."
+  },
+  "citiesEmptyFilteredMessage": "Nema gradova za zadanu pretragu.",
+  "@citiesEmptyFilteredMessage": {
+    "description": "Empty-state message on the cities screen when the search excludes every row."
+  },
+  "nameColumnLabel": "Naziv",
+  "@nameColumnLabel": {
+    "description": "Table column header and form field label for a codebook row's name, shared by cities/municipalities/settlements."
+  },
+  "codeColumnLabel": "Kod",
+  "@codeColumnLabel": {
+    "description": "Table column header and form field label for a codebook row's code, shared by cities/municipalities."
+  },
+  "editCityDialogTitle": "Uredi grad",
+  "@editCityDialogTitle": {
+    "description": "Edit-dialog title on the cities screen."
+  },
+
+  "municipalitiesTitle": "Općine · {cityName}",
+  "@municipalitiesTitle": {
+    "description": "Header title on the municipalities screen, with the parent city's name.",
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "municipalitiesScreenSubtitle": "Pregled, dodavanje, uređivanje i brisanje općina.",
+  "@municipalitiesScreenSubtitle": {
+    "description": "Subtitle on the municipalities screen header."
+  },
+  "newMunicipalityButtonLabel": "Nova općina",
+  "@newMunicipalityButtonLabel": {
+    "description": "'New' button label, create-dialog title, and empty-state action label on the municipalities screen."
+  },
+  "municipalityCreatedSuccess": "Općina je dodana.",
+  "@municipalityCreatedSuccess": {
+    "description": "Snackbar message shown after a municipality is created."
+  },
+  "municipalitySavedSuccess": "Općina je sačuvana.",
+  "@municipalitySavedSuccess": {
+    "description": "Snackbar message shown after a municipality is saved."
+  },
+  "deleteMunicipalityDialogTitle": "Obriši općinu",
+  "@deleteMunicipalityDialogTitle": {
+    "description": "Title of the delete-confirmation dialog on the municipalities screen."
+  },
+  "deleteMunicipalityDialogContent": "Da li želite obrisati općinu \"{name}\"? Ova radnja se ne može poništiti.",
+  "@deleteMunicipalityDialogContent": {
+    "description": "Body text of the delete-confirmation dialog on the municipalities screen, with the municipality's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "municipalityDeletedSuccess": "Općina je obrisana.",
+  "@municipalityDeletedSuccess": {
+    "description": "Snackbar message shown after a municipality is deleted."
+  },
+  "municipalitySearchHint": "Naziv općine",
+  "@municipalitySearchHint": {
+    "description": "Hint text for the search field on the municipalities screen."
+  },
+  "cityHasNoMunicipalitiesMessage": "Grad '{cityName}' još nema općina.",
+  "@cityHasNoMunicipalitiesMessage": {
+    "description": "True-empty-state message on the municipalities screen when the parent city has no municipalities yet.",
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "municipalitiesEmptyFilteredMessage": "Nema općina za zadanu pretragu.",
+  "@municipalitiesEmptyFilteredMessage": {
+    "description": "Empty-state message on the municipalities screen when the search excludes every row."
+  },
+  "editMunicipalityDialogTitle": "Uredi općinu",
+  "@editMunicipalityDialogTitle": {
+    "description": "Edit-dialog title on the municipalities screen."
+  },
+
+  "settlementsTitle": "Naselja · {municipalityName}",
+  "@settlementsTitle": {
+    "description": "Header title on the settlements screen, with the parent municipality's name.",
+    "placeholders": {
+      "municipalityName": {
+        "type": "String"
+      }
+    }
+  },
+  "settlementsScreenSubtitle": "Pregled, dodavanje, uređivanje i brisanje naselja.",
+  "@settlementsScreenSubtitle": {
+    "description": "Subtitle on the settlements screen header."
+  },
+  "newSettlementButtonLabel": "Novo naselje",
+  "@newSettlementButtonLabel": {
+    "description": "'New' button label, create-dialog title, and empty-state action label on the settlements screen."
+  },
+  "settlementCreatedSuccess": "Naselje je dodano.",
+  "@settlementCreatedSuccess": {
+    "description": "Snackbar message shown after a settlement is created."
+  },
+  "settlementSavedSuccess": "Naselje je sačuvano.",
+  "@settlementSavedSuccess": {
+    "description": "Snackbar message shown after a settlement is saved."
+  },
+  "deleteSettlementDialogTitle": "Obriši naselje",
+  "@deleteSettlementDialogTitle": {
+    "description": "Title of the delete-confirmation dialog on the settlements screen."
+  },
+  "deleteSettlementDialogContent": "Da li želite obrisati naselje \"{name}\"? Ova radnja se ne može poništiti.",
+  "@deleteSettlementDialogContent": {
+    "description": "Body text of the delete-confirmation dialog on the settlements screen, with the settlement's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settlementDeletedSuccess": "Naselje je obrisano.",
+  "@settlementDeletedSuccess": {
+    "description": "Snackbar message shown after a settlement is deleted."
+  },
+  "settlementSearchHint": "Naziv naselja",
+  "@settlementSearchHint": {
+    "description": "Hint text for the search field on the settlements screen."
+  },
+  "municipalityHasNoSettlementsMessage": "Općina '{municipalityName}' još nema naselja.",
+  "@municipalityHasNoSettlementsMessage": {
+    "description": "True-empty-state message on the settlements screen when the parent municipality has no settlements yet.",
+    "placeholders": {
+      "municipalityName": {
+        "type": "String"
+      }
+    }
+  },
+  "settlementsEmptyFilteredMessage": "Nema naselja za zadanu pretragu.",
+  "@settlementsEmptyFilteredMessage": {
+    "description": "Empty-state message on the settlements screen when the search excludes every row."
+  },
+  "postalCodeColumnLabel": "Poštanski broj",
+  "@postalCodeColumnLabel": {
+    "description": "Table column header and form field label for a settlement's postal code."
+  },
+  "editSettlementDialogTitle": "Uredi naselje",
+  "@editSettlementDialogTitle": {
+    "description": "Edit-dialog title on the settlements screen."
+  },
+
+  "noCollectorsAvailableError": "Nema dostupnih inkasanata.",
+  "@noCollectorsAvailableError": {
+    "description": "Error shown when trying to assign a request/report but no collector profiles exist."
+  },
+  "waterMeterRequestsPageTitle": "Zahtjevi za vodomjer",
+  "@waterMeterRequestsPageTitle": {
+    "description": "App header title on the admin water meter requests screen."
+  },
+  "waterMeterRequestsPageSubtitle": "Pregled, dodjela collectoru i odbijanje zahtjeva za novi vodomjer.",
+  "@waterMeterRequestsPageSubtitle": {
+    "description": "Subtitle on the admin water meter requests screen header."
+  },
+  "allStatusesOption": "Svi statusi",
+  "@allStatusesOption": {
+    "description": "Option in a status filter dropdown meaning no filter (all statuses)."
+  },
+  "requestStatusPending": "Na čekanju",
+  "@requestStatusPending": {
+    "description": "Display label for the 'Pending' water meter request status."
+  },
+  "requestStatusAwaitingRegistration": "Čeka registraciju",
+  "@requestStatusAwaitingRegistration": {
+    "description": "Display label for the 'Assigned' water meter request status - the request awaits the collector's on-site registration."
+  },
+  "requestStatusRegistered": "Registrovan",
+  "@requestStatusRegistered": {
+    "description": "Display label for the 'Registered' water meter request status."
+  },
+  "requestStatusRejected": "Odbijen",
+  "@requestStatusRejected": {
+    "description": "Display label for the 'Rejected' water meter request status."
+  },
+  "requestStatusCancelled": "Otkazan",
+  "@requestStatusCancelled": {
+    "description": "Display label for the 'Cancelled' water meter request status."
+  },
+  "applyFilterTooltip": "Primijeni filter",
+  "@applyFilterTooltip": {
+    "description": "Tooltip for the button that applies the status filter on the water meter requests screen."
+  },
+  "noWaterMeterRequestsMessage": "Nema zahtjeva za novi vodomjer.",
+  "@noWaterMeterRequestsMessage": {
+    "description": "Empty-state message on the admin water meter requests screen when there are no rows."
+  },
+  "waterMeterRequestsEmptyFilteredMessage": "Nema zahtjeva za odabrani status.",
+  "@waterMeterRequestsEmptyFilteredMessage": {
+    "description": "Empty-state message on the admin water meter requests screen when the status filter excludes every row."
+  },
+  "customerColumnLabel": "Korisnik",
+  "@customerColumnLabel": {
+    "description": "Table column header for the customer on the water meter requests screen."
+  },
+  "collectorColumnLabel": "Collector",
+  "@collectorColumnLabel": {
+    "description": "Table column header for the assigned collector on the water meter requests screen."
+  },
+  "collectorFallbackLabel": "Collector #{id}",
+  "@collectorFallbackLabel": {
+    "description": "Fallback collector label on the water meter requests screen when the collector has no code on file.",
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "unknownSettlementLabel": "Naselje nepoznato",
+  "@unknownSettlementLabel": {
+    "description": "Placeholder shown on a water meter request row when the settlement name is unknown."
+  },
+  "noStreetAddressLabel": "Bez ulice i broja",
+  "@noStreetAddressLabel": {
+    "description": "Placeholder shown on a water meter request row when the request has no street/house number."
+  },
+  "requestCustomerFallbackLabel": "Korisnik #{id}",
+  "@requestCustomerFallbackLabel": {
+    "description": "Fallback customer label on a water meter request row when the customer has no name on file.",
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "noPhoneLabel": "Bez telefona",
+  "@noPhoneLabel": {
+    "description": "Placeholder shown on a water meter request row when the customer has no phone number on file."
+  },
+  "assignToCollectorTooltip": "Dodijeli inkasantu",
+  "@assignToCollectorTooltip": {
+    "description": "Tooltip/title for the action that assigns a water meter request or fault report to a collector, and the shared assign dialog's own title."
+  },
+  "rejectTooltip": "Odbij",
+  "@rejectTooltip": {
+    "description": "Tooltip and submit-button label for rejecting a water meter request."
+  },
+  "selectionColumnLabel": "Izbor",
+  "@selectionColumnLabel": {
+    "description": "Table column header for the radio-selection column in the collector assign dialog."
+  },
+  "assignButtonLabel": "Dodijeli",
+  "@assignButtonLabel": {
+    "description": "Submit button label on the collector assign dialog."
+  },
+  "collectorProfileFallbackLabel": "Profil #{id}",
+  "@collectorProfileFallbackLabel": {
+    "description": "Fallback subtitle in the collector assign dialog's row when the collector has no employee code on file.",
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectRequestDialogTitle": "Odbij zahtjev",
+  "@rejectRequestDialogTitle": {
+    "description": "Title of the reject-request dialog on the water meter requests screen."
+  },
+  "reasonOptionalLabel": "Razlog (opciono)",
+  "@reasonOptionalLabel": {
+    "description": "Label for the optional reason field on the reject-request dialog."
+  },
+  "requestAssignedSuccess": "Zahtjev je dodijeljen inkasantu.",
+  "@requestAssignedSuccess": {
+    "description": "Snackbar message shown after a water meter request is assigned to a collector."
+  },
+  "requestRejectedSuccess": "Zahtjev je odbijen.",
+  "@requestRejectedSuccess": {
+    "description": "Snackbar message shown after a water meter request is rejected."
+  },
+
+  "faultReportStatusNew": "Nova",
+  "@faultReportStatusNew": {
+    "description": "Display label for the 'New' fault report status."
+  },
+  "faultReportStatusAssigned": "Dodijeljena",
+  "@faultReportStatusAssigned": {
+    "description": "Display label for the 'Assigned' fault report status."
+  },
+  "faultReportStatusInProgress": "U toku",
+  "@faultReportStatusInProgress": {
+    "description": "Display label for the 'InProgress' fault report status."
+  },
+  "faultReportStatusResolved": "Riješena",
+  "@faultReportStatusResolved": {
+    "description": "Display label for the 'Resolved' fault report status."
+  },
+  "changeStatusDialogTitle": "Promijeni status",
+  "@changeStatusDialogTitle": {
+    "description": "Title of the status-advance confirmation dialog on the fault reports screen."
+  },
+  "changeStatusDialogContent": "Da li želite promijeniti status prijave \"{title}\" u \"{status}\"?",
+  "@changeStatusDialogContent": {
+    "description": "Body text of the status-advance confirmation dialog, with the report's title and the target status label.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "changeButtonLabel": "Promijeni",
+  "@changeButtonLabel": {
+    "description": "Confirm button label on the status-advance confirmation dialog."
+  },
+  "statusChangedSuccess": "Status prijave je promijenjen.",
+  "@statusChangedSuccess": {
+    "description": "Snackbar message shown after a fault report's status is advanced."
+  },
+  "faultReportAssignedSuccess": "Prijava je dodijeljena inkasantu.",
+  "@faultReportAssignedSuccess": {
+    "description": "Snackbar message shown after a fault report is assigned to a collector."
+  },
+  "faultReportsPageSubtitle": "Pregled prijava kvarova i upravljanje statusom.",
+  "@faultReportsPageSubtitle": {
+    "description": "Subtitle on the admin fault reports screen header."
+  },
+  "faultReportSearchLabel": "Naslov, kupac ili naselje",
+  "@faultReportSearchLabel": {
+    "description": "Label for the search field on the admin fault reports screen."
+  },
+  "noFaultReportsMessage": "Nema prijava kvarova.",
+  "@noFaultReportsMessage": {
+    "description": "Empty-state message on the admin fault reports screen when there are no rows."
+  },
+  "faultReportsEmptyFilteredMessage": "Nema prijava kvarova za zadane filtere.",
+  "@faultReportsEmptyFilteredMessage": {
+    "description": "Empty-state message on the admin fault reports screen when filters exclude every row."
+  },
+  "titleColumnLabel": "Naslov",
+  "@titleColumnLabel": {
+    "description": "Table column header for a fault report's title."
+  },
+  "customerLabel": "Kupac",
+  "@customerLabel": {
+    "description": "Table column header and detail-dialog label for a fault report's customer."
+  },
+  "collectorNameColumnLabel": "Inkasant",
+  "@collectorNameColumnLabel": {
+    "description": "Table column header and detail-dialog label for a fault report's assigned collector."
+  },
+  "dateColumnLabel": "Datum",
+  "@dateColumnLabel": {
+    "description": "Table column header for a fault report's creation date."
+  },
+  "collectorNumberFallbackLabel": "Inkasant #{id}",
+  "@collectorNumberFallbackLabel": {
+    "description": "Fallback collector label on the fault reports screen when the collector has no code on file.",
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "reassignTooltip": "Preraspodijeli drugom inkasantu",
+  "@reassignTooltip": {
+    "description": "Tooltip for the assign action on a fault report that already has a collector assigned."
+  },
+  "assignmentNoLongerPossibleTooltip": "Dodjela više nije moguća",
+  "@assignmentNoLongerPossibleTooltip": {
+    "description": "Tooltip for the disabled assign action once a fault report is past the assignable statuses."
+  },
+  "reportResolvedTooltip": "Prijava je riješena",
+  "@reportResolvedTooltip": {
+    "description": "Tooltip for the disabled status-advance action once a fault report is resolved."
+  },
+  "changeStatusToTooltip": "Promijeni status u \"{status}\"",
+  "@changeStatusToTooltip": {
+    "description": "Tooltip for the status-advance action, with the target status label.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "noteOptionalFieldLabel": "Napomena (opcionalno)",
+  "@noteOptionalFieldLabel": {
+    "description": "Label for the optional note field on the fault report assign dialog."
+  },
+  "assignmentNoteHint": "Razlog dodjele ili uputa inkasantu",
+  "@assignmentNoteHint": {
+    "description": "Hint text for the optional note field on the fault report assign dialog."
+  },
+  "reportedAtLabel": "Prijavljeno",
+  "@reportedAtLabel": {
+    "description": "Label for the reported-at date row on the fault report detail dialog."
+  },
+  "resolvedAtLabel": "Riješeno",
+  "@resolvedAtLabel": {
+    "description": "Label for the resolved-at date row on the fault report detail dialog."
+  },
+  "photosSectionHeading": "Fotografije",
+  "@photosSectionHeading": {
+    "description": "Section heading for the photo gallery on the fault report detail dialog."
+  },
+  "noPhotosMessage": "Nema priloženih fotografija.",
+  "@noPhotosMessage": {
+    "description": "Message shown in the photo gallery when a fault report has no attached photos."
+  },
+
+  "meterReadingsTitle": "Očitanja - {serialNumber}",
+  "@meterReadingsTitle": {
+    "description": "App bar title on the admin meter readings screen, with the water meter's serial number.",
+    "placeholders": {
+      "serialNumber": {
+        "type": "String"
+      }
+    }
+  },
+  "noReadingsForMeterMessage": "Za ovaj vodomjer još nema evidentiranih očitanja.",
+  "@noReadingsForMeterMessage": {
+    "description": "Empty-state message on the admin meter readings screen when there are no rows."
+  },
+  "readingDateColumnLabel": "Datum očitanja",
+  "@readingDateColumnLabel": {
+    "description": "Table column header for a meter reading's date."
+  },
+  "previousReadingColumnLabel": "Prethodno (m³)",
+  "@previousReadingColumnLabel": {
+    "description": "Table column header for a meter reading's previous value."
+  },
+  "newReadingColumnLabel": "Novo (m³)",
+  "@newReadingColumnLabel": {
+    "description": "Table column header for a meter reading's new value."
+  },
+  "consumptionColumnLabel": "Potrošnja (m³)",
+  "@consumptionColumnLabel": {
+    "description": "Table column header for a meter reading's consumption, on the meter readings screen."
+  },
+  "syncColumnLabel": "Sinhronizacija",
+  "@syncColumnLabel": {
+    "description": "Table column header for a meter reading's sync status."
+  },
+  "syncStatusSynced": "Sinhronizovano",
+  "@syncStatusSynced": {
+    "description": "Display label for the 'Synced' meter reading sync status."
+  },
+  "syncStatusFailed": "Neuspješno",
+  "@syncStatusFailed": {
+    "description": "Display label for the 'Failed' meter reading sync status."
+  },
+
+  "tariffCreatedSuccess": "Tarifa je dodana.",
+  "@tariffCreatedSuccess": {
+    "description": "Snackbar message shown after a tariff is created."
+  },
+  "tariffSavedSuccess": "Tarifa je sačuvana.",
+  "@tariffSavedSuccess": {
+    "description": "Snackbar message shown after a tariff is saved."
+  },
+  "tariffDeletedSuccess": "Tarifa je obrisana.",
+  "@tariffDeletedSuccess": {
+    "description": "Snackbar message shown after a tariff is deleted."
+  },
+  "deleteTariffDialogTitle": "Obriši tarifu",
+  "@deleteTariffDialogTitle": {
+    "description": "Title of the delete-confirmation dialog on the tariffs screen."
+  },
+  "deleteTariffDialogContent": "Da li želite obrisati tarifu \"{name}\"? Brisanje neće biti moguće ako je tarifa referencirana stavkama računa.",
+  "@deleteTariffDialogContent": {
+    "description": "Body text of the delete-confirmation dialog on the tariffs screen, with the tariff's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tariffsScreenSubtitle": "Pregled, dodavanje, uređivanje i brisanje tarifa.",
+  "@tariffsScreenSubtitle": {
+    "description": "Subtitle on the tariffs screen header."
+  },
+  "newTariffButtonLabel": "Nova tarifa",
+  "@newTariffButtonLabel": {
+    "description": "'New' button label and create-dialog title on the tariffs screen."
+  },
+  "allOptionFeminine": "Sve",
+  "@allOptionFeminine": {
+    "description": "Generic 'no filter' option meaning all values, grammatically agreeing with a feminine-plural noun (e.g. 'tarife') - distinct from allOption's masculine form."
+  },
+  "activeFilterOption": "Aktivne",
+  "@activeFilterOption": {
+    "description": "Feminine-plural 'active' filter option (e.g. for tariffs), distinct from statusActive's masculine-singular form."
+  },
+  "inactiveFilterOption": "Neaktivne",
+  "@inactiveFilterOption": {
+    "description": "Feminine-plural 'inactive' filter option (e.g. for tariffs), distinct from statusInactive's masculine-singular form."
+  },
+  "noTariffsMessage": "Nema tarifa.",
+  "@noTariffsMessage": {
+    "description": "Empty-state message on the tariffs screen when there are no rows."
+  },
+  "tariffsEmptyFilteredMessage": "Nema tarifa za zadane filtere.",
+  "@tariffsEmptyFilteredMessage": {
+    "description": "Empty-state message on the tariffs screen when filters exclude every row."
+  },
+  "pricePerM3Label": "Cijena po m³",
+  "@pricePerM3Label": {
+    "description": "Label for a tariff's price-per-cubic-metre field/column."
+  },
+  "tariffStatusInactive": "Neaktivna",
+  "@tariffStatusInactive": {
+    "description": "Feminine-agreeing display label for an inactive tariff's status."
+  },
+  "tariffStatusActive": "Aktivna",
+  "@tariffStatusActive": {
+    "description": "Feminine-agreeing display label for an active tariff's status, also the label on the editor dialog's active switch."
+  },
+  "editTariffDialogTitle": "Uredi tarifu",
+  "@editTariffDialogTitle": {
+    "description": "Edit-dialog title on the tariffs screen."
+  },
+  "invalidNumberError": "Unesite ispravan broj.",
+  "@invalidNumberError": {
+    "description": "Validation error shown when a numeric field doesn't parse as a number."
+  },
+  "negativeValueError": "Vrijednost ne smije biti negativna.",
+  "@negativeValueError": {
+    "description": "Validation error shown when a numeric field is negative."
+  },
+
+  "invoiceStatusIssued": "Izdat",
+  "@invoiceStatusIssued": {
+    "description": "Display label for the 'Issued' invoice status."
+  },
+  "invoiceStatusPaid": "Plaćen",
+  "@invoiceStatusPaid": {
+    "description": "Display label for the 'Paid' invoice status."
+  },
+  "invoiceStatusCancelled": "Storniran",
+  "@invoiceStatusCancelled": {
+    "description": "Display label for the 'Cancelled' invoice status."
+  },
+  "markAsPaidLabel": "Označi kao plaćeno",
+  "@markAsPaidLabel": {
+    "description": "Tooltip/button/dialog-title text for the action that records an invoice as paid."
+  },
+  "markAsPaidDialogContent": "Da li želite označiti račun \"{invoiceNumber}\" kao plaćen ({amount})?",
+  "@markAsPaidDialogContent": {
+    "description": "Body text of the mark-as-paid confirmation dialog, with the invoice number and the already-formatted remaining amount (currency suffix included).",
+    "placeholders": {
+      "invoiceNumber": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "invoiceMarkedPaidSuccess": "Račun je označen kao plaćen.",
+  "@invoiceMarkedPaidSuccess": {
+    "description": "Snackbar message shown after an invoice is recorded as paid."
+  },
+  "cancelInvoiceDialogTitle": "Storniraj račun",
+  "@cancelInvoiceDialogTitle": {
+    "description": "Title of the cancel-invoice confirmation dialog."
+  },
+  "cancelInvoiceDialogContent": "Da li želite stornirati račun \"{invoiceNumber}\"?",
+  "@cancelInvoiceDialogContent": {
+    "description": "Body text of the cancel-invoice confirmation dialog, with the invoice number.",
+    "placeholders": {
+      "invoiceNumber": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelInvoiceButtonLabel": "Storniraj",
+  "@cancelInvoiceButtonLabel": {
+    "description": "Tooltip/button label for the action that cancels an invoice."
+  },
+  "invoiceCancelledSuccess": "Račun je storniran.",
+  "@invoiceCancelledSuccess": {
+    "description": "Snackbar message shown after an invoice is cancelled."
+  },
+  "invoicesScreenSubtitle": "Pregled računa i upravljanje njihovim statusom.",
+  "@invoicesScreenSubtitle": {
+    "description": "Subtitle on the invoices screen header."
+  },
+  "invoiceNumberFieldLabel": "Broj računa",
+  "@invoiceNumberFieldLabel": {
+    "description": "Label for the invoice number search field and table column on the invoices screen."
+  },
+  "monthFilterLabel": "Mjesec",
+  "@monthFilterLabel": {
+    "description": "Label for the billing-month filter chip on the invoices screen when no month is selected."
+  },
+  "noInvoicesMessage": "Nema računa.",
+  "@noInvoicesMessage": {
+    "description": "Empty-state message on the invoices screen when there are no rows."
+  },
+  "invoicesEmptyFilteredMessage": "Nema računa za zadane filtere.",
+  "@invoicesEmptyFilteredMessage": {
+    "description": "Empty-state message on the invoices screen when filters exclude every row."
+  },
+  "waterMeterColumnLabel": "Vodomjer",
+  "@waterMeterColumnLabel": {
+    "description": "Table column header for the water meter on the invoices screen."
+  },
+  "periodColumnLabel": "Period",
+  "@periodColumnLabel": {
+    "description": "Table column header for an invoice's billing period."
+  },
+  "consumptionM3ColumnLabel": "Potrošnja m³",
+  "@consumptionM3ColumnLabel": {
+    "description": "Table column header for an invoice's consumption in cubic metres."
+  },
+  "amountColumnLabel": "Iznos",
+  "@amountColumnLabel": {
+    "description": "Table column header for a monetary amount, shared by the invoices and payments screens."
+  },
+
+  "paymentStatusCompleted": "Završena",
+  "@paymentStatusCompleted": {
+    "description": "Display label for the 'Completed' payment status."
+  },
+  "paymentsScreenSubtitle": "Pregled evidentiranih uplata. Uplate se evidentiraju isključivo putem akcije \"Evidentiraj uplatu\" na ekranu Računi.",
+  "@paymentsScreenSubtitle": {
+    "description": "Subtitle on the payments screen header."
+  },
+  "invoiceIdFieldLabel": "ID računa",
+  "@invoiceIdFieldLabel": {
+    "description": "Label for the invoice-id search field on the payments screen."
+  },
+  "noPaymentsMessage": "Nema uplata.",
+  "@noPaymentsMessage": {
+    "description": "Empty-state message on the payments screen when there are no rows."
+  },
+  "paymentsEmptyFilteredMessage": "Nema uplata za zadane filtere.",
+  "@paymentsEmptyFilteredMessage": {
+    "description": "Empty-state message on the payments screen when filters exclude every row."
+  },
+  "paymentDateColumnLabel": "Datum uplate",
+  "@paymentDateColumnLabel": {
+    "description": "Table column header for a payment's date."
+  },
+  "invoiceColumnLabel": "Račun",
+  "@invoiceColumnLabel": {
+    "description": "Table column header for the related invoice on the payments screen."
+  },
+  "methodColumnLabel": "Način",
+  "@methodColumnLabel": {
+    "description": "Table column header for a payment's method."
+  },
+  "manualPaymentMethodLabel": "Ručno",
+  "@manualPaymentMethodLabel": {
+    "description": "Display label for the 'Manual' payment method."
+  },
+
+  "cannotDetermineAdminUserError": "Nije moguće odrediti admin korisnika.",
+  "@cannotDetermineAdminUserError": {
+    "description": "Error shown when creating a notification but the signed-in admin's user id can't be resolved."
+  },
+  "notificationCreatedSuccess": "Obavijest je dodana.",
+  "@notificationCreatedSuccess": {
+    "description": "Snackbar message shown after a notification is created."
+  },
+  "cannotDetermineNotificationAuthorError": "Nije moguće odrediti autora obavijesti.",
+  "@cannotDetermineNotificationAuthorError": {
+    "description": "Error shown when editing a notification but neither its author nor the signed-in admin's id can be resolved."
+  },
+  "notificationSavedSuccess": "Obavijest je sačuvana.",
+  "@notificationSavedSuccess": {
+    "description": "Snackbar message shown after a notification is saved."
+  },
+  "deleteNotificationDialogTitle": "Obriši obavijest",
+  "@deleteNotificationDialogTitle": {
+    "description": "Title of the delete-confirmation dialog on the notifications screen."
+  },
+  "deleteNotificationDialogContent": "Da li želite obrisati obavijest \"{title}\"? Povezani zapisi korisničkih obavijesti će također biti uklonjeni.",
+  "@deleteNotificationDialogContent": {
+    "description": "Body text of the delete-confirmation dialog on the notifications screen, with the notification's title.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDeletedSuccess": "Obavijest je obrisana.",
+  "@notificationDeletedSuccess": {
+    "description": "Snackbar message shown after a notification is deleted."
+  },
+  "notificationsScreenSubtitle": "Pregled, dodavanje, uređivanje i brisanje sistemskih obavijesti.",
+  "@notificationsScreenSubtitle": {
+    "description": "Subtitle on the notifications screen header."
+  },
+  "newNotificationButtonLabel": "Nova obavijest",
+  "@newNotificationButtonLabel": {
+    "description": "'New' button label and create-dialog title on the notifications screen."
+  },
+  "notificationSearchHint": "Naslov, sadržaj, tip ili publika",
+  "@notificationSearchHint": {
+    "description": "Hint text for the search field on the notifications screen."
+  },
+  "typeFieldLabel": "Tip",
+  "@typeFieldLabel": {
+    "description": "Label for the notification type filter dropdown and form field."
+  },
+  "notificationsAllTypesOption": "Svi tipovi",
+  "@notificationsAllTypesOption": {
+    "description": "Option in the notification type filter dropdown meaning no filter (all types)."
+  },
+  "audienceFieldLabel": "Publika",
+  "@audienceFieldLabel": {
+    "description": "Label for the notification audience filter dropdown, form field, and table column - also the generic fallback label for an unrecognized audience value."
+  },
+  "allAudiencesOption": "Sve publike",
+  "@allAudiencesOption": {
+    "description": "Option in the notification audience filter dropdown meaning no filter (all audiences)."
+  },
+  "notificationsEmptyMessage": "Nema obavijesti.",
+  "@notificationsEmptyMessage": {
+    "description": "Empty-state message on the notifications screen when there are no rows."
+  },
+  "notificationsFilteredEmptyMessage": "Nema obavijesti za zadane filtere.",
+  "@notificationsFilteredEmptyMessage": {
+    "description": "Empty-state message on the notifications screen when filters exclude every row."
+  },
+  "notificationColumnLabel": "Obavijest",
+  "@notificationColumnLabel": {
+    "description": "Table column header for a notification's title/body on the notifications screen."
+  },
+  "createdAtColumnLabel": "Kreirano",
+  "@createdAtColumnLabel": {
+    "description": "Table column header for a notification's creation date."
+  },
+  "notificationFallbackTitle": "Obavijest #{id}",
+  "@notificationFallbackTitle": {
+    "description": "Fallback notification title used when the notification has no title.",
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "editNotificationDialogTitle": "Uredi obavijest",
+  "@editNotificationDialogTitle": {
+    "description": "Edit-dialog title on the notifications screen."
+  },
+  "contentFieldLabel": "Sadržaj",
+  "@contentFieldLabel": {
+    "description": "Label for the notification body/content field on the notification editor dialog."
+  },
+  "imagesCountLabel": "Slike ({count}/{max})",
+  "@imagesCountLabel": {
+    "description": "Label showing how many images are attached out of the maximum allowed, on the notification editor dialog.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "addImageButtonLabel": "Dodaj sliku",
+  "@addImageButtonLabel": {
+    "description": "Button/tooltip label for adding an image, shared by the notification editor dialog and the support ticket reply composer."
+  },
+  "uploadingImageLabel": "Slanje slike {current}/{total}...",
+  "@uploadingImageLabel": {
+    "description": "Progress label shown while uploading images on the notification editor dialog.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationTypeInfoLabel": "Info",
+  "@notificationTypeInfoLabel": {
+    "description": "Display label for the 'Info' notification type."
+  },
+  "notificationTypePlannedWorksLabel": "Planirani radovi",
+  "@notificationTypePlannedWorksLabel": {
+    "description": "Display label for the 'PlannedWorks' notification type."
+  },
+  "notificationTypeWarningLabel": "Upozorenje",
+  "@notificationTypeWarningLabel": {
+    "description": "Display label for the 'Warning' notification type."
+  },
+  "notificationTypeGenericLabel": "Obavijest",
+  "@notificationTypeGenericLabel": {
+    "description": "Generic singular fallback label for a notification of unknown/empty type."
+  },
+  "allUsersAudienceLabel": "Svi korisnici",
+  "@allUsersAudienceLabel": {
+    "description": "Display label for the 'All' notification audience."
+  },
+  "customersAudienceLabel": "Korisnici",
+  "@customersAudienceLabel": {
+    "description": "Display label for the 'Customers' notification audience, distinct from usersLabel's 'Users' translation despite the identical Bosnian word."
+  },
+  "settlementAudienceLabel": "Naselje",
+  "@settlementAudienceLabel": {
+    "description": "Display label for the 'Settlement' notification audience."
+  },
+
+  "supportTicketFilterOpen": "Otvoreni",
+  "@supportTicketFilterOpen": {
+    "description": "Plural-form filter option for open support tickets, distinct from supportTicketStatusOpen's singular pill label."
+  },
+  "supportTicketFilterClosed": "Zatvoreni",
+  "@supportTicketFilterClosed": {
+    "description": "Plural-form filter option for closed support tickets, distinct from supportTicketStatusClosed's singular pill label."
+  },
+  "ticketSubjectSearchHint": "Predmet tiketa",
+  "@ticketSubjectSearchHint": {
+    "description": "Hint text for the search field on the support tickets screen."
+  },
+  "supportTicketsScreenSubtitle": "Svi korisnički tiketi podrške. Tiketi označeni narandžastom čekaju odgovor - zadnja poruka u niti nije od podrške.",
+  "@supportTicketsScreenSubtitle": {
+    "description": "Subtitle on the support tickets screen header."
+  },
+  "subjectColumnLabel": "Predmet",
+  "@subjectColumnLabel": {
+    "description": "Table column header for a support ticket's subject."
+  },
+  "messagesColumnLabel": "Poruke",
+  "@messagesColumnLabel": {
+    "description": "Table column header for a support ticket's message count."
+  },
+  "lastMessageColumnLabel": "Zadnja poruka",
+  "@lastMessageColumnLabel": {
+    "description": "Table column header for a support ticket's last message date."
+  },
+  "ticketFallbackTitle": "Tiket #{id}",
+  "@ticketFallbackTitle": {
+    "description": "Fallback subject shown on a support ticket row when the ticket has no subject.",
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "noTicketsFilteredMessage": "Nema tiketa za zadane filtere.",
+  "@noTicketsFilteredMessage": {
+    "description": "Empty-state message on the support tickets screen when filters exclude every row."
+  },
+  "noTicketsMessage": "Nema tiketa.",
+  "@noTicketsMessage": {
+    "description": "Empty-state message on the support tickets screen when there are no rows."
+  },
+
+  "enterMessageTextError": "Unesite tekst poruke.",
+  "@enterMessageTextError": {
+    "description": "Snackbar message shown when trying to send an empty support ticket reply."
+  },
+  "ticketClosedSuccess": "Tiket je zatvoren.",
+  "@ticketClosedSuccess": {
+    "description": "Snackbar message shown after a support ticket is closed."
+  },
+  "ticketReopenedSuccess": "Tiket je ponovo otvoren.",
+  "@ticketReopenedSuccess": {
+    "description": "Snackbar message shown after a support ticket is reopened."
+  },
+  "ticketFallbackLabel": "Tiket",
+  "@ticketFallbackLabel": {
+    "description": "Fallback app bar title on the support ticket detail screen when the ticket has no subject and hasn't loaded an id-specific fallback."
+  },
+  "reopenTicketButtonLabel": "Ponovo otvori",
+  "@reopenTicketButtonLabel": {
+    "description": "Button label for reopening a closed support ticket."
+  },
+  "noMessagesMessage": "Nema poruka.",
+  "@noMessagesMessage": {
+    "description": "Message shown in the support ticket thread when it has no messages."
+  },
+  "sendButtonLabel": "Pošalji",
+  "@sendButtonLabel": {
+    "description": "Tooltip/button label for sending a support ticket reply."
+  },
+  "writeReplyHint": "Napišite odgovor...",
+  "@writeReplyHint": {
+    "description": "Hint text for the reply composer's text field on the support ticket detail screen."
+  },
+  "openedAtLabel": "Otvoren: {date}",
+  "@openedAtLabel": {
+    "description": "Inline opened-at date shown on the support ticket detail screen's status header, with the already-formatted date.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "genericCustomerLabel": "Korisnik",
+  "@genericCustomerLabel": {
+    "description": "Generic fallback sender label for a support ticket message from a customer with no name on file."
+  },
+  "ticketClosedBannerMessage": "Tiket je zatvoren. Ponovo ga otvorite da odgovorite.",
+  "@ticketClosedBannerMessage": {
+    "description": "Banner message shown instead of the reply composer when a support ticket is closed."
+  },
+  "supportTicketStatusOpen": "Otvoren",
+  "@supportTicketStatusOpen": {
+    "description": "Singular display label for an open support ticket's status pill."
+  },
+  "supportTicketStatusClosed": "Zatvoren",
+  "@supportTicketStatusClosed": {
+    "description": "Singular display label for a closed support ticket's status pill."
   }
 }

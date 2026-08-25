@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_invoice.dart';
 import 'package:aquaflow_desktop/services/admin_invoice_exception.dart';
 import 'package:aquaflow_desktop/services/admin_invoice_service.dart';
@@ -25,10 +26,10 @@ class AdminInvoicesScreen extends StatefulWidget {
   State<AdminInvoicesScreen> createState() => _AdminInvoicesScreenState();
 }
 
-const _statusOptions = <String, String>{
-  'Issued': 'Izdat',
-  'Paid': 'Plaćen',
-  'Cancelled': 'Storniran',
+Map<String, String> _statusOptions(AppLocalizations loc) => <String, String>{
+  'Issued': loc.invoiceStatusIssued,
+  'Paid': loc.invoiceStatusPaid,
+  'Cancelled': loc.invoiceStatusCancelled,
 };
 
 class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
@@ -60,7 +61,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
   String describeError(Object error) {
     return error is AdminInvoiceException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   void _setStatusFilter(String value) {
@@ -86,23 +87,26 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
   }
 
   Future<void> _recordPayment(AdminInvoice invoice) async {
+    final loc = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Označi kao plaćeno'),
+        title: Text(loc.markAsPaidLabel),
         content: Text(
-          'Da li želite označiti račun "${invoice.invoiceNumber}" kao '
-          'plaćen (${formatMoney(invoice.remainingAmount)} BAM)?',
+          loc.markAsPaidDialogContent(
+            invoice.invoiceNumber,
+            '${formatMoney(invoice.remainingAmount)} BAM',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Odustani'),
+            child: Text(loc.dialogDismissButton),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(true),
             icon: const Icon(Icons.payments_outlined),
-            label: const Text('Označi kao plaćeno'),
+            label: Text(loc.markAsPaidLabel),
           ),
         ],
       ),
@@ -111,26 +115,25 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
 
     await runMutation(() async {
       await _service.recordPayment(invoice.id);
-    }, 'Račun je označen kao plaćen.');
+    }, AppLocalizations.of(context).invoiceMarkedPaidSuccess);
   }
 
   Future<void> _cancel(AdminInvoice invoice) async {
+    final loc = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Storniraj račun'),
-        content: Text(
-          'Da li želite stornirati račun "${invoice.invoiceNumber}"?',
-        ),
+        title: Text(loc.cancelInvoiceDialogTitle),
+        content: Text(loc.cancelInvoiceDialogContent(invoice.invoiceNumber)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Odustani'),
+            child: Text(loc.dialogDismissButton),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(true),
             icon: const Icon(Icons.block_outlined),
-            label: const Text('Storniraj'),
+            label: Text(loc.cancelInvoiceButtonLabel),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
@@ -142,7 +145,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
 
     await runMutation(() async {
       await _service.cancel(invoice.id);
-    }, 'Račun je storniran.');
+    }, AppLocalizations.of(context).invoiceCancelledSuccess);
   }
 
   @override
@@ -154,6 +157,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -164,20 +168,20 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ScreenHeader(
-                  title: 'Računi',
-                  subtitle: 'Pregled računa i upravljanje njihovim statusom.',
+                  title: loc.invoicesLabel,
+                  subtitle: loc.invoicesScreenSubtitle,
                   actions: [
                     RefreshButton(onRefresh: () => load(), enabled: !mutating),
                   ],
                 ),
                 const SizedBox(height: 18),
-                _buildFilters(),
+                _buildFilters(loc),
               ],
             ),
           ),
           if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent()),
+          Expanded(child: _buildContent(loc)),
           if (!isInitialLoad && error == null)
             PagedTablePaginationBar(
               page: page,
@@ -193,7 +197,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     final hasSearch = searchController.text.trim().isNotEmpty;
 
     return Wrap(
@@ -209,11 +213,11 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
             onChanged: queueSearch,
             onSubmitted: submitSearch,
             decoration: InputDecoration(
-              labelText: 'Broj računa',
+              labelText: loc.invoiceNumberFieldLabel,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: hasSearch
                   ? IconButton(
-                      tooltip: 'Očisti pretragu',
+                      tooltip: loc.clearSearchTooltip,
                       onPressed: clearSearch,
                       icon: const Icon(Icons.clear),
                     )
@@ -226,13 +230,13 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
           child: DropdownButtonFormField<String>(
             initialValue: _statusFilter ?? '',
             isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Status',
-              prefixIcon: Icon(Icons.filter_alt_outlined),
+            decoration: InputDecoration(
+              labelText: loc.statusFieldLabel,
+              prefixIcon: const Icon(Icons.filter_alt_outlined),
             ),
             items: [
-              const DropdownMenuItem(value: '', child: Text('Svi')),
-              for (final entry in _statusOptions.entries)
+              DropdownMenuItem(value: '', child: Text(loc.allOption)),
+              for (final entry in _statusOptions(loc).entries)
                 DropdownMenuItem(value: entry.key, child: Text(entry.value)),
             ],
             onChanged: loading || mutating
@@ -247,7 +251,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
               label: Text(
                 _billingPeriodFilter != null
                     ? '${_billingPeriodFilter!.month}/${_billingPeriodFilter!.year}'
-                    : 'Mjesec',
+                    : loc.monthFilterLabel,
               ),
               avatar: const Icon(Icons.calendar_month_outlined, size: 18),
               onPressed: loading || mutating
@@ -263,7 +267,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
           ],
         ),
         IconButton.filledTonal(
-          tooltip: 'Primijeni filtere',
+          tooltip: loc.applyFiltersTooltip,
           onPressed: loading || mutating ? null : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
@@ -271,7 +275,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -284,10 +288,10 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
     if (items.isEmpty) {
       return EmptyStateView(
         icon: Icons.receipt_long_outlined,
-        message: 'Nema računa.',
+        message: loc.noInvoicesMessage,
         hasFilters: _hasFilters,
         filteredIcon: Icons.search_off,
-        filteredMessage: 'Nema računa za zadane filtere.',
+        filteredMessage: loc.invoicesEmptyFilteredMessage,
       );
     }
 
@@ -313,15 +317,15 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
                   child: DataTable(
                     dataRowMinHeight: 60,
                     dataRowMaxHeight: 68,
-                    columns: const [
-                      DataColumn(label: Text('Broj računa')),
-                      DataColumn(label: Text('Kupac')),
-                      DataColumn(label: Text('Vodomjer')),
-                      DataColumn(label: Text('Period')),
-                      DataColumn(label: Text('Potrošnja m³')),
-                      DataColumn(label: Text('Iznos')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Akcije')),
+                    columns: [
+                      DataColumn(label: Text(loc.invoiceNumberFieldLabel)),
+                      DataColumn(label: Text(loc.customerLabel)),
+                      DataColumn(label: Text(loc.waterMeterColumnLabel)),
+                      DataColumn(label: Text(loc.periodColumnLabel)),
+                      DataColumn(label: Text(loc.consumptionM3ColumnLabel)),
+                      DataColumn(label: Text(loc.amountColumnLabel)),
+                      DataColumn(label: Text(loc.statusFieldLabel)),
+                      DataColumn(label: Text(loc.actionsColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
@@ -337,7 +341,9 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
                               ),
                             ),
                             DataCell(Text(formatMoney(item.consumptionM3))),
-                            DataCell(Text('${formatMoney(item.totalAmount)} BAM')),
+                            DataCell(
+                              Text('${formatMoney(item.totalAmount)} BAM'),
+                            ),
                             DataCell(_InvoiceStatusPill(status: item.status)),
                             DataCell(
                               _RowActions(
@@ -381,19 +387,20 @@ class _RowActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final buttons = <Widget>[];
 
     if (invoice.status == 'Issued') {
       buttons.add(
         IconButton(
-          tooltip: 'Označi kao plaćeno',
+          tooltip: loc.markAsPaidLabel,
           onPressed: disabled ? null : onRecordPayment,
           icon: const Icon(Icons.payments_outlined),
         ),
       );
       buttons.add(
         IconButton(
-          tooltip: 'Storniraj',
+          tooltip: loc.cancelInvoiceButtonLabel,
           onPressed: disabled ? null : onCancel,
           icon: const Icon(Icons.block_outlined),
           color: Theme.of(context).colorScheme.error,
@@ -421,15 +428,20 @@ class _InvoiceStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final (label, color, icon) = switch (status) {
-      'Issued' => ('Izdat', const Color(0xFF1D4ED8), Icons.send_outlined),
+      'Issued' => (
+        loc.invoiceStatusIssued,
+        const Color(0xFF1D4ED8),
+        Icons.send_outlined,
+      ),
       'Paid' => (
-        'Plaćen',
+        loc.invoiceStatusPaid,
         const Color(0xFF2E7D32),
         Icons.check_circle_outline,
       ),
       'Cancelled' => (
-        'Storniran',
+        loc.invoiceStatusCancelled,
         const Color(0xFF64748B),
         Icons.block_outlined,
       ),

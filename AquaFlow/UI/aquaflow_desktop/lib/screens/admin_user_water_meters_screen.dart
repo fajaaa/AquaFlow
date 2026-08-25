@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_user.dart';
 import 'package:aquaflow_desktop/models/admin_water_meter.dart';
 import 'package:aquaflow_desktop/screens/admin_meter_readings_screen.dart';
@@ -92,16 +93,17 @@ class _AdminUserWaterMetersScreenState
     super.dispose();
   }
 
-  String get _title {
+  String _title(AppLocalizations loc) {
     final name = widget.user.fullName;
-    return 'Vodomjeri - ${name.isEmpty ? widget.user.email : name}';
+    return loc.waterMetersTitle(name.isEmpty ? widget.user.email : name);
   }
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(_title),
+        title: Text(_title(loc)),
         actions: [
           RefreshButton(onRefresh: _load),
           const SizedBox(width: 8),
@@ -112,14 +114,14 @@ class _AdminUserWaterMetersScreenState
           children: [
             if (_loading && !_isInitialLoad)
               const LinearProgressIndicator(minHeight: 2),
-            Expanded(child: _buildBody()),
+            Expanded(child: _buildBody(loc)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations loc) {
     if (_isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -130,16 +132,16 @@ class _AdminUserWaterMetersScreenState
     }
 
     if (!_hasProfile) {
-      return const EmptyStateView(
+      return EmptyStateView(
         icon: Icons.person_off_outlined,
-        message: 'Korisnik nema kreiran profil pa ni vodomjere.',
+        message: loc.userNoProfileMessage,
       );
     }
 
     if (_meters.isEmpty) {
-      return const EmptyStateView(
+      return EmptyStateView(
         icon: Icons.water_drop_outlined,
-        message: 'Korisnik trenutno nema evidentiranih vodomjera.',
+        message: loc.userNoWaterMetersMessage,
       );
     }
 
@@ -172,6 +174,7 @@ class _WaterMeterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final statusColor = _statusColor(meter.status);
 
     return Card(
@@ -197,11 +200,7 @@ class _WaterMeterCard extends StatelessWidget {
                       color: statusColor.withValues(alpha: 0.10),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      Icons.water_drop,
-                      size: 20,
-                      color: statusColor,
-                    ),
+                    child: Icon(Icons.water_drop, size: 20, color: statusColor),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -232,24 +231,24 @@ class _WaterMeterCard extends StatelessWidget {
                 children: [
                   _DetailChip(
                     icon: Icons.location_on_outlined,
-                    label: 'Naselje',
+                    label: loc.locationSettlementLabel,
                     value: meter.settlementName.isEmpty
                         ? '-'
                         : meter.settlementName,
                   ),
                   _DetailChip(
                     icon: Icons.event_outlined,
-                    label: 'Instaliran',
+                    label: loc.installedLabel,
                     value: _formatDate(meter.installedAt),
                   ),
                   _DetailChip(
                     icon: Icons.speed_outlined,
-                    label: 'Početno očitanje',
+                    label: loc.initialReadingLabel,
                     value: '${_formatReading(meter.initialReading)} m³',
                   ),
                   _DetailChip(
                     icon: Icons.speed,
-                    label: 'Zadnje očitanje',
+                    label: loc.lastReadingLabel,
                     value: '${_formatReading(meter.lastReading)} m³',
                   ),
                 ],
@@ -315,6 +314,7 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _statusColor(status);
+    final loc = AppLocalizations.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
@@ -328,7 +328,7 @@ class _StatusPill extends StatelessWidget {
           Icon(_statusIcon(status), size: 15, color: color),
           const SizedBox(width: 5),
           Text(
-            _statusLabel(status),
+            _statusLabel(status, loc),
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: color,
               fontWeight: FontWeight.w700,
@@ -370,14 +370,14 @@ IconData _statusIcon(String status) {
   }
 }
 
-String _statusLabel(String status) {
+String _statusLabel(String status, AppLocalizations loc) {
   switch (status.toLowerCase()) {
     case 'active':
-      return 'Aktivan';
+      return loc.statusActive;
     case 'inactive':
-      return 'Neaktivan';
+      return loc.statusInactive;
     case 'removed':
-      return 'Uklonjen';
+      return loc.waterMeterStatusRemoved;
     default:
       return status.isEmpty ? '-' : status;
   }

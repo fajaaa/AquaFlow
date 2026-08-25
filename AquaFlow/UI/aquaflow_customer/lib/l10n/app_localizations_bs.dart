@@ -33,6 +33,16 @@ class AppLocalizationsBs extends AppLocalizations {
   String get commonRetry => 'Pokušaj ponovo';
 
   @override
+  String get commonLogout => 'Odjava';
+
+  @override
+  String get unknownRoleTitle => 'Nepoznata uloga';
+
+  @override
+  String get unknownRoleMessage =>
+      'Vaš nalog nema podržanu ulogu za ovu aplikaciju. Obratite se administratoru.';
+
+  @override
   String get commonSend => 'Pošalji';
 
   @override
@@ -124,6 +134,30 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get fieldEmailLabel => 'Email';
+
+  @override
+  String get companySettingsScreenTitle => 'Postavke firme';
+
+  @override
+  String get companyNameLabel => 'Naziv firme';
+
+  @override
+  String get taxNumberLabel => 'Porezni broj';
+
+  @override
+  String get bankAccountLabel => 'Bankovni račun';
+
+  @override
+  String get logoUrlOptionalLabel => 'URL logotipa (opcionalno)';
+
+  @override
+  String get defaultLanguageLabel => 'Jezik';
+
+  @override
+  String get defaultCurrencyLabel => 'Valuta';
+
+  @override
+  String get companySettingsSaveSuccess => 'Postavke firme su sačuvane.';
 
   @override
   String get fieldPhoneLabel => 'Telefon';
@@ -650,6 +684,43 @@ class AppLocalizationsBs extends AppLocalizations {
   String get newFaultReportTooltip => 'Nova prijava';
 
   @override
+  String get newFaultReportDialogTitle => 'Nova prijava kvara';
+
+  @override
+  String get titleFieldLabel => 'Naslov';
+
+  @override
+  String get descriptionFieldLabel => 'Opis';
+
+  @override
+  String get waterMeterOptionalLabel => 'Vodomjer (opciono)';
+
+  @override
+  String get noWaterMeterOption => 'Bez vodomjera';
+
+  @override
+  String get streetOptionalLabel => 'Ulica (opciono)';
+
+  @override
+  String get houseNumberOptionalLabel => 'Broj (opciono)';
+
+  @override
+  String photoCountLabel(int current, int max) {
+    return 'Fotografije ($current/$max)';
+  }
+
+  @override
+  String get addImageButtonLabel => 'Dodaj sliku';
+
+  @override
+  String sendingPhotoLabel(int current, int total) {
+    return 'Slanje fotografije $current/$total...';
+  }
+
+  @override
+  String get newFaultReportSubmitButton => 'Pošalji prijavu';
+
+  @override
   String get faultReportsEmptyMessage => 'Nemate poslanih prijava kvarova.';
 
   @override
@@ -690,6 +761,12 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get newSupportTicketTooltip => 'Novi tiket';
+
+  @override
+  String get newSupportTicketDialogTitle => 'Novi tiket';
+
+  @override
+  String get messageFieldLabel => 'Poruka';
 
   @override
   String get supportTicketCreateSuccess => 'Tiket je kreiran.';

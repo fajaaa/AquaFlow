@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
 import 'package:aquaflow_collector/models/collector_fault_report.dart';
 import 'package:aquaflow_collector/screens/collector_fault_report_detail_screen.dart';
 import 'package:aquaflow_collector/services/collector_fault_report_exception.dart';
@@ -11,11 +12,11 @@ import 'package:aquaflow_collector/shared/navigation/app_navigation.dart';
 
 // No 'New' option: a New report is by definition not yet assigned, so the
 // pinned listing below can never contain one.
-const _statusOptions = <String, String>{
-  '': 'Svi statusi',
-  'Assigned': 'Dodijeljena',
-  'InProgress': 'U toku',
-  'Resolved': 'Riješena',
+Map<String, String> _statusOptions(AppLocalizations loc) => <String, String>{
+  '': loc.allStatusesOption,
+  'Assigned': loc.faultReportStatusAssigned,
+  'InProgress': loc.faultReportStatusInProgress,
+  'Resolved': loc.faultReportStatusResolved,
 };
 
 /// Pushed as its own Scaffold+AppBar route (from a header action on one of
@@ -126,8 +127,9 @@ class _CollectorFaultReportsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Prijave kvarova')),
+      appBar: AppBar(title: Text(loc.faultReportsScreenTitle)),
       body: SafeArea(
         child: Column(
           children: [
@@ -142,12 +144,12 @@ class _CollectorFaultReportsScreenState
                   _load();
                 },
                 decoration: InputDecoration(
-                  hintText: 'Naslov ili ime kupca',
+                  hintText: loc.faultReportSearchHint,
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _searchCtrl.text.isEmpty
                       ? null
                       : IconButton(
-                          tooltip: 'Obriši',
+                          tooltip: loc.commonClear,
                           onPressed: _clearSearch,
                           icon: const Icon(Icons.close),
                         ),
@@ -162,7 +164,7 @@ class _CollectorFaultReportsScreenState
                   value: _status,
                   underline: const SizedBox.shrink(),
                   items: [
-                    for (final entry in _statusOptions.entries)
+                    for (final entry in _statusOptions(loc).entries)
                       DropdownMenuItem(
                         value: entry.key,
                         child: Text(entry.value),
@@ -172,14 +174,14 @@ class _CollectorFaultReportsScreenState
                 ),
               ),
             ),
-            Expanded(child: _buildContent()),
+            Expanded(child: _buildContent(loc)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -231,6 +233,7 @@ class _FaultReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final customer = report.customerFullName;
     final location = [
       report.settlementName.trim(),
@@ -278,8 +281,8 @@ class _FaultReportCard extends StatelessWidget {
                 label: customer.isNotEmpty
                     ? customer
                     : report.customerId == null
-                        ? '-'
-                        : 'Korisnik #${report.customerId}',
+                    ? '-'
+                    : loc.customerFallbackLabel(report.customerId!),
               ),
               const SizedBox(height: 6),
               _InfoRow(
@@ -289,7 +292,7 @@ class _FaultReportCard extends StatelessWidget {
               const SizedBox(height: 6),
               _InfoRow(
                 icon: Icons.event_outlined,
-                label: 'Prijavljeno: ${_formatDate(report.createdAt)}',
+                label: loc.reportedAtInlineLabel(_formatDate(report.createdAt)),
               ),
             ],
           ),
@@ -336,7 +339,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'Nema prijava kvarova.',
+            AppLocalizations.of(context).collectorFaultReportsEmptyMessage,
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium,
           ),
@@ -368,7 +371,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

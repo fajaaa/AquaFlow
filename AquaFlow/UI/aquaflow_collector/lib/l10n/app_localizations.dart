@@ -146,6 +146,24 @@ abstract class AppLocalizations {
   /// **'Pokušaj ponovo'**
   String get commonRetry;
 
+  /// Generic logout button label, used e.g. by UnavailableScreen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Odjava'**
+  String get commonLogout;
+
+  /// Title shown when an authenticated user's role isn't supported by this app.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nepoznata uloga'**
+  String get unknownRoleTitle;
+
+  /// Explanatory message shown alongside unknownRoleTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Vaš nalog nema podržanu ulogu za ovu aplikaciju. Obratite se administratoru.'**
+  String get unknownRoleMessage;
+
   /// Generic loading indicator caption.
   ///
   /// In bs, this message translates to:
@@ -295,6 +313,54 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Email'**
   String get fieldEmailLabel;
+
+  /// App bar title for the company settings screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Postavke firme'**
+  String get companySettingsScreenTitle;
+
+  /// Label for the company name field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Naziv firme'**
+  String get companyNameLabel;
+
+  /// Label for the tax number field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Porezni broj'**
+  String get taxNumberLabel;
+
+  /// Label for the bank account field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Bankovni račun'**
+  String get bankAccountLabel;
+
+  /// Label for the optional logo URL field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'URL logotipa (opcionalno)'**
+  String get logoUrlOptionalLabel;
+
+  /// Label for the default language field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Jezik'**
+  String get defaultLanguageLabel;
+
+  /// Label for the default currency field on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Valuta'**
+  String get defaultCurrencyLabel;
+
+  /// Snackbar message shown after company settings are saved successfully.
+  ///
+  /// In bs, this message translates to:
+  /// **'Postavke firme su sačuvane.'**
+  String get companySettingsSaveSuccess;
 
   /// Shared label for a phone input field (registration, personal details).
   ///
@@ -818,6 +884,18 @@ abstract class AppLocalizations {
   /// **'Broj'**
   String get locationHouseNumberLabel;
 
+  /// Snackbar message shown when trying to save an address before a name has been set on the personal details screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Unesite ime i prezime u \"Lični podaci\" da biste sačuvali adresu.'**
+  String get locationNameRequiredError;
+
+  /// Snackbar message shown after the location is saved successfully.
+  ///
+  /// In bs, this message translates to:
+  /// **'Lokacija je sačuvana.'**
+  String get locationSaveSuccess;
+
   /// Validation error shown when no settlement is selected on the water meter registration dialog.
   ///
   /// In bs, this message translates to:
@@ -1115,6 +1193,132 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Cijena po m³'**
   String get pricePerM3Label;
+
+  /// Display label for the 'New' fault report status, shared by the report list card, status filter dropdown, and the detail screen's status banner.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova'**
+  String get faultReportStatusNew;
+
+  /// Display label for the 'Assigned' fault report status, shared by the report list card, status filter dropdown, and the detail screen's status banner.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dodijeljena'**
+  String get faultReportStatusAssigned;
+
+  /// Display label for the 'InProgress' fault report status, shared by the report list card, status filter dropdown, and the detail screen's status banner.
+  ///
+  /// In bs, this message translates to:
+  /// **'U toku'**
+  String get faultReportStatusInProgress;
+
+  /// Display label for the 'Resolved' fault report status, shared by the report list card, status filter dropdown, and the detail screen's status banner.
+  ///
+  /// In bs, this message translates to:
+  /// **'Riješena'**
+  String get faultReportStatusResolved;
+
+  /// Eyebrow label above the status name on the fault report detail screen's status banner, shown uppercased.
+  ///
+  /// In bs, this message translates to:
+  /// **'Status prijave'**
+  String get faultReportStatusFieldLabel;
+
+  /// Section heading for the photos card on the fault report detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Fotografije'**
+  String get photosSectionHeading;
+
+  /// Message shown in the photos card when a fault report has no attached photos.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema priloženih fotografija.'**
+  String get noPhotosMessage;
+
+  /// Section heading for the info card on the fault report detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Podaci o prijavi'**
+  String get faultReportInfoSectionHeading;
+
+  /// Label for the reported-at date row on the fault report detail screen's info card.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijavljeno'**
+  String get reportedAtLabel;
+
+  /// Label for the resolved-at date row on the fault report detail screen's info card. Distinct from faultReportStatusResolved ('Riješena') which is a different grammatical form used as the status label.
+  ///
+  /// In bs, this message translates to:
+  /// **'Riješeno'**
+  String get resolvedAtLabel;
+
+  /// Label for the address row on the fault report detail screen's info card.
+  ///
+  /// In bs, this message translates to:
+  /// **'Adresa'**
+  String get addressLabel;
+
+  /// Label for the customer row on the fault report detail screen's info card.
+  ///
+  /// In bs, this message translates to:
+  /// **'Kupac'**
+  String get customerLabel;
+
+  /// App bar title for the collector's fault reports screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijave kvarova'**
+  String get faultReportsScreenTitle;
+
+  /// Hint text for the free-text search field on the collector fault reports screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Naslov ili ime kupca'**
+  String get faultReportSearchHint;
+
+  /// Empty-state message shown when the collector has no assigned fault reports.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema prijava kvarova.'**
+  String get collectorFaultReportsEmptyMessage;
+
+  /// Inline reported-at date shown on a fault report list card, with the already-formatted date/time.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijavljeno: {date}'**
+  String reportedAtInlineLabel(String date);
+
+  /// Option in the fault report status filter dropdown meaning no filter (all statuses).
+  ///
+  /// In bs, this message translates to:
+  /// **'Svi statusi'**
+  String get allStatusesOption;
+
+  /// Title of the fault report status-advance confirmation dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Promjena statusa'**
+  String get statusChangeDialogTitle;
+
+  /// Confirmation question in the fault report status-advance dialog, with the already-localized target status label.
+  ///
+  /// In bs, this message translates to:
+  /// **'Postaviti status prijave na \"{status}\"?'**
+  String statusChangeDialogContent(String status);
+
+  /// Button label that advances a fault report from New/Assigned to InProgress.
+  ///
+  /// In bs, this message translates to:
+  /// **'Započni'**
+  String get startActionButton;
+
+  /// Button label that advances a fault report from InProgress to Resolved.
+  ///
+  /// In bs, this message translates to:
+  /// **'Riješi'**
+  String get resolveActionButton;
 }
 
 class _AppLocalizationsDelegate

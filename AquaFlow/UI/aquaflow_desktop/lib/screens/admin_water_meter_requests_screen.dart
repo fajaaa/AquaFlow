@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_collector_profile.dart';
 import 'package:aquaflow_desktop/models/admin_water_meter_request.dart';
 import 'package:aquaflow_desktop/services/admin_water_meter_request_exception.dart';
@@ -54,7 +55,7 @@ class _AdminWaterMeterRequestsScreenState
   String describeError(Object error) {
     return error is AdminWaterMeterRequestException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   Future<bool> _loadCollectors() async {
@@ -82,7 +83,7 @@ class _AdminWaterMeterRequestsScreenState
     if (!mounted || !loaded) return;
 
     if (_collectors.isEmpty) {
-      showError('Nema dostupnih inkasanata.');
+      showError(AppLocalizations.of(context).noCollectorsAvailableError);
       return;
     }
 
@@ -94,7 +95,7 @@ class _AdminWaterMeterRequestsScreenState
 
     await runMutation(() async {
       await _service.assign(request.id, collectorId);
-    }, 'Zahtjev je dodijeljen inkasantu.');
+    }, AppLocalizations.of(context).requestAssignedSuccess);
   }
 
   Future<void> _openReject(AdminWaterMeterRequest request) async {
@@ -106,7 +107,7 @@ class _AdminWaterMeterRequestsScreenState
 
     await runMutation(() async {
       await _service.reject(request.id, reason);
-    }, 'Zahtjev je odbijen.');
+    }, AppLocalizations.of(context).requestRejectedSuccess);
   }
 
   @override
@@ -118,6 +119,7 @@ class _AdminWaterMeterRequestsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -128,21 +130,20 @@ class _AdminWaterMeterRequestsScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ScreenHeader(
-                  title: 'Zahtjevi za vodomjer',
-                  subtitle:
-                      'Pregled, dodjela collectoru i odbijanje zahtjeva za novi vodomjer.',
+                  title: loc.waterMeterRequestsPageTitle,
+                  subtitle: loc.waterMeterRequestsPageSubtitle,
                   actions: [
                     RefreshButton(onRefresh: () => load(), enabled: !mutating),
                   ],
                 ),
                 const SizedBox(height: 18),
-                _buildFilters(),
+                _buildFilters(loc),
               ],
             ),
           ),
           if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent()),
+          Expanded(child: _buildContent(loc)),
           if (!isInitialLoad && error == null)
             PagedTablePaginationBar(
               page: page,
@@ -158,7 +159,7 @@ class _AdminWaterMeterRequestsScreenState
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     return Wrap(
       spacing: 12,
       runSpacing: 12,
@@ -168,20 +169,32 @@ class _AdminWaterMeterRequestsScreenState
           width: 240,
           child: DropdownButtonFormField<String>(
             initialValue: _statusFilter ?? '',
-            decoration: const InputDecoration(
-              labelText: 'Status',
-              prefixIcon: Icon(Icons.filter_alt_outlined),
+            decoration: InputDecoration(
+              labelText: loc.statusFieldLabel,
+              prefixIcon: const Icon(Icons.filter_alt_outlined),
             ),
-            items: const [
-              DropdownMenuItem(value: '', child: Text('Svi statusi')),
-              DropdownMenuItem(value: 'Pending', child: Text('Na čekanju')),
+            items: [
+              DropdownMenuItem(value: '', child: Text(loc.allStatusesOption)),
+              DropdownMenuItem(
+                value: 'Pending',
+                child: Text(loc.requestStatusPending),
+              ),
               DropdownMenuItem(
                 value: 'Assigned',
-                child: Text('Čeka registraciju'),
+                child: Text(loc.requestStatusAwaitingRegistration),
               ),
-              DropdownMenuItem(value: 'Registered', child: Text('Registrovan')),
-              DropdownMenuItem(value: 'Rejected', child: Text('Odbijen')),
-              DropdownMenuItem(value: 'Cancelled', child: Text('Otkazan')),
+              DropdownMenuItem(
+                value: 'Registered',
+                child: Text(loc.requestStatusRegistered),
+              ),
+              DropdownMenuItem(
+                value: 'Rejected',
+                child: Text(loc.requestStatusRejected),
+              ),
+              DropdownMenuItem(
+                value: 'Cancelled',
+                child: Text(loc.requestStatusCancelled),
+              ),
             ],
             onChanged: loading || mutating
                 ? null
@@ -189,7 +202,7 @@ class _AdminWaterMeterRequestsScreenState
           ),
         ),
         IconButton.filledTonal(
-          tooltip: 'Primijeni filter',
+          tooltip: loc.applyFilterTooltip,
           onPressed: loading || mutating ? null : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
@@ -197,7 +210,7 @@ class _AdminWaterMeterRequestsScreenState
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -210,10 +223,10 @@ class _AdminWaterMeterRequestsScreenState
     if (items.isEmpty) {
       return EmptyStateView(
         icon: Icons.assignment_outlined,
-        message: 'Nema zahtjeva za novi vodomjer.',
+        message: loc.noWaterMeterRequestsMessage,
         hasFilters: _statusFilter != null,
         filteredIcon: Icons.search_off,
-        filteredMessage: 'Nema zahtjeva za odabrani status.',
+        filteredMessage: loc.waterMeterRequestsEmptyFilteredMessage,
       );
     }
 
@@ -239,13 +252,13 @@ class _AdminWaterMeterRequestsScreenState
                   child: DataTable(
                     dataRowMinHeight: 72,
                     dataRowMaxHeight: 88,
-                    columns: const [
-                      DataColumn(label: Text('Adresa')),
-                      DataColumn(label: Text('Korisnik')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Collector')),
-                      DataColumn(label: Text('Kreiran')),
-                      DataColumn(label: Text('Akcije')),
+                    columns: [
+                      DataColumn(label: Text(loc.addressLabel)),
+                      DataColumn(label: Text(loc.customerColumnLabel)),
+                      DataColumn(label: Text(loc.statusFieldLabel)),
+                      DataColumn(label: Text(loc.collectorColumnLabel)),
+                      DataColumn(label: Text(loc.createdColumnLabel)),
+                      DataColumn(label: Text(loc.actionsColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
@@ -284,7 +297,7 @@ class _AdminWaterMeterRequestsScreenState
     for (final collector in _collectors) {
       if (collector.id == collectorId) return collector.label;
     }
-    return 'Collector #$collectorId';
+    return AppLocalizations.of(context).collectorFallbackLabel(collectorId);
   }
 }
 
@@ -296,6 +309,7 @@ class _RequestCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final settlement = request.settlementName.trim();
     final address = request.address;
     final note = request.note?.trim();
@@ -307,7 +321,7 @@ class _RequestCell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            settlement.isEmpty ? 'Naselje nepoznato' : settlement,
+            settlement.isEmpty ? loc.unknownSettlementLabel : settlement,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.titleSmall?.copyWith(
@@ -316,7 +330,7 @@ class _RequestCell extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            address.isEmpty ? 'Bez ulice i broja' : address,
+            address.isEmpty ? loc.noStreetAddressLabel : address,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -349,6 +363,7 @@ class _CustomerCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
     final name = request.customerFullName;
     final phone = request.customerPhone?.trim();
 
@@ -359,7 +374,9 @@ class _CustomerCell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            name.isEmpty ? 'Korisnik #${request.customerId}' : name,
+            name.isEmpty
+                ? loc.requestCustomerFallbackLabel(request.customerId)
+                : name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodyMedium?.copyWith(
@@ -368,7 +385,7 @@ class _CustomerCell extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            phone == null || phone.isEmpty ? 'Bez telefona' : phone,
+            phone == null || phone.isEmpty ? loc.noPhoneLabel : phone,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -396,8 +413,11 @@ class _RowActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     if (!request.isPending) {
-      final text = request.isAssigned ? 'Čeka registraciju' : '-';
+      final text = request.isAssigned
+          ? loc.requestStatusAwaitingRegistration
+          : '-';
       return Text(text);
     }
 
@@ -405,12 +425,12 @@ class _RowActions extends StatelessWidget {
       disabled: disabled,
       extraActions: [
         IconButton(
-          tooltip: 'Dodijeli inkasantu',
+          tooltip: loc.assignToCollectorTooltip,
           onPressed: disabled ? null : onAssign,
           icon: const Icon(Icons.assignment_ind_outlined),
         ),
         IconButton(
-          tooltip: 'Odbij',
+          tooltip: loc.rejectTooltip,
           onPressed: disabled ? null : onReject,
           icon: const Icon(Icons.block_outlined),
         ),
@@ -446,9 +466,10 @@ class _AssignDialogState extends State<_AssignDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
 
     return AlertDialog(
-      title: const Text('Dodijeli inkasantu'),
+      title: Text(loc.assignToCollectorTooltip),
       content: SizedBox(
         width: 820,
         child: ConstrainedBox(
@@ -471,11 +492,11 @@ class _AssignDialogState extends State<_AssignDialog> {
                       headingRowHeight: 44,
                       dataRowMinHeight: 58,
                       dataRowMaxHeight: 66,
-                      columns: const [
-                        DataColumn(label: Text('Izbor')),
-                        DataColumn(label: Text('Ime i prezime')),
-                        DataColumn(label: Text('Email')),
-                        DataColumn(label: Text('Telefon')),
+                      columns: [
+                        DataColumn(label: Text(loc.selectionColumnLabel)),
+                        DataColumn(label: Text(loc.fullNameColumnLabel)),
+                        DataColumn(label: Text(loc.fieldEmailLabel)),
+                        DataColumn(label: Text(loc.fieldPhoneLabel)),
                       ],
                       rows: [
                         for (final collector in widget.collectors)
@@ -492,14 +513,14 @@ class _AssignDialogState extends State<_AssignDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: _collectorId == null
               ? null
               : () => Navigator.of(context).pop(_collectorId),
           icon: const Icon(Icons.assignment_ind_outlined),
-          label: const Text('Dodijeli'),
+          label: Text(loc.assignButtonLabel),
         ),
       ],
     );
@@ -583,7 +604,9 @@ class _AssignDialogState extends State<_AssignDialog> {
   String _profileLabel(AdminCollectorProfile collector) {
     final code = collector.employeeCode.trim();
     if (code.isNotEmpty) return code;
-    return 'Profil #${collector.id}';
+    return AppLocalizations.of(
+      context,
+    ).collectorProfileFallbackLabel(collector.id);
   }
 
   String _textOrDash(String value) {
@@ -610,30 +633,31 @@ class _RejectDialogState extends State<_RejectDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Odbij zahtjev'),
+      title: Text(loc.rejectRequestDialogTitle),
       content: SizedBox(
         width: 420,
         child: TextField(
           controller: _reasonCtrl,
           maxLines: 3,
           maxLength: 500,
-          decoration: const InputDecoration(
-            labelText: 'Razlog (opciono)',
+          decoration: InputDecoration(
+            labelText: loc.reasonOptionalLabel,
             alignLabelWithHint: true,
-            prefixIcon: Icon(Icons.notes_outlined),
+            prefixIcon: const Icon(Icons.notes_outlined),
           ),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(null),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: () => Navigator.of(context).pop(_reasonCtrl.text),
           icon: const Icon(Icons.block_outlined),
-          label: const Text('Odbij'),
+          label: Text(loc.rejectTooltip),
         ),
       ],
     );
@@ -647,25 +671,30 @@ class _RequestStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final (label, color, icon) = switch (status.toLowerCase()) {
       'pending' => (
-        'Na čekanju',
+        loc.requestStatusPending,
         const Color(0xFFB45309),
         Icons.hourglass_top_outlined,
       ),
       'assigned' => (
-        'Čeka registraciju',
+        loc.requestStatusAwaitingRegistration,
         const Color(0xFF1D4ED8),
         Icons.engineering_outlined,
       ),
       'registered' => (
-        'Registrovan',
+        loc.requestStatusRegistered,
         const Color(0xFF2E7D32),
         Icons.check_circle_outline,
       ),
-      'rejected' => ('Odbijen', const Color(0xFFB91C1C), Icons.block_outlined),
+      'rejected' => (
+        loc.requestStatusRejected,
+        const Color(0xFFB91C1C),
+        Icons.block_outlined,
+      ),
       'cancelled' => (
-        'Otkazan',
+        loc.requestStatusCancelled,
         const Color(0xFF64748B),
         Icons.cancel_outlined,
       ),

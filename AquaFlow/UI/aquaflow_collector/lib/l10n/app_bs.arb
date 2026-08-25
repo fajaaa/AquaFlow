@@ -34,6 +34,18 @@
   "@commonRetry": {
     "description": "Retry button label shown by ErrorRetry."
   },
+  "commonLogout": "Odjava",
+  "@commonLogout": {
+    "description": "Generic logout button label, used e.g. by UnavailableScreen."
+  },
+  "unknownRoleTitle": "Nepoznata uloga",
+  "@unknownRoleTitle": {
+    "description": "Title shown when an authenticated user's role isn't supported by this app."
+  },
+  "unknownRoleMessage": "Vaš nalog nema podržanu ulogu za ovu aplikaciju. Obratite se administratoru.",
+  "@unknownRoleMessage": {
+    "description": "Explanatory message shown alongside unknownRoleTitle."
+  },
 
   "stateLoading": "Učitavanje...",
   "@stateLoading": {
@@ -153,6 +165,38 @@
   "fieldEmailLabel": "Email",
   "@fieldEmailLabel": {
     "description": "Shared label for an email input field (login, registration, personal details)."
+  },
+  "companySettingsScreenTitle": "Postavke firme",
+  "@companySettingsScreenTitle": {
+    "description": "App bar title for the company settings screen."
+  },
+  "companyNameLabel": "Naziv firme",
+  "@companyNameLabel": {
+    "description": "Label for the company name field on the company settings form."
+  },
+  "taxNumberLabel": "Porezni broj",
+  "@taxNumberLabel": {
+    "description": "Label for the tax number field on the company settings form."
+  },
+  "bankAccountLabel": "Bankovni račun",
+  "@bankAccountLabel": {
+    "description": "Label for the bank account field on the company settings form."
+  },
+  "logoUrlOptionalLabel": "URL logotipa (opcionalno)",
+  "@logoUrlOptionalLabel": {
+    "description": "Label for the optional logo URL field on the company settings form."
+  },
+  "defaultLanguageLabel": "Jezik",
+  "@defaultLanguageLabel": {
+    "description": "Label for the default language field on the company settings form."
+  },
+  "defaultCurrencyLabel": "Valuta",
+  "@defaultCurrencyLabel": {
+    "description": "Label for the default currency field on the company settings form."
+  },
+  "companySettingsSaveSuccess": "Postavke firme su sačuvane.",
+  "@companySettingsSaveSuccess": {
+    "description": "Snackbar message shown after company settings are saved successfully."
   },
   "fieldPhoneLabel": "Telefon",
   "@fieldPhoneLabel": {
@@ -535,6 +579,14 @@
   "@locationHouseNumberLabel": {
     "description": "Label for the house number field on a location/address form."
   },
+  "locationNameRequiredError": "Unesite ime i prezime u \"Lični podaci\" da biste sačuvali adresu.",
+  "@locationNameRequiredError": {
+    "description": "Snackbar message shown when trying to save an address before a name has been set on the personal details screen."
+  },
+  "locationSaveSuccess": "Lokacija je sačuvana.",
+  "@locationSaveSuccess": {
+    "description": "Snackbar message shown after the location is saved successfully."
+  },
   "settlementRequiredError": "Odaberite naselje.",
   "@settlementRequiredError": {
     "description": "Validation error shown when no settlement is selected on the water meter registration dialog."
@@ -786,5 +838,101 @@
   "pricePerM3Label": "Cijena po m³",
   "@pricePerM3Label": {
     "description": "Label for the price-per-cubic-metre line on the meter reading entry screen's price preview."
+  },
+
+  "faultReportStatusNew": "Nova",
+  "@faultReportStatusNew": {
+    "description": "Display label for the 'New' fault report status, shared by the report list card, status filter dropdown, and the detail screen's status banner."
+  },
+  "faultReportStatusAssigned": "Dodijeljena",
+  "@faultReportStatusAssigned": {
+    "description": "Display label for the 'Assigned' fault report status, shared by the report list card, status filter dropdown, and the detail screen's status banner."
+  },
+  "faultReportStatusInProgress": "U toku",
+  "@faultReportStatusInProgress": {
+    "description": "Display label for the 'InProgress' fault report status, shared by the report list card, status filter dropdown, and the detail screen's status banner."
+  },
+  "faultReportStatusResolved": "Riješena",
+  "@faultReportStatusResolved": {
+    "description": "Display label for the 'Resolved' fault report status, shared by the report list card, status filter dropdown, and the detail screen's status banner."
+  },
+  "faultReportStatusFieldLabel": "Status prijave",
+  "@faultReportStatusFieldLabel": {
+    "description": "Eyebrow label above the status name on the fault report detail screen's status banner, shown uppercased."
+  },
+  "photosSectionHeading": "Fotografije",
+  "@photosSectionHeading": {
+    "description": "Section heading for the photos card on the fault report detail screen."
+  },
+  "noPhotosMessage": "Nema priloženih fotografija.",
+  "@noPhotosMessage": {
+    "description": "Message shown in the photos card when a fault report has no attached photos."
+  },
+  "faultReportInfoSectionHeading": "Podaci o prijavi",
+  "@faultReportInfoSectionHeading": {
+    "description": "Section heading for the info card on the fault report detail screen."
+  },
+  "reportedAtLabel": "Prijavljeno",
+  "@reportedAtLabel": {
+    "description": "Label for the reported-at date row on the fault report detail screen's info card."
+  },
+  "resolvedAtLabel": "Riješeno",
+  "@resolvedAtLabel": {
+    "description": "Label for the resolved-at date row on the fault report detail screen's info card. Distinct from faultReportStatusResolved ('Riješena') which is a different grammatical form used as the status label."
+  },
+  "addressLabel": "Adresa",
+  "@addressLabel": {
+    "description": "Label for the address row on the fault report detail screen's info card."
+  },
+  "customerLabel": "Kupac",
+  "@customerLabel": {
+    "description": "Label for the customer row on the fault report detail screen's info card."
+  },
+
+  "faultReportsScreenTitle": "Prijave kvarova",
+  "@faultReportsScreenTitle": {
+    "description": "App bar title for the collector's fault reports screen."
+  },
+  "faultReportSearchHint": "Naslov ili ime kupca",
+  "@faultReportSearchHint": {
+    "description": "Hint text for the free-text search field on the collector fault reports screen."
+  },
+  "collectorFaultReportsEmptyMessage": "Nema prijava kvarova.",
+  "@collectorFaultReportsEmptyMessage": {
+    "description": "Empty-state message shown when the collector has no assigned fault reports."
+  },
+  "reportedAtInlineLabel": "Prijavljeno: {date}",
+  "@reportedAtInlineLabel": {
+    "description": "Inline reported-at date shown on a fault report list card, with the already-formatted date/time.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "allStatusesOption": "Svi statusi",
+  "@allStatusesOption": {
+    "description": "Option in the fault report status filter dropdown meaning no filter (all statuses)."
+  },
+  "statusChangeDialogTitle": "Promjena statusa",
+  "@statusChangeDialogTitle": {
+    "description": "Title of the fault report status-advance confirmation dialog."
+  },
+  "statusChangeDialogContent": "Postaviti status prijave na \"{status}\"?",
+  "@statusChangeDialogContent": {
+    "description": "Confirmation question in the fault report status-advance dialog, with the already-localized target status label.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "startActionButton": "Započni",
+  "@startActionButton": {
+    "description": "Button label that advances a fault report from New/Assigned to InProgress."
+  },
+  "resolveActionButton": "Riješi",
+  "@resolveActionButton": {
+    "description": "Button label that advances a fault report from InProgress to Resolved."
   }
 }

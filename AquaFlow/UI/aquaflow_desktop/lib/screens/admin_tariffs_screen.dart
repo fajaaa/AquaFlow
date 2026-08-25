@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_tariff.dart';
 import 'package:aquaflow_desktop/models/admin_tariff_draft.dart';
 import 'package:aquaflow_desktop/services/admin_tariff_exception.dart';
@@ -50,7 +51,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
   String describeError(Object error) {
     return error is AdminTariffException
         ? error.message
-        : 'Došlo je do neočekivane greške.';
+        : AppLocalizations.of(context).unexpectedError;
   }
 
   void _setStatusFilter(String value) {
@@ -77,7 +78,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
 
     await runMutation(() async {
       await _service.create(draft);
-    }, 'Tarifa je dodana.');
+    }, AppLocalizations.of(context).tariffCreatedSuccess);
   }
 
   Future<void> _openEdit(AdminTariff tariff) async {
@@ -90,27 +91,25 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
 
     await runMutation(() async {
       await _service.update(tariff.id, draft);
-    }, 'Tarifa je sačuvana.');
+    }, AppLocalizations.of(context).tariffSavedSuccess);
   }
 
   Future<void> _confirmDelete(AdminTariff tariff) async {
+    final loc = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Obriši tarifu'),
-        content: Text(
-          'Da li želite obrisati tarifu "${tariff.name}"? '
-          'Brisanje neće biti moguće ako je tarifa referencirana stavkama računa.',
-        ),
+        title: Text(loc.deleteTariffDialogTitle),
+        content: Text(loc.deleteTariffDialogContent(tariff.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Odustani'),
+            child: Text(loc.dialogDismissButton),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(true),
             icon: const Icon(Icons.delete_outline),
-            label: const Text('Obriši'),
+            label: Text(loc.commonDelete),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
@@ -125,7 +124,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
       if (items.length == 1 && page > 1) {
         page -= 1;
       }
-    }, 'Tarifa je obrisana.');
+    }, AppLocalizations.of(context).tariffDeletedSuccess);
   }
 
   @override
@@ -137,6 +136,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -147,26 +147,26 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ScreenHeader(
-                  title: 'Tarife',
-                  subtitle: 'Pregled, dodavanje, uređivanje i brisanje tarifa.',
+                  title: loc.tariffsNavLabel,
+                  subtitle: loc.tariffsScreenSubtitle,
                   actions: [
                     RefreshButton(onRefresh: () => load(), enabled: !mutating),
                     const SizedBox(width: 8),
                     FilledButton.icon(
                       onPressed: loading || mutating ? null : _openCreate,
                       icon: const Icon(Icons.add),
-                      label: const Text('Nova tarifa'),
+                      label: Text(loc.newTariffButtonLabel),
                     ),
                   ],
                 ),
                 const SizedBox(height: 18),
-                _buildFilters(),
+                _buildFilters(loc),
               ],
             ),
           ),
           if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
-          Expanded(child: _buildContent()),
+          Expanded(child: _buildContent(loc)),
           if (!isInitialLoad && error == null)
             PagedTablePaginationBar(
               page: page,
@@ -182,7 +182,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations loc) {
     final hasSearch = searchController.text.trim().isNotEmpty;
 
     return Wrap(
@@ -198,11 +198,11 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
             onChanged: queueSearch,
             onSubmitted: submitSearch,
             decoration: InputDecoration(
-              labelText: 'Naziv',
+              labelText: loc.nameColumnLabel,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: hasSearch
                   ? IconButton(
-                      tooltip: 'Očisti pretragu',
+                      tooltip: loc.clearSearchTooltip,
                       onPressed: clearSearch,
                       icon: const Icon(Icons.clear),
                     )
@@ -214,14 +214,20 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
           width: 190,
           child: DropdownButtonFormField<String>(
             initialValue: _statusFilterValue,
-            decoration: const InputDecoration(
-              labelText: 'Status',
-              prefixIcon: Icon(Icons.filter_alt_outlined),
+            decoration: InputDecoration(
+              labelText: loc.statusFieldLabel,
+              prefixIcon: const Icon(Icons.filter_alt_outlined),
             ),
-            items: const [
-              DropdownMenuItem(value: '', child: Text('Sve')),
-              DropdownMenuItem(value: 'active', child: Text('Aktivne')),
-              DropdownMenuItem(value: 'inactive', child: Text('Neaktivne')),
+            items: [
+              DropdownMenuItem(value: '', child: Text(loc.allOptionFeminine)),
+              DropdownMenuItem(
+                value: 'active',
+                child: Text(loc.activeFilterOption),
+              ),
+              DropdownMenuItem(
+                value: 'inactive',
+                child: Text(loc.inactiveFilterOption),
+              ),
             ],
             onChanged: loading || mutating
                 ? null
@@ -229,7 +235,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
           ),
         ),
         IconButton.filledTonal(
-          tooltip: 'Primijeni filtere',
+          tooltip: loc.applyFiltersTooltip,
           onPressed: loading || mutating ? null : () => load(resetPage: true),
           icon: const Icon(Icons.filter_alt_outlined),
         ),
@@ -237,7 +243,7 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations loc) {
     if (isInitialLoad) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -250,10 +256,10 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
     if (items.isEmpty) {
       return EmptyStateView(
         icon: Icons.request_quote_outlined,
-        message: 'Nema tarifa.',
+        message: loc.noTariffsMessage,
         hasFilters: _hasFilters,
         filteredIcon: Icons.search_off,
-        filteredMessage: 'Nema tarifa za zadane filtere.',
+        filteredMessage: loc.tariffsEmptyFilteredMessage,
       );
     }
 
@@ -279,12 +285,12 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
                   child: DataTable(
                     dataRowMinHeight: 60,
                     dataRowMaxHeight: 68,
-                    columns: const [
-                      DataColumn(label: Text('Naziv')),
-                      DataColumn(label: Text('Opis')),
-                      DataColumn(label: Text('Cijena po m³')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Akcije')),
+                    columns: [
+                      DataColumn(label: Text(loc.nameColumnLabel)),
+                      DataColumn(label: Text(loc.descriptionColumnLabel)),
+                      DataColumn(label: Text(loc.pricePerM3Label)),
+                      DataColumn(label: Text(loc.statusFieldLabel)),
+                      DataColumn(label: Text(loc.actionsColumnLabel)),
                     ],
                     rows: [
                       for (final item in items)
@@ -305,7 +311,9 @@ class _AdminTariffsScreenState extends State<AdminTariffsScreen>
                                 ),
                               ),
                             ),
-                            DataCell(Text('${formatMoney(item.pricePerM3)} BAM/m³')),
+                            DataCell(
+                              Text('${formatMoney(item.pricePerM3)} BAM/m³'),
+                            ),
                             DataCell(_TariffStatusPill(tariff: item)),
                             DataCell(
                               TableRowActions(
@@ -338,9 +346,18 @@ class _TariffStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final (label, color, icon) = !tariff.isActive
-        ? ('Neaktivna', const Color(0xFF64748B), Icons.block_outlined)
-        : ('Aktivna', const Color(0xFF2E7D32), Icons.check_circle_outline);
+        ? (
+            loc.tariffStatusInactive,
+            const Color(0xFF64748B),
+            Icons.block_outlined,
+          )
+        : (
+            loc.tariffStatusActive,
+            const Color(0xFF2E7D32),
+            Icons.check_circle_outline,
+          );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
@@ -420,8 +437,11 @@ class _TariffEditorDialogState extends State<_TariffEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(_isEdit ? 'Uredi tarifu' : 'Nova tarifa'),
+      title: Text(
+        _isEdit ? loc.editTariffDialogTitle : loc.newTariffButtonLabel,
+      ),
       content: SizedBox(
         width: math.min(640, MediaQuery.sizeOf(context).width - 48),
         child: SingleChildScrollView(
@@ -434,10 +454,10 @@ class _TariffEditorDialogState extends State<_TariffEditorDialog> {
                   controller: _nameCtrl,
                   textInputAction: TextInputAction.next,
                   maxLength: 100,
-                  validator: _requiredValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Naziv',
-                    prefixIcon: Icon(Icons.label_outline),
+                  validator: (value) => _requiredValidator(context, value),
+                  decoration: InputDecoration(
+                    labelText: loc.nameColumnLabel,
+                    prefixIcon: const Icon(Icons.label_outline),
                     counterText: '',
                   ),
                 ),
@@ -447,10 +467,10 @@ class _TariffEditorDialogState extends State<_TariffEditorDialog> {
                   textInputAction: TextInputAction.next,
                   maxLines: 3,
                   maxLength: 200,
-                  validator: _requiredValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Opis',
-                    prefixIcon: Icon(Icons.description_outlined),
+                  validator: (value) => _requiredValidator(context, value),
+                  decoration: InputDecoration(
+                    labelText: loc.descriptionColumnLabel,
+                    prefixIcon: const Icon(Icons.description_outlined),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -463,16 +483,16 @@ class _TariffEditorDialogState extends State<_TariffEditorDialog> {
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                   ],
-                  validator: _decimalValidator,
-                  decoration: const InputDecoration(
-                    labelText: 'Cijena po m³',
-                    prefixIcon: Icon(Icons.water_drop_outlined),
+                  validator: (value) => _decimalValidator(context, value),
+                  decoration: InputDecoration(
+                    labelText: loc.pricePerM3Label,
+                    prefixIcon: const Icon(Icons.water_drop_outlined),
                   ),
                 ),
                 const SizedBox(height: 8),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Aktivna'),
+                  title: Text(loc.tariffStatusActive),
                   value: _isActive,
                   onChanged: (value) => setState(() => _isActive = value),
                 ),
@@ -484,26 +504,28 @@ class _TariffEditorDialogState extends State<_TariffEditorDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Odustani'),
+          child: Text(loc.dialogDismissButton),
         ),
         FilledButton.icon(
           onPressed: _save,
           icon: const Icon(Icons.save_outlined),
-          label: const Text('Sačuvaj'),
+          label: Text(loc.commonSave),
         ),
       ],
     );
   }
 
-  String? _requiredValidator(String? value) {
-    return value == null || value.trim().isEmpty ? 'Obavezno polje.' : null;
+  String? _requiredValidator(BuildContext context, String? value) {
+    return value == null || value.trim().isEmpty
+        ? AppLocalizations.of(context).fieldRequiredError
+        : null;
   }
 
-  String? _decimalValidator(String? value) {
+  String? _decimalValidator(BuildContext context, String? value) {
     final parsed = parseDecimal(value ?? '');
-    if (parsed == null) return 'Unesite ispravan broj.';
-    if (parsed < 0) return 'Vrijednost ne smije biti negativna.';
+    final loc = AppLocalizations.of(context);
+    if (parsed == null) return loc.invalidNumberError;
+    if (parsed < 0) return loc.negativeValueError;
     return null;
   }
 }
-

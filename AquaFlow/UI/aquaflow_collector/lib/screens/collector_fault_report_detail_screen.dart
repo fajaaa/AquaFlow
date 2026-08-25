@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
 import 'package:aquaflow_collector/models/collector_fault_report.dart';
 import 'package:aquaflow_collector/models/collector_fault_report_photo.dart';
 import 'package:aquaflow_collector/services/collector_fault_report_exception.dart';
@@ -9,13 +10,6 @@ import 'package:aquaflow_collector/services/collector_fault_report_service.dart'
 import 'package:aquaflow_collector/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_collector/shared/theme/app_theme.dart';
 import 'package:aquaflow_collector/shared/widgets/authenticated_image.dart';
-
-const _statusLabels = <String, String>{
-  'New': 'Nova',
-  'Assigned': 'Dodijeljena',
-  'InProgress': 'U toku',
-  'Resolved': 'Riješena',
-};
 
 /// Icon + accent color + label for a fault report `status`, covering the
 /// backend `FaultReport.Status` values (New/Assigned/InProgress/Resolved).
@@ -100,21 +94,20 @@ class _CollectorFaultReportDetailScreenState
     final next = _report.nextStatus;
     if (next == null) return;
 
+    final loc = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Promjena statusa'),
-        content: Text(
-          'Postaviti status prijave na "${_statusLabels[next] ?? next}"?',
-        ),
+        title: Text(loc.statusChangeDialogTitle),
+        content: Text(loc.statusChangeDialogContent(_metaFor(next, loc).label)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Odustani'),
+            child: Text(loc.dialogDismissButton),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Potvrdi'),
+            child: Text(loc.commonConfirm),
           ),
         ],
       ),
@@ -158,8 +151,9 @@ class _CollectorFaultReportDetailScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final loc = AppLocalizations.of(context);
 
-    final meta = _metaFor(_report.status);
+    final meta = _metaFor(_report.status, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     final onAccent =
         ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
@@ -206,7 +200,7 @@ class _CollectorFaultReportDetailScreenState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'STATUS PRIJAVE',
+                            loc.faultReportStatusFieldLabel.toUpperCase(),
                             style: theme.textTheme.labelSmall?.copyWith(
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
@@ -239,7 +233,7 @@ class _CollectorFaultReportDetailScreenState
                       const SizedBox(height: 16),
                       _buildPhotosSection(accent),
                       const SizedBox(height: 16),
-                      _buildStatusAction(),
+                      _buildStatusAction(loc),
                     ],
                   ),
                 ),
@@ -251,7 +245,7 @@ class _CollectorFaultReportDetailScreenState
     );
   }
 
-  Widget _buildStatusAction() {
+  Widget _buildStatusAction(AppLocalizations loc) {
     final next = _report.nextStatus;
     if (next == null) {
       return const SizedBox.shrink();
@@ -274,7 +268,9 @@ class _CollectorFaultReportDetailScreenState
                     ? Icons.engineering_outlined
                     : Icons.check_circle_outline,
               ),
-        label: Text(startsWork ? 'Započni' : 'Riješi'),
+        label: Text(
+          startsWork ? loc.startActionButton : loc.resolveActionButton,
+        ),
       ),
     );
   }
@@ -292,12 +288,13 @@ class _CollectorFaultReportDetailScreenState
       return _ErrorRetry(message: error, onRetry: _loadPhotos);
     }
 
+    final loc = AppLocalizations.of(context);
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Fotografije',
+            loc.photosSectionHeading,
             icon: Icons.photo_library_outlined,
             color: accent,
           ),
@@ -306,7 +303,7 @@ class _CollectorFaultReportDetailScreenState
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                'Nema priloženih fotografija.',
+                loc.noPhotosMessage,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -340,31 +337,31 @@ class _CollectorFaultReportDetailScreenState
     );
   }
 
-  static _StatusMeta _metaFor(String status) {
+  static _StatusMeta _metaFor(String status, AppLocalizations loc) {
     switch (status.toLowerCase()) {
       case 'new':
-        return const _StatusMeta(
-          'Nova',
+        return _StatusMeta(
+          loc.faultReportStatusNew,
           Icons.fiber_new_outlined,
-          Color(0xFFB45309),
+          const Color(0xFFB45309),
         );
       case 'assigned':
-        return const _StatusMeta(
-          'Dodijeljena',
+        return _StatusMeta(
+          loc.faultReportStatusAssigned,
           Icons.assignment_ind_outlined,
-          Color(0xFF6D28D9),
+          const Color(0xFF6D28D9),
         );
       case 'inprogress':
-        return const _StatusMeta(
-          'U toku',
+        return _StatusMeta(
+          loc.faultReportStatusInProgress,
           Icons.engineering_outlined,
-          Color(0xFF1D4ED8),
+          const Color(0xFF1D4ED8),
         );
       case 'resolved':
-        return const _StatusMeta(
-          'Riješena',
+        return _StatusMeta(
+          loc.faultReportStatusResolved,
           Icons.check_circle_outline,
-          Color(0xFF2E7D32),
+          const Color(0xFF2E7D32),
         );
       default:
         return _StatusMeta(status, Icons.help_outline, const Color(0xFF64748B));
@@ -411,44 +408,45 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final customer = report.customerFullName;
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Podaci o prijavi',
+            loc.faultReportInfoSectionHeading,
             icon: Icons.info_outline,
             color: accent,
           ),
           const SizedBox(height: 10),
           _KeyValueRow(
-            label: 'Kupac',
+            label: loc.customerLabel,
             // customerId is null when the reporter had no CustomerProfile.
             value: customer.isNotEmpty
                 ? customer
                 : report.customerId == null
                 ? '-'
-                : 'Korisnik #${report.customerId}',
+                : loc.customerFallbackLabel(report.customerId!),
           ),
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Naselje',
+            label: loc.locationSettlementLabel,
             value: report.settlementName.isEmpty ? '-' : report.settlementName,
           ),
           if (report.address.isNotEmpty) ...[
             const SizedBox(height: 6),
-            _KeyValueRow(label: 'Adresa', value: report.address),
+            _KeyValueRow(label: loc.addressLabel, value: report.address),
           ],
           const SizedBox(height: 6),
           _KeyValueRow(
-            label: 'Prijavljeno',
+            label: loc.reportedAtLabel,
             value: _formatDate(report.createdAt),
           ),
           if (report.resolvedAt != null) ...[
             const SizedBox(height: 6),
             _KeyValueRow(
-              label: 'Riješeno',
+              label: loc.resolvedAtLabel,
               value: _formatDate(report.resolvedAt),
             ),
           ],
@@ -472,7 +470,7 @@ class _DescriptionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionHeading(
-            'Opis',
+            AppLocalizations.of(context).notificationDetailDescriptionHeading,
             icon: Icons.description_outlined,
             color: accent,
           ),
@@ -612,7 +610,7 @@ class _ErrorRetry extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Pokušaj ponovo'),
+              label: Text(AppLocalizations.of(context).commonRetry),
             ),
           ],
         ),

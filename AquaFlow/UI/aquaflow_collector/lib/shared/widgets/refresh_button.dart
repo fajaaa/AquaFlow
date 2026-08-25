@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_collector/l10n/app_localizations.dart';
+
 /// Circular refresh button that spins its icon while [onRefresh] is awaited.
 /// Drop-in replacement for a bare `IconButton(icon: Icon(Icons.refresh))` -
 /// same tap target, but gives visual feedback for the duration of the call
@@ -8,7 +10,7 @@ class RefreshButton extends StatefulWidget {
   const RefreshButton({
     super.key,
     required this.onRefresh,
-    this.tooltip = 'Osvježi',
+    this.tooltip,
     this.size = 36,
     this.enabled = true,
   });
@@ -25,9 +27,12 @@ class RefreshButton extends StatefulWidget {
   State<RefreshButton> createState() => _RefreshButtonState();
 }
 
-class _RefreshButtonState extends State<RefreshButton> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+class _RefreshButtonState extends State<RefreshButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 700),
+  );
   bool _loading = false;
 
   Future<void> _handleTap() async {
@@ -56,9 +61,7 @@ class _RefreshButtonState extends State<RefreshButton> with SingleTickerProvider
 
     final button = Material(
       color: colorScheme.surface,
-      shape: CircleBorder(
-        side: BorderSide(color: colorScheme.outlineVariant),
-      ),
+      shape: CircleBorder(side: BorderSide(color: colorScheme.outlineVariant)),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: canTap ? _handleTap : null,
@@ -71,7 +74,9 @@ class _RefreshButtonState extends State<RefreshButton> with SingleTickerProvider
               child: Icon(
                 Icons.refresh,
                 size: widget.size * 0.5,
-                color: widget.enabled ? colorScheme.onSurfaceVariant : colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                color: widget.enabled
+                    ? colorScheme.onSurfaceVariant
+                    : colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
               ),
             ),
           ),
@@ -79,8 +84,8 @@ class _RefreshButtonState extends State<RefreshButton> with SingleTickerProvider
       ),
     );
 
-    final tooltipText = widget.tooltip;
-    if (tooltipText == null) return button;
+    final tooltipText =
+        widget.tooltip ?? AppLocalizations.of(context).commonRefresh;
     return Tooltip(message: tooltipText, child: button);
   }
 }

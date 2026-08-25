@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
+
 /// Coloured status pill for a support ticket, covering the backend
 /// `SupportTicketStatus` values (Open/Closed). Duplicated from
 /// `lib/customer/widgets/support_ticket_status_pill.dart` rather than
@@ -12,14 +14,15 @@ class SupportTicketStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final (label, color, icon) = switch (status.toLowerCase()) {
       'open' => (
-        'Otvoren',
+        loc.supportTicketStatusOpen,
         const Color(0xFF1D4ED8),
         Icons.mark_chat_unread_outlined,
       ),
       'closed' => (
-        'Zatvoren',
+        loc.supportTicketStatusClosed,
         const Color(0xFF64748B),
         Icons.lock_outline,
       ),
