@@ -20,6 +20,7 @@ single ASP.NET Core Web API and three role-specific Flutter clients.
 - [Technology stack](#technology-stack)
 - [Prerequisites](#prerequisites)
 - [Getting started](#getting-started)
+- [Login credentials](#login-credentials)
 - [Configuration](#configuration)
 - [Security model](#security-model)
 - [Hardening checklist before a non-local deployment](#hardening-checklist-before-a-non-local-deployment)
@@ -101,6 +102,7 @@ Everything lives under the `AquaFlow/` directory.
 | [AquaFlow.Services](AquaFlow/AquaFlow.Services/) | Business logic, validators, EF Core `DbContext`, entities, migrations, state machines, payment providers |
 | [AquaFlow.Model](AquaFlow/AquaFlow.Model/) | Request/response DTOs, search objects, shared constants and exceptions |
 | [AquaFlow.Common.Services](AquaFlow/AquaFlow.Common.Services/) | Cross-cutting services: password hashing, push notification delivery |
+| [AquaFlow.Subscriber](AquaFlow/AquaFlow.Subscriber/) | Standalone console worker: consumes RabbitMQ notification messages independently of the API |
 | [AquaFlow.Services.Tests](AquaFlow/AquaFlow.Services.Tests/) | xUnit tests for the business logic layer |
 | [AquaFlow.WebAPI.Tests](AquaFlow/AquaFlow.WebAPI.Tests/) | xUnit tests for controller authorization and ownership rules |
 
@@ -157,37 +159,84 @@ changes.
 
 All commands are PowerShell, run from the repository root.
 
-### 1. Start the database
+### Quick start (Docker)
+
+The fastest way to get the whole backend running — database, message broker, API, and the
+notification worker — is `docker compose`:
 
 ```powershell
-docker compose --file .\AquaFlow\docker-compose.yml up -d
+docker compose --file .\AquaFlow\docker-compose.yml up -d --build
+```
+
+This starts four containers on a shared network: `aquaflow-db` (SQL Server, host port `1435`),
+`aquaflow-rabbitmq` (broker; AMQP on `5672`, management UI on `15672`), `aquaflow-api` (the Web
+API, `http://localhost:5161`) and `aquaflow-subscriber` (the RabbitMQ notification worker). The
+container credentials are development placeholders defined in
+[docker-compose.yml](AquaFlow/docker-compose.yml); they are not intended for any shared or
+hosted environment.
+
+Migrations still have to be applied by hand (the API does not migrate on start-up):
+
+```powershell
+dotnet ef database update --project .\AquaFlow\AquaFlow.Services --startup-project .\AquaFlow\AquaFlow.WebAPI
+```
+
+That connects to the database over its host-mapped port (`localhost,1435`), so it works the
+same whether SQL Server is running in Docker or locally. Then open
+`http://localhost:5161/scalar/v1` to confirm the API is up, and skip ahead to
+[Login credentials](#login-credentials) to sign in from a client.
+
+To stop everything: `docker compose --file .\AquaFlow\docker-compose.yml down` (add `-v` to also
+drop the database volume and start clean next time).
+
+### Manual / local dev (step by step)
+
+Use this instead of the Docker quick start when you want to run the API or worker from your IDE
+(breakpoints, hot reload) rather than as a container. Only the database and broker run in
+Docker; the API and worker run directly on your machine.
+
+### 1. Start the database and broker
+
+```powershell
+docker compose --file .\AquaFlow\docker-compose.yml up -d aquaflow-db aquaflow-rabbitmq
 ```
 
 This provisions a local-only SQL Server container reachable at `localhost,1435` (host port
 `1435` maps to the container's `1433`, so it does not collide with a locally installed SQL
-Server on `1433`). The container credentials are development placeholders defined in
-[docker-compose.yml](AquaFlow/docker-compose.yml); they are not intended for any shared or
-hosted environment.
+Server on `1433`) and a RabbitMQ broker reachable at `localhost:5672` (management UI at
+`http://localhost:15672`, credentials `admin` / `admin`). Naming these two services explicitly
+(rather than a bare `up -d`) skips building/starting the `aquaflow-api` and
+`aquaflow-subscriber` containers, so they don't fight the local `dotnet run` instances below over
+the same ports.
 
 ### 2. Configure the API
 
-The API requires a connection string and JWT settings, and fails fast at start-up if either is
-missing. The repository ships placeholder development values in
-[appsettings.json](AquaFlow/AquaFlow.WebAPI/appsettings.json) so a fresh clone runs without
-extra setup — treat them as non-secret sample data and override them everywhere else.
+The API requires a connection string, JWT settings, and (optionally) a RabbitMQ connection
+string, and fails fast at start-up if the first two are missing. None of these — nor any other
+secret — are hardcoded in [appsettings.json](AquaFlow/AquaFlow.WebAPI/appsettings.json) or
+anywhere else in source; they are supplied through `AquaFlow.WebAPI/.env`.
 
-See [Configuration](#configuration) for the full key reference and the supported override
-mechanisms. To run against your own database or signing key, set the values in the same shell
-you will start the API from:
+Copy the template and fill it in:
 
 ```powershell
-$env:ConnectionStrings__DefaultConnection = 'Server=localhost,1435;Database=AquaFlow;User Id=<db-user>;Password=<db-password>;TrustServerCertificate=True;Encrypt=False'
-$env:JwtToken__SecretKey = '<random-value-at-least-32-characters>'
-$env:ASPNETCORE_ENVIRONMENT = 'Development'
+Copy-Item .\AquaFlow\AquaFlow.WebAPI\.env.example .\AquaFlow\AquaFlow.WebAPI\.env
+notepad .\AquaFlow\AquaFlow.WebAPI\.env
 ```
 
-`TrustServerCertificate=True` and `Encrypt=False` are appropriate only for a local container;
-use an encrypted, certificate-validated connection anywhere else.
+At minimum, set:
+
+```env
+ConnectionStrings__DefaultConnection=Server=localhost,1435;Database=AquaFlow;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False
+JwtToken__Issuer=AquaFlow
+JwtToken__Audience=AquaFlowClients
+JwtToken__SecretKey=<random-value-at-least-32-characters>
+RabbitMQ__ConnectionString=host=localhost;username=admin;password=admin
+```
+
+See [Configuration](#configuration) for the full key reference, why `.env` isn't committed, and
+how the submitted archive replaces this step for a grader. `TrustServerCertificate=True` and
+`Encrypt=False` are appropriate only for a local container; use an encrypted,
+certificate-validated connection anywhere else.
 
 ### 3. Apply migrations
 
@@ -198,7 +247,7 @@ records for local testing) are created by the migrations:
 dotnet ef database update --project .\AquaFlow\AquaFlow.Services --startup-project .\AquaFlow\AquaFlow.WebAPI
 ```
 
-### 4. Run the API
+### 4. Run the API (and, optionally, the worker)
 
 ```powershell
 dotnet run --project .\AquaFlow\AquaFlow.WebAPI\AquaFlow.WebAPI.csproj --launch-profile http
@@ -207,6 +256,15 @@ dotnet run --project .\AquaFlow\AquaFlow.WebAPI\AquaFlow.WebAPI.csproj --launch-
 The API listens on `http://localhost:5161` (bound to all interfaces so a phone or tablet on the
 same network can reach it for testing). The `https` profile additionally listens on
 `https://localhost:7286`.
+
+The notification worker (`AquaFlow.Subscriber`) is a separate process; run it in its own
+terminal if you want to see the RabbitMQ messages the API publishes actually get consumed:
+
+```powershell
+dotnet run --project .\AquaFlow\AquaFlow.Subscriber\AquaFlow.Subscriber.csproj
+```
+
+It only needs RabbitMQ (from step 1) to be running, not the API.
 
 ### 5. Verify
 
@@ -228,10 +286,32 @@ flutter run
 ```
 
 Sign in with an account whose role matches the client; a role mismatch is rejected with an
-"unavailable" screen. The migrations seed one account per role for local testing — the
-credentials are deliberately not reproduced in this document; read them from
-[AquaFlowDbContextSeed.cs](AquaFlow/AquaFlow.Services/Database/AquaFlowDbContextSeed.cs) or
-create your own account through `POST /Access/register`.
+"unavailable" screen. See [Login credentials](#login-credentials) below for accounts to sign in
+with, or create your own through `POST /Access/register` (always creates a Customer).
+
+---
+
+## Login credentials
+
+The migrations seed one demo account per role (see
+[AquaFlowDbContextSeed.cs](AquaFlow/AquaFlow.Services/Database/AquaFlowDbContextSeed.cs)). These
+are local-only development accounts — reset or remove them before deploying anywhere shared (see
+[Hardening checklist](#hardening-checklist-before-a-non-local-deployment)).
+
+| Role | Client | Email | Password |
+| --- | --- | --- | --- |
+| Admin | `aquaflow_desktop` | `kenan.fajic@aquaflow.ba` | `AquaFlow123!` |
+| Collector | `aquaflow_collector` | `amel.fajic@aquaflow.ba` | `AquaFlow123!` |
+| Collector | `aquaflow_collector` | `kemal.fajic@aquaflow.ba` | `AquaFlow123!` |
+| Customer | `aquaflow_customer` | `denis.music@aquaflow.ba` | `AquaFlow123!` |
+| Customer | `aquaflow_customer` | `elmir.babovic@aquaflow.ba` | `AquaFlow123!` |
+| Customer | `aquaflow_customer` | `adil.joldic@aquaflow.ba` | `AquaFlow123!` |
+
+Every seeded account uses the same password. The three seeded customers each own a different
+number of water meters (3, 2 and 1 respectively), so switching between them is a quick way to
+see accounts with more or less billing history. Signing in with an account whose role doesn't
+match the client (e.g. a Customer email in `aquaflow_desktop`) is rejected with an "unavailable"
+screen — use the matching client for the role you want to test.
 
 ---
 
@@ -239,12 +319,18 @@ create your own account through `POST /Access/register`.
 
 Configuration is resolved by the standard ASP.NET Core provider chain. Later sources win:
 
-1. `appsettings.json` — placeholder development values, committed.
+1. `appsettings.json` — no secrets, committed. Only non-sensitive settings live here
+   (`Logging`, `AllowedHosts`, `Payments:Provider`/`Payments:Currency`); the connection string,
+   JWT settings and Stripe keys are omitted entirely, and `RabbitMQ:ConnectionString`/`Firebase:*`
+   are present as explicit empty strings, since those two are optional and no-op cleanly when
+   blank.
 2. `appsettings.Development.json` — machine-local, git-ignored.
 3. `AquaFlow.WebAPI/.env` — machine-local, git-ignored; loaded at start-up using the same
    `Section__Key` double-underscore convention as environment variables. Copy
    [.env.example](AquaFlow/AquaFlow.WebAPI/.env.example) and fill in your own values. A missing
-   `.env` file is a silent no-op.
+   `.env` file is a silent no-op — which, since nothing lives in `appsettings.json` as a fallback
+   anymore, means the API now fails fast (see below) unless something else in this chain
+   supplies the required keys.
 4. User secrets — `dotnet user-secrets set "JwtToken:SecretKey" "<value>" --project .\AquaFlow\AquaFlow.WebAPI`
 5. Environment variables / the hosting platform's secret store.
 
@@ -254,6 +340,7 @@ Configuration is resolved by the standard ASP.NET Core provider chain. Later sou
 | `JwtToken__Issuer`, `JwtToken__Audience` | Yes | Token issuer and audience. |
 | `JwtToken__SecretKey` | Yes | Signing key, minimum 32 characters. Use a random, per-environment value. |
 | `JwtToken__DurationInMinutes` | No | Access token lifetime, default `60`. |
+| `RabbitMQ__ConnectionString` | No | Broker connection string (`host=...;username=...;password=...`). Blank registers a no-op publisher; every other feature keeps working. |
 | `Payments__Provider` | No | `Manual` (default) or `Stripe`. |
 | `Payments__Currency` | No | Currency code used for checkout amounts. |
 | `Payments__Stripe__SecretKey` | If Stripe | Secret API key. Start-up fails if the provider is `Stripe` and this is blank. |
@@ -276,6 +363,19 @@ $bytes = New-Object byte[] 48
 [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
 [Convert]::ToBase64String($bytes)
 ```
+
+### Submitting `.env` for review
+
+`AquaFlow.WebAPI/.env` is never committed. In its place,
+`AquaFlow.WebAPI/.env-tajne.zip` — a password-protected (AES-256) ZIP archive containing the
+same, real `.env` — **is** committed, so the repository still ships everything needed to run the
+project without any code change, while no secret sits in plaintext in a public repository. To
+use it: extract the archive with the password provided separately (through the course's DL
+system, not in this repository) into `AquaFlow.WebAPI/`, so `.env` sits next to `.env-tajne.zip`
+exactly as it does for local development. Regenerating the archive after changing `.env` requires
+a small one-off script (`Ionic.Zip`/DotNetZip's `ZipFile.Password` + `EncryptionAlgorithm.WinZipAes256`
+— .NET's built-in `System.IO.Compression` cannot write encrypted archives); it is not part of the
+shipped solution.
 
 ---
 

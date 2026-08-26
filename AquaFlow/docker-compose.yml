@@ -11,6 +11,14 @@ services:
       - "1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
+    networks:
+      - aquaflow-net
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   aquaflow-rabbitmq:
     image: rabbitmq:3-management
@@ -21,6 +29,56 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    networks:
+      - aquaflow-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  aquaflow-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aquaflow-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=aquaflow-db;Database=AquaFlow;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False
+      - JwtToken__Issuer=AquaFlow
+      - JwtToken__Audience=AquaFlowClients
+      - JwtToken__SecretKey=dev-only-secret-change-me-at-least-32-chars
+      - JwtToken__DurationInMinutes=60
+      - RabbitMQ__ConnectionString=host=aquaflow-rabbitmq;username=admin;password=admin
+    ports:
+      - "5161:5161"
+    expose:
+      - "5161"
+    depends_on:
+      aquaflow-db:
+        condition: service_healthy
+      aquaflow-rabbitmq:
+        condition: service_healthy
+    networks:
+      - aquaflow-net
+
+  aquaflow-subscriber:
+    build:
+      context: .
+      dockerfile: AquaFlow.Subscriber/Dockerfile
+    container_name: aquaflow-subscriber
+    environment:
+      - RABBITMQ_CONNECTIONSTRING=host=aquaflow-rabbitmq;username=admin;password=admin
+    depends_on:
+      aquaflow-rabbitmq:
+        condition: service_healthy
+    networks:
+      - aquaflow-net
 
 volumes:
   sqlserver_data:
+
+networks:
+  aquaflow-net:
+    driver: bridge
