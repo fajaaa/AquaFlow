@@ -3548,52 +3548,17 @@ namespace AquaFlow.Services.Migrations
                             IsActive = true,
                             Module = "Invoices",
                             Name = "Pay own invoices"
+                        },
+                        new
+                        {
+                            Id = 23,
+                            Code = "ConsumptionAlerts.Manage",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows viewing, resolving, and recomputing water consumption anomaly alerts.",
+                            IsActive = true,
+                            Module = "ConsumptionAlerts",
+                            Name = "Manage consumption alerts"
                         });
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.Recommendation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("WaterMeterId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("WaterMeterId");
-
-                    b.ToTable("Recommendations");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.RefreshToken", b =>
@@ -4567,6 +4532,13 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 21,
                             UserRoleId = 3
+                        },
+                        new
+                        {
+                            Id = 27,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 23,
+                            UserRoleId = 1
                         });
                 });
 
@@ -5234,24 +5206,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.Recommendation", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
-                        .WithMany("Recommendations")
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AquaFlow.Services.Database.WaterMeter", "WaterMeter")
-                        .WithMany()
-                        .HasForeignKey("WaterMeterId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("WaterMeter");
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.RefreshToken", b =>
                 {
                     b.HasOne("AquaFlow.Services.Database.User", "User")
@@ -5510,8 +5464,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Invoices");
 
                     b.Navigation("Payments");
-
-                    b.Navigation("Recommendations");
 
                     b.Navigation("SupportTickets");
 

@@ -28,7 +28,6 @@ public class CustomerProfile : EntityBase
     public string? HouseNumber { get; set; }
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
-    public ICollection<Recommendation> Recommendations { get; set; } = new List<Recommendation>();
     public ICollection<WaterConsumptionAlert> WaterConsumptionAlerts { get; set; } = new List<WaterConsumptionAlert>();
     public ICollection<SupportTicket> SupportTickets { get; set; } = new List<SupportTicket>();
 }

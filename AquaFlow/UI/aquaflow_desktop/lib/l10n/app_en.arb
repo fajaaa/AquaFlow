@@ -107,12 +107,17 @@
   "systemGroupLabel": "System",
   "codebookLabel": "Codebook",
 
-  "dashboardOverviewSubtitle": "Overview of key metrics (demo data)",
-  "lineChartTitle": "Line chart",
-  "donutChartTitle": "Donut chart",
-  "barChartTitle": "Bar chart",
-  "seriesALabel": "Series A",
-  "seriesBLabel": "Series B",
+  "dashboardOverviewSubtitle": "Overview of key metrics",
+  "dashboardRevenueTrendChartTitle": "Revenue",
+  "dashboardInvoiceStatusChartTitle": "Invoice status",
+  "dashboardConsumptionTrendChartTitle": "Water consumption",
+  "dashboardFaultReportStatusChartTitle": "Fault reports by status",
+  "dashboardUserGrowthChartTitle": "User base growth",
+  "dashboardWaterMeterRequestStatusChartTitle": "Water meter requests by status",
+  "dashboardFilterCityLabel": "City",
+  "dashboardFilterAllCities": "All cities",
+  "dashboardFilterDateRangeTooltip": "Choose date range",
+  "dashboardFilterReset": "Reset filters",
 
   "statusFieldLabel": "Status",
   "allOption": "All",
@@ -421,5 +426,19 @@
   "genericCustomerLabel": "Customer",
   "ticketClosedBannerMessage": "This ticket is closed. Reopen it to reply.",
   "supportTicketStatusOpen": "Open",
-  "supportTicketStatusClosed": "Closed"
+  "supportTicketStatusClosed": "Closed",
+
+  "messageColumnLabel": "Message",
+
+  "consumptionAlertsNavLabel": "Consumption alerts",
+  "consumptionAlertsScreenSubtitle": "Review water consumption anomaly alerts and resolve them.",
+  "checkAnomaliesButtonLabel": "Check anomalies",
+  "consumptionAlertsRecomputedSuccess": "Consumption anomalies checked.",
+  "consumptionAlertsEmptyMessage": "No consumption alerts.",
+  "markAsResolvedTooltip": "Mark as resolved",
+  "alertMarkedResolvedSuccess": "Alert marked as resolved.",
+  "measuredValueColumnLabel": "Measured value",
+  "thresholdValueColumnLabel": "Threshold value",
+  "resolvedStatusLabel": "Resolved",
+  "unresolvedStatusLabel": "Unresolved"
 }

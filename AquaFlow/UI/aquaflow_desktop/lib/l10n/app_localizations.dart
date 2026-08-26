@@ -662,41 +662,71 @@ abstract class AppLocalizations {
   /// **'Šifarnik'**
   String get codebookLabel;
 
-  /// Subtitle under the dashboard overview heading, noting the charts show demo data.
+  /// Subtitle under the dashboard overview heading.
   ///
   /// In bs, this message translates to:
-  /// **'Pregled ključnih pokazatelja (demo podaci)'**
+  /// **'Pregled ključnih pokazatelja'**
   String get dashboardOverviewSubtitle;
 
-  /// Title for the demo line chart card on the dashboard overview.
+  /// Title for the revenue-over-time chart card on the dashboard overview.
   ///
   /// In bs, this message translates to:
-  /// **'Linijski grafikon'**
-  String get lineChartTitle;
+  /// **'Prihod od naplate'**
+  String get dashboardRevenueTrendChartTitle;
 
-  /// Title for the demo donut chart card on the dashboard overview.
+  /// Title for the invoice-status breakdown chart card on the dashboard overview.
   ///
   /// In bs, this message translates to:
-  /// **'Kružni grafikon'**
-  String get donutChartTitle;
+  /// **'Status računa'**
+  String get dashboardInvoiceStatusChartTitle;
 
-  /// Title for the demo bar chart card on the dashboard overview.
+  /// Title for the water consumption-over-time chart card on the dashboard overview.
   ///
   /// In bs, this message translates to:
-  /// **'Trakasti grafikon'**
-  String get barChartTitle;
+  /// **'Potrošnja vode'**
+  String get dashboardConsumptionTrendChartTitle;
 
-  /// Legend label for the first series in the demo bar chart.
+  /// Title for the fault-report-status breakdown chart card on the dashboard overview.
   ///
   /// In bs, this message translates to:
-  /// **'Serija A'**
-  String get seriesALabel;
+  /// **'Prijave kvarova po statusu'**
+  String get dashboardFaultReportStatusChartTitle;
 
-  /// Legend label for the second series in the demo bar chart.
+  /// Title for the new-users-over-time chart card on the dashboard overview.
   ///
   /// In bs, this message translates to:
-  /// **'Serija B'**
-  String get seriesBLabel;
+  /// **'Rast korisničke baze'**
+  String get dashboardUserGrowthChartTitle;
+
+  /// Title for the water-meter-request-status breakdown chart card on the dashboard overview.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zahtjevi za vodomjere po statusu'**
+  String get dashboardWaterMeterRequestStatusChartTitle;
+
+  /// Label for the city filter dropdown above the dashboard charts.
+  ///
+  /// In bs, this message translates to:
+  /// **'Grad'**
+  String get dashboardFilterCityLabel;
+
+  /// Option in the dashboard city filter dropdown that clears the city filter.
+  ///
+  /// In bs, this message translates to:
+  /// **'Svi gradovi'**
+  String get dashboardFilterAllCities;
+
+  /// Tooltip for the date range button above the dashboard charts.
+  ///
+  /// In bs, this message translates to:
+  /// **'Odaberi raspon datuma'**
+  String get dashboardFilterDateRangeTooltip;
+
+  /// Button that resets the dashboard filters (date range and city) to their defaults.
+  ///
+  /// In bs, this message translates to:
+  /// **'Resetuj filtere'**
+  String get dashboardFilterReset;
 
   /// Label for a status filter/column, shared across the users, collectors, and water meters screens.
   ///
@@ -2443,6 +2473,78 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Zatvoren'**
   String get supportTicketStatusClosed;
+
+  /// Table column header for a consumption alert's message.
+  ///
+  /// In bs, this message translates to:
+  /// **'Poruka'**
+  String get messageColumnLabel;
+
+  /// Sidebar menu label for the water consumption alerts management section.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upozorenja o potrošnji'**
+  String get consumptionAlertsNavLabel;
+
+  /// Subtitle on the 'Upozorenja o potrošnji' screen header.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pregled upozorenja o neuobičajenoj potrošnji vode i njihovo rješavanje.'**
+  String get consumptionAlertsScreenSubtitle;
+
+  /// Button label on the 'Upozorenja o potrošnji' screen that triggers recomputing consumption alerts.
+  ///
+  /// In bs, this message translates to:
+  /// **'Provjeri anomalije'**
+  String get checkAnomaliesButtonLabel;
+
+  /// Snackbar message shown after consumption alerts are recomputed.
+  ///
+  /// In bs, this message translates to:
+  /// **'Anomalije potrošnje su provjerene.'**
+  String get consumptionAlertsRecomputedSuccess;
+
+  /// Empty-state message on the 'Upozorenja o potrošnji' screen when there are no rows.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema upozorenja o potrošnji.'**
+  String get consumptionAlertsEmptyMessage;
+
+  /// Tooltip for the row action that marks a consumption alert as resolved.
+  ///
+  /// In bs, this message translates to:
+  /// **'Označi kao riješeno'**
+  String get markAsResolvedTooltip;
+
+  /// Snackbar message shown after a consumption alert is marked as resolved.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upozorenje je označeno kao riješeno.'**
+  String get alertMarkedResolvedSuccess;
+
+  /// Table column header for a consumption alert's measured value.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izmjerena vrijednost'**
+  String get measuredValueColumnLabel;
+
+  /// Table column header for a consumption alert's threshold value.
+  ///
+  /// In bs, this message translates to:
+  /// **'Granična vrijednost'**
+  String get thresholdValueColumnLabel;
+
+  /// Status pill label for a resolved consumption alert.
+  ///
+  /// In bs, this message translates to:
+  /// **'Riješeno'**
+  String get resolvedStatusLabel;
+
+  /// Status pill label for an unresolved consumption alert.
+  ///
+  /// In bs, this message translates to:
+  /// **'Neriješeno'**
+  String get unresolvedStatusLabel;
 }
 
 class _AppLocalizationsDelegate

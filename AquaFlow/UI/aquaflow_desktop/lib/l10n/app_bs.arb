@@ -417,29 +417,49 @@
     "description": "Sidebar menu label for the codebook (cities/municipalities/settlements) section."
   },
 
-  "dashboardOverviewSubtitle": "Pregled ključnih pokazatelja (demo podaci)",
+  "dashboardOverviewSubtitle": "Pregled ključnih pokazatelja",
   "@dashboardOverviewSubtitle": {
-    "description": "Subtitle under the dashboard overview heading, noting the charts show demo data."
+    "description": "Subtitle under the dashboard overview heading."
   },
-  "lineChartTitle": "Linijski grafikon",
-  "@lineChartTitle": {
-    "description": "Title for the demo line chart card on the dashboard overview."
+  "dashboardRevenueTrendChartTitle": "Prihod od naplate",
+  "@dashboardRevenueTrendChartTitle": {
+    "description": "Title for the revenue-over-time chart card on the dashboard overview."
   },
-  "donutChartTitle": "Kružni grafikon",
-  "@donutChartTitle": {
-    "description": "Title for the demo donut chart card on the dashboard overview."
+  "dashboardInvoiceStatusChartTitle": "Status računa",
+  "@dashboardInvoiceStatusChartTitle": {
+    "description": "Title for the invoice-status breakdown chart card on the dashboard overview."
   },
-  "barChartTitle": "Trakasti grafikon",
-  "@barChartTitle": {
-    "description": "Title for the demo bar chart card on the dashboard overview."
+  "dashboardConsumptionTrendChartTitle": "Potrošnja vode",
+  "@dashboardConsumptionTrendChartTitle": {
+    "description": "Title for the water consumption-over-time chart card on the dashboard overview."
   },
-  "seriesALabel": "Serija A",
-  "@seriesALabel": {
-    "description": "Legend label for the first series in the demo bar chart."
+  "dashboardFaultReportStatusChartTitle": "Prijave kvarova po statusu",
+  "@dashboardFaultReportStatusChartTitle": {
+    "description": "Title for the fault-report-status breakdown chart card on the dashboard overview."
   },
-  "seriesBLabel": "Serija B",
-  "@seriesBLabel": {
-    "description": "Legend label for the second series in the demo bar chart."
+  "dashboardUserGrowthChartTitle": "Rast korisničke baze",
+  "@dashboardUserGrowthChartTitle": {
+    "description": "Title for the new-users-over-time chart card on the dashboard overview."
+  },
+  "dashboardWaterMeterRequestStatusChartTitle": "Zahtjevi za vodomjere po statusu",
+  "@dashboardWaterMeterRequestStatusChartTitle": {
+    "description": "Title for the water-meter-request-status breakdown chart card on the dashboard overview."
+  },
+  "dashboardFilterCityLabel": "Grad",
+  "@dashboardFilterCityLabel": {
+    "description": "Label for the city filter dropdown above the dashboard charts."
+  },
+  "dashboardFilterAllCities": "Svi gradovi",
+  "@dashboardFilterAllCities": {
+    "description": "Option in the dashboard city filter dropdown that clears the city filter."
+  },
+  "dashboardFilterDateRangeTooltip": "Odaberi raspon datuma",
+  "@dashboardFilterDateRangeTooltip": {
+    "description": "Tooltip for the date range button above the dashboard charts."
+  },
+  "dashboardFilterReset": "Resetuj filtere",
+  "@dashboardFilterReset": {
+    "description": "Button that resets the dashboard filters (date range and city) to their defaults."
   },
 
   "statusFieldLabel": "Status",
@@ -1774,5 +1794,55 @@
   "supportTicketStatusClosed": "Zatvoren",
   "@supportTicketStatusClosed": {
     "description": "Singular display label for a closed support ticket's status pill."
+  },
+
+  "messageColumnLabel": "Poruka",
+  "@messageColumnLabel": {
+    "description": "Table column header for a consumption alert's message."
+  },
+
+  "consumptionAlertsNavLabel": "Upozorenja o potrošnji",
+  "@consumptionAlertsNavLabel": {
+    "description": "Sidebar menu label for the water consumption alerts management section."
+  },
+  "consumptionAlertsScreenSubtitle": "Pregled upozorenja o neuobičajenoj potrošnji vode i njihovo rješavanje.",
+  "@consumptionAlertsScreenSubtitle": {
+    "description": "Subtitle on the 'Upozorenja o potrošnji' screen header."
+  },
+  "checkAnomaliesButtonLabel": "Provjeri anomalije",
+  "@checkAnomaliesButtonLabel": {
+    "description": "Button label on the 'Upozorenja o potrošnji' screen that triggers recomputing consumption alerts."
+  },
+  "consumptionAlertsRecomputedSuccess": "Anomalije potrošnje su provjerene.",
+  "@consumptionAlertsRecomputedSuccess": {
+    "description": "Snackbar message shown after consumption alerts are recomputed."
+  },
+  "consumptionAlertsEmptyMessage": "Nema upozorenja o potrošnji.",
+  "@consumptionAlertsEmptyMessage": {
+    "description": "Empty-state message on the 'Upozorenja o potrošnji' screen when there are no rows."
+  },
+  "markAsResolvedTooltip": "Označi kao riješeno",
+  "@markAsResolvedTooltip": {
+    "description": "Tooltip for the row action that marks a consumption alert as resolved."
+  },
+  "alertMarkedResolvedSuccess": "Upozorenje je označeno kao riješeno.",
+  "@alertMarkedResolvedSuccess": {
+    "description": "Snackbar message shown after a consumption alert is marked as resolved."
+  },
+  "measuredValueColumnLabel": "Izmjerena vrijednost",
+  "@measuredValueColumnLabel": {
+    "description": "Table column header for a consumption alert's measured value."
+  },
+  "thresholdValueColumnLabel": "Granična vrijednost",
+  "@thresholdValueColumnLabel": {
+    "description": "Table column header for a consumption alert's threshold value."
+  },
+  "resolvedStatusLabel": "Riješeno",
+  "@resolvedStatusLabel": {
+    "description": "Status pill label for a resolved consumption alert."
+  },
+  "unresolvedStatusLabel": "Neriješeno",
+  "@unresolvedStatusLabel": {
+    "description": "Status pill label for an unresolved consumption alert."
   }
 }

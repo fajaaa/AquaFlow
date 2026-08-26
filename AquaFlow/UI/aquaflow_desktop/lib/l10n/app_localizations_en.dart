@@ -309,22 +309,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get codebookLabel => 'Codebook';
 
   @override
-  String get dashboardOverviewSubtitle => 'Overview of key metrics (demo data)';
+  String get dashboardOverviewSubtitle => 'Overview of key metrics';
 
   @override
-  String get lineChartTitle => 'Line chart';
+  String get dashboardRevenueTrendChartTitle => 'Revenue';
 
   @override
-  String get donutChartTitle => 'Donut chart';
+  String get dashboardInvoiceStatusChartTitle => 'Invoice status';
 
   @override
-  String get barChartTitle => 'Bar chart';
+  String get dashboardConsumptionTrendChartTitle => 'Water consumption';
 
   @override
-  String get seriesALabel => 'Series A';
+  String get dashboardFaultReportStatusChartTitle => 'Fault reports by status';
 
   @override
-  String get seriesBLabel => 'Series B';
+  String get dashboardUserGrowthChartTitle => 'User base growth';
+
+  @override
+  String get dashboardWaterMeterRequestStatusChartTitle =>
+      'Water meter requests by status';
+
+  @override
+  String get dashboardFilterCityLabel => 'City';
+
+  @override
+  String get dashboardFilterAllCities => 'All cities';
+
+  @override
+  String get dashboardFilterDateRangeTooltip => 'Choose date range';
+
+  @override
+  String get dashboardFilterReset => 'Reset filters';
 
   @override
   String get statusFieldLabel => 'Status';
@@ -1292,4 +1308,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supportTicketStatusClosed => 'Closed';
+
+  @override
+  String get messageColumnLabel => 'Message';
+
+  @override
+  String get consumptionAlertsNavLabel => 'Consumption alerts';
+
+  @override
+  String get consumptionAlertsScreenSubtitle =>
+      'Review water consumption anomaly alerts and resolve them.';
+
+  @override
+  String get checkAnomaliesButtonLabel => 'Check anomalies';
+
+  @override
+  String get consumptionAlertsRecomputedSuccess =>
+      'Consumption anomalies checked.';
+
+  @override
+  String get consumptionAlertsEmptyMessage => 'No consumption alerts.';
+
+  @override
+  String get markAsResolvedTooltip => 'Mark as resolved';
+
+  @override
+  String get alertMarkedResolvedSuccess => 'Alert marked as resolved.';
+
+  @override
+  String get measuredValueColumnLabel => 'Measured value';
+
+  @override
+  String get thresholdValueColumnLabel => 'Threshold value';
+
+  @override
+  String get resolvedStatusLabel => 'Resolved';
+
+  @override
+  String get unresolvedStatusLabel => 'Unresolved';
 }

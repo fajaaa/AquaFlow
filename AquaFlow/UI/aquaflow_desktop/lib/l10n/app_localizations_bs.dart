@@ -307,23 +307,39 @@ class AppLocalizationsBs extends AppLocalizations {
   String get codebookLabel => 'Šifarnik';
 
   @override
-  String get dashboardOverviewSubtitle =>
-      'Pregled ključnih pokazatelja (demo podaci)';
+  String get dashboardOverviewSubtitle => 'Pregled ključnih pokazatelja';
 
   @override
-  String get lineChartTitle => 'Linijski grafikon';
+  String get dashboardRevenueTrendChartTitle => 'Prihod od naplate';
 
   @override
-  String get donutChartTitle => 'Kružni grafikon';
+  String get dashboardInvoiceStatusChartTitle => 'Status računa';
 
   @override
-  String get barChartTitle => 'Trakasti grafikon';
+  String get dashboardConsumptionTrendChartTitle => 'Potrošnja vode';
 
   @override
-  String get seriesALabel => 'Serija A';
+  String get dashboardFaultReportStatusChartTitle =>
+      'Prijave kvarova po statusu';
 
   @override
-  String get seriesBLabel => 'Serija B';
+  String get dashboardUserGrowthChartTitle => 'Rast korisničke baze';
+
+  @override
+  String get dashboardWaterMeterRequestStatusChartTitle =>
+      'Zahtjevi za vodomjere po statusu';
+
+  @override
+  String get dashboardFilterCityLabel => 'Grad';
+
+  @override
+  String get dashboardFilterAllCities => 'Svi gradovi';
+
+  @override
+  String get dashboardFilterDateRangeTooltip => 'Odaberi raspon datuma';
+
+  @override
+  String get dashboardFilterReset => 'Resetuj filtere';
 
   @override
   String get statusFieldLabel => 'Status';
@@ -1287,4 +1303,43 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get supportTicketStatusClosed => 'Zatvoren';
+
+  @override
+  String get messageColumnLabel => 'Poruka';
+
+  @override
+  String get consumptionAlertsNavLabel => 'Upozorenja o potrošnji';
+
+  @override
+  String get consumptionAlertsScreenSubtitle =>
+      'Pregled upozorenja o neuobičajenoj potrošnji vode i njihovo rješavanje.';
+
+  @override
+  String get checkAnomaliesButtonLabel => 'Provjeri anomalije';
+
+  @override
+  String get consumptionAlertsRecomputedSuccess =>
+      'Anomalije potrošnje su provjerene.';
+
+  @override
+  String get consumptionAlertsEmptyMessage => 'Nema upozorenja o potrošnji.';
+
+  @override
+  String get markAsResolvedTooltip => 'Označi kao riješeno';
+
+  @override
+  String get alertMarkedResolvedSuccess =>
+      'Upozorenje je označeno kao riješeno.';
+
+  @override
+  String get measuredValueColumnLabel => 'Izmjerena vrijednost';
+
+  @override
+  String get thresholdValueColumnLabel => 'Granična vrijednost';
+
+  @override
+  String get resolvedStatusLabel => 'Riješeno';
+
+  @override
+  String get unresolvedStatusLabel => 'Neriješeno';
 }

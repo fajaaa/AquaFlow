@@ -1,4 +1,6 @@
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Common.Services.PushNotificationService;
+using AquaFlow.Model.Messages;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
@@ -325,6 +327,54 @@ public class NotificationServiceTests
     }
 
     [Fact]
+    public async Task InsertAsync_PublishesNotificationCreatedMessageExactlyOnce()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+
+        var messagePublisher = new FakeMessagePublisher();
+        var service = CreateNotificationService(context, messagePublisher: messagePublisher);
+
+        var response = await service.InsertAsync(new NotificationInsertRequest
+        {
+            Title = "Nova obavijest",
+            Body = "Sadrzaj obavijesti",
+            Type = "Info",
+            Audience = "All",
+            CreatedById = AdminUserId
+        });
+
+        var call = Assert.Single(messagePublisher.Calls);
+        Assert.Equal(typeof(NotificationCreated), call.MessageType);
+        var message = Assert.IsType<NotificationCreated>(call.Message);
+        Assert.Equal(response.Id, message.Id);
+    }
+
+    [Fact]
+    public async Task InsertAsync_MessagePublisherThrows_StillReturnsNotificationResponse()
+    {
+        var options = BuildOptions();
+        await using var context = new AquaFlowDbContext(options);
+        SeedUsersAndLocations(context);
+
+        var messagePublisher = new FakeMessagePublisher { ExceptionToThrow = new InvalidOperationException("RabbitMQ unavailable") };
+        var service = CreateNotificationService(context, messagePublisher: messagePublisher);
+
+        var response = await service.InsertAsync(new NotificationInsertRequest
+        {
+            Title = "Nova obavijest",
+            Body = "Sadrzaj obavijesti",
+            Type = "Info",
+            Audience = "All",
+            CreatedById = AdminUserId
+        });
+
+        Assert.True(response.Id > 0);
+        Assert.True(await context.UserNotifications.AnyAsync(userNotification => userNotification.NotificationId == response.Id));
+    }
+
+    [Fact]
     public async Task UpdateAsync_DoesNotSendPush()
     {
         var options = BuildOptions();
@@ -450,7 +500,8 @@ public class NotificationServiceTests
 
     private static NotificationService CreateNotificationService(
         AquaFlowDbContext context,
-        IPushNotificationSender? pushNotificationSender = null)
+        IPushNotificationSender? pushNotificationSender = null,
+        IMessagePublisher? messagePublisher = null)
     {
         // Mirrors Program.cs's AddPatchMapping, which only runs for the real app - a plain
         // `new Mapper()` here would map every null field on NotificationPatchRequest onto the
@@ -468,6 +519,7 @@ public class NotificationServiceTests
             new IValidator<NotificationPatchRequest>[] { new NotificationPatchValidator() },
             recipientService,
             pushNotificationSender ?? new FakePushNotificationSender(),
+            messagePublisher ?? new FakeMessagePublisher(),
             NullLogger<NotificationService>.Instance);
     }
 

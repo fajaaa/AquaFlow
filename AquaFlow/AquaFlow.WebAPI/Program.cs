@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using AquaFlow.Common.Services.CryptoService;
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
@@ -8,6 +9,7 @@ using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.FaultReportStateMachine;
+using AquaFlow.Services.Forecasting;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Payments;
 using AquaFlow.Services.Pdf;
@@ -137,6 +139,21 @@ else
     builder.Services.AddScoped<IPushNotificationSender, NoOpPushNotificationSender>();
 }
 
+// RabbitMQ message publishing is optional infrastructure, just like Firebase above: a missing
+// connection string must not stop the API from starting, and a dead broker must not block
+// requests. When no connection string is configured, a no-op IMessagePublisher is registered
+// instead (logs a warning and publishes nothing) rather than throwing.
+var rabbitMqConnectionString = builder.Configuration["RabbitMQ:ConnectionString"];
+if (!string.IsNullOrWhiteSpace(rabbitMqConnectionString))
+{
+    builder.Services.AddSingleton<EasyNetQ.IBus>(_ => EasyNetQ.RabbitHutch.CreateBus(rabbitMqConnectionString));
+    builder.Services.AddSingleton<IMessagePublisher, EasyNetQMessagePublisher>();
+}
+else
+{
+    builder.Services.AddSingleton<IMessagePublisher, NoOpMessagePublisher>();
+}
+
 builder.Services.AddDbContext<AquaFlowDbContext>(options => options.UseSqlServer(connectionString));
 
 builder.Services.AddCors(options =>
@@ -179,6 +196,10 @@ mapperConfig.NewConfig<WaterMeter, WaterMeterResponse>()
     .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
     .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
     .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName);
+mapperConfig.NewConfig<WaterConsumptionAlert, WaterConsumptionAlertResponse>()
+    .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
+    .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
+    .Map(destination => destination.WaterMeterSerialNumber, source => source.WaterMeter == null ? string.Empty : source.WaterMeter.SerialNumber);
 mapperConfig.NewConfig<WaterMeterRequest, WaterMeterRequestResponse>()
     .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
     .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
@@ -256,6 +277,15 @@ AddPatchMapping<MeterReadingPatchRequest, MeterReading>();
 builder.Services.AddScoped<IMeterReadingService, MeterReadingService>();
 builder.Services.AddScoped<IBaseCRUDService<MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IMeterReadingService>());
+builder.Services.AddScoped<IConsumptionForecastingService, ConsumptionForecastingService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+// WaterConsumptionAlert is registered by hand (not AddCrud<>) because RecomputeAsync is an extra
+// action beyond the generic EfCrudService; the generic IBaseCRUDService alias still resolves to
+// the same service instance, same pattern as WaterMeter/MeterReading above.
+AddPatchMapping<WaterConsumptionAlertPatchRequest, WaterConsumptionAlert>();
+builder.Services.AddScoped<IWaterConsumptionAlertService, WaterConsumptionAlertService>();
+builder.Services.AddScoped<IBaseCRUDService<WaterConsumptionAlertResponse, WaterConsumptionAlertSearchObject, WaterConsumptionAlertInsertRequest, WaterConsumptionAlertUpdateRequest, WaterConsumptionAlertPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<IWaterConsumptionAlertService>());
 AddPatchMapping<TariffPatchRequest, Tariff>();
 builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>, TariffService>();
 // Payments:Provider selects which IPaymentProvider is registered (today only "Manual" exists);
