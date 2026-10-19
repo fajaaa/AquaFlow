@@ -1,7 +1,9 @@
+using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Payments;
+using AquaFlow.Services.Tests.Notifications;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
@@ -332,7 +334,7 @@ public class InvoiceCheckoutTests
             () => service.ConfirmPaymentAsync(PaymentProvider.Stripe, "does-not-exist", PaymentConfirmationOutcome.Succeeded));
     }
 
-    private static AquaFlowDbContext CreateContext()
+    internal static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -342,7 +344,7 @@ public class InvoiceCheckoutTests
         return new AquaFlowDbContext(options);
     }
 
-    private static void SeedInvoice(AquaFlowDbContext context, int id, decimal totalAmount, string status)
+    internal static void SeedInvoice(AquaFlowDbContext context, int id, decimal totalAmount, string status)
     {
         context.Settlements.Add(new Settlement { Id = 1, Name = "Sarajevo", MunicipalityId = 1, PostalCode = "71000" });
         context.UserRoles.Add(new UserRole { Id = 1, Name = "Customer" });
@@ -371,7 +373,7 @@ public class InvoiceCheckoutTests
 
     // A Stripe online payment attempt against invoice 1, seeded directly (e.g. a stale-amount attempt,
     // or a row the old payment_failed handling marked Failed).
-    private static void SeedPayment(AquaFlowDbContext context, int id, decimal amount, string status, string transactionId)
+    internal static void SeedPayment(AquaFlowDbContext context, int id, decimal amount, string status, string transactionId)
     {
         context.Payments.Add(new Payment
         {
@@ -389,7 +391,7 @@ public class InvoiceCheckoutTests
         context.SaveChanges();
     }
 
-    private static InvoiceService CreateService(AquaFlowDbContext context, IPaymentProvider paymentProvider)
+    internal static InvoiceService CreateService(AquaFlowDbContext context, IPaymentProvider paymentProvider, IPushNotificationSender? pushSender = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<Invoice, Model.Responses.InvoiceResponse>()
@@ -398,7 +400,8 @@ public class InvoiceCheckoutTests
             .Map(destination => destination.WaterMeterSerialNumber, source => source.WaterMeter == null ? string.Empty : source.WaterMeter.SerialNumber);
         IMapper mapper = new Mapper(mapperConfig);
 
-        var stateResolver = new InvoiceStateResolver(BuildServiceProvider(context, mapper));
+        var systemNotifications = TestSystemNotifications.Create(context, pushSender);
+        var stateResolver = new InvoiceStateResolver(BuildServiceProvider(context, mapper, systemNotifications));
 
         return new InvoiceService(
             context,
@@ -407,7 +410,8 @@ public class InvoiceCheckoutTests
             paymentProvider,
             Options.Create(new PaymentsOptions()),
             Options.Create(new StripeOptions()),
-            NullLogger<InvoiceService>.Instance);
+            NullLogger<InvoiceService>.Instance,
+            systemNotifications);
     }
 
     // InvoiceStateResolver resolves states through IServiceProvider.GetRequiredKeyedService (which
@@ -416,20 +420,20 @@ public class InvoiceCheckoutTests
     // CheckoutAsync/ConfirmPaymentAsync exercise the actual keyed-state wiring Program.cs sets up in
     // production, unlike InvoiceServiceTests/InvoiceStateMachineTransitionTests which either stub the
     // resolver out or instantiate a single state directly.
-    private static IServiceProvider BuildServiceProvider(AquaFlowDbContext context, IMapper mapper)
-        => new KeyedInvoiceStateServiceProvider(context, mapper);
+    private static IServiceProvider BuildServiceProvider(AquaFlowDbContext context, IMapper mapper, ISystemNotificationService systemNotifications)
+        => new KeyedInvoiceStateServiceProvider(context, mapper, systemNotifications);
 
     private sealed class KeyedInvoiceStateServiceProvider : IServiceProvider, IKeyedServiceProvider
     {
         private readonly Dictionary<string, BaseInvoiceState> _statesByStatus;
 
-        public KeyedInvoiceStateServiceProvider(AquaFlowDbContext context, IMapper mapper)
+        public KeyedInvoiceStateServiceProvider(AquaFlowDbContext context, IMapper mapper, ISystemNotificationService systemNotifications)
         {
             _statesByStatus = new Dictionary<string, BaseInvoiceState>
             {
-                [InvoiceStatus.Issued] = new IssuedInvoiceState(context, mapper),
-                [InvoiceStatus.Paid] = new PaidInvoiceState(context, mapper),
-                [InvoiceStatus.Cancelled] = new CancelledInvoiceState(context, mapper)
+                [InvoiceStatus.Issued] = new IssuedInvoiceState(context, mapper, systemNotifications),
+                [InvoiceStatus.Paid] = new PaidInvoiceState(context, mapper, systemNotifications),
+                [InvoiceStatus.Cancelled] = new CancelledInvoiceState(context, mapper, systemNotifications)
             };
         }
 

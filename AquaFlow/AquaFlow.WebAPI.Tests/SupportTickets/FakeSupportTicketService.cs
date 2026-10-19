@@ -116,11 +116,20 @@ public class FakeSupportTicketService : ISupportTicketService
         return Task.FromResult(ticket);
     }
 
-    public Task<SupportTicketResponse> CloseAsync(int ticketId)
-        => throw new NotSupportedException();
+    public int? LastCloseActorUserId { get; private set; }
+    public int? LastReopenActorUserId { get; private set; }
 
-    public Task<SupportTicketResponse> ReopenAsync(int ticketId)
-        => throw new NotSupportedException();
+    public Task<SupportTicketResponse> CloseAsync(int ticketId, int actorUserId)
+    {
+        LastCloseActorUserId = actorUserId;
+        return Task.FromResult(new SupportTicketResponse { Id = ticketId, Status = SupportTicketStatus.Closed });
+    }
+
+    public Task<SupportTicketResponse> ReopenAsync(int ticketId, int actorUserId)
+    {
+        LastReopenActorUserId = actorUserId;
+        return Task.FromResult(new SupportTicketResponse { Id = ticketId, Status = SupportTicketStatus.Open });
+    }
 
     public Task<(byte[] Data, string ContentType, string FileName)> GetPhotoAsync(int ticketId, int messageId, int photoId)
         => throw new NotSupportedException();

@@ -172,7 +172,22 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
             request.ResolvedAt = null;
         }
 
-        return await base.Create(request);
+        // CreateAsync rather than base.Create's InsertAsync: the service needs the acting user (from
+        // the JWT) to keep them out of the "new report" staff notification - for an admin filing on
+        // behalf of a customer, ReportedById is the customer, not the actor.
+        try
+        {
+            var result = await Service.CreateAsync(request, userId);
+            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+        }
+        catch (FluentValidation.ValidationException exception)
+        {
+            return BadRequest(CreateValidationErrorResponse(exception));
+        }
+        catch (ClientException exception)
+        {
+            return BadRequest(CreateClientErrorResponse(exception));
+        }
     }
 
     [RequirePermission(ManagePermission)]

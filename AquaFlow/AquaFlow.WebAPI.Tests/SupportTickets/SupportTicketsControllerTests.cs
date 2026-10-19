@@ -273,6 +273,33 @@ public class SupportTicketsControllerTests
         Assert.Contains(ManagePermission, codes);
     }
 
+    // The acting staff member (kept out of the customer's system notification) comes from the JWT,
+    // never from the request.
+    [Fact]
+    public async Task CloseAndReopen_PassTheJwtUserAsActor()
+    {
+        var service = new FakeSupportTicketService([]);
+        var controller = CreateController(service, BuildUser(userId: 42, role: AdminRole, ManagePermission), []);
+
+        Assert.IsType<OkObjectResult>((await controller.Close(1)).Result);
+        Assert.IsType<OkObjectResult>((await controller.Reopen(1)).Result);
+
+        Assert.Equal(42, service.LastCloseActorUserId);
+        Assert.Equal(42, service.LastReopenActorUserId);
+    }
+
+    [Fact]
+    public async Task CloseAndReopen_WithoutIdClaim_ReturnUnauthorized()
+    {
+        var service = new FakeSupportTicketService([]);
+        var controller = CreateController(service, BuildUser(userId: null, role: AdminRole, ManagePermission), []);
+
+        Assert.IsType<UnauthorizedResult>((await controller.Close(1)).Result);
+        Assert.IsType<UnauthorizedResult>((await controller.Reopen(1)).Result);
+        Assert.Null(service.LastCloseActorUserId);
+        Assert.Null(service.LastReopenActorUserId);
+    }
+
     private static SupportTicketsController CreateController(
         ClaimsPrincipal user,
         IEnumerable<CustomerProfileResponse> profiles,

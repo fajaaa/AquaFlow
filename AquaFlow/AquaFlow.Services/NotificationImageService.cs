@@ -1,3 +1,4 @@
+using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Responses;
 using AquaFlow.Services.Database;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,14 @@ public class NotificationImageService : INotificationImageService
 
     public async Task<NotificationImageResponse> UploadAsync(int notificationId, byte[] data, string contentType, string fileName)
     {
+        // Images are notification content, and a system notification's content is fixed once its
+        // recipients were told (same rule as NotificationService's update/patch/delete guard) - so
+        // POST /Notifications/{id}/images can't attach anything to one.
+        if (await _dbContext.Notifications.AnyAsync(notification => notification.Id == notificationId && notification.IsSystem))
+        {
+            throw new ClientException("System notifications cannot be edited.");
+        }
+
         var image = new NotificationImage
         {
             NotificationId = notificationId,

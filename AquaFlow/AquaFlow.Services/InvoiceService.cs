@@ -26,6 +26,7 @@ public class InvoiceService
     private readonly PaymentsOptions _paymentsOptions;
     private readonly StripeOptions _stripeOptions;
     private readonly ILogger<InvoiceService> _logger;
+    private readonly ISystemNotificationService _systemNotifications;
 
     public InvoiceService(
         AquaFlowDbContext dbContext,
@@ -34,7 +35,8 @@ public class InvoiceService
         IPaymentProvider paymentProvider,
         IOptions<PaymentsOptions> paymentsOptions,
         IOptions<StripeOptions> stripeOptions,
-        ILogger<InvoiceService> logger)
+        ILogger<InvoiceService> logger,
+        ISystemNotificationService systemNotifications)
         : base(dbContext, mapper)
     {
         _dbContext = dbContext;
@@ -43,6 +45,7 @@ public class InvoiceService
         _paymentsOptions = paymentsOptions.Value;
         _stripeOptions = stripeOptions.Value;
         _logger = logger;
+        _systemNotifications = systemNotifications;
     }
 
     protected override IQueryable<Invoice> IncludeForRead(IQueryable<Invoice> query) =>
@@ -73,13 +76,17 @@ public class InvoiceService
     public async Task<InvoiceResponse> RecordPaymentAsync(int id, int changedById)
     {
         var invoice = await LoadInvoiceAsync(id);
-        return await _stateResolver.Resolve(invoice.Status).RecordPaymentAsync(invoice, changedById);
+        var response = await _stateResolver.Resolve(invoice.Status).RecordPaymentAsync(invoice, changedById);
+        await _systemNotifications.DispatchPendingPushAsync();
+        return response;
     }
 
     public async Task<InvoiceResponse> CancelAsync(int id, int changedById)
     {
         var invoice = await LoadInvoiceAsync(id);
-        return await _stateResolver.Resolve(invoice.Status).CancelAsync(invoice, changedById);
+        var response = await _stateResolver.Resolve(invoice.Status).CancelAsync(invoice, changedById);
+        await _systemNotifications.DispatchPendingPushAsync();
+        return response;
     }
 
     // The invoice's ownership has already been verified by the caller (InvoicesController.Checkout
@@ -246,6 +253,7 @@ public class InvoiceService
         var invoice = await LoadInvoiceAsync(payment.InvoiceId);
         var changedById = await ResolvePayerUserIdAsync(invoice.CustomerId);
         await _stateResolver.Resolve(invoice.Status).ConfirmPaymentAsync(invoice, payment, changedById);
+        await _systemNotifications.DispatchPendingPushAsync();
 
         return Mapper.Map<PaymentResponse>(payment);
     }

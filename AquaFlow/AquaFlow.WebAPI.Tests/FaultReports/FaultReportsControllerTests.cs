@@ -326,6 +326,31 @@ public class FaultReportsControllerTests
         Assert.Equal("New", service.LastInsertRequest.Status);
     }
 
+    // An admin filing on behalf of a customer keeps the customer in ReportedById (trusted body),
+    // but the actor handed to the service - who is kept out of the "new report" staff
+    // notification - is always the JWT caller.
+    [Fact]
+    public async Task Create_ManageHolderOnBehalfOfCustomer_PassesJwtCallerAsActor()
+    {
+        var service = new FakeFaultReportCrudService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 99, role: AdminRole, permissions: [ManagePermission]),
+            profiles: []);
+
+        var result = await controller.Create(new FaultReportInsertRequest
+        {
+            ReportedById = 7,
+            SettlementId = 3,
+            Title = "Leak",
+            Description = "Reported by phone"
+        });
+
+        Assert.IsType<CreatedAtActionResult>(result.Result);
+        Assert.Equal(7, service.LastInsertRequest!.ReportedById);
+        Assert.Equal(99, service.LastCreateActorUserId);
+    }
+
     // A caller with no CustomerProfile owns no meters, so attaching any WaterMeterId must fail
     // the same way as someone else's meter.
     [Fact]

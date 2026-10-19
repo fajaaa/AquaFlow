@@ -1080,6 +1080,9 @@ public partial class AquaFlowDbContext
                 Type = "Info",
                 Audience = "All",
                 CreatedById = 1,
+                IsSystem = false,
+                RelatedEntityType = (string?)null,
+                RelatedEntityId = (int?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });

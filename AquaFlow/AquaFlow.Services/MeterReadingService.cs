@@ -1,3 +1,4 @@
+using AquaFlow.Model;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
@@ -21,15 +22,18 @@ public class MeterReadingService
 {
     private readonly AquaFlowDbContext _dbContext;
     private readonly IValidator<MeterReadingCollectorEntryRequest>? _collectorEntryValidator;
+    private readonly ISystemNotificationService _systemNotifications;
 
     public MeterReadingService(
         AquaFlowDbContext dbContext,
         IMapper mapper,
-        IEnumerable<IValidator<MeterReadingCollectorEntryRequest>> collectorEntryValidators)
+        IEnumerable<IValidator<MeterReadingCollectorEntryRequest>> collectorEntryValidators,
+        ISystemNotificationService systemNotifications)
         : base(dbContext, mapper)
     {
         _dbContext = dbContext;
         _collectorEntryValidator = collectorEntryValidators.FirstOrDefault();
+        _systemNotifications = systemNotifications;
     }
 
     public async Task<MeterReadingCollectorEntryResponse> CreateForCollectorAsync(int callerUserId, MeterReadingCollectorEntryRequest request)
@@ -187,7 +191,33 @@ public class MeterReadingService
             _dbContext.Invoices.Add(invoice);
             entity.Invoice = invoice;
 
-            await _dbContext.SaveChangesAsync();
+            // The customer's "new invoice" notification points at the invoice id, which only exists
+            // after the INSERT - so it is staged after the first save and committed in the same
+            // transaction as the reading, the invoice and the LastReading update.
+            var customerUserId = await _systemNotifications.GetCustomerUserIdAsync(waterMeter.CustomerId);
+
+            await using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+            {
+                await _dbContext.SaveChangesAsync();
+
+                if (customerUserId is not null)
+                {
+                    _systemNotifications.Stage(
+                        new SystemNotificationMessage(
+                            $"Novi račun {invoice.InvoiceNumber}",
+                            $"Izdan je račun {invoice.InvoiceNumber} za period {periodFrom:MM/yyyy} u iznosu od {invoice.TotalAmount:0.00} KM.",
+                            NotificationType.Billing,
+                            RelatedEntityTypes.Invoice,
+                            invoice.Id),
+                        new[] { customerUserId.Value },
+                        callerUserId);
+                    await _dbContext.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+            }
+
+            await _systemNotifications.DispatchPendingPushAsync();
 
             response = Mapper.Map<MeterReadingCollectorEntryResponse>(entity);
             response.InvoiceId = invoice.Id;

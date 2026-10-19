@@ -8,8 +8,8 @@ namespace AquaFlow.Services.InvoiceStateMachine;
 
 public class IssuedInvoiceState : BaseInvoiceState
 {
-    public IssuedInvoiceState(AquaFlowDbContext dbContext, IMapper mapper)
-        : base(dbContext, mapper)
+    public IssuedInvoiceState(AquaFlowDbContext dbContext, IMapper mapper, ISystemNotificationService systemNotifications)
+        : base(dbContext, mapper, systemNotifications)
     {
     }
 
@@ -36,8 +36,8 @@ public class IssuedInvoiceState : BaseInvoiceState
     //    Rule 2 guarantees nothing newer counts, so the revert is unconditional: the meter is genuinely back
     //    where this invoice started, and overwriting a LastReading that was edited out of band (WaterMeter
     //    PATCH) is the right call, since the next reading must re-bill exactly from that baseline.
-    // The void and the revert are staged before TransitionAsync so they commit in the same SaveChanges as the
-    // status change.
+    // The void, the revert and the customer's "invoice cancelled" notification are staged before TransitionAsync
+    // so they commit in the same SaveChanges as the status change.
     public override async Task<InvoiceResponse> CancelAsync(Invoice invoice, int changedById)
     {
         var hasCompletedPayment = await DbContext.Payments
@@ -68,6 +68,13 @@ public class IssuedInvoiceState : BaseInvoiceState
             waterMeter.LastReading = reading.PreviousReadingValue;
             waterMeter.UpdatedAt = DateTime.UtcNow;
         }
+
+        StageCustomerNotification(
+            invoice,
+            await SystemNotifications.GetCustomerUserIdAsync(invoice.CustomerId),
+            $"Račun {invoice.InvoiceNumber} je storniran",
+            $"Račun {invoice.InvoiceNumber} je storniran i ne trebate ga plaćati.",
+            changedById);
 
         return await TransitionAsync(invoice, InvoiceStatus.Cancelled, "Invoice cancelled.", changedById);
     }

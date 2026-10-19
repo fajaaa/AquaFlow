@@ -1,12 +1,15 @@
+using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.Tests.Notifications;
 using AquaFlow.Services.Validators;
 using AquaFlow.Services.WaterMeterRequestStateMachine;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -261,10 +264,13 @@ public class WaterMeterRequestServiceTests
         });
     }
 
-    private static AquaFlowDbContext CreateContext()
+    internal static AquaFlowDbContext CreateContext()
     {
+        // Creating a request commits it and its staff notification in one explicit transaction,
+        // which InMemory ignores.
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new AquaFlowDbContext(options);
@@ -314,7 +320,7 @@ public class WaterMeterRequestServiceTests
     // as Program.cs, so RegisterAsync/AssignAsync exercise the actual state machine instead of a
     // stub - needed for the RegisterAsync tests above to observe what AssignedWaterMeterRequestState
     // actually writes onto the new WaterMeter.
-    private static WaterMeterRequestService CreateService(AquaFlowDbContext context)
+    internal static WaterMeterRequestService CreateService(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         // Mirror the flatten config from Program.cs so the response's SettlementName and customer
@@ -330,12 +336,14 @@ public class WaterMeterRequestServiceTests
             .IgnoreNullValues(true);
         IMapper mapper = new Mapper(mapperConfig);
 
+        var systemNotifications = TestSystemNotifications.Create(context, pushSender);
+
         var stateServices = new ServiceCollection();
-        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Pending, (_, _) => new PendingWaterMeterRequestState(context, mapper));
-        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Assigned, (_, _) => new AssignedWaterMeterRequestState(context, mapper));
-        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Registered, (_, _) => new RegisteredWaterMeterRequestState(context, mapper));
-        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Rejected, (_, _) => new RejectedWaterMeterRequestState(context, mapper));
-        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Cancelled, (_, _) => new CancelledWaterMeterRequestState(context, mapper));
+        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Pending, (_, _) => new PendingWaterMeterRequestState(context, mapper, systemNotifications));
+        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Assigned, (_, _) => new AssignedWaterMeterRequestState(context, mapper, systemNotifications));
+        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Registered, (_, _) => new RegisteredWaterMeterRequestState(context, mapper, systemNotifications));
+        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Rejected, (_, _) => new RejectedWaterMeterRequestState(context, mapper, systemNotifications));
+        stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Cancelled, (_, _) => new CancelledWaterMeterRequestState(context, mapper, systemNotifications));
         var stateResolver = new WaterMeterRequestStateResolver(stateServices.BuildServiceProvider());
 
         return new WaterMeterRequestService(
@@ -345,6 +353,7 @@ public class WaterMeterRequestServiceTests
             new IValidator<WaterMeterRequestUpdateRequest>[] { new WaterMeterRequestUpdateValidator() },
             new IValidator<WaterMeterRequestPatchRequest>[] { new WaterMeterRequestPatchValidator() },
             new IValidator<WaterMeterInsertRequest>[] { new WaterMeterInsertValidator() },
-            stateResolver);
+            stateResolver,
+            systemNotifications);
     }
 }

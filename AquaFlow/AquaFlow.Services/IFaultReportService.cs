@@ -20,6 +20,11 @@ public interface IFaultReportService
     // control flow.
     Task<FaultReportOwnership?> GetOwnershipAsync(int id);
 
+    // InsertAsync with the acting user known (from the JWT): a new report (Status New) notifies the
+    // FaultReports.Manage staff, never the actor themselves - an admin filing a report on behalf of a
+    // customer carries the customer in ReportedById, so InsertAsync alone can't tell who acted.
+    Task<FaultReportResponse> CreateAsync(FaultReportInsertRequest request, int actorUserId);
+
     // State-machine transitions (see AquaFlow.Services/FaultReportStateMachine): each loads the
     // tracked entity once, resolves the state from its Status, and delegates to the state action.
     // changedById is the acting user stamped onto the FaultStatusHistory row. AssignAsync also

@@ -1,3 +1,4 @@
+using AquaFlow.Model;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Services.Database;
@@ -7,8 +8,8 @@ namespace AquaFlow.Services.WaterMeterRequestStateMachine;
 
 public class AssignedWaterMeterRequestState : BaseWaterMeterRequestState
 {
-    public AssignedWaterMeterRequestState(AquaFlowDbContext dbContext, IMapper mapper)
-        : base(dbContext, mapper)
+    public AssignedWaterMeterRequestState(AquaFlowDbContext dbContext, IMapper mapper, ISystemNotificationService systemNotifications)
+        : base(dbContext, mapper, systemNotifications)
     {
     }
 
@@ -30,6 +31,14 @@ public class AssignedWaterMeterRequestState : BaseWaterMeterRequestState
         // Setting the navigation lets EF assign ResultingWaterMeterId from the new meter's
         // generated key during the same SaveChanges.
         request.ResultingWaterMeter = meter;
+
+        StageNotification(
+            request,
+            await GetRequesterUserIdAsync(request),
+            "Vodomjer je registrovan",
+            $"Po vašem zahtjevu #{request.Id} ugrađen je vodomjer serijskog broja {meter.SerialNumber}.",
+            NotificationType.Info,
+            changedById);
 
         await TransitionToAsync(request, WaterMeterRequestStatus.Registered, changedById, $"Water meter '{meter.SerialNumber}' registered.");
         return Mapper.Map<WaterMeterRequestResponse>(request);

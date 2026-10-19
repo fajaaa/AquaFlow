@@ -220,9 +220,16 @@ public class SupportTicketsController : BaseReadController<SupportTicketResponse
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SupportTicketResponse>> Close(int id)
     {
+        // The acting staff member comes from the JWT (never the request); the service keeps them out
+        // of the customer's "ticket closed" notification.
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
         try
         {
-            return Ok(await Service.CloseAsync(id));
+            return Ok(await Service.CloseAsync(id, userId));
         }
         catch (KeyNotFoundException)
         {
@@ -237,9 +244,14 @@ public class SupportTicketsController : BaseReadController<SupportTicketResponse
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SupportTicketResponse>> Reopen(int id)
     {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
         try
         {
-            return Ok(await Service.ReopenAsync(id));
+            return Ok(await Service.ReopenAsync(id, userId));
         }
         catch (KeyNotFoundException)
         {

@@ -25,6 +25,19 @@ public class NotificationImageServiceTests
     }
 
     [Fact]
+    public async Task UploadAsync_ToSystemNotification_ThrowsClientExceptionAndStoresNothing()
+    {
+        await using var context = CreateContext();
+        context.Notifications.Add(new Notification { Id = 1, Title = "Racun izdan", Audience = "Direct", IsSystem = true, CreatedById = 1 });
+        await context.SaveChangesAsync();
+        var service = new NotificationImageService(context);
+
+        await Assert.ThrowsAsync<AquaFlow.Model.Exceptions.ClientException>(
+            () => service.UploadAsync(1, new byte[] { 1, 2, 3 }, "image/png", "x.png"));
+        Assert.False(await context.NotificationImages.AnyAsync());
+    }
+
+    [Fact]
     public async Task GetMetadataAsync_OnlyReturnsRowsForTheGivenNotification()
     {
         await using var context = CreateContext();

@@ -1,12 +1,15 @@
+using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.Tests.Notifications;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Validators;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
 namespace AquaFlow.Services.Tests.MeterReadings;
@@ -89,7 +92,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         };
         var firstResponse = await service.CreateForCollectorAsync(callerUserId: 3, firstRequest);
 
-        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper());
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
         var invoice = await context.Invoices.FirstAsync(i => i.Id == firstResponse.InvoiceId);
         await invoiceState.CancelAsync(invoice, changedById: 2);
 
@@ -134,7 +137,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         context.WaterMeters.First(m => m.Id == 1).LastReading = 50;
         context.SaveChanges();
 
-        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper());
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
         var invoice = await context.Invoices.FirstAsync(i => i.Id == 1);
         await invoiceState.CancelAsync(invoice, changedById: 2);
 
@@ -169,7 +172,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         context.WaterMeters.First(m => m.Id == 1).LastReading = 80;
         context.SaveChanges();
 
-        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper());
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
         var invoice = await context.Invoices.FirstAsync(i => i.Id == 1);
 
         var exception = await Assert.ThrowsAsync<ClientException>(() => invoiceState.CancelAsync(invoice, changedById: 2));
@@ -201,7 +204,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         Assert.NotNull(first.InvoiceId);
         Assert.NotNull(second.InvoiceId);
 
-        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper());
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
         var invoiceA = await context.Invoices.FirstAsync(i => i.Id == first.InvoiceId);
 
         await Assert.ThrowsAsync<ClientException>(() => invoiceState.CancelAsync(invoiceA, changedById: 2));
@@ -230,7 +233,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         await BackdateReadingAsync(context, first.Id, days: 20);
         var second = await CreateReadingAsync(service, readingValue: 80);
 
-        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper());
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
         var invoiceB = await context.Invoices.FirstAsync(i => i.Id == second.InvoiceId);
         await invoiceState.CancelAsync(invoiceB, changedById: 2);
         Assert.Equal(50, (await context.WaterMeters.FirstAsync(m => m.Id == 1)).LastReading);
@@ -266,7 +269,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         Assert.Null(zero.InvoiceId);
         Assert.Equal(0, zero.ConsumptionM3);
 
-        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper());
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
         var invoiceA = await context.Invoices.FirstAsync(i => i.Id == first.InvoiceId);
 
         await Assert.ThrowsAsync<ClientException>(() => invoiceState.CancelAsync(invoiceA, changedById: 2));
@@ -295,7 +298,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         });
         context.SaveChanges();
 
-        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper());
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
         var invoice = await context.Invoices.FirstAsync(i => i.Id == 1);
 
         await Assert.ThrowsAsync<ClientException>(() => invoiceState.CancelAsync(invoice, changedById: 2));
@@ -352,6 +355,9 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            // A billed reading commits with the customer's invoice notification in one explicit
+            // transaction, which InMemory ignores.
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new AquaFlowDbContext(options);
@@ -468,7 +474,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             .Where(i => i.WaterMeterId == 1 && i.Status != InvoiceStatus.Cancelled)
             .SumAsync(i => i.ConsumptionM3);
 
-    private static MeterReadingService CreateService(AquaFlowDbContext context)
+    internal static MeterReadingService CreateService(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<MeterReading, Model.Responses.MeterReadingResponse>();
@@ -477,7 +483,8 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         return new MeterReadingService(
             context,
             mapper,
-            new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() });
+            new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() },
+            TestSystemNotifications.Create(context, pushSender));
     }
 
     private static IMapper CreateInvoiceMapper()

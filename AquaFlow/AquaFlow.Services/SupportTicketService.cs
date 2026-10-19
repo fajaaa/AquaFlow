@@ -16,12 +16,17 @@ namespace AquaFlow.Services;
 public class SupportTicketService
     : BaseReadService<SupportTicket, SupportTicketResponse, SupportTicketSearchObject>, ISupportTicketService
 {
-    private readonly AquaFlowDbContext _dbContext;
+    // Staff who answer tickets - recipients of the notifications about customer activity.
+    private const string ManagePermission = "SupportTickets.Manage";
 
-    public SupportTicketService(AquaFlowDbContext dbContext, IMapper mapper)
+    private readonly AquaFlowDbContext _dbContext;
+    private readonly ISystemNotificationService _systemNotifications;
+
+    public SupportTicketService(AquaFlowDbContext dbContext, IMapper mapper, ISystemNotificationService systemNotifications)
         : base(mapper)
     {
         _dbContext = dbContext;
+        _systemNotifications = systemNotifications;
     }
 
     // List/base source: only the Customer join is needed for CustomerName. Messages (and their
@@ -113,10 +118,28 @@ public class SupportTicketService
             }
         };
 
-        // Ticket, opening message and its photos are one object graph, so this single SaveChanges
-        // inserts all of them atomically (EF wraps one SaveChanges in its own transaction).
-        _dbContext.SupportTickets.Add(ticket);
-        await _dbContext.SaveChangesAsync();
+        var staffUserIds = await _systemNotifications.GetUserIdsWithPermissionAsync(ManagePermission);
+
+        // Ticket, opening message and its photos are one object graph, so the first SaveChanges
+        // inserts all of them atomically. The staff notification points at the ticket id, which only
+        // exists after that INSERT, so it is staged afterwards and committed in the same transaction.
+        await using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+        {
+            _dbContext.SupportTickets.Add(ticket);
+            await _dbContext.SaveChangesAsync();
+
+            StageTicketNotification(
+                ticket,
+                staffUserIds,
+                "Novi tiket podrške",
+                $"Otvoren je novi tiket podrške: \"{ticket.Subject}\".",
+                userId);
+            await _dbContext.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+
+        await _systemNotifications.DispatchPendingPushAsync();
 
         return await GetByIdAsync(ticket.Id);
     }
@@ -140,11 +163,34 @@ public class SupportTicketService
             Photos = ToPhotoEntities(photos, now)
         };
 
-        // Message, its photos and the ticket's LastMessage* bump land in one SaveChanges.
+        // The other side of the thread is told: a staff reply goes to the ticket's customer, a customer
+        // message to the staff.
+        if (isFromStaff)
+        {
+            StageTicketNotification(
+                ticket,
+                await CustomerRecipientAsync(ticket),
+                "Novi odgovor podrške",
+                $"Stigao je novi odgovor na vaš tiket \"{ticket.Subject}\".",
+                senderId);
+        }
+        else
+        {
+            StageTicketNotification(
+                ticket,
+                await _systemNotifications.GetUserIdsWithPermissionAsync(ManagePermission),
+                "Nova poruka u tiketu",
+                $"Korisnik je poslao novu poruku u tiketu \"{ticket.Subject}\".",
+                senderId);
+        }
+
+        // Message, its photos, the ticket's LastMessage* bump and the notification land in one
+        // SaveChanges.
         _dbContext.SupportTicketMessages.Add(message);
         ticket.LastMessageAt = now;
         ticket.LastMessageFromStaff = isFromStaff;
         await _dbContext.SaveChangesAsync();
+        await _systemNotifications.DispatchPendingPushAsync();
 
         // Load the sender's profile so the flattened SenderName populates (mirrors GetByIdAsync's
         // includes); Photos are already the saved entities, so their metadata (incl. ids) maps as-is.
@@ -157,7 +203,7 @@ public class SupportTicketService
         return Mapper.Map<SupportTicketMessageResponse>(message);
     }
 
-    public async Task<SupportTicketResponse> CloseAsync(int ticketId)
+    public async Task<SupportTicketResponse> CloseAsync(int ticketId, int actorUserId)
     {
         var ticket = await LoadTicketAsync(ticketId);
         if (ticket.Status == SupportTicketStatus.Closed)
@@ -167,12 +213,19 @@ public class SupportTicketService
 
         ticket.Status = SupportTicketStatus.Closed;
         ticket.ClosedAt = DateTime.UtcNow;
+        StageTicketNotification(
+            ticket,
+            await CustomerRecipientAsync(ticket),
+            "Tiket podrške je zatvoren",
+            $"Vaš tiket \"{ticket.Subject}\" je zatvoren.",
+            actorUserId);
         await _dbContext.SaveChangesAsync();
+        await _systemNotifications.DispatchPendingPushAsync();
 
         return await GetByIdAsync(ticketId);
     }
 
-    public async Task<SupportTicketResponse> ReopenAsync(int ticketId)
+    public async Task<SupportTicketResponse> ReopenAsync(int ticketId, int actorUserId)
     {
         var ticket = await LoadTicketAsync(ticketId);
         if (ticket.Status == SupportTicketStatus.Open)
@@ -182,9 +235,33 @@ public class SupportTicketService
 
         ticket.Status = SupportTicketStatus.Open;
         ticket.ClosedAt = null;
+        StageTicketNotification(
+            ticket,
+            await CustomerRecipientAsync(ticket),
+            "Tiket podrške je ponovo otvoren",
+            $"Vaš tiket \"{ticket.Subject}\" je ponovo otvoren.",
+            actorUserId);
         await _dbContext.SaveChangesAsync();
+        await _systemNotifications.DispatchPendingPushAsync();
 
         return await GetByIdAsync(ticketId);
+    }
+
+    // Staged after the rule checks and right before the SaveChanges that applies the ticket change,
+    // so the notification commits together with it (see SystemNotificationService). The actor is
+    // never notified about their own message/action.
+    private void StageTicketNotification(SupportTicket ticket, IEnumerable<int> recipientUserIds, string title, string body, int actorUserId)
+    {
+        _systemNotifications.Stage(
+            new SystemNotificationMessage(title, body, NotificationType.Info, RelatedEntityTypes.SupportTicket, ticket.Id),
+            recipientUserIds,
+            actorUserId);
+    }
+
+    private async Task<IEnumerable<int>> CustomerRecipientAsync(SupportTicket ticket)
+    {
+        var customerUserId = await _systemNotifications.GetCustomerUserIdAsync(ticket.CustomerId);
+        return customerUserId is null ? Array.Empty<int>() : new[] { customerUserId.Value };
     }
 
     public async Task<(byte[] Data, string ContentType, string FileName)> GetPhotoAsync(int ticketId, int messageId, int photoId)

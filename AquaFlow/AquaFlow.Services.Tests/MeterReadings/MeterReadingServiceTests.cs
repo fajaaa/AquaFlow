@@ -1,11 +1,14 @@
+using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.Tests.Notifications;
 using AquaFlow.Services.Validators;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
 namespace AquaFlow.Services.Tests.MeterReadings;
@@ -509,16 +512,19 @@ public class MeterReadingServiceTests
         Assert.Null(result);
     }
 
-    private static AquaFlowDbContext CreateContext()
+    internal static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            // A billed reading commits with the customer's invoice notification in one explicit
+            // transaction, which InMemory ignores.
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new AquaFlowDbContext(options);
     }
 
-    private static void SeedTestData(AquaFlowDbContext context)
+    internal static void SeedTestData(AquaFlowDbContext context)
     {
         context.Settlements.Add(new Settlement { Id = 1, Name = "Sarajevo", MunicipalityId = 1, PostalCode = "71000" });
 
@@ -570,7 +576,7 @@ public class MeterReadingServiceTests
         context.SaveChanges();
     }
 
-    private static MeterReadingService CreateService(AquaFlowDbContext context)
+    internal static MeterReadingService CreateService(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<MeterReading, Model.Responses.MeterReadingResponse>();
@@ -579,6 +585,7 @@ public class MeterReadingServiceTests
         return new MeterReadingService(
             context,
             mapper,
-            new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() });
+            new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() },
+            TestSystemNotifications.Create(context, pushSender));
     }
 }

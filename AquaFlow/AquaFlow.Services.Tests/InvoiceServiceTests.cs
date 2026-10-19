@@ -1,5 +1,6 @@
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.Tests.Notifications;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Payments;
 using Mapster;
@@ -262,7 +263,8 @@ public class InvoiceServiceTests
             new NotSupportedPaymentProvider(),
             Options.Create(new PaymentsOptions()),
             Options.Create(new StripeOptions()),
-            NullLogger<InvoiceService>.Instance);
+            NullLogger<InvoiceService>.Instance,
+            TestSystemNotifications.Create(context));
     }
 
     // GetAllAsync never touches the state resolver, so a minimal stub that throws if it were ever

@@ -1,6 +1,7 @@
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.InvoiceStateMachine;
+using AquaFlow.Services.Tests.Notifications;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,7 @@ public class InvoiceStateMachineTransitionTests
         SeedTestData(context);
         var invoice = context.Invoices.First();
 
-        var state = new IssuedInvoiceState(context, CreateMapper());
+        var state = new IssuedInvoiceState(context, CreateMapper(), TestSystemNotifications.Create(context));
         var response = await state.RecordPaymentAsync(invoice, changedById: 1);
 
         // Status should change to Paid
@@ -66,7 +67,7 @@ public class InvoiceStateMachineTransitionTests
         });
         context.SaveChanges();
 
-        var state = new IssuedInvoiceState(context, CreateMapper());
+        var state = new IssuedInvoiceState(context, CreateMapper(), TestSystemNotifications.Create(context));
 
         await Assert.ThrowsAsync<ClientException>(() => state.RecordPaymentAsync(invoice, changedById: 1));
     }

@@ -2726,6 +2726,16 @@ namespace AquaFlow.Services.Migrations
                     b.Property<int>("CreatedById")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("RelatedEntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RelatedEntityType")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -2753,6 +2763,7 @@ namespace AquaFlow.Services.Migrations
                             Body = "Planirani radovi na mrezi.",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CreatedById = 1,
+                            IsSystem = false,
                             Title = "Planirani radovi",
                             Type = "Info"
                         });

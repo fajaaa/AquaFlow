@@ -1,11 +1,14 @@
+using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.Tests.Notifications;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
 namespace AquaFlow.Services.Tests;
@@ -214,11 +217,11 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        var closed = await service.CloseAsync(1);
+        var closed = await service.CloseAsync(1, actorUserId: 99);
         Assert.Equal(SupportTicketStatus.Closed, closed.Status);
         Assert.NotNull(closed.ClosedAt);
 
-        var reopened = await service.ReopenAsync(1);
+        var reopened = await service.ReopenAsync(1, actorUserId: 99);
         Assert.Equal(SupportTicketStatus.Open, reopened.Status);
         Assert.Null(reopened.ClosedAt);
     }
@@ -238,7 +241,7 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        var exception = await Assert.ThrowsAsync<ClientException>(() => service.CloseAsync(1));
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.CloseAsync(1, actorUserId: 99));
 
         Assert.Contains("already closed", exception.Message);
     }
@@ -258,7 +261,7 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        var exception = await Assert.ThrowsAsync<ClientException>(() => service.ReopenAsync(1));
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.ReopenAsync(1, actorUserId: 99));
 
         Assert.Contains("already open", exception.Message);
     }
@@ -284,10 +287,11 @@ public class SupportTicketServiceTests
         Assert.Equal(2, item.Id);
     }
 
-    private static AquaFlowDbContext CreateContext()
+    internal static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new AquaFlowDbContext(options);
@@ -318,7 +322,7 @@ public class SupportTicketServiceTests
     // Mirrors the SupportTicket flatten config from Program.cs so the response's CustomerName,
     // MessageCount and SenderName populate from the loaded navigations, same approach as
     // WaterMeterRequestServiceTests building a local TypeAdapterConfig.
-    private static SupportTicketService CreateService(AquaFlowDbContext context)
+    internal static SupportTicketService CreateService(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<SupportTicket, SupportTicketResponse>()
@@ -328,6 +332,6 @@ public class SupportTicketServiceTests
             .Map(destination => destination.SenderName, source => source.Sender == null || source.Sender.CustomerProfile == null ? null : (source.Sender.CustomerProfile.FirstName + " " + source.Sender.CustomerProfile.LastName).Trim());
         IMapper mapper = new Mapper(mapperConfig);
 
-        return new SupportTicketService(context, mapper);
+        return new SupportTicketService(context, mapper, TestSystemNotifications.Create(context, pushSender));
     }
 }

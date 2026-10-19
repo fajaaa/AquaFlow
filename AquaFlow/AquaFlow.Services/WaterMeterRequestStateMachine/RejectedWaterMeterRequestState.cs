@@ -6,8 +6,8 @@ namespace AquaFlow.Services.WaterMeterRequestStateMachine;
 // Terminal state: a rejected request accepts no further transitions.
 public class RejectedWaterMeterRequestState : BaseWaterMeterRequestState
 {
-    public RejectedWaterMeterRequestState(AquaFlowDbContext dbContext, IMapper mapper)
-        : base(dbContext, mapper)
+    public RejectedWaterMeterRequestState(AquaFlowDbContext dbContext, IMapper mapper, ISystemNotificationService systemNotifications)
+        : base(dbContext, mapper, systemNotifications)
     {
     }
 

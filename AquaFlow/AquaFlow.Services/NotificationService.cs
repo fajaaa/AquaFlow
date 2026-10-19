@@ -1,5 +1,5 @@
 using AquaFlow.Common.Services.MessageBus;
-using AquaFlow.Common.Services.PushNotificationService;
+using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Messages;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
@@ -15,10 +15,8 @@ namespace AquaFlow.Services;
 public class NotificationService
     : EfCrudService<Notification, NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>
 {
-    private const int PushBodyMaxLength = 150;
-
     private readonly NotificationRecipientService _recipientService;
-    private readonly IPushNotificationSender _pushNotificationSender;
+    private readonly NotificationPushDispatcher _pushDispatcher;
     private readonly IMessagePublisher _messagePublisher;
     private readonly ILogger<NotificationService> _logger;
 
@@ -29,20 +27,23 @@ public class NotificationService
         IEnumerable<IValidator<NotificationUpdateRequest>> updateValidators,
         IEnumerable<IValidator<NotificationPatchRequest>> patchValidators,
         NotificationRecipientService recipientService,
-        IPushNotificationSender pushNotificationSender,
+        NotificationPushDispatcher pushDispatcher,
         IMessagePublisher messagePublisher,
         ILogger<NotificationService> logger)
         : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _recipientService = recipientService;
-        _pushNotificationSender = pushNotificationSender;
+        _pushDispatcher = pushDispatcher;
         _messagePublisher = messagePublisher;
         _logger = logger;
     }
 
+    // /Notifications is the admin CRUD table for news/announcements. System notifications
+    // (SystemNotificationService - one per business event, addressed to specific users) never show
+    // up in that listing; their recipients read them through GET /UserNotifications/mine.
     protected override IQueryable<Notification> ApplyFilters(IQueryable<Notification> query, NotificationSearchObject? search)
     {
-        query = base.ApplyFilters(query, search);
+        query = base.ApplyFilters(query, search).Where(notification => !notification.IsSystem);
 
         var searchText = search?.Search?.Trim();
         if (string.IsNullOrWhiteSpace(searchText))
@@ -55,6 +56,29 @@ public class NotificationService
             notification.Body.Contains(searchText) ||
             notification.Type.Contains(searchText) ||
             notification.Audience.Contains(searchText));
+    }
+
+    // A system notification records a business event sent to explicit recipients: an admin edit
+    // would rewrite what those users were told, and SyncRecipientsAsync can't resolve recipients for
+    // the Direct audience anyway. DeleteAsync applies the same rule.
+    protected override Task BeforeUpdateAsync(int id, NotificationUpdateRequest request, Notification entity)
+    {
+        EnsureNotSystem(entity);
+        return Task.CompletedTask;
+    }
+
+    protected override Task BeforePatchAsync(int id, NotificationPatchRequest request, Notification entity)
+    {
+        EnsureNotSystem(entity);
+        return Task.CompletedTask;
+    }
+
+    private static void EnsureNotSystem(Notification entity)
+    {
+        if (entity.IsSystem)
+        {
+            throw new ClientException("System notifications cannot be edited or deleted.");
+        }
     }
 
     public override async Task<NotificationResponse> InsertAsync(NotificationInsertRequest request)
@@ -77,7 +101,9 @@ public class NotificationService
 
         await transaction.CommitAsync();
 
-        await SendPushNotificationAsync(entity, recipientUserIds);
+        // After CommitAsync: a push failure/outage must never block or roll back the notification
+        // and its inbox rows (NotificationPushDispatcher logs and swallows every error).
+        await _pushDispatcher.SendAsync(entity, recipientUserIds);
         await PublishNotificationCreatedAsync(entity);
 
         await LoadReferencesAsync(entity);
@@ -142,6 +168,8 @@ public class NotificationService
         var entity = await DbContext.Notifications.FirstOrDefaultAsync(notification => notification.Id == id)
             ?? throw new KeyNotFoundException($"Notification with id {id} was not found.");
 
+        EnsureNotSystem(entity);
+
         await using var transaction = await DbContext.Database.BeginTransactionAsync();
 
         await DbContext.UserNotifications
@@ -152,62 +180,6 @@ public class NotificationService
         await DbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();
-    }
-
-    // Deliberately outside the InsertAsync transaction (called after CommitAsync): an FCM outage
-    // or bad Firebase config must never block or roll back notification creation, so any failure
-    // here is caught, logged, and swallowed instead of propagating.
-    private async Task SendPushNotificationAsync(Notification notification, List<int> recipientUserIds)
-    {
-        if (recipientUserIds.Count == 0)
-        {
-            return;
-        }
-
-        try
-        {
-            var tokens = await DbContext.DeviceTokens
-                .Where(deviceToken => deviceToken.IsActive && recipientUserIds.Contains(deviceToken.UserId))
-                .Select(deviceToken => deviceToken.Token)
-                .ToListAsync();
-
-            if (tokens.Count == 0)
-            {
-                return;
-            }
-
-            var body = notification.Body.Length > PushBodyMaxLength
-                ? notification.Body[..PushBodyMaxLength] + "..."
-                : notification.Body;
-
-            var invalidTokens = await _pushNotificationSender.SendAsync(
-                tokens,
-                notification.Title,
-                body,
-                new Dictionary<string, string>
-                {
-                    ["notificationId"] = notification.Id.ToString(),
-                    ["type"] = notification.Type
-                });
-
-            if (invalidTokens.Count > 0)
-            {
-                var tokensToDeactivate = await DbContext.DeviceTokens
-                    .Where(deviceToken => invalidTokens.Contains(deviceToken.Token) && deviceToken.IsActive)
-                    .ToListAsync();
-
-                foreach (var deviceToken in tokensToDeactivate)
-                {
-                    deviceToken.IsActive = false;
-                }
-
-                await DbContext.SaveChangesAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send push notification for notification {NotificationId}.", notification.Id);
-        }
     }
 
     // Deliberately outside the InsertAsync transaction (called after CommitAsync): a RabbitMQ

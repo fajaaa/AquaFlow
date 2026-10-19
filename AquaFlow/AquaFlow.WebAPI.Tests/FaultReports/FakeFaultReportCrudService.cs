@@ -68,6 +68,14 @@ public class FakeFaultReportCrudService : IFaultReportService
         return Task.FromResult(row is null ? null : new FaultReportOwnership(row.ReportedById, row.Status, row.AssignedCollectorId));
     }
 
+    public int? LastCreateActorUserId { get; private set; }
+
+    public Task<FaultReportResponse> CreateAsync(FaultReportInsertRequest request, int actorUserId)
+    {
+        LastCreateActorUserId = actorUserId;
+        return InsertAsync(request);
+    }
+
     public Task<FaultReportResponse> InsertAsync(FaultReportInsertRequest request)
     {
         LastInsertRequest = request;

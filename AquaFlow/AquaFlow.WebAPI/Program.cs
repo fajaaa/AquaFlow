@@ -241,6 +241,11 @@ builder.Services.AddScoped<ISupportTicketService, SupportTicketService>();
 builder.Services.AddScoped<IBaseReadService<SupportTicketResponse, SupportTicketSearchObject>>(
     serviceProvider => serviceProvider.GetRequiredService<ISupportTicketService>());
 builder.Services.AddScoped<NotificationRecipientService>();
+// Shared FCM delivery (preference filter, invalid-token cleanup, errors swallowed) used by both the
+// admin NotificationService and SystemNotificationService. Both are scoped on purpose: the system
+// notifications are staged into the request's own DbContext so they commit with the business change.
+builder.Services.AddScoped<NotificationPushDispatcher>();
+builder.Services.AddScoped<ISystemNotificationService, SystemNotificationService>();
 builder.Services.AddScoped<IAccessManager, AccessManager>();
 builder.Services.AddScoped<ICryptoService, CryptoService>();
 AddPatchMapping<UserPatchRequest, User>();

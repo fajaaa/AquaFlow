@@ -24,10 +24,11 @@ public interface ISupportTicketService : IBaseReadService<SupportTicketResponse,
     Task<SupportTicketMessageResponse> AddMessageAsync(int ticketId, int senderId, bool isFromStaff, string body, IReadOnlyCollection<SupportTicketPhotoUpload> photos);
 
     // Closes the ticket (Status=Closed, ClosedAt=now); ClientException when it is already Closed.
-    Task<SupportTicketResponse> CloseAsync(int ticketId);
+    // actorUserId (the staff member, from the JWT) is kept out of the customer's notification.
+    Task<SupportTicketResponse> CloseAsync(int ticketId, int actorUserId);
 
     // Reopens the ticket (Status=Open, ClosedAt=null); ClientException when it is already Open.
-    Task<SupportTicketResponse> ReopenAsync(int ticketId);
+    Task<SupportTicketResponse> ReopenAsync(int ticketId, int actorUserId);
 
     // Loads a photo's bytes scoped to the ticket -> message -> photo chain, so a photo id from
     // another ticket/message cannot be read through this ticket. Throws KeyNotFoundException when

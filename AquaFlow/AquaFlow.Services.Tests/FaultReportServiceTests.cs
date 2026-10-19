@@ -1,13 +1,16 @@
+using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.FaultReportStateMachine;
+using AquaFlow.Services.Tests.Notifications;
 using AquaFlow.Services.Validators;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -629,10 +632,13 @@ public class FaultReportServiceTests
         context.ChangeTracker.Clear();
     }
 
-    private static AquaFlowDbContext CreateContext()
+    internal static AquaFlowDbContext CreateContext()
     {
+        // Creating a report commits the report and its staff notification in one explicit
+        // transaction, which InMemory ignores.
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new AquaFlowDbContext(options);
@@ -689,7 +695,7 @@ public class FaultReportServiceTests
     // populate from the loaded navigations, and builds a real IServiceProvider with the same keyed
     // BaseFaultReportState registrations as Program.cs so the transition tests exercise the actual
     // state machine instead of a stub - same template as WaterMeterRequestServiceTests.CreateService.
-    private static FaultReportService CreateService(AquaFlowDbContext context)
+    internal static FaultReportService CreateService(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<FaultReport, Model.Responses.FaultReportResponse>()
@@ -705,11 +711,13 @@ public class FaultReportServiceTests
             .IgnoreNullValues(true);
         IMapper mapper = new Mapper(mapperConfig);
 
+        var systemNotifications = TestSystemNotifications.Create(context, pushSender);
+
         var stateServices = new ServiceCollection();
-        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.New, (_, _) => new NewFaultReportState(context, mapper));
-        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.Assigned, (_, _) => new AssignedFaultReportState(context, mapper));
-        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.InProgress, (_, _) => new InProgressFaultReportState(context, mapper));
-        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.Resolved, (_, _) => new ResolvedFaultReportState(context, mapper));
+        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.New, (_, _) => new NewFaultReportState(context, mapper, systemNotifications));
+        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.Assigned, (_, _) => new AssignedFaultReportState(context, mapper, systemNotifications));
+        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.InProgress, (_, _) => new InProgressFaultReportState(context, mapper, systemNotifications));
+        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.Resolved, (_, _) => new ResolvedFaultReportState(context, mapper, systemNotifications));
         var stateResolver = new FaultReportStateResolver(stateServices.BuildServiceProvider());
 
         return new FaultReportService(
@@ -718,6 +726,7 @@ public class FaultReportServiceTests
             new IValidator<Model.Requests.FaultReportInsertRequest>[] { new FaultReportInsertValidator() },
             new IValidator<Model.Requests.FaultReportUpdateRequest>[] { new FaultReportUpdateValidator() },
             new IValidator<Model.Requests.FaultReportPatchRequest>[] { new FaultReportPatchValidator() },
-            stateResolver);
+            stateResolver,
+            systemNotifications);
     }
 }

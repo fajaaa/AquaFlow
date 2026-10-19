@@ -498,7 +498,7 @@ public class NotificationServiceTests
         Assert.Equal(901, readItem.NotificationId);
     }
 
-    private static NotificationService CreateNotificationService(
+    internal static NotificationService CreateNotificationService(
         AquaFlowDbContext context,
         IPushNotificationSender? pushNotificationSender = null,
         IMessagePublisher? messagePublisher = null)
@@ -518,12 +518,12 @@ public class NotificationServiceTests
             new IValidator<NotificationUpdateRequest>[] { new NotificationUpdateValidator() },
             new IValidator<NotificationPatchRequest>[] { new NotificationPatchValidator() },
             recipientService,
-            pushNotificationSender ?? new FakePushNotificationSender(),
+            TestSystemNotifications.CreateDispatcher(context, pushNotificationSender),
             messagePublisher ?? new FakeMessagePublisher(),
             NullLogger<NotificationService>.Instance);
     }
 
-    private static UserNotificationService CreateUserNotificationService(AquaFlowDbContext context)
+    internal static UserNotificationService CreateUserNotificationService(AquaFlowDbContext context)
     {
         IMapper mapper = new Mapper();
         var recipientService = new NotificationRecipientService(context);
@@ -537,7 +537,7 @@ public class NotificationServiceTests
             recipientService);
     }
 
-    private static void SeedUsersAndLocations(AquaFlowDbContext context)
+    internal static void SeedUsersAndLocations(AquaFlowDbContext context)
     {
         context.UserRoles.AddRange(
             new UserRole { Id = 1, Name = "Admin" },
@@ -564,7 +564,7 @@ public class NotificationServiceTests
         context.SaveChanges();
     }
 
-    private static void SeedDeviceTokens(AquaFlowDbContext context)
+    internal static void SeedDeviceTokens(AquaFlowDbContext context)
     {
         context.DeviceTokens.AddRange(
             new DeviceToken { Id = 1, UserId = AdminUserId, Token = "token-admin", Platform = "android", IsActive = true },
@@ -590,7 +590,7 @@ public class NotificationServiceTests
         };
     }
 
-    private static DbContextOptions<AquaFlowDbContext> BuildOptions() =>
+    internal static DbContextOptions<AquaFlowDbContext> BuildOptions() =>
         new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))

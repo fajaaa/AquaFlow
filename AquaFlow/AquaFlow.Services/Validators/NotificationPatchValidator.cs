@@ -10,7 +10,10 @@ public class NotificationPatchValidator : AbstractValidator<NotificationPatchReq
         RuleFor(x => x.Title).NotEmpty().MaximumLength(150).When(x => x.Title != null);
         RuleFor(x => x.Body).NotEmpty().When(x => x.Body != null);
         RuleFor(x => x.Type).NotEmpty().MaximumLength(40).When(x => x.Type != null);
-        RuleFor(x => x.Audience).NotEmpty().MaximumLength(40).When(x => x.Audience != null);
+        RuleFor(x => x.Audience).NotEmpty().MaximumLength(40)
+            .Must(audience => !NotificationInsertValidator.IsDirectAudience(audience))
+            .WithMessage(NotificationInsertValidator.DirectAudienceMessage)
+            .When(x => x.Audience != null);
         RuleFor(x => x.CreatedById).GreaterThan(0).When(x => x.CreatedById.HasValue);
     }
 }
