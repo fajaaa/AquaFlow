@@ -7,23 +7,19 @@ import 'package:http/http.dart' as http;
 import 'package:aquaflow_collector/models/collector_water_meter_request.dart';
 import 'package:aquaflow_collector/services/collector_water_meter_request_exception.dart';
 import 'package:aquaflow_collector/shared/config/api_config.dart';
-import 'package:aquaflow_collector/shared/services/token_storage.dart';
+import 'package:aquaflow_collector/shared/services/authenticated_client.dart';
 
 class CollectorWaterMeterRequestService {
   CollectorWaterMeterRequestService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<List<CollectorWaterMeterRequest>> fetchAssigned() async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeterRequests').replace(
       queryParameters: {
         'PageSize': '100',
@@ -34,7 +30,7 @@ class CollectorWaterMeterRequestService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -79,7 +75,6 @@ class CollectorWaterMeterRequestService {
     required String street,
     required String houseNumber,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/WaterMeterRequests/$requestId/register',
     );
@@ -88,7 +83,6 @@ class CollectorWaterMeterRequestService {
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -109,14 +103,6 @@ class CollectorWaterMeterRequestService {
         _messageFor(response, 'Vodomjer nije moguće registrovati'),
       );
     }
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CollectorWaterMeterRequestException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

@@ -11,7 +11,7 @@ import 'package:aquaflow_desktop/models/admin_fault_report_page.dart';
 import 'package:aquaflow_desktop/models/admin_fault_report_photo.dart';
 import 'package:aquaflow_desktop/services/admin_fault_report_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 /// Desktop admin data layer over `/FaultReports`, following the
 /// `AdminInvoiceService`/`AdminTariffService` template. `FaultReports.Manage`
@@ -23,14 +23,11 @@ import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 class AdminFaultReportService {
   AdminFaultReportService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<AdminFaultReportPage> fetch({
@@ -40,7 +37,6 @@ class AdminFaultReportService {
     String? status,
     int? customerId,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -65,7 +61,7 @@ class AdminFaultReportService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -102,13 +98,12 @@ class AdminFaultReportService {
   /// Metadata for every photo attached to [faultReportId] (never raw bytes -
   /// see [fetchPhotoBytes]).
   Future<List<AdminFaultReportPhoto>> fetchPhotos(int faultReportId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/FaultReports/$faultReportId/photos',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -133,13 +128,12 @@ class AdminFaultReportService {
   /// Raw bytes of one photo (`GET /FaultReports/{id}/photos/{photoId}`), for
   /// `Image.memory` via the shared `AuthenticatedImage` widget.
   Future<Uint8List> fetchPhotoBytes(int faultReportId, int photoId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/FaultReports/$faultReportId/photos/$photoId',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -154,7 +148,6 @@ class AdminFaultReportService {
   /// Collector pick-list for the assign dialog (`GET /CollectorProfiles`),
   /// mirroring `AdminWaterMeterRequestService.fetchCollectors`.
   Future<List<AdminCollectorProfile>> fetchCollectors() async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/CollectorProfiles').replace(
       queryParameters: {
         'PageSize': '100',
@@ -164,7 +157,7 @@ class AdminFaultReportService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -224,14 +217,12 @@ class AdminFaultReportService {
     String action, {
     Map<String, dynamic>? body,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id/$action');
 
     final response = await _send(
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           if (body != null) 'Content-Type': 'application/json',
         },
         body: body != null ? jsonEncode(body) : null,
@@ -252,14 +243,6 @@ class AdminFaultReportService {
     }
 
     return AdminFaultReport.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminFaultReportException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

@@ -10,7 +10,7 @@ import 'package:aquaflow_collector/models/collector_fault_report_page.dart';
 import 'package:aquaflow_collector/models/collector_fault_report_photo.dart';
 import 'package:aquaflow_collector/services/collector_fault_report_exception.dart';
 import 'package:aquaflow_collector/shared/config/api_config.dart';
-import 'package:aquaflow_collector/shared/services/token_storage.dart';
+import 'package:aquaflow_collector/shared/services/authenticated_client.dart';
 
 /// Mobile collector data layer over `/FaultReports`, following the
 /// `AdminFaultReportService` template. A collector no longer holds
@@ -21,14 +21,11 @@ import 'package:aquaflow_collector/shared/services/token_storage.dart';
 class CollectorFaultReportService {
   CollectorFaultReportService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<CollectorFaultReportPage> fetch({
@@ -37,7 +34,6 @@ class CollectorFaultReportService {
     String? term,
     String? status,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -59,7 +55,7 @@ class CollectorFaultReportService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -98,13 +94,12 @@ class CollectorFaultReportService {
   Future<List<CollectorFaultReportPhoto>> fetchPhotos(
     int faultReportId,
   ) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/FaultReports/$faultReportId/photos',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -129,13 +124,12 @@ class CollectorFaultReportService {
   /// Raw bytes of one photo (`GET /FaultReports/{id}/photos/{photoId}`), for
   /// `Image.memory` via the shared `AuthenticatedImage` widget.
   Future<Uint8List> fetchPhotoBytes(int faultReportId, int photoId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/FaultReports/$faultReportId/photos/$photoId',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -157,11 +151,10 @@ class CollectorFaultReportService {
   Future<CollectorFaultReport> resolve(int id) => _postTransition(id, 'resolve');
 
   Future<CollectorFaultReport> _postTransition(int id, String action) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id/$action');
 
     final response = await _send(
-      () => _client.post(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.post(uri),
     );
 
     if (response.statusCode != 200) {
@@ -178,14 +171,6 @@ class CollectorFaultReportService {
     }
 
     return CollectorFaultReport.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CollectorFaultReportException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

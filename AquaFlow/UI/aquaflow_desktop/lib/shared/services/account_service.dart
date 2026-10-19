@@ -7,38 +7,33 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/account_details.dart';
 import 'account_exception.dart';
-import 'token_storage.dart';
+import 'authenticated_client.dart';
 
 /// Loads and saves the signed-in user's own account data (`/Account/me`). This
 /// is the self-service endpoint any authenticated user can use regardless of
 /// role, so - unlike editing users through `/Users` - it needs no admin
 /// permission. The backend derives the user from the JWT, so no id is ever sent.
 ///
-/// The bearer token is read from [TokenStorage] and attached to every request.
+/// The bearer token is attached (and refreshed) by [AuthenticatedClient].
 /// Network/HTTP failures throw [AccountException] with a user-safe message. The
 /// base URL always comes from [ApiConfig.baseUrl] - the host is never hardcoded
 /// here.
 class AccountService {
   AccountService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  })  : _client = client ?? http.Client(),
-        _tokenStorage = tokenStorage ?? TokenStorage(),
+  })  : _client = client ?? AuthenticatedClient.instance,
         _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   /// Fetches the caller's own account data via `GET /Account/me`.
   Future<AccountDetails> fetch() async {
-    final token = await _requireToken();
-
     final uri = Uri.parse('${ApiConfig.baseUrl}/Account/me');
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -53,15 +48,12 @@ class AccountService {
   /// Saves [details] via `PUT /Account/me` and returns the updated data echoed
   /// back by the backend.
   Future<AccountDetails> update(AccountDetails details) async {
-    final token = await _requireToken();
-
     final uri = Uri.parse('${ApiConfig.baseUrl}/Account/me');
 
     final response = await _send(
       () => _client.put(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(details.toUpdateJson()),
@@ -83,15 +75,12 @@ class AccountService {
     required String currentPassword,
     required String newPassword,
   }) async {
-    final token = await _requireToken();
-
     final uri = Uri.parse('${ApiConfig.baseUrl}/Account/me/password');
 
     final response = await _send(
       () => _client.put(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -115,14 +104,6 @@ class AccountService {
       throw AccountException(malformedMessage);
     }
     return AccountDetails.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AccountException('You are not signed in.');
-    }
-    return token;
   }
 
   /// Runs an HTTP call, mapping transport failures to a user-safe exception.

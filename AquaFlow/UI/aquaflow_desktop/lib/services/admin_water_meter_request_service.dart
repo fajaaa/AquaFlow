@@ -9,19 +9,16 @@ import 'package:aquaflow_desktop/models/admin_water_meter_request.dart';
 import 'package:aquaflow_desktop/models/admin_water_meter_request_page.dart';
 import 'package:aquaflow_desktop/services/admin_water_meter_request_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 class AdminWaterMeterRequestService {
   AdminWaterMeterRequestService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<AdminWaterMeterRequestPage> fetch({
@@ -29,7 +26,6 @@ class AdminWaterMeterRequestService {
     required int pageSize,
     String? status,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -48,7 +44,7 @@ class AdminWaterMeterRequestService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -83,7 +79,6 @@ class AdminWaterMeterRequestService {
   }
 
   Future<List<AdminCollectorProfile>> fetchCollectors() async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/CollectorProfiles').replace(
       queryParameters: {
         'PageSize': '100',
@@ -93,7 +88,7 @@ class AdminWaterMeterRequestService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -123,14 +118,12 @@ class AdminWaterMeterRequestService {
   }
 
   Future<void> assign(int id, int collectorId) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeterRequests/$id/assign');
 
     final response = await _send(
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({'collectorId': collectorId}),
@@ -145,7 +138,6 @@ class AdminWaterMeterRequestService {
   }
 
   Future<void> reject(int id, String? reason) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeterRequests/$id/reject');
     final reasonText = reason?.trim();
 
@@ -153,7 +145,6 @@ class AdminWaterMeterRequestService {
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -167,14 +158,6 @@ class AdminWaterMeterRequestService {
         _messageFor(response, 'Zahtjev nije moguće odbiti'),
       );
     }
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminWaterMeterRequestException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

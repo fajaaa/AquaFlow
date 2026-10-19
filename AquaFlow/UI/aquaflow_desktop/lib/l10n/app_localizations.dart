@@ -2551,6 +2551,18 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Neriješeno'**
   String get unresolvedStatusLabel;
+
+  /// SnackBar shown after an involuntary sign-out because the refresh token was rejected (expired or revoked session).
+  ///
+  /// In bs, this message translates to:
+  /// **'Sesija je istekla. Prijavite se ponovo.'**
+  String get sessionExpiredMessage;
+
+  /// SnackBar shown after a successful own password change; the backend ends every session, so the user is signed out.
+  ///
+  /// In bs, this message translates to:
+  /// **'Lozinka je promijenjena. Prijavite se ponovo.'**
+  String get passwordChangedSignInAgain;
 }
 
 class _AppLocalizationsDelegate

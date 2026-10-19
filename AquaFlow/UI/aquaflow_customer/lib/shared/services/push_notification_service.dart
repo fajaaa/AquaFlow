@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
+import 'authenticated_client.dart';
 import 'push_notification_exception.dart';
 import 'token_storage.dart';
 
@@ -16,14 +17,16 @@ import 'token_storage.dart';
 /// `main.dart` (`!kIsWeb && !PlatformGate.isDesktop`); this class assumes it is
 /// only ever driven from a mobile build.
 ///
-/// Follows the same `http.Client` + `TokenStorage` + timeout + dedicated
-/// exception template as `NotificationService`/`AccountService`.
+/// Follows the same `AuthenticatedClient` + timeout + dedicated exception
+/// template as `NotificationService`/`AccountService`. [TokenStorage] is only
+/// consulted to skip calls while nobody is signed in - the bearer token itself
+/// is attached (and refreshed) by [AuthenticatedClient].
 class PushNotificationService {
   PushNotificationService({
     http.Client? client,
     TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _tokenStorage = tokenStorage ?? TokenStorage(),
        _timeout = timeout ?? const Duration(seconds: 15);
 
@@ -61,14 +64,13 @@ class PushNotificationService {
     final token = await FirebaseMessaging.instance.getToken();
     if (token == null) return;
 
-    final accessToken = await _requireToken();
+    await _requireSignedIn();
     final uri = Uri.parse('${ApiConfig.baseUrl}/DeviceTokens/unregister');
 
     final response = await _send(
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({'token': token}),
@@ -85,8 +87,7 @@ class PushNotificationService {
   Future<void> _register(String token) async {
     // onTokenRefresh can fire while nobody is signed in (e.g. right after a
     // logout, before the app is closed) - silently skip rather than throwing.
-    final accessToken = await _tokenStorage.getAccessToken();
-    if (accessToken == null) return;
+    if (await _tokenStorage.getAccessToken() == null) return;
 
     final uri = Uri.parse('${ApiConfig.baseUrl}/DeviceTokens/register');
 
@@ -94,7 +95,6 @@ class PushNotificationService {
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({'token': token, 'platform': _platform}),
@@ -110,12 +110,10 @@ class PushNotificationService {
 
   String get _platform => Platform.isAndroid ? 'android' : 'ios';
 
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
+  Future<void> _requireSignedIn() async {
+    if (await _tokenStorage.getAccessToken() == null) {
       throw const PushNotificationException('Niste prijavljeni.');
     }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

@@ -8,7 +8,7 @@ import 'package:aquaflow_collector/models/collector_meter_reading.dart';
 import 'package:aquaflow_collector/models/collector_meter_reading_result.dart';
 import 'package:aquaflow_collector/services/collector_meter_reading_exception.dart';
 import 'package:aquaflow_collector/shared/config/api_config.dart';
-import 'package:aquaflow_collector/shared/services/token_storage.dart';
+import 'package:aquaflow_collector/shared/services/authenticated_client.dart';
 
 /// Submits a collector-entered meter reading. Deliberately sends no
 /// `CollectorId`/`PreviousReadingValue`/`ConsumptionM3`/`ReadingDate`/`Source`
@@ -19,14 +19,11 @@ import 'package:aquaflow_collector/shared/services/token_storage.dart';
 class CollectorMeterReadingService {
   CollectorMeterReadingService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<CollectorMeterReadingResult> submit({
@@ -37,14 +34,12 @@ class CollectorMeterReadingService {
     String? note,
     String? photoUrl,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/MeterReadings/collector-entry');
 
     final response = await _send(
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -81,13 +76,12 @@ class CollectorMeterReadingService {
   /// the current last reading (which would otherwise block a new reading the
   /// server would actually accept).
   Future<CollectorMeterReading?> fetchLastReading(int waterMeterId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/MeterReadings/last-counting',
     ).replace(queryParameters: {'waterMeterId': '$waterMeterId'});
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -101,14 +95,6 @@ class CollectorMeterReadingService {
       return null;
     }
     return CollectorMeterReading.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CollectorMeterReadingException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

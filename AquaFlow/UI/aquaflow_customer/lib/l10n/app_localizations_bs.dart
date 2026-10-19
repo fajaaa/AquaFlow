@@ -816,4 +816,11 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get supportTicketClosedBanner => 'Tiket je zatvoren';
+
+  @override
+  String get sessionExpiredMessage => 'Sesija je istekla. Prijavite se ponovo.';
+
+  @override
+  String get passwordChangedSignInAgain =>
+      'Lozinka je promijenjena. Prijavite se ponovo.';
 }

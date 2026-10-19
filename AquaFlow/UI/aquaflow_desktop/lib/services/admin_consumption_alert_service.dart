@@ -8,26 +8,22 @@ import 'package:aquaflow_desktop/models/admin_consumption_alert.dart';
 import 'package:aquaflow_desktop/models/admin_consumption_alert_page.dart';
 import 'package:aquaflow_desktop/services/admin_consumption_alert_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 class AdminConsumptionAlertService {
   AdminConsumptionAlertService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<AdminConsumptionAlertPage> fetch({
     required int page,
     required int pageSize,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/WaterConsumptionAlerts',
     ).replace(
@@ -41,7 +37,7 @@ class AdminConsumptionAlertService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -76,13 +72,12 @@ class AdminConsumptionAlertService {
   }
 
   Future<void> recompute() async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/WaterConsumptionAlerts/recompute',
     );
 
     final response = await _send(
-      () => _client.post(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.post(uri),
     );
 
     if (response.statusCode != 200) {
@@ -93,14 +88,12 @@ class AdminConsumptionAlertService {
   }
 
   Future<void> markAsResolved(int id) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterConsumptionAlerts/$id');
 
     final response = await _send(
       () => _client.patch(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({'isResolved': true}),
@@ -112,14 +105,6 @@ class AdminConsumptionAlertService {
         _messageFor(response, 'Upozorenje nije moguće označiti kao riješeno'),
       );
     }
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminConsumptionAlertException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

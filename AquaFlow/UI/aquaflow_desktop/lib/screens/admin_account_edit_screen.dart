@@ -226,6 +226,16 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
         _currentPasswordCtrl.clear();
         _newPasswordCtrl.clear();
         _confirmPasswordCtrl.clear();
+
+        // The backend ended every session of this user, this one included
+        // (`PUT /Account/me/password` revokes them all), so sign in again.
+        if (!mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        final message = AppLocalizations.of(context).passwordChangedSignInAgain;
+        final auth = context.read<AuthProvider>();
+        messenger.showSnackBar(SnackBar(content: Text(message)));
+        await auth.logout();
+        return;
       }
 
       if (!mounted) return;

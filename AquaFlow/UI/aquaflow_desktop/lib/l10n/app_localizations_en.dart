@@ -1350,4 +1350,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unresolvedStatusLabel => 'Unresolved';
+
+  @override
+  String get sessionExpiredMessage =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get passwordChangedSignInAgain =>
+      'Your password has been changed. Please sign in again.';
 }

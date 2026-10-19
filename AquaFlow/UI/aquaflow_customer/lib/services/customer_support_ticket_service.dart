@@ -12,7 +12,7 @@ import 'package:aquaflow_customer/models/customer_support_ticket_message.dart';
 import 'package:aquaflow_customer/models/customer_support_ticket_page.dart';
 import 'package:aquaflow_customer/services/customer_support_ticket_exception.dart';
 import 'package:aquaflow_customer/shared/config/api_config.dart';
-import 'package:aquaflow_customer/shared/services/token_storage.dart';
+import 'package:aquaflow_customer/shared/services/authenticated_client.dart';
 
 /// Support tickets of the signed-in customer: list own (`GET /SupportTickets/mine`),
 /// read one thread (`GET /SupportTickets/{id}`), open a new ticket
@@ -26,14 +26,11 @@ import 'package:aquaflow_customer/shared/services/token_storage.dart';
 class CustomerSupportTicketService {
   CustomerSupportTicketService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   /// One page of the caller's tickets, newest activity first. The backend pins
@@ -44,7 +41,6 @@ class CustomerSupportTicketService {
     required int page,
     int pageSize = 20,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/SupportTickets/mine').replace(
       queryParameters: {
         'Page': '$page',
@@ -56,7 +52,7 @@ class CustomerSupportTicketService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -94,11 +90,10 @@ class CustomerSupportTicketService {
   /// ownership to the caller): header fields plus every message and its photo
   /// metadata. Used by the detail/chat screen.
   Future<CustomerSupportTicket> fetchById(int id) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/SupportTickets/$id');
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -128,11 +123,9 @@ class CustomerSupportTicketService {
     required String body,
     List<File> images = const [],
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/SupportTickets');
 
     final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
       ..fields['subject'] = subject.trim()
       ..fields['body'] = body.trim();
     for (final image in images) {
@@ -164,13 +157,11 @@ class CustomerSupportTicketService {
     required String body,
     List<File> images = const [],
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/SupportTickets/$ticketId/messages',
     );
 
     final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
       ..fields['body'] = body.trim();
     for (final image in images) {
       request.files.add(await _multipartImage(image));
@@ -201,13 +192,12 @@ class CustomerSupportTicketService {
     int messageId,
     int photoId,
   ) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/SupportTickets/$ticketId/messages/$messageId/photos/$photoId',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -236,14 +226,6 @@ class CustomerSupportTicketService {
       imageFile.path,
       contentType: MediaType.parse(mimeType),
     );
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CustomerSupportTicketException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

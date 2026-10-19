@@ -8,7 +8,7 @@ import 'package:aquaflow_customer/models/customer_water_meter.dart';
 import 'package:aquaflow_customer/models/customer_water_meter_page.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_exception.dart';
 import 'package:aquaflow_customer/shared/config/api_config.dart';
-import 'package:aquaflow_customer/shared/services/token_storage.dart';
+import 'package:aquaflow_customer/shared/services/authenticated_client.dart';
 
 /// Loads the signed-in customer's own water meters - [fetchPage] for the
 /// paginated "Vodomjeri" tab list, [fetchMine] for callers that need every
@@ -19,14 +19,11 @@ import 'package:aquaflow_customer/shared/services/token_storage.dart';
 class CustomerWaterMeterService {
   CustomerWaterMeterService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   /// One page of the caller's water meters, newest-installed first. The
@@ -36,7 +33,6 @@ class CustomerWaterMeterService {
     required int page,
     int pageSize = 10,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeters').replace(
       queryParameters: {
         'Page': '$page',
@@ -48,7 +44,7 @@ class CustomerWaterMeterService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -81,13 +77,12 @@ class CustomerWaterMeterService {
   }
 
   Future<List<CustomerWaterMeter>> fetchMine() async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/WaterMeters',
     ).replace(queryParameters: {'PageSize': '100'});
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -112,14 +107,6 @@ class CustomerWaterMeterService {
         .whereType<Map<String, dynamic>>()
         .map(CustomerWaterMeter.fromJson)
         .toList();
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CustomerWaterMeterException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

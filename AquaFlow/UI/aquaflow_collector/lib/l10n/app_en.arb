@@ -231,5 +231,7 @@
   "statusChangeDialogTitle": "Status change",
   "statusChangeDialogContent": "Set the report status to \"{status}\"?",
   "startActionButton": "Start",
-  "resolveActionButton": "Resolve"
+  "resolveActionButton": "Resolve",
+  "sessionExpiredMessage": "Your session has expired. Please sign in again.",
+  "passwordChangedSignInAgain": "Your password has been changed. Please sign in again."
 }

@@ -1346,4 +1346,11 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get unresolvedStatusLabel => 'Neriješeno';
+
+  @override
+  String get sessionExpiredMessage => 'Sesija je istekla. Prijavite se ponovo.';
+
+  @override
+  String get passwordChangedSignInAgain =>
+      'Lozinka je promijenjena. Prijavite se ponovo.';
 }

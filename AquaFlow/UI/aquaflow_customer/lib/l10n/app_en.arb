@@ -283,5 +283,7 @@
   "supportTicketNoMessages": "No messages.",
   "supportTicketOpenedAtLabel": "Opened: {date}",
   "supportTicketYouLabel": "You",
-  "supportTicketClosedBanner": "This ticket is closed"
+  "supportTicketClosedBanner": "This ticket is closed",
+  "sessionExpiredMessage": "Your session has expired. Please sign in again.",
+  "passwordChangedSignInAgain": "Your password has been changed. Please sign in again."
 }

@@ -934,5 +934,13 @@
   "resolveActionButton": "Riješi",
   "@resolveActionButton": {
     "description": "Button label that advances a fault report from InProgress to Resolved."
+  },
+  "sessionExpiredMessage": "Sesija je istekla. Prijavite se ponovo.",
+  "@sessionExpiredMessage": {
+    "description": "SnackBar shown after an involuntary sign-out because the refresh token was rejected (expired or revoked session)."
+  },
+  "passwordChangedSignInAgain": "Lozinka je promijenjena. Prijavite se ponovo.",
+  "@passwordChangedSignInAgain": {
+    "description": "SnackBar shown after a successful own password change; the backend ends every session, so the user is signed out."
   }
 }

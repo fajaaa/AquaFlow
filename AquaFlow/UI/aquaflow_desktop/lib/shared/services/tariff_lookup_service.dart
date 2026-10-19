@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/tariff_lookup.dart';
 import 'tariff_lookup_exception.dart';
-import 'token_storage.dart';
+import 'authenticated_client.dart';
 
 /// Read-only active-tariff lookup for the collector's reading-entry tariff
 /// picker. Lives in `shared` (not `admin`) because `lib/collector` cannot
@@ -18,18 +18,14 @@ import 'token_storage.dart';
 class TariffLookupService {
   TariffLookupService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<List<TariffLookup>> fetchActiveTariffs() async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Tariffs').replace(
       queryParameters: {
         'IsActive': 'true',
@@ -39,7 +35,7 @@ class TariffLookupService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -58,14 +54,6 @@ class TariffLookupService {
         .whereType<Map<String, dynamic>>()
         .map(TariffLookup.fromJson)
         .toList();
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const TariffLookupException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

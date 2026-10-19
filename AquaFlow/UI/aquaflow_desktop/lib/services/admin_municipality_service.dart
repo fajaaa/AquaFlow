@@ -8,19 +8,16 @@ import 'package:aquaflow_desktop/models/admin_municipality.dart';
 import 'package:aquaflow_desktop/models/admin_municipality_page.dart';
 import 'package:aquaflow_desktop/services/admin_municipality_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 class AdminMunicipalityService {
   AdminMunicipalityService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<AdminMunicipalityPage> fetch({
@@ -29,7 +26,6 @@ class AdminMunicipalityService {
     String? name,
     int? cityId,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -50,7 +46,7 @@ class AdminMunicipalityService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -83,13 +79,12 @@ class AdminMunicipalityService {
   /// Full unfiltered list (bounded to 200) for dropdown/lookup use, e.g. the
   /// Settlement tab's parent filter/dialog and the Users editor's Općina step.
   Future<List<AdminMunicipality>> fetchAll() async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Municipalities').replace(
       queryParameters: {'PageSize': '200', 'SortBy': 'Name'},
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -115,14 +110,12 @@ class AdminMunicipalityService {
     required String code,
     required int cityId,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Municipalities');
 
     final response = await _send(
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({'name': name, 'code': code, 'cityId': cityId}),
@@ -144,14 +137,12 @@ class AdminMunicipalityService {
     required String code,
     required int cityId,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Municipalities/$id');
 
     final response = await _send(
       () => _client.put(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({'name': name, 'code': code, 'cityId': cityId}),
@@ -168,11 +159,10 @@ class AdminMunicipalityService {
   }
 
   Future<void> delete(int id) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Municipalities/$id');
 
     final response = await _send(
-      () => _client.delete(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.delete(uri),
     );
 
     if (response.statusCode != 204) {
@@ -188,14 +178,6 @@ class AdminMunicipalityService {
       throw const AdminMunicipalityException('Općina je u neispravnom formatu.');
     }
     return AdminMunicipality.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminMunicipalityException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
 import 'package:aquaflow_desktop/shared/services/account_exception.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 /// Backs the admin-only "Moj nalog" screen for the one thing that doesn't go
 /// through the shared `AccountService`/`/Account/me`: a password change.
@@ -14,20 +14,17 @@ import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 /// `/Users` and needs `Users.Manage`) since this only ever acts on the
 /// caller's own password.
 ///
-/// The bearer token is read from [TokenStorage] and attached to every request.
+/// The bearer token is attached (and refreshed) by [AuthenticatedClient].
 /// Failures throw [AccountException] with a user-safe message. The base URL
 /// always comes from [ApiConfig.baseUrl] - the host is never hardcoded here.
 class AdminAccountService {
   AdminAccountService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  })  : _client = client ?? http.Client(),
-        _tokenStorage = tokenStorage ?? TokenStorage(),
+  })  : _client = client ?? AuthenticatedClient.instance,
         _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   /// Changes the signed-in user's own password via `PUT /Account/me/password`.
@@ -36,14 +33,12 @@ class AdminAccountService {
     required String currentPassword,
     required String newPassword,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Account/me/password');
 
     final response = await _send(
       () => _client.put(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -58,14 +53,6 @@ class AdminAccountService {
         _messageFor(response, 'Lozinku nije moguće promijeniti'),
       );
     }
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AccountException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

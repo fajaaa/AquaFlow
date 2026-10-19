@@ -12,7 +12,7 @@ import 'package:aquaflow_customer/models/customer_fault_report_page.dart';
 import 'package:aquaflow_customer/models/customer_fault_report_photo.dart';
 import 'package:aquaflow_customer/services/customer_fault_report_exception.dart';
 import 'package:aquaflow_customer/shared/config/api_config.dart';
-import 'package:aquaflow_customer/shared/services/token_storage.dart';
+import 'package:aquaflow_customer/shared/services/authenticated_client.dart';
 
 /// Fault reports of the signed-in customer: list own, create a new one, and
 /// manage its photos. No CustomerId/ReportedById/Status is ever sent on create
@@ -23,14 +23,11 @@ import 'package:aquaflow_customer/shared/services/token_storage.dart';
 class CustomerFaultReportService {
   CustomerFaultReportService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   /// One page of the caller's fault reports, newest first. The backend pins
@@ -40,7 +37,6 @@ class CustomerFaultReportService {
     required int page,
     int pageSize = 20,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports').replace(
       queryParameters: {
         'Page': '$page',
@@ -52,7 +48,7 @@ class CustomerFaultReportService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -99,7 +95,6 @@ class CustomerFaultReportService {
     String? houseNumber,
     int? waterMeterId,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports');
 
     final trimmedStreet = street?.trim();
@@ -108,7 +103,6 @@ class CustomerFaultReportService {
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -143,13 +137,12 @@ class CustomerFaultReportService {
   /// Metadata for every photo attached to [faultReportId] (never raw bytes -
   /// see `fetchPhotoBytes`). Same ownership gate as `fetchPage`/`create`.
   Future<List<CustomerFaultReportPhoto>> fetchPhotos(int faultReportId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/FaultReports/$faultReportId/photos',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -178,7 +171,6 @@ class CustomerFaultReportService {
     int faultReportId,
     File imageFile,
   ) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/FaultReports/$faultReportId/photos',
     );
@@ -194,7 +186,6 @@ class CustomerFaultReportService {
         lookupMimeType(imageFile.path, headerBytes: headerBytes) ??
         'image/jpeg';
     final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
       ..files.add(
         await http.MultipartFile.fromPath(
           'file',
@@ -240,13 +231,12 @@ class CustomerFaultReportService {
   /// this app serves images without a Bearer token, so there is no plain URL to
   /// hand to `Image.network`.
   Future<Uint8List> fetchPhotoBytes(int faultReportId, int photoId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/FaultReports/$faultReportId/photos/$photoId',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -256,14 +246,6 @@ class CustomerFaultReportService {
     }
 
     return response.bodyBytes;
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CustomerFaultReportException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

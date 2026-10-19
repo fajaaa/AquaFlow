@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'package:aquaflow_collector/l10n/app_localizations.dart';
 
+import '../providers/auth_provider.dart';
 import '../services/account_exception.dart';
 import '../services/account_service.dart';
 
@@ -45,11 +47,14 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
       _confirmPasswordCtrl.clear();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).passwordResetSuccess),
-        ),
-      );
+      // The backend ended every session of this user, this device included
+      // (`PUT /Account/me/password` revokes them all), so sign in again.
+      final messenger = ScaffoldMessenger.of(context);
+      final message = AppLocalizations.of(context).passwordChangedSignInAgain;
+      final auth = context.read<AuthProvider>();
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+      await auth.logout();
     } on AccountException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

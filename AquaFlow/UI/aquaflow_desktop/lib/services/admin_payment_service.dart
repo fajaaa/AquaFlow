@@ -8,7 +8,7 @@ import 'package:aquaflow_desktop/models/admin_payment.dart';
 import 'package:aquaflow_desktop/models/admin_payment_page.dart';
 import 'package:aquaflow_desktop/services/admin_payment_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 /// Read-only data layer over `/Payments`. Payments arise exclusively through
 /// `POST /Invoices/{id}/payments` (the "Evidentiraj uplatu" action on the
@@ -16,14 +16,11 @@ import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 class AdminPaymentService {
   AdminPaymentService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<AdminPaymentPage> fetch({
@@ -32,7 +29,6 @@ class AdminPaymentService {
     int? invoiceId,
     String? status,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -53,7 +49,7 @@ class AdminPaymentService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -81,14 +77,6 @@ class AdminPaymentService {
       items: items,
       totalCount: (decoded['totalCount'] as num?)?.toInt() ?? items.length,
     );
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminPaymentException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

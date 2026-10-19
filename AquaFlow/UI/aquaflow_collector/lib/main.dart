@@ -33,6 +33,20 @@ final _themeProvider = ThemeProvider();
 /// `UserPreference.Language` to it after login/session restore.
 final _localeProvider = LocaleProvider();
 
+/// Involuntary sign-out (the refresh token was rejected while the app was in
+/// use - see `SessionManager`): `AuthProvider` has already swapped `_AuthGate`
+/// to the login flow, so drop any pushed routes/dialogs left above it and tell
+/// the user why. Runs outside any screen, hence the root keys.
+void _handleSessionExpired() {
+  _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+  final messenger = _scaffoldMessengerKey.currentState;
+  if (messenger == null) return;
+  final loc = lookupAppLocalizations(_localeProvider.locale);
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(loc.sessionExpiredMessage)));
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -58,6 +72,7 @@ class AquaFlowApp extends StatelessWidget {
           create: (_) => AuthProvider(
             themeProvider: _themeProvider,
             localeProvider: _localeProvider,
+            onSessionExpired: _handleSessionExpired,
           )..bootstrap(),
         ),
         // Shared instance (not `create`) so PushMessageHandler's onMessage

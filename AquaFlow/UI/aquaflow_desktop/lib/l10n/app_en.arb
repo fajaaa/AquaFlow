@@ -441,5 +441,7 @@
   "measuredValueColumnLabel": "Measured value",
   "thresholdValueColumnLabel": "Threshold value",
   "resolvedStatusLabel": "Resolved",
-  "unresolvedStatusLabel": "Unresolved"
+  "unresolvedStatusLabel": "Unresolved",
+  "sessionExpiredMessage": "Your session has expired. Please sign in again.",
+  "passwordChangedSignInAgain": "Your password has been changed. Please sign in again."
 }

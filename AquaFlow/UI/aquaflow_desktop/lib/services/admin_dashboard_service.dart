@@ -9,7 +9,7 @@ import 'package:aquaflow_desktop/models/dashboard_status_breakdown.dart';
 import 'package:aquaflow_desktop/models/dashboard_trend_point.dart';
 import 'package:aquaflow_desktop/services/admin_dashboard_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 /// Feeds the admin dashboard's 6 chart cards from `GET /Dashboard/*`. All 6
 /// requests share the same (from, to, cityId) filter and are fired in
@@ -18,14 +18,11 @@ import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 class AdminDashboardService {
   AdminDashboardService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<DashboardStats> fetchStats({
@@ -78,7 +75,6 @@ class AdminDashboardService {
     DateTime? to,
     int? cityId,
   ) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Dashboard/$action').replace(
       queryParameters: {
         if (from != null) 'from': _dateParam(from),
@@ -88,7 +84,7 @@ class AdminDashboardService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     // ForbidResult carries no body, so without this branch a 403 would only
@@ -117,14 +113,6 @@ class AdminDashboardService {
   String _dateParam(DateTime date) {
     String two(int value) => value.toString().padLeft(2, '0');
     return '${date.year.toString().padLeft(4, '0')}-${two(date.month)}-${two(date.day)}';
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminDashboardException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

@@ -9,7 +9,7 @@ import '../models/city_lookup.dart';
 import '../models/municipality_lookup.dart';
 import '../models/settlement_lookup.dart';
 import 'location_lookup_exception.dart';
-import 'token_storage.dart';
+import 'authenticated_client.dart';
 
 /// Read-only City -> Municipality -> Settlement lookups for the cascading
 /// Grad -> Općina -> Naselje address pickers used outside the admin desktop
@@ -23,14 +23,11 @@ import 'token_storage.dart';
 class LocationLookupService {
   LocationLookupService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<List<CityLookup>> fetchCities() =>
@@ -46,13 +43,12 @@ class LocationLookupService {
     String resource,
     T Function(Map<String, dynamic>) fromJson,
   ) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/$resource').replace(
       queryParameters: {'PageSize': '200', 'SortBy': 'Name'},
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -68,14 +64,6 @@ class LocationLookupService {
     }
 
     return itemsJson.whereType<Map<String, dynamic>>().map(fromJson).toList();
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const LocationLookupException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {
