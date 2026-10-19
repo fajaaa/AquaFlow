@@ -443,5 +443,21 @@
   "resolvedStatusLabel": "Resolved",
   "unresolvedStatusLabel": "Unresolved",
   "sessionExpiredMessage": "Your session has expired. Please sign in again.",
-  "passwordChangedSignInAgain": "Your password has been changed. Please sign in again."
+  "passwordChangedSignInAgain": "Your password has been changed. Please sign in again.",
+  "notificationDetailCreatedAtLabel": "Date created",
+  "notificationDetailDescriptionHeading": "Description",
+  "notificationDetailDetailsHeading": "Details",
+  "notificationDetailEmptyBody": "No additional content.",
+  "notificationDetailImagesHeading": "Images ({count})",
+  "notificationDetailTitle": "Notification details",
+  "notificationStatusRead": "Read",
+  "notificationStatusUnread": "New",
+  "notificationTypeFieldLabel": "Notification type",
+  "notificationsMarkAllReadTooltip": "Mark all as read",
+  "notificationsEmptyFilteredMessage": "No notifications for the selected type.",
+  "notificationsNewBanner": "You have new notifications",
+  "notificationOpenAction": "Open",
+  "notificationOpenRelatedFailed": "The related item couldn't be opened. It may no longer be available.",
+  "notificationsInboxNavLabel": "My notifications",
+  "notificationsManageNavLabel": "Manage notifications"
 }

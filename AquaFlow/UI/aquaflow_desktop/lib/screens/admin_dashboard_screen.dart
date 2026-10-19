@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/l10n/app_localizations.dart';
+import 'package:aquaflow_desktop/models/admin_fault_report.dart';
 import 'package:aquaflow_desktop/models/dashboard_stats.dart';
 import 'package:aquaflow_desktop/models/dashboard_status_breakdown.dart';
 import 'package:aquaflow_desktop/models/dashboard_trend_point.dart';
@@ -15,16 +17,23 @@ import 'package:aquaflow_desktop/screens/admin_fault_reports_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_invoices_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_notifications_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_payments_screen.dart';
+import 'package:aquaflow_desktop/screens/admin_support_ticket_detail_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_support_tickets_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_tariffs_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_users_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_water_meter_requests_screen.dart';
 import 'package:aquaflow_desktop/services/admin_dashboard_exception.dart';
 import 'package:aquaflow_desktop/services/admin_dashboard_service.dart';
+import 'package:aquaflow_desktop/services/admin_fault_report_service.dart';
+import 'package:aquaflow_desktop/services/admin_support_ticket_service.dart';
 import 'package:aquaflow_desktop/shared/models/auth_session.dart';
 import 'package:aquaflow_desktop/shared/models/city_lookup.dart';
+import 'package:aquaflow_desktop/shared/navigation/app_navigation.dart';
+import 'package:aquaflow_desktop/shared/navigation/notification_deep_links.dart';
 import 'package:aquaflow_desktop/shared/providers/auth_provider.dart';
+import 'package:aquaflow_desktop/shared/providers/notification_badge_provider.dart';
 import 'package:aquaflow_desktop/shared/screens/company_settings_screen.dart';
+import 'package:aquaflow_desktop/shared/screens/notifications_screen.dart';
 import 'package:aquaflow_desktop/shared/services/location_lookup_service.dart';
 import 'package:aquaflow_desktop/shared/widgets/async_state_view.dart';
 
@@ -33,10 +42,18 @@ import 'package:aquaflow_desktop/shared/widgets/async_state_view.dart';
 /// Classic admin layout: a fixed left [_Sidebar] (brand on top, a vertical menu
 /// below with the active item highlighted in blue and a left indicator bar) and
 /// a content area on the right that swaps with the selected menu item. The menu
-/// mixes standalone entries ("Dashboard", "Obavijesti", "Moj nalog") with
-/// collapsible category groups ("Korisnici", "Finansije", "Podrška",
+/// mixes standalone entries ("Dashboard", "Moj nalog") with collapsible
+/// category groups ("Obavijesti", "Korisnici", "Finansije", "Podrška",
 /// "Sistem"); at most one group is expanded at a time (accordion - see
-/// [_SidebarState]). The "Obavijesti", "Šifarnik", "Tarife", "Računi",
+/// [_SidebarState]). "Obavijesti" holds the admin's own inbox ("Moje
+/// obavijesti" - the shared [NotificationsScreen], where system
+/// notifications such as new fault reports, new requests and ticket messages
+/// land; its sidebar row and the collapsed group header carry the unread
+/// badge) and "Upravljanje obavijestima" (the [AdminNotificationsScreen]
+/// CRUD). This screen is mounted exactly while an admin is signed in, so it
+/// starts/stops [NotificationBadgeProvider]'s polling (desktop has no FCM)
+/// and registers the admin's notification deep links (see `_deepLinks`).
+/// The "Šifarnik", "Tarife", "Računi",
 /// "Prijave kvarova", "Zahtjevi" (water meter requests, grouped under
 /// "Podrška" alongside fault reports rather than under its own "Vodomjeri"
 /// category), "Postavke firme", and "Moj nalog" sections embed their
@@ -69,13 +86,25 @@ class _AdminNavItem {
     required this.selectedIcon,
     required this.label,
     this.builder,
+    this.section,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
   final IconData selectedIcon;
   final String label;
   final WidgetBuilder? builder;
+
+  /// Set on the items a notification deep link can jump to, so they can be
+  /// found in the flat index without relying on their (localized) label.
+  final _AdminSection? section;
+
+  /// Red count pill on the row (and on its collapsed group header); hidden
+  /// at 0.
+  final int badgeCount;
 }
+
+enum _AdminSection { faultReports, waterMeterRequests }
 
 /// One entry in the top-level sidebar tree: either a standalone leaf (e.g.
 /// "Dashboard") or a collapsible category group of related leaves. Sealed so
@@ -113,8 +142,9 @@ class _AdminNavGroup extends _AdminNavEntry {
 /// "Postavke firme" card.
 List<_AdminNavEntry> _buildNavEntries(
   AuthSession? session,
-  AppLocalizations loc,
-) {
+  AppLocalizations loc, {
+  int unreadNotifications = 0,
+}) {
   final canManageSupportTickets =
       session?.hasPermission('SupportTickets.Manage') ?? false;
   final canManageConsumptionAlerts =
@@ -129,13 +159,24 @@ List<_AdminNavEntry> _buildNavEntries(
         builder: (_) => const _DashboardOverview(),
       ),
     ),
-    _AdminNavLeaf(
-      _AdminNavItem(
-        icon: Icons.notifications_outlined,
-        selectedIcon: Icons.notifications,
-        label: loc.tabNotifications,
-        builder: (_) => const AdminNotificationsScreen(),
-      ),
+    _AdminNavGroup(
+      label: loc.tabNotifications,
+      icon: Icons.notifications_outlined,
+      items: [
+        _AdminNavItem(
+          icon: Icons.inbox_outlined,
+          selectedIcon: Icons.inbox,
+          label: loc.notificationsInboxNavLabel,
+          badgeCount: unreadNotifications,
+          builder: (_) => const NotificationsScreen(),
+        ),
+        _AdminNavItem(
+          icon: Icons.edit_notifications_outlined,
+          selectedIcon: Icons.edit_notifications,
+          label: loc.notificationsManageNavLabel,
+          builder: (_) => const AdminNotificationsScreen(),
+        ),
+      ],
     ),
     _AdminNavGroup(
       label: loc.usersLabel,
@@ -201,12 +242,14 @@ List<_AdminNavEntry> _buildNavEntries(
           icon: Icons.report_problem_outlined,
           selectedIcon: Icons.report_problem,
           label: loc.faultReportsScreenTitle,
+          section: _AdminSection.faultReports,
           builder: (_) => const AdminFaultReportsScreen(),
         ),
         _AdminNavItem(
           icon: Icons.assignment_outlined,
           selectedIcon: Icons.assignment,
           label: loc.waterMeterRequestsNavLabel,
+          section: _AdminSection.waterMeterRequests,
           builder: (_) => const AdminWaterMeterRequestsScreen(),
         ),
         if (canManageSupportTickets)
@@ -274,14 +317,94 @@ List<_AdminNavItem> _flattenNavItems(List<_AdminNavEntry> entries) {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _selectedIndex = 0;
+  late final NotificationBadgeProvider _badge;
+
+  /// What an admin's system notification can open, keyed by the backend's
+  /// `RelatedEntityTypes` (see `NotificationDeepLinks`). Only support tickets
+  /// have a detail route; a fault report switches to its table and opens the
+  /// table's own detail dialog, a water meter request just switches to the
+  /// "Zahtjevi" table. A record that can't be loaded throws, which the
+  /// notification detail screen turns into a SnackBar.
+  late final Map<String, NotificationDeepLinkHandler> _deepLinks = {
+    'SupportTicket': _openSupportTicket,
+    'FaultReport': _openFaultReport,
+    'WaterMeterRequest': _openWaterMeterRequests,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _badge = context.read<NotificationBadgeProvider>()..start();
+    NotificationDeepLinks.instance.registerAll(_deepLinks);
+  }
+
+  @override
+  void dispose() {
+    NotificationDeepLinks.instance.unregisterAll(_deepLinks);
+    _badge.stop();
+    super.dispose();
+  }
 
   void _select(int index) => setState(() => _selectedIndex = index);
+
+  /// Pops whatever is pushed over the dashboard (the notification detail the
+  /// deep link came from) and selects [section] in the sidebar.
+  void _showSection(_AdminSection section) {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    final items = _flattenNavItems(
+      _buildNavEntries(
+        context.read<AuthProvider>().session,
+        AppLocalizations.of(context),
+      ),
+    );
+    final index = items.indexWhere((item) => item.section == section);
+    if (index >= 0) _select(index);
+  }
+
+  Future<void> _openSupportTicket(BuildContext context, int id) async {
+    final service = AdminSupportTicketService();
+    try {
+      // The detail screen loads the ticket itself; fetching it here first is
+      // what turns a gone ticket into the SnackBar instead of an error page.
+      await service.fetchById(id);
+      if (!context.mounted) return;
+      unawaited(
+        context.pushScreen(AdminSupportTicketDetailScreen(ticketId: id)),
+      );
+    } finally {
+      service.dispose();
+    }
+  }
+
+  Future<void> _openFaultReport(BuildContext context, int id) async {
+    final service = AdminFaultReportService();
+    final AdminFaultReport report;
+    try {
+      report = await service.fetchById(id);
+    } finally {
+      service.dispose();
+    }
+    if (!mounted) return;
+    _showSection(_AdminSection.faultReports);
+    unawaited(showAdminFaultReportDetailDialog(this.context, report));
+  }
+
+  Future<void> _openWaterMeterRequests(BuildContext context, int id) async {
+    _showSection(_AdminSection.waterMeterRequests);
+  }
 
   @override
   Widget build(BuildContext context) {
     final session = context.watch<AuthProvider>().session;
+    final unreadNotifications = context
+        .watch<NotificationBadgeProvider>()
+        .unreadCount;
     final loc = AppLocalizations.of(context);
-    final entries = _buildNavEntries(session, loc);
+    final entries = _buildNavEntries(
+      session,
+      loc,
+      unreadNotifications: unreadNotifications,
+    );
     final items = _flattenNavItems(entries);
     // The item count only changes when SupportTickets.Manage flips (a full
     // re-login), but guard anyway so a stale index can never run off the end.
@@ -364,6 +487,17 @@ class _SidebarState extends State<_Sidebar> {
     return null;
   }
 
+  /// A selection made from outside the menu (a notification deep link) can
+  /// land inside a collapsed group - open it so the active row is visible.
+  /// Selecting a standalone leaf leaves the accordion as it was.
+  @override
+  void didUpdateWidget(covariant _Sidebar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedIndex == oldWidget.selectedIndex) return;
+    final group = _groupContaining(widget.entries, widget.selectedIndex);
+    if (group != null) _expandedGroup = group;
+  }
+
   void _toggleGroup(String label) {
     setState(() => _expandedGroup = _expandedGroup == label ? null : label);
   }
@@ -404,6 +538,10 @@ class _SidebarState extends State<_Sidebar> {
               icon: icon,
               expanded: expanded,
               containsSelection: containsSelection,
+              // Collapsed, the header stands in for its rows' badges.
+              badgeCount: expanded
+                  ? 0
+                  : items.fold(0, (sum, item) => sum + item.badgeCount),
               onTap: () => _toggleGroup(label),
             ),
           );
@@ -593,6 +731,10 @@ class _AdminNavTile extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (item.badgeCount > 0) ...[
+                  _NavCountBadge(count: item.badgeCount),
+                  const SizedBox(width: 10),
+                ],
               ],
             ),
           ),
@@ -613,6 +755,7 @@ class _AdminNavGroupHeader extends StatelessWidget {
     required this.expanded,
     required this.containsSelection,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   final String label;
@@ -620,6 +763,7 @@ class _AdminNavGroupHeader extends StatelessWidget {
   final bool expanded;
   final bool containsSelection;
   final VoidCallback onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -655,6 +799,10 @@ class _AdminNavGroupHeader extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (badgeCount > 0) ...[
+                  _NavCountBadge(count: badgeCount),
+                  const SizedBox(width: 6),
+                ],
                 AnimatedRotation(
                   duration: const Duration(milliseconds: 150),
                   turns: expanded ? 0.5 : 0,
@@ -664,6 +812,37 @@ class _AdminNavGroupHeader extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Red unread-count pill at the end of a sidebar row, same look as the
+/// mobile tab badge (`MobileShell`'s `_BadgedIcon`): error color, "99+" cap.
+class _NavCountBadge extends StatelessWidget {
+  const _NavCountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      constraints: const BoxConstraints(minWidth: 22),
+      decoration: BoxDecoration(
+        color: colorScheme.error,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: colorScheme.onError,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          height: 1.3,
         ),
       ),
     );

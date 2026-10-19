@@ -285,5 +285,8 @@
   "supportTicketYouLabel": "You",
   "supportTicketClosedBanner": "This ticket is closed",
   "sessionExpiredMessage": "Your session has expired. Please sign in again.",
-  "passwordChangedSignInAgain": "Your password has been changed. Please sign in again."
+  "passwordChangedSignInAgain": "Your password has been changed. Please sign in again.",
+  "notificationsNewBanner": "You have new notifications",
+  "notificationOpenAction": "Open",
+  "notificationOpenRelatedFailed": "The related item couldn't be opened. It may no longer be available."
 }

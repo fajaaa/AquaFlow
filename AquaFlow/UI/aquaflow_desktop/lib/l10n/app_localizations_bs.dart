@@ -1353,4 +1353,56 @@ class AppLocalizationsBs extends AppLocalizations {
   @override
   String get passwordChangedSignInAgain =>
       'Lozinka je promijenjena. Prijavite se ponovo.';
+
+  @override
+  String get notificationDetailCreatedAtLabel => 'Datum kreiranja';
+
+  @override
+  String get notificationDetailDescriptionHeading => 'Opis';
+
+  @override
+  String get notificationDetailDetailsHeading => 'Detalji';
+
+  @override
+  String get notificationDetailEmptyBody => 'Nema dodatnog sadržaja.';
+
+  @override
+  String notificationDetailImagesHeading(int count) {
+    return 'Slike ($count)';
+  }
+
+  @override
+  String get notificationDetailTitle => 'Detalji obavijesti';
+
+  @override
+  String get notificationStatusRead => 'Pročitano';
+
+  @override
+  String get notificationStatusUnread => 'Novo';
+
+  @override
+  String get notificationTypeFieldLabel => 'Tip obavijesti';
+
+  @override
+  String get notificationsMarkAllReadTooltip => 'Označi sve kao pročitano';
+
+  @override
+  String get notificationsEmptyFilteredMessage =>
+      'Nema obavijesti za odabrani tip.';
+
+  @override
+  String get notificationsNewBanner => 'Imate novih obavijesti';
+
+  @override
+  String get notificationOpenAction => 'Otvori';
+
+  @override
+  String get notificationOpenRelatedFailed =>
+      'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.';
+
+  @override
+  String get notificationsInboxNavLabel => 'Moje obavijesti';
+
+  @override
+  String get notificationsManageNavLabel => 'Upravljanje obavijestima';
 }

@@ -1160,5 +1160,17 @@
   "passwordChangedSignInAgain": "Lozinka je promijenjena. Prijavite se ponovo.",
   "@passwordChangedSignInAgain": {
     "description": "SnackBar shown after a successful own password change; the backend ends every session, so the user is signed out."
+  },
+  "notificationsNewBanner": "Imate novih obavijesti",
+  "@notificationsNewBanner": {
+    "description": "Banner shown above the notification list (page 2 or later) when a new notification has arrived; paired with the commonRefresh action that jumps back to page 1."
+  },
+  "notificationOpenAction": "Otvori",
+  "@notificationOpenAction": {
+    "description": "Button/SnackBar action that opens the record a notification is about (invoice, fault report, request, ticket) or the notification itself from a push."
+  },
+  "notificationOpenRelatedFailed": "Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.",
+  "@notificationOpenRelatedFailed": {
+    "description": "SnackBar shown when the record a notification links to cannot be loaded (e.g. deleted or no longer visible)."
   }
 }

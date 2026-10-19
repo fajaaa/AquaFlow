@@ -827,4 +827,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get passwordChangedSignInAgain =>
       'Your password has been changed. Please sign in again.';
+
+  @override
+  String get notificationsNewBanner => 'You have new notifications';
+
+  @override
+  String get notificationOpenAction => 'Open';
+
+  @override
+  String get notificationOpenRelatedFailed =>
+      'The related item couldn\'t be opened. It may no longer be available.';
 }

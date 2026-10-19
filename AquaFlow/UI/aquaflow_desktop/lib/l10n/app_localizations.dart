@@ -2563,6 +2563,102 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Lozinka je promijenjena. Prijavite se ponovo.'**
   String get passwordChangedSignInAgain;
+
+  /// Label for the created-at date row on the notification detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Datum kreiranja'**
+  String get notificationDetailCreatedAtLabel;
+
+  /// Generic 'Description' section heading, used above the notification body text on the notification detail screen and above the description text on the fault report detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Opis'**
+  String get notificationDetailDescriptionHeading;
+
+  /// Section heading above the type/date detail rows on the notification detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Detalji'**
+  String get notificationDetailDetailsHeading;
+
+  /// Placeholder shown in the description section when the notification has no body text.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema dodatnog sadržaja.'**
+  String get notificationDetailEmptyBody;
+
+  /// Section heading above the image gallery on the notification detail screen, with the image count.
+  ///
+  /// In bs, this message translates to:
+  /// **'Slike ({count})'**
+  String notificationDetailImagesHeading(int count);
+
+  /// Notification detail screen app bar title.
+  ///
+  /// In bs, this message translates to:
+  /// **'Detalji obavijesti'**
+  String get notificationDetailTitle;
+
+  /// Status pill label shown on a read notification's detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pročitano'**
+  String get notificationStatusRead;
+
+  /// Status pill label shown on an unread notification's detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Novo'**
+  String get notificationStatusUnread;
+
+  /// Shared label for the notification type: the filter dropdown on the notifications list, and the type field on the notification detail screen (also shown uppercased as an eyebrow label there).
+  ///
+  /// In bs, this message translates to:
+  /// **'Tip obavijesti'**
+  String get notificationTypeFieldLabel;
+
+  /// Tooltip for the 'mark all as read' icon button on the notifications screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Označi sve kao pročitano'**
+  String get notificationsMarkAllReadTooltip;
+
+  /// Empty-state message shown when the notification list has no items matching the selected type filter.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema obavijesti za odabrani tip.'**
+  String get notificationsEmptyFilteredMessage;
+
+  /// Banner shown above the notification list (page 2 or later) when a new notification has arrived; paired with the commonRefresh action that jumps back to page 1.
+  ///
+  /// In bs, this message translates to:
+  /// **'Imate novih obavijesti'**
+  String get notificationsNewBanner;
+
+  /// Button/SnackBar action that opens the record a notification is about (invoice, fault report, request, ticket) or the notification itself from a push.
+  ///
+  /// In bs, this message translates to:
+  /// **'Otvori'**
+  String get notificationOpenAction;
+
+  /// SnackBar shown when the record a notification links to cannot be loaded (e.g. deleted or no longer visible).
+  ///
+  /// In bs, this message translates to:
+  /// **'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.'**
+  String get notificationOpenRelatedFailed;
+
+  /// Admin sidebar sub-item under 'Obavijesti': the admin's own inbox (shared NotificationsScreen).
+  ///
+  /// In bs, this message translates to:
+  /// **'Moje obavijesti'**
+  String get notificationsInboxNavLabel;
+
+  /// Admin sidebar sub-item under 'Obavijesti': the CRUD table for admin-authored notifications.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upravljanje obavijestima'**
+  String get notificationsManageNavLabel;
 }
 
 class _AppLocalizationsDelegate

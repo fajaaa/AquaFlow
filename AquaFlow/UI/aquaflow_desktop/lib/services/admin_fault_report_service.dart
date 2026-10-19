@@ -95,6 +95,30 @@ class AdminFaultReportService {
     );
   }
 
+  /// A single report (`GET /FaultReports/{id}`) - used by the notification
+  /// deep link; an unknown id comes back as 404 and throws
+  /// [AdminFaultReportException].
+  Future<AdminFaultReport> fetchById(int id) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id');
+
+    final response = await _send(() => _client.get(uri));
+
+    if (response.statusCode != 200) {
+      throw AdminFaultReportException(
+        _messageFor(response, 'Prijavu kvara nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const AdminFaultReportException(
+        'Prijava kvara je u neispravnom formatu.',
+      );
+    }
+
+    return AdminFaultReport.fromJson(decoded);
+  }
+
   /// Metadata for every photo attached to [faultReportId] (never raw bytes -
   /// see [fetchPhotoBytes]).
   Future<List<AdminFaultReportPhoto>> fetchPhotos(int faultReportId) async {

@@ -36,6 +36,28 @@ class AdminFaultReportsScreen extends StatefulWidget {
       _AdminFaultReportsScreenState();
 }
 
+/// Opens the read-only detail dialog for [report] (description + photo
+/// gallery) - the table's row click, and the notification deep link for a
+/// `FaultReport` (which has no detail route of its own). Without a
+/// [service], one is created for the dialog's photo calls and disposed when
+/// it closes.
+Future<void> showAdminFaultReportDetailDialog(
+  BuildContext context,
+  AdminFaultReport report, {
+  AdminFaultReportService? service,
+}) async {
+  final dialogService = service ?? AdminFaultReportService();
+  try {
+    await showDialog<void>(
+      context: context,
+      builder: (_) =>
+          _FaultReportDetailDialog(report: report, service: dialogService),
+    );
+  } finally {
+    if (service == null) dialogService.dispose();
+  }
+}
+
 Map<String, String> _statusOptions(AppLocalizations loc) => <String, String>{
   'New': loc.faultReportStatusNew,
   'Assigned': loc.faultReportStatusAssigned,
@@ -81,11 +103,7 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
   }
 
   void _openDetail(AdminFaultReport report) {
-    showDialog<void>(
-      context: context,
-      builder: (_) =>
-          _FaultReportDetailDialog(report: report, service: _service),
-    );
+    showAdminFaultReportDetailDialog(context, report, service: _service);
   }
 
   Future<void> _advanceStatus(AdminFaultReport report) async {

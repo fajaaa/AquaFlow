@@ -21,6 +21,11 @@ class UserNotificationItem {
 
   bool get isRead => readAt != null;
 
+  /// Deep-link target of the underlying notification (see
+  /// [AppNotification.relatedEntityType]); null when it has none.
+  String? get relatedEntityType => notification?.relatedEntityType;
+  int? get relatedEntityId => notification?.relatedEntityId;
+
   UserNotificationItem copyWith({DateTime? readAt}) {
     return UserNotificationItem(
       id: id,

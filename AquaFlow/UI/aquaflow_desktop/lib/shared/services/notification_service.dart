@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/notification_image.dart';
 import '../models/notification_page.dart';
+import '../models/unread_notification_summary.dart';
 import '../models/user_notification_item.dart';
 import 'notification_exception.dart';
 import 'authenticated_client.dart';
@@ -115,17 +116,21 @@ class NotificationService {
     return UserNotificationItem.fromJson(first);
   }
 
-  /// Number of unread inbox rows for the signed-in user, used for the mobile
-  /// shells' "Obavijesti" tab badge. Backed by the same `/UserNotifications/
+  /// Unread count plus the newest unread inbox row for the signed-in user -
+  /// the probe `NotificationBadgeProvider` polls for the "Obavijesti" badge
+  /// and its new-notification signal. Backed by the same `/UserNotifications/
   /// mine` endpoint as [fetchMine] - `IsRead=false` + `IncludeTotalCount=true`
-  /// + `PageSize=1` so only the count is paid for, not a full page of items.
-  Future<int> fetchUnreadCount() async {
+  /// + `PageSize=1`, newest first, so only the count and a single row are
+  /// paid for, not a full page of items.
+  Future<UnreadNotificationSummary> fetchUnreadSummary() async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/UserNotifications/mine')
         .replace(
           queryParameters: {
             'IsRead': 'false',
             'IncludeTotalCount': 'true',
             'PageSize': '1',
+            'SortBy': 'CreatedAt',
+            'SortDescending': 'true',
           },
         );
 
@@ -147,7 +152,17 @@ class NotificationService {
       throw const NotificationException('Odgovor je u neispravnom formatu.');
     }
 
-    return (decoded['totalCount'] as num?)?.toInt() ?? 0;
+    final itemsJson = decoded['items'];
+    final first = itemsJson is List && itemsJson.isNotEmpty
+        ? itemsJson.first
+        : null;
+
+    return UnreadNotificationSummary(
+      unreadCount: (decoded['totalCount'] as num?)?.toInt() ?? 0,
+      latest: first is Map<String, dynamic>
+          ? UserNotificationItem.fromJson(first)
+          : null,
+    );
   }
 
   /// Persists a read receipt for [userNotificationId] via `PATCH
@@ -176,6 +191,25 @@ class NotificationService {
     }
   }
 
+  /// Marks every unread inbox row for the signed-in user as read in one
+  /// request via `POST /UserNotifications/mark-all-read`, instead of one
+  /// `PATCH` per row.
+  Future<void> markAllAsRead() async {
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/UserNotifications/mark-all-read',
+    );
+
+    final response = await _send(
+      () => _client.post(uri),
+    );
+
+    if (response.statusCode != 204) {
+      throw NotificationException(
+        _messageFor(response, 'Obavijesti nije moguće označiti kao pročitane'),
+      );
+    }
+  }
+
   /// Metadata for every image attached to [notificationId] (never raw bytes -
   /// see `fetchImageBytes`). Reaches `/Notifications/{id}/images` directly
   /// (a different controller than `/UserNotifications/...`) - readable by any
@@ -198,7 +232,9 @@ class NotificationService {
 
     final decoded = jsonDecode(response.body);
     if (decoded is! List) {
-      throw const NotificationException('Lista slika je u neispravnom formatu.');
+      throw const NotificationException(
+        'Lista slika je u neispravnom formatu.',
+      );
     }
 
     return decoded

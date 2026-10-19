@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 
 import '../models/notification_page.dart';
 import '../models/user_notification_item.dart';
@@ -12,48 +16,102 @@ import '../theme/app_theme.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/error_retry.dart';
 import '../widgets/paged_table_pagination_bar.dart';
+import '../widgets/refresh_button.dart';
 import 'notification_detail_screen.dart';
 
+/// The signed-in user's inbox (`GET /UserNotifications/mine`, newest first,
+/// paged + type filter). Mobile "Obavijesti" tab and the desktop "Moje
+/// obavijesti" sidebar item.
+///
+/// Keeps itself current via [NotificationBadgeProvider.inboxVersion]: when
+/// the provider detects a new notification (poll or foreground push), page 1
+/// is reloaded silently - no loader, the list and its scroll position stay,
+/// rows marked read in this session stay read - while on a later page a
+/// "new notifications" banner offers the jump back instead of moving the
+/// user.
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  const NotificationsScreen({super.key, this.service});
+
+  /// Defaults to a fresh [NotificationService]; injectable for tests.
+  final NotificationService? service;
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final NotificationService _service = NotificationService();
+  late final NotificationService _service =
+      widget.service ?? NotificationService();
+  late final NotificationBadgeProvider _badge;
 
   NotificationPage? _pageData;
   bool _loading = true;
+  bool _markingAll = false;
   String? _error;
   String? _typeFilter;
   int _page = 1;
   int _pageSize = 10;
   int _requestSerial = 0;
 
+  /// Last [NotificationBadgeProvider.inboxVersion] this screen reacted to.
+  late int _handledInboxVersion;
+
+  /// A new notification arrived while the user was past page 1.
+  bool _hasNewNotifications = false;
+
+  /// A new notification arrived while a regular load was running; reload
+  /// page 1 silently once it is done (that load may predate the arrival).
+  bool _silentReloadPending = false;
+
+  /// Read receipts saved from this screen's detail views (row id -> readAt),
+  /// re-applied to every page load so a reload whose request raced the
+  /// PATCH can't bring the "Novo" badge back.
+  final Map<int, DateTime> _locallyRead = {};
+
   @override
   void initState() {
     super.initState();
+    _badge = context.read<NotificationBadgeProvider>();
+    _handledInboxVersion = _badge.inboxVersion;
+    _badge.addListener(_onBadgeChanged);
     _load();
   }
 
-  Future<void> _load({bool resetPage = false}) async {
+  void _onBadgeChanged() {
+    final version = _badge.inboxVersion;
+    if (!mounted || version == _handledInboxVersion) return;
+    _handledInboxVersion = version;
+
+    if (_page != 1) {
+      setState(() => _hasNewNotifications = true);
+    } else if (_loading) {
+      _silentReloadPending = true;
+    } else {
+      unawaited(_load(silent: true));
+    }
+  }
+
+  /// [silent] refreshes the current page in the background: no loader, no
+  /// disabled controls, and a failure keeps what is already on screen.
+  Future<void> _load({bool resetPage = false, bool silent = false}) async {
     final session = context.read<AuthProvider>().session;
     if (session == null) {
+      if (silent) return;
       setState(() {
         _loading = false;
-        _error = 'Niste prijavljeni.';
+        _error = AppLocalizations.of(context).notLoggedInError;
       });
       return;
     }
 
     final requestId = ++_requestSerial;
-    setState(() {
-      if (resetPage) _page = 1;
-      _loading = true;
-      _error = null;
-    });
+    if (!silent) {
+      setState(() {
+        if (resetPage) _page = 1;
+        _loading = true;
+        _error = null;
+      });
+    }
 
     try {
       final pageData = await _service.fetchMine(
@@ -63,17 +121,61 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       );
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
-        _pageData = pageData;
+        _pageData = _withLocalReads(pageData);
         _loading = false;
+        _error = null;
+        if (_page == 1) _hasNewNotifications = false;
       });
       context.read<NotificationBadgeProvider>().markSeen();
     } on NotificationException catch (e) {
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
-        _pageData = null;
         _loading = false;
-        _error = e.message;
+        if (!silent) {
+          _pageData = null;
+          _error = e.message;
+        }
       });
+    }
+
+    if (_silentReloadPending && mounted) {
+      _silentReloadPending = false;
+      if (_page == 1) {
+        unawaited(_load(silent: true));
+      } else {
+        setState(() => _hasNewNotifications = true);
+      }
+    }
+  }
+
+  NotificationPage _withLocalReads(NotificationPage page) {
+    if (_locallyRead.isEmpty) return page;
+    return NotificationPage(
+      items: [
+        for (final item in page.items)
+          if (!item.isRead && _locallyRead.containsKey(item.id))
+            item.copyWith(readAt: _locallyRead[item.id])
+          else
+            item,
+      ],
+      totalCount: page.totalCount,
+    );
+  }
+
+  Future<void> _markAllAsRead() async {
+    setState(() => _markingAll = true);
+    try {
+      await _service.markAllAsRead();
+      if (!mounted) return;
+      context.read<NotificationBadgeProvider>().markSeen();
+      await _load(resetPage: true);
+    } on NotificationException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _markingAll = false);
     }
   }
 
@@ -108,6 +210,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   /// Patches the just-opened item in the already-loaded page in place, so the
   /// "Novo" badge on its list card clears without a full reload.
   void _applyMarkedRead(UserNotificationItem updated) {
+    final readAt = updated.readAt;
+    if (readAt != null) _locallyRead[updated.id] = readAt;
     final pageData = _pageData;
     if (!mounted || pageData == null) return;
     setState(() {
@@ -123,6 +227,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   void dispose() {
+    _badge.removeListener(_onBadgeChanged);
     _service.dispose();
     super.dispose();
   }
@@ -130,7 +235,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final pageData = _pageData;
-    final totalPages = _totalPages(pageData?.totalCount ?? 0);
+
+    // Docked below the list rather than as its last scrollable item, so it
+    // stays visible at the bottom of the tab regardless of scroll position
+    // or how many notifications there are.
+    final pagination = pageData != null && _error == null
+        ? PagedTablePaginationBar(
+            page: _page,
+            totalPages: _totalPages(pageData.totalCount),
+            totalCount: pageData.totalCount,
+            pageSize: _pageSize,
+            loading: _loading,
+            onPageChanged: _goToPage,
+            onPageSizeChanged: _setPageSize,
+          )
+        : null;
 
     return SafeArea(
       child: Column(
@@ -139,25 +258,32 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: _buildFilters(),
           ),
+          if (_hasNewNotifications)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: _NewNotificationsBanner(
+                onRefresh: _loading ? null : () => _load(resetPage: true),
+              ),
+            ),
           if (_loading && pageData != null)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent()),
-          if (pageData != null && _error == null)
-            PagedTablePaginationBar(
-              page: _page,
-              totalPages: totalPages,
-              totalCount: pageData.totalCount,
-              pageSize: _pageSize,
-              loading: _loading,
-              onPageChanged: _goToPage,
-              onPageSizeChanged: _setPageSize,
-            ),
+          ?pagination,
         ],
       ),
     );
   }
 
   Widget _buildFilters() {
+    // Badge provider's count reflects the tab icon (zeroed by `markSeen` the
+    // moment this screen's list loads), so it can't drive this button -
+    // whether individual rows are still unread is read straight from the
+    // loaded page instead.
+    final hasUnread = (_pageData?.items ?? const <UserNotificationItem>[]).any(
+      (item) => !item.isRead,
+    );
+    final loc = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -165,29 +291,41 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           children: [
             Expanded(
               child: Text(
-                'Obavijesti',
+                loc.tabNotifications,
                 style: Theme.of(
                   context,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
-            IconButton(
-              tooltip: 'Osvježi',
-              onPressed: _loading ? null : () => _load(),
-              icon: const Icon(Icons.refresh),
-            ),
+            if (hasUnread)
+              IconButton(
+                tooltip: loc.notificationsMarkAllReadTooltip,
+                onPressed: (_loading || _markingAll) ? null : _markAllAsRead,
+                icon: _markingAll
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.done_all),
+              ),
+            if (hasUnread) const SizedBox(width: 8),
+            RefreshButton(enabled: !_loading, onRefresh: () => _load()),
           ],
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _typeFilter ?? '',
-          decoration: const InputDecoration(
-            labelText: 'Tip obavijesti',
-            prefixIcon: Icon(Icons.filter_alt_outlined),
+          decoration: InputDecoration(
+            labelText: loc.notificationTypeFieldLabel,
+            prefixIcon: const Icon(Icons.filter_alt_outlined),
           ),
           items: [
-            const DropdownMenuItem(value: '', child: Text('Svi tipovi')),
-            for (final option in _notificationTypeOptions)
+            DropdownMenuItem(
+              value: '',
+              child: Text(loc.notificationsAllTypesOption),
+            ),
+            for (final option in _notificationTypeOptions(loc))
               DropdownMenuItem(value: option.value, child: Text(option.label)),
           ],
           onChanged: _loading ? null : (value) => _setTypeFilter(value ?? ''),
@@ -217,10 +355,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
             EmptyStateView(
               icon: Icons.notifications_none,
-              message: 'Nema obavijesti.',
+              message: AppLocalizations.of(context).notificationsEmptyMessage,
               hasFilters: _typeFilter != null,
               filteredIcon: Icons.filter_alt_off_outlined,
-              filteredMessage: 'Nema obavijesti za odabrani tip.',
+              filteredMessage: AppLocalizations.of(
+                context,
+              ).notificationsEmptyFilteredMessage,
             ),
           ],
         ),
@@ -248,6 +388,49 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 }
 
+/// Compact "new notifications - refresh" strip shown above the list when
+/// something new arrived while the user was past page 1.
+class _NewNotificationsBanner extends StatelessWidget {
+  const _NewNotificationsBanner({required this.onRefresh});
+
+  final VoidCallback? onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final loc = AppLocalizations.of(context);
+
+    return Material(
+      key: const ValueKey('notifications-new-banner'),
+      color: colorScheme.primaryContainer,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
+        child: Row(
+          children: [
+            Icon(
+              Icons.notifications_active_outlined,
+              size: 20,
+              color: colorScheme.onPrimaryContainer,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                loc.notificationsNewBanner,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ),
+            TextButton(onPressed: onRefresh, child: Text(loc.commonRefresh)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _NotificationCard extends StatelessWidget {
   const _NotificationCard({required this.item, required this.onTap});
 
@@ -259,6 +442,7 @@ class _NotificationCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isLight = theme.brightness == Brightness.light;
+    final loc = AppLocalizations.of(context);
 
     final notification = item.notification;
     final type = notification?.type ?? '';
@@ -272,7 +456,7 @@ class _NotificationCard extends StatelessWidget {
     final createdAt = notification?.createdAt ?? item.createdAt;
     final rawTitle = notification?.title.trim();
     final title = rawTitle == null || rawTitle.isEmpty
-        ? 'Obavijest #${item.notificationId}'
+        ? loc.notificationFallbackTitle(item.notificationId)
         : rawTitle;
     final body = _truncate(notification?.body.trim() ?? '', 50);
 
@@ -410,7 +594,7 @@ class _NotificationCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                _typeLabel(type),
+                                _typeLabel(type, loc),
                                 style: TextStyle(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w700,
@@ -476,14 +660,14 @@ class _NotificationCard extends StatelessWidget {
     return base;
   }
 
-  static String _typeLabel(String type) {
+  static String _typeLabel(String type, AppLocalizations loc) {
     switch (type.toLowerCase()) {
       case 'plannedworks':
-        return 'Planirani radovi';
+        return loc.notificationTypePlannedWorksLabel;
       case 'warning':
-        return 'Upozorenje';
+        return loc.notificationTypeWarningLabel;
       default:
-        return type.isEmpty ? 'Obavijest' : type;
+        return type.isEmpty ? loc.notificationTypeGenericLabel : type;
     }
   }
 
@@ -514,8 +698,11 @@ class _SelectOption {
   final String label;
 }
 
-const List<_SelectOption> _notificationTypeOptions = [
-  _SelectOption(value: 'Info', label: 'Info'),
-  _SelectOption(value: 'PlannedWorks', label: 'Planirani radovi'),
-  _SelectOption(value: 'Warning', label: 'Upozorenje'),
+List<_SelectOption> _notificationTypeOptions(AppLocalizations loc) => [
+  _SelectOption(value: 'Info', label: loc.notificationTypeInfoLabel),
+  _SelectOption(
+    value: 'PlannedWorks',
+    label: loc.notificationTypePlannedWorksLabel,
+  ),
+  _SelectOption(value: 'Warning', label: loc.notificationTypeWarningLabel),
 ];

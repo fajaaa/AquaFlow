@@ -1331,6 +1331,24 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Lozinka je promijenjena. Prijavite se ponovo.'**
   String get passwordChangedSignInAgain;
+
+  /// Banner shown above the notification list (page 2 or later) when a new notification has arrived; paired with the commonRefresh action that jumps back to page 1.
+  ///
+  /// In bs, this message translates to:
+  /// **'Imate novih obavijesti'**
+  String get notificationsNewBanner;
+
+  /// Button/SnackBar action that opens the record a notification is about (invoice, fault report, request, ticket) or the notification itself from a push.
+  ///
+  /// In bs, this message translates to:
+  /// **'Otvori'**
+  String get notificationOpenAction;
+
+  /// SnackBar shown when the record a notification links to cannot be loaded (e.g. deleted or no longer visible).
+  ///
+  /// In bs, this message translates to:
+  /// **'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.'**
+  String get notificationOpenRelatedFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -1,6 +1,8 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
+
 import '../screens/notification_detail_screen.dart';
 import 'notification_exception.dart';
 import 'notification_service.dart';
@@ -17,9 +19,13 @@ import 'notification_service.dart';
 ///     tapping a notification; there is no in-memory state yet.
 ///
 /// Both tap paths read `notificationId` from the push's data payload (set by
-/// `NotificationService.SendPushNotificationAsync` on the backend) and open
+/// `NotificationPushDispatcher` on the backend) and open
 /// [NotificationDetailScreen], fetching the row from the backend since a cold
-/// start has nothing cached.
+/// start has nothing cached. The screen is opened with `openRelatedOnStart`,
+/// so a system notification with a deep link (`relatedEntityType`/
+/// `relatedEntityId`) goes straight on to its record through the same
+/// `NotificationDeepLinks` registry as the "Otvori" button - and is still
+/// marked read on the way.
 ///
 /// Lives in its own file rather than `main.dart` so the app entry point stays
 /// small; kept in `shared/services` alongside the notification services it
@@ -36,10 +42,11 @@ class PushMessageHandler {
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey;
   final NotificationService _notificationService;
 
-  /// Called for every foreground push (`onMessage`) so callers can bump an
-  /// unread-count badge without a full refetch. Not called for the two tap
-  /// paths (`onMessageOpenedApp`/cold start) - those resume an already-open
-  /// notification rather than deliver a new unread one.
+  /// Called for every foreground push (`onMessage`) - `main.dart` wires it to
+  /// `NotificationBadgeProvider.refresh`, so the badge and an open inbox
+  /// update right away instead of on the next poll. Not called for the two
+  /// tap paths (`onMessageOpenedApp`/cold start) - those resume an
+  /// already-delivered notification rather than deliver a new unread one.
   final VoidCallback? onForegroundMessage;
 
   /// Call once at mobile app startup, AFTER `runApp` so [_navigatorKey] is
@@ -49,8 +56,7 @@ class PushMessageHandler {
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
     FirebaseMessaging.onMessageOpenedApp.listen(_openFromMessage);
 
-    final initialMessage = await FirebaseMessaging.instance
-        .getInitialMessage();
+    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
       await _openFromMessage(initialMessage);
     }
@@ -62,11 +68,17 @@ class PushMessageHandler {
     final title = message.notification?.title;
     if (title == null || title.isEmpty) return;
 
-    _scaffoldMessengerKey.currentState?.showSnackBar(
+    final messenger = _scaffoldMessengerKey.currentState;
+    if (messenger == null) return;
+    final loc = Localizations.of<AppLocalizations>(
+      messenger.context,
+      AppLocalizations,
+    );
+    messenger.showSnackBar(
       SnackBar(
         content: Text(title),
         action: SnackBarAction(
-          label: 'Otvori',
+          label: loc?.notificationOpenAction ?? 'Otvori',
           onPressed: () => _openFromMessage(message),
         ),
       ),
@@ -87,7 +99,8 @@ class PushMessageHandler {
       if (item == null) return;
       navigator.push(
         MaterialPageRoute<void>(
-          builder: (_) => NotificationDetailScreen(item: item),
+          builder: (_) =>
+              NotificationDetailScreen(item: item, openRelatedOnStart: true),
         ),
       );
     } on NotificationException {

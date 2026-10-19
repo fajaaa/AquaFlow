@@ -2,11 +2,15 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
+
+import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 
 import '../models/notification_image.dart';
 import '../models/user_notification_item.dart';
 import '../navigation/app_navigation.dart';
+import '../navigation/notification_deep_links.dart';
 import '../providers/notification_badge_provider.dart';
 import '../services/notification_exception.dart';
 import '../services/notification_service.dart';
@@ -24,8 +28,8 @@ class _TypeMeta {
   final Color color;
 }
 
-const _TypeMeta _infoMeta = _TypeMeta(
-  'Info',
+_TypeMeta _infoMeta(AppLocalizations loc) => _TypeMeta(
+  loc.notificationTypeInfoLabel,
   Icons.info_outline,
   AppColors.secondary,
 );
@@ -35,6 +39,9 @@ class NotificationDetailScreen extends StatefulWidget {
     super.key,
     required this.item,
     this.onMarkedRead,
+    this.openRelatedOnStart = false,
+    this.service,
+    this.deepLinks,
   });
 
   final UserNotificationItem item;
@@ -44,17 +51,38 @@ class NotificationDetailScreen extends StatefulWidget {
   /// patch its own in-memory list without a full refetch.
   final ValueChanged<UserNotificationItem>? onMarkedRead;
 
+  /// Opens the related record (same as tapping "Otvori") as soon as a
+  /// handler for it is registered - used for a tapped push
+  /// (`PushMessageHandler`), so the notification is still marked read and
+  /// stays one "back" away.
+  final bool openRelatedOnStart;
+
+  /// Defaults to a fresh [NotificationService]; injectable for tests.
+  final NotificationService? service;
+
+  /// Defaults to [NotificationDeepLinks.instance]; injectable for tests.
+  final NotificationDeepLinks? deepLinks;
+
   @override
   State<NotificationDetailScreen> createState() =>
       _NotificationDetailScreenState();
 }
 
 class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
-  final NotificationService _service = NotificationService();
+  late final NotificationService _service =
+      widget.service ?? NotificationService();
+  late final NotificationDeepLinks _deepLinks =
+      widget.deepLinks ?? NotificationDeepLinks.instance;
   late UserNotificationItem _item;
 
   bool _imagesLoading = true;
   List<NotificationImage> _images = const [];
+
+  bool _openingRelated = false;
+
+  /// [NotificationDetailScreen.openRelatedOnStart] is still to be honoured
+  /// (no handler was registered yet when this screen opened).
+  bool _autoOpenPending = false;
 
   /// Tracks the in-flight [_markAsRead] call (if any) so [dispose] can wait
   /// for it before closing [_service] - `http.Client.close()` force-closes
@@ -71,6 +99,62 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       _markAsReadFuture = _markAsRead();
     }
     unawaited(_loadImages());
+    _deepLinks.addListener(_onDeepLinksChanged);
+    if (widget.openRelatedOnStart) {
+      _autoOpenPending = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoOpen());
+    }
+  }
+
+  bool get _canOpenRelated =>
+      _deepLinks.canOpen(_item.relatedEntityType, _item.relatedEntityId);
+
+  /// Shells (un)register their handlers from `initState`/`dispose`, i.e. in
+  /// the middle of a frame, where a `setState` here would throw - so react
+  /// once that frame is done.
+  void _onDeepLinksChanged() {
+    void apply() {
+      if (!mounted) return;
+      setState(() {});
+      _tryAutoOpen();
+    }
+
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase == SchedulerPhase.idle ||
+        phase == SchedulerPhase.postFrameCallbacks) {
+      apply();
+    } else {
+      SchedulerBinding.instance.addPostFrameCallback((_) => apply());
+    }
+  }
+
+  void _tryAutoOpen() {
+    if (!mounted || !_autoOpenPending || !_canOpenRelated) return;
+    _autoOpenPending = false;
+    unawaited(_openRelated());
+  }
+
+  Future<void> _openRelated() async {
+    final type = _item.relatedEntityType;
+    final id = _item.relatedEntityId;
+    if (_openingRelated || type == null || id == null) return;
+    final future = _deepLinks.open(context, type, id);
+    if (future == null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final failedMessage = AppLocalizations.of(
+      context,
+    ).notificationOpenRelatedFailed;
+    setState(() => _openingRelated = true);
+    try {
+      await future;
+    } on Exception {
+      // Typically a 404 (the record was deleted or is no longer visible to
+      // this user) - tell the user instead of opening a broken screen.
+      messenger.showSnackBar(SnackBar(content: Text(failedMessage)));
+    } finally {
+      if (mounted) setState(() => _openingRelated = false);
+    }
   }
 
   // Runs alongside (not blocking) the mark-as-read flow above - most notifications carry
@@ -113,6 +197,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
 
   @override
   void dispose() {
+    _deepLinks.removeListener(_onDeepLinksChanged);
     final pending = _markAsReadFuture;
     if (pending != null) {
       unawaited(pending.whenComplete(_service.dispose));
@@ -126,22 +211,23 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final loc = AppLocalizations.of(context);
 
     final notification = _item.notification;
     final type = notification?.type ?? '';
-    final meta = _metaFor(type);
+    final meta = _metaFor(type, loc);
     final accent = _readableAccent(meta.color, theme.brightness);
     final onAccent =
         ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
         ? Colors.white
         : AppColors.textDark;
 
-    final title = _title(_item);
+    final title = _title(_item, loc);
     final body = notification?.body.trim() ?? '';
     final createdAt = notification?.createdAt ?? _item.createdAt;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Detalji obavijesti')),
+      appBar: AppBar(title: Text(loc.notificationDetailTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -171,7 +257,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'TIP OBAVIJESTI',
+                          loc.notificationTypeFieldLabel.toUpperCase(),
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
@@ -220,16 +306,41 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                         ],
                       ),
                     ),
+                    if (_canOpenRelated) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          key: const ValueKey('notification-open-related'),
+                          onPressed: _openingRelated ? null : _openRelated,
+                          icon: _openingRelated
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.open_in_new),
+                          label: Text(loc.notificationOpenAction),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     // Body card - the notification text.
                     _Card(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _SectionHeading('Opis', color: accent),
+                          _SectionHeading(
+                            loc.notificationDetailDescriptionHeading,
+                            color: accent,
+                          ),
                           const SizedBox(height: 10),
                           Text(
-                            body.isEmpty ? 'Nema dodatnog sadržaja.' : body,
+                            body.isEmpty
+                                ? loc.notificationDetailEmptyBody
+                                : body,
                             style: theme.textTheme.bodyLarge?.copyWith(
                               height: 1.55,
                               color: body.isEmpty
@@ -244,7 +355,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                     ),
                     if (!_imagesLoading && _images.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      _buildImagesSection(accent),
+                      _buildImagesSection(accent, loc),
                     ],
                     const SizedBox(height: 16),
                     // Details card - type, dates, status.
@@ -252,19 +363,22 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _SectionHeading('Detalji', color: accent),
+                          _SectionHeading(
+                            loc.notificationDetailDetailsHeading,
+                            color: accent,
+                          ),
                           const SizedBox(height: 14),
                           _DetailRow(
                             icon: meta.icon,
                             iconColor: accent,
-                            label: 'Tip obavijesti',
+                            label: loc.notificationTypeFieldLabel,
                             value: meta.label,
                           ),
                           const SizedBox(height: 14),
                           _DetailRow(
                             icon: Icons.calendar_today_outlined,
                             iconColor: accent,
-                            label: 'Datum kreiranja',
+                            label: loc.notificationDetailCreatedAtLabel,
                             value: _formatDate(createdAt),
                           ),
                         ],
@@ -283,12 +397,15 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   // Renders nothing while loading or when there are no images - most notifications carry
   // none, so this stays a lazy-loaded, easy-to-miss-if-absent section rather than a
   // placeholder, same approach as CustomerFaultReportDetailScreen's photo gallery.
-  Widget _buildImagesSection(Color accent) {
+  Widget _buildImagesSection(Color accent, AppLocalizations loc) {
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeading('Slike (${_images.length})', color: accent),
+          _SectionHeading(
+            loc.notificationDetailImagesHeading(_images.length),
+            color: accent,
+          ),
           const SizedBox(height: 12),
           GridView.builder(
             shrinkWrap: true,
@@ -328,32 +445,32 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     );
   }
 
-  static String _title(UserNotificationItem item) {
+  static String _title(UserNotificationItem item, AppLocalizations loc) {
     final notification = item.notification;
     final title = notification?.title.trim();
     if (title == null || title.isEmpty) {
-      return 'Obavijest #${item.notificationId}';
+      return loc.notificationFallbackTitle(item.notificationId);
     }
     return title;
   }
 
-  static _TypeMeta _metaFor(String type) {
+  static _TypeMeta _metaFor(String type, AppLocalizations loc) {
     switch (type.toLowerCase()) {
       case 'plannedworks':
-        return const _TypeMeta(
-          'Planirani radovi',
+        return _TypeMeta(
+          loc.notificationTypePlannedWorksLabel,
           Icons.build_outlined,
           AppColors.success,
         );
       case 'warning':
-        return const _TypeMeta(
-          'Upozorenje',
+        return _TypeMeta(
+          loc.notificationTypeWarningLabel,
           Icons.warning_amber_rounded,
           AppColors.warning,
         );
       case 'info':
       default:
-        return _infoMeta;
+        return _infoMeta(loc);
     }
   }
 
@@ -454,7 +571,9 @@ class _StatusPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        isRead ? 'Pročitano' : 'Novo',
+        isRead
+            ? AppLocalizations.of(context).notificationStatusRead
+            : AppLocalizations.of(context).notificationStatusUnread,
         style: theme.textTheme.labelSmall?.copyWith(
           color: foreground,
           fontWeight: FontWeight.w700,

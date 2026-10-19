@@ -15,6 +15,9 @@ import 'package:aquaflow_desktop/shared/theme/app_theme.dart';
 final _navigatorKey = GlobalKey<NavigatorState>();
 final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
+/// Inbox badge + new-notification signal for the "Moje obavijesti" sidebar
+/// item. Desktop has no FCM, so its polling (started/stopped by
+/// `AdminDashboardScreen`) is the only update path.
 final _notificationBadgeProvider = NotificationBadgeProvider();
 
 /// Created here (not inside [AquaFlowApp]'s `build`) so the same instance can

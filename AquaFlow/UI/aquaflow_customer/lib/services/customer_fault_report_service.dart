@@ -82,6 +82,33 @@ class CustomerFaultReportService {
     );
   }
 
+  /// One of the caller's own reports (`GET /FaultReports/{id}`) - used by the
+  /// notification deep link. Another user's or an unknown id comes back as
+  /// 404 (the backend pins `ReportedById`, same as [fetchPage]), surfacing as
+  /// [CustomerFaultReportException].
+  Future<CustomerFaultReport> fetchById(int id) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id');
+
+    final response = await _send(
+      () => _client.get(uri),
+    );
+
+    if (response.statusCode != 200) {
+      throw CustomerFaultReportException(
+        _messageFor(response, 'Prijavu kvara nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const CustomerFaultReportException(
+        'Odgovor servera je u neispravnom formatu.',
+      );
+    }
+
+    return CustomerFaultReport.fromJson(decoded);
+  }
+
   /// `FaultReportInsertRequest` carries the report's own location: a required
   /// `SettlementId` plus optional `Street`/`HouseNumber` - the report is not
   /// tied to the caller's profile address. The backend forces

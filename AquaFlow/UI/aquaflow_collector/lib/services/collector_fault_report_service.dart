@@ -150,6 +150,33 @@ class CollectorFaultReportService {
   /// the backend stamps `resolvedAt` itself - the FE no longer sends it.
   Future<CollectorFaultReport> resolve(int id) => _postTransition(id, 'resolve');
 
+  /// One report assigned to the caller (`GET /FaultReports/{id}`) - used by
+  /// the notification deep link. A report not assigned to this collector (or
+  /// gone) is a 404 on the backend, surfacing as
+  /// [CollectorFaultReportException].
+  Future<CollectorFaultReport> fetchById(int id) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id');
+
+    final response = await _send(
+      () => _client.get(uri),
+    );
+
+    if (response.statusCode != 200) {
+      throw CollectorFaultReportException(
+        _messageFor(response, 'Prijavu kvara nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const CollectorFaultReportException(
+        'Prijava kvara je u neispravnom formatu.',
+      );
+    }
+
+    return CollectorFaultReport.fromJson(decoded);
+  }
+
   Future<CollectorFaultReport> _postTransition(int id, String action) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id/$action');
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
@@ -21,8 +23,9 @@ final _navigatorKey = GlobalKey<NavigatorState>();
 final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 /// Created here rather than inside [AquaFlowApp]'s `build` so
-/// [PushMessageHandler] - which lives outside the widget tree - can bump the
-/// "Obavijesti" tab badge directly from FCM's `onMessage` callback.
+/// [PushMessageHandler] - which lives outside the widget tree - can trigger an
+/// immediate inbox re-probe (badge + open list) from FCM's `onMessage`
+/// callback. Polling itself is started/stopped by the role shell.
 final _notificationBadgeProvider = NotificationBadgeProvider();
 
 /// Created here (not inside [AquaFlowApp]'s `build`) so the same instance can
@@ -58,7 +61,9 @@ Future<void> main() async {
   await PushMessageHandler(
     navigatorKey: _navigatorKey,
     scaffoldMessengerKey: _scaffoldMessengerKey,
-    onForegroundMessage: _notificationBadgeProvider.increment,
+    // Re-probes the inbox right away (badge + an open list), instead of
+    // waiting for the next poll tick.
+    onForegroundMessage: () => unawaited(_notificationBadgeProvider.refresh()),
   ).init();
   await _initStripe();
 }
@@ -91,8 +96,8 @@ class AquaFlowApp extends StatelessWidget {
           )..bootstrap(),
         ),
         // Shared instance (not `create`) so PushMessageHandler's onMessage
-        // callback in `main()`, which runs outside the widget tree, bumps the
-        // exact same badge state the shell reads.
+        // callback in `main()`, which runs outside the widget tree, refreshes
+        // the exact same badge state the shell reads.
         ChangeNotifierProvider.value(value: _notificationBadgeProvider),
         // Shared instance (not `create`) - see the comment on [_themeProvider].
         ChangeNotifierProvider.value(value: _themeProvider),

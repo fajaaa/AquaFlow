@@ -1358,4 +1358,56 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get passwordChangedSignInAgain =>
       'Your password has been changed. Please sign in again.';
+
+  @override
+  String get notificationDetailCreatedAtLabel => 'Date created';
+
+  @override
+  String get notificationDetailDescriptionHeading => 'Description';
+
+  @override
+  String get notificationDetailDetailsHeading => 'Details';
+
+  @override
+  String get notificationDetailEmptyBody => 'No additional content.';
+
+  @override
+  String notificationDetailImagesHeading(int count) {
+    return 'Images ($count)';
+  }
+
+  @override
+  String get notificationDetailTitle => 'Notification details';
+
+  @override
+  String get notificationStatusRead => 'Read';
+
+  @override
+  String get notificationStatusUnread => 'New';
+
+  @override
+  String get notificationTypeFieldLabel => 'Notification type';
+
+  @override
+  String get notificationsMarkAllReadTooltip => 'Mark all as read';
+
+  @override
+  String get notificationsEmptyFilteredMessage =>
+      'No notifications for the selected type.';
+
+  @override
+  String get notificationsNewBanner => 'You have new notifications';
+
+  @override
+  String get notificationOpenAction => 'Open';
+
+  @override
+  String get notificationOpenRelatedFailed =>
+      'The related item couldn\'t be opened. It may no longer be available.';
+
+  @override
+  String get notificationsInboxNavLabel => 'My notifications';
+
+  @override
+  String get notificationsManageNavLabel => 'Manage notifications';
 }

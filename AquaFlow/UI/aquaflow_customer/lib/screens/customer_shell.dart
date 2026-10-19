@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_customer/app/notification_deep_link_handlers.dart';
 import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/screens/customer_fault_reports_screen.dart';
 import 'package:aquaflow_customer/screens/customer_support_tickets_screen.dart';
 import 'package:aquaflow_customer/screens/customer_water_meters_screen.dart';
 import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
+import 'package:aquaflow_customer/shared/navigation/notification_deep_links.dart';
 import 'package:aquaflow_customer/shared/providers/notification_badge_provider.dart';
 import 'package:aquaflow_customer/shared/screens/account_screen.dart';
 import 'package:aquaflow_customer/shared/screens/mobile_shell.dart';
@@ -18,16 +20,35 @@ import 'package:aquaflow_customer/shared/screens/notifications_screen.dart';
 /// ([CustomerWaterMetersScreen]), "Prijave kvarova"
 /// ([CustomerFaultReportsScreen]), and "Nalog" (the shared [AccountScreen]).
 ///
-/// The "Obavijesti" tab is always index 0, i.e. [MobileShell] builds it
-/// immediately on mount regardless of which tab the user later selects, so
+/// Mounted exactly while a customer is signed in, so it is what starts
+/// [NotificationBadgeProvider]'s polling (and stops it again on logout) and
+/// registers the customer's notification deep links
+/// ([customerNotificationDeepLinks]) for the shared detail screen.
 /// [NotificationsScreen] itself (via `NotificationBadgeProvider.markSeen`)
-/// is what keeps the unread badge in sync - this shell doesn't need its own
-/// `NotificationBadgeProvider.refresh()` call. It used to have one in
-/// `initState`/on every return to this tab, which raced the list's own load
-/// (two concurrent `GET /UserNotifications/mine` calls for the same user)
-/// and could backfill the same inbox row twice.
-class CustomerShell extends StatelessWidget {
+/// clears the badge whenever the inbox list loads.
+class CustomerShell extends StatefulWidget {
   const CustomerShell({super.key});
+
+  @override
+  State<CustomerShell> createState() => _CustomerShellState();
+}
+
+class _CustomerShellState extends State<CustomerShell> {
+  late final NotificationBadgeProvider _badge;
+
+  @override
+  void initState() {
+    super.initState();
+    _badge = context.read<NotificationBadgeProvider>()..start();
+    NotificationDeepLinks.instance.registerAll(customerNotificationDeepLinks);
+  }
+
+  @override
+  void dispose() {
+    NotificationDeepLinks.instance.unregisterAll(customerNotificationDeepLinks);
+    _badge.stop();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

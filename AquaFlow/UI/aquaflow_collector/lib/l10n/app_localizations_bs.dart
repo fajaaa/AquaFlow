@@ -671,4 +671,14 @@ class AppLocalizationsBs extends AppLocalizations {
   @override
   String get passwordChangedSignInAgain =>
       'Lozinka je promijenjena. Prijavite se ponovo.';
+
+  @override
+  String get notificationsNewBanner => 'Imate novih obavijesti';
+
+  @override
+  String get notificationOpenAction => 'Otvori';
+
+  @override
+  String get notificationOpenRelatedFailed =>
+      'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.';
 }
