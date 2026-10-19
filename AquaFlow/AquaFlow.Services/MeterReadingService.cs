@@ -106,9 +106,11 @@ public class MeterReadingService
         }
 
         // Baseline comes from the most recent counting reading, not straight off WaterMeter.LastReading:
-        // that field is reverted on cancel only when nothing newer has landed (belt and braces - see
-        // IssuedInvoiceState.CancelAsync), so it can lag behind reality. It is still the right fallback
-        // when the meter has no readings at all (e.g. a freshly seeded meter with only InitialReading).
+        // that field is a denormalized copy (also editable via WaterMeter PATCH), so the reading history is
+        // the source of truth. IssuedInvoiceState.CancelAsync only lets the newest counting reading be
+        // un-billed and then reverts LastReading to its baseline, so the two agree after a cancel. LastReading
+        // is still the right fallback when the meter has no counting reading at all (e.g. a freshly seeded
+        // meter with only InitialReading, or every reading voided).
         var previousReading = lastCountingReading?.ReadingValue ?? waterMeter.LastReading;
         if (request.ReadingValue < previousReading)
         {

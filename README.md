@@ -59,7 +59,9 @@ Administrators maintain price-per-m³ tariffs (several may be active at once, e.
 versus commercial). Invoices carry a year-scoped sequential number and move through
 `Issued → Paid | Cancelled`; a partial payment keeps the invoice `Issued`. Cancelling an
 invoice voids the reading it billed, so the consumption is re-billed by the next reading
-instead of being silently lost.
+instead of being silently lost. Only the meter's newest reading can be un-billed: an invoice
+is rejected for cancellation while a newer reading still counts for the same meter, so a
+meter's invoices are cancelled newest-to-oldest and no consumption range is ever left uncovered.
 
 **Payments**
 A pluggable payment provider abstraction ships with a manual provider (payments recorded by
