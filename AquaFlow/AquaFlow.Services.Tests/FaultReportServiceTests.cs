@@ -550,6 +550,85 @@ public class FaultReportServiceTests
         Assert.Contains("Unknown fault report status", exception.Message);
     }
 
+    // A fault report is never physically removed - it is closed through the state machine (Resolve),
+    // which keeps its FaultStatusHistory trail. DeleteAsync is blocked in the service too, not just by
+    // the controller no longer routing DELETE.
+    [Fact]
+    public async Task DeleteAsync_AnyReport_ThrowsClientExceptionAndKeepsRow()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.DeleteAsync(2));
+
+        Assert.Contains("not deleted", exception.Message);
+        Assert.True(await context.FaultReports.AnyAsync(f => f.Id == 2));
+    }
+
+    // A Resolved report is closed history, so neither PUT nor PATCH may rewrite it (neither request
+    // carries Status - that only changes through the state machine - but the other fields are still
+    // part of the record).
+    [Fact]
+    public async Task UpdateAsync_ResolvedReport_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        await MarkResolvedAsync(context, reportId: 1);
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.UpdateAsync(1, new FaultReportUpdateRequest
+        {
+            ReportedById = 1,
+            CustomerId = 1,
+            SettlementId = 1,
+            Title = "Rewritten title",
+            Description = "Rewritten description."
+        }));
+
+        Assert.Contains(FaultReportStatus.Resolved, exception.Message);
+        var stored = await context.FaultReports.AsNoTracking().SingleAsync(f => f.Id == 1);
+        Assert.Equal("Leak in the basement", stored.Title);
+    }
+
+    [Fact]
+    public async Task PatchAsync_ResolvedReport_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        await MarkResolvedAsync(context, reportId: 1);
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(
+            () => service.PatchAsync(1, new FaultReportPatchRequest { Title = "Rewritten title" }));
+
+        Assert.Contains(FaultReportStatus.Resolved, exception.Message);
+        var stored = await context.FaultReports.AsNoTracking().SingleAsync(f => f.Id == 1);
+        Assert.Equal("Leak in the basement", stored.Title);
+    }
+
+    // The terminal-status guard must not lock out editing an open report.
+    [Fact]
+    public async Task PatchAsync_NewReport_StillEditable()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var response = await service.PatchAsync(2, new FaultReportPatchRequest { Title = "Corrected title" });
+
+        Assert.Equal("Corrected title", response.Title);
+    }
+
+    private static async Task MarkResolvedAsync(AquaFlowDbContext context, int reportId)
+    {
+        var report = await context.FaultReports.SingleAsync(f => f.Id == reportId);
+        report.Status = FaultReportStatus.Resolved;
+        report.ResolvedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+    }
+
     private static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()

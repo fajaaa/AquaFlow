@@ -187,9 +187,14 @@ public class WaterMeterRequestsController : BaseCRUDController<WaterMeterRequest
     public override Task<ActionResult<WaterMeterRequestResponse>> Patch(int id, [FromBody] WaterMeterRequestPatchRequest request)
         => base.Patch(id, request);
 
-    [RequirePermission(ManagePermission)]
+    // No DELETE /WaterMeterRequests/{id}: a request ends through a state-machine transition
+    // (cancel/reject/register) that writes WaterMeterRequestStatusHistory, never by being physically
+    // removed. [NonAction] takes the inherited BaseCRUDController.Delete out of MVC action discovery,
+    // so the route is not registered at all; the override exists only because a C# override cannot
+    // remove a virtual member. WaterMeterRequestService.DeleteAsync also throws, as defense in depth.
+    [NonAction]
     public override Task<IActionResult> Delete(int id)
-        => base.Delete(id);
+        => throw new NotSupportedException("Water meter requests cannot be deleted.");
 
     [HttpPost("{id:int}/assign")]
     [RequirePermission(ManagePermission)]

@@ -166,6 +166,101 @@ public class WaterMeterRequestServiceTests
         Assert.Contains("Settlement with id 999", exception.Message);
     }
 
+    // A request is never physically removed - it ends through a status transition
+    // (cancel/reject/register) that keeps the WaterMeterRequestStatusHistory trail. DeleteAsync is
+    // blocked in the service too, not just by the controller no longer routing DELETE.
+    [Fact]
+    public async Task DeleteAsync_AnyRequest_ThrowsClientExceptionAndKeepsRow()
+    {
+        await using var context = CreateContext();
+        SeedCustomer(context, settlementId: 1);
+        SeedRequest(context, WaterMeterRequestStatus.Pending);
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.DeleteAsync(1));
+
+        Assert.Contains("not deleted", exception.Message);
+        Assert.True(await context.WaterMeterRequests.AnyAsync(r => r.Id == 1));
+    }
+
+    // Registered, Rejected and Cancelled are terminal: the record is closed history, so neither PUT
+    // nor PATCH may rewrite its address/note.
+    [Theory]
+    [InlineData(WaterMeterRequestStatus.Registered)]
+    [InlineData(WaterMeterRequestStatus.Rejected)]
+    [InlineData(WaterMeterRequestStatus.Cancelled)]
+    public async Task UpdateAsync_TerminalRequest_ThrowsClientException(string status)
+    {
+        await using var context = CreateContext();
+        SeedCustomer(context, settlementId: 1);
+        SeedRequest(context, status);
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.UpdateAsync(1, new WaterMeterRequestUpdateRequest
+        {
+            SettlementId = 1,
+            Street = "Rewritten street",
+            HouseNumber = "99"
+        }));
+
+        Assert.Contains(status, exception.Message);
+        var stored = await context.WaterMeterRequests.AsNoTracking().SingleAsync(r => r.Id == 1);
+        Assert.Equal("Zmaja od Bosne", stored.Street);
+    }
+
+    [Theory]
+    [InlineData(WaterMeterRequestStatus.Registered)]
+    [InlineData(WaterMeterRequestStatus.Rejected)]
+    [InlineData(WaterMeterRequestStatus.Cancelled)]
+    public async Task PatchAsync_TerminalRequest_ThrowsClientException(string status)
+    {
+        await using var context = CreateContext();
+        SeedCustomer(context, settlementId: 1);
+        SeedRequest(context, status);
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(
+            () => service.PatchAsync(1, new WaterMeterRequestPatchRequest { Note = "Rewritten note" }));
+
+        Assert.Contains(status, exception.Message);
+        var stored = await context.WaterMeterRequests.AsNoTracking().SingleAsync(r => r.Id == 1);
+        Assert.Null(stored.Note);
+    }
+
+    // The terminal-status guard must not lock out correcting a still-open request.
+    [Theory]
+    [InlineData(WaterMeterRequestStatus.Pending)]
+    [InlineData(WaterMeterRequestStatus.Assigned)]
+    public async Task PatchAsync_OpenRequest_StillEditable(string status)
+    {
+        await using var context = CreateContext();
+        SeedCustomer(context, settlementId: 1);
+        SeedRequest(context, status);
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var response = await service.PatchAsync(1, new WaterMeterRequestPatchRequest { HouseNumber = "12B" });
+
+        Assert.Equal("12B", response.HouseNumber);
+        Assert.Equal("Zmaja od Bosne", response.Street);
+    }
+
+    private static void SeedRequest(AquaFlowDbContext context, string status)
+    {
+        context.WaterMeterRequests.Add(new WaterMeterRequest
+        {
+            Id = 1,
+            CustomerId = 1,
+            Status = status,
+            SettlementId = 1,
+            Street = "Zmaja od Bosne",
+            HouseNumber = "12A"
+        });
+    }
+
     private static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
@@ -229,6 +324,10 @@ public class WaterMeterRequestServiceTests
             .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
             .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName)
             .Map(destination => destination.CustomerPhone, source => source.Customer == null || source.Customer.User == null ? null : source.Customer.User.Phone);
+        // Mirrors Program.cs's AddPatchMapping, so an omitted patch field leaves the entity's value
+        // untouched instead of overwriting it with null.
+        mapperConfig.NewConfig<WaterMeterRequestPatchRequest, WaterMeterRequest>()
+            .IgnoreNullValues(true);
         IMapper mapper = new Mapper(mapperConfig);
 
         var stateServices = new ServiceCollection();

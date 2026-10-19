@@ -269,14 +269,11 @@ AddPatchMapping<WaterMeterPatchRequest, WaterMeter>();
 builder.Services.AddScoped<IWaterMeterService, WaterMeterService>();
 builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IWaterMeterService>());
-// MeterReading is registered by hand (not AddCrud<>) because the collector data-entry flow
-// (CreateForCollectorAsync) needs billing-cycle resolution/validation and WaterMeter.LastReading
-// updates beyond the generic EfCrudService; the generic IBaseCRUDService alias still resolves to
-// the same MeterReadingService instance, same pattern as WaterMeterRequest/Invoice below.
-AddPatchMapping<MeterReadingPatchRequest, MeterReading>();
+// MeterReading is read-only over the generic API (MeterReadingService extends EfReadService): the
+// only write path is the collector data-entry flow (CreateForCollectorAsync), so there is no patch
+// mapping and no generic IBaseCRUDService alias - MeterReadingsController depends on
+// IMeterReadingService directly.
 builder.Services.AddScoped<IMeterReadingService, MeterReadingService>();
-builder.Services.AddScoped<IBaseCRUDService<MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>>(
-    serviceProvider => serviceProvider.GetRequiredService<IMeterReadingService>());
 builder.Services.AddScoped<IConsumptionForecastingService, ConsumptionForecastingService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 // WaterConsumptionAlert is registered by hand (not AddCrud<>) because RecomputeAsync is an extra
@@ -323,14 +320,12 @@ builder.Services.AddScoped<IPaymentProvider>(_ =>
             $"Unknown payment provider '{providerName}'. Configure Payments:Provider to a supported value.")
     };
 });
-// Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
-// it by hand: the patch mapping, IInvoiceService, and the generic IBaseCRUDService alias resolving
-// to the same InvoiceService. Each invoice state is a keyed scoped BaseInvoiceState (status string as
-// key); IInvoiceStateResolver resolves the state for a status through those keyed registrations.
-AddPatchMapping<InvoicePatchRequest, Invoice>();
+// Invoice uses the state machine (InvoiceService) instead of the generic CRUD service and is
+// read-only over the generic API (InvoiceService extends EfReadService), so there is no patch mapping
+// and no generic IBaseCRUDService alias - InvoicesController depends on IInvoiceService directly.
+// Each invoice state is a keyed scoped BaseInvoiceState (status string as key); IInvoiceStateResolver
+// resolves the state for a status through those keyed registrations.
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
-builder.Services.AddScoped<IBaseCRUDService<InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>>(
-    serviceProvider => serviceProvider.GetRequiredService<IInvoiceService>());
 builder.Services.AddKeyedScoped<BaseInvoiceState, IssuedInvoiceState>(InvoiceStatus.Issued);
 builder.Services.AddKeyedScoped<BaseInvoiceState, PaidInvoiceState>(InvoiceStatus.Paid);
 builder.Services.AddKeyedScoped<BaseInvoiceState, CancelledInvoiceState>(InvoiceStatus.Cancelled);
@@ -357,7 +352,9 @@ builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, RegisteredWaterMeter
 builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, RejectedWaterMeterRequestState>(WaterMeterRequestStatus.Rejected);
 builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, CancelledWaterMeterRequestState>(WaterMeterRequestStatus.Cancelled);
 builder.Services.AddScoped<IWaterMeterRequestStateResolver, WaterMeterRequestStateResolver>();
-AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
+// InvoiceItem is read-only: items are created only together with their invoice in
+// MeterReadingService.CreateForCollectorAsync, so only the IBaseReadService<...> registration exists.
+AddRead<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject>();
 // PaymentsController is read-only (see its own comment): every Payment row is written
 // either by the invoice state machine or the payment provider confirmation path, never
 // through a generic CRUD surface, so only the IBaseReadService<...> alias is exposed to it.
@@ -428,19 +425,10 @@ builder.Services.AddScoped<IValidator<WaterMeterMarkBrokenRequest>, WaterMeterMa
 builder.Services.AddScoped<IValidator<WaterMeterRequestInsertRequest>, WaterMeterRequestInsertValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestUpdateRequest>, WaterMeterRequestUpdateValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestPatchRequest>, WaterMeterRequestPatchValidator>();
-builder.Services.AddScoped<IValidator<MeterReadingInsertRequest>, MeterReadingInsertValidator>();
-builder.Services.AddScoped<IValidator<MeterReadingUpdateRequest>, MeterReadingUpdateValidator>();
-builder.Services.AddScoped<IValidator<MeterReadingPatchRequest>, MeterReadingPatchValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingCollectorEntryRequest>, MeterReadingCollectorEntryValidator>();
 builder.Services.AddScoped<IValidator<TariffInsertRequest>, TariffInsertValidator>();
 builder.Services.AddScoped<IValidator<TariffUpdateRequest>, TariffUpdateValidator>();
 builder.Services.AddScoped<IValidator<TariffPatchRequest>, TariffPatchValidator>();
-builder.Services.AddScoped<IValidator<InvoiceInsertRequest>, InvoiceInsertValidator>();
-builder.Services.AddScoped<IValidator<InvoiceUpdateRequest>, InvoiceUpdateValidator>();
-builder.Services.AddScoped<IValidator<InvoicePatchRequest>, InvoicePatchValidator>();
-builder.Services.AddScoped<IValidator<InvoiceItemInsertRequest>, InvoiceItemInsertValidator>();
-builder.Services.AddScoped<IValidator<InvoiceItemUpdateRequest>, InvoiceItemUpdateValidator>();
-builder.Services.AddScoped<IValidator<InvoiceItemPatchRequest>, InvoiceItemPatchValidator>();
 builder.Services.AddScoped<IValidator<PaymentInsertRequest>, PaymentInsertValidator>();
 builder.Services.AddScoped<IValidator<PaymentUpdateRequest>, PaymentUpdateValidator>();
 builder.Services.AddScoped<IValidator<PaymentPatchRequest>, PaymentPatchValidator>();
@@ -555,6 +543,16 @@ void AddCrud<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatch
 
     builder.Services.AddScoped<IBaseCRUDService<TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>>(serviceProvider =>
         ActivatorUtilities.CreateInstance<EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>>(serviceProvider));
+}
+
+// Read-only counterpart of AddCrud: registers only IBaseReadService<...> over a generic EfReadService,
+// for resources that have no generic write path at all.
+void AddRead<TEntity, TResponse, TSearch>()
+    where TEntity : EntityBase
+    where TSearch : BaseSearchObject
+{
+    builder.Services.AddScoped<IBaseReadService<TResponse, TSearch>>(serviceProvider =>
+        ActivatorUtilities.CreateInstance<EfReadService<TEntity, TResponse, TSearch>>(serviceProvider));
 }
 
 void AddPatchMapping<TPatchRequest, TEntity>()

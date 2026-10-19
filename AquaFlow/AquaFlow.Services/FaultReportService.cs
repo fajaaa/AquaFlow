@@ -55,6 +55,34 @@ public class FaultReportService
         }
     }
 
+    // Update/Patch carry no Status (it changes only through the state machine), but a Resolved report
+    // is closed history - its FaultStatusHistory trail describes exactly what was reported and fixed,
+    // so editing its title/description/location afterwards would rewrite that history.
+    protected override Task BeforeUpdateAsync(int id, FaultReportUpdateRequest request, FaultReport entity)
+    {
+        EnsureNotTerminal(entity);
+        return Task.CompletedTask;
+    }
+
+    protected override Task BeforePatchAsync(int id, FaultReportPatchRequest request, FaultReport entity)
+    {
+        EnsureNotTerminal(entity);
+        return Task.CompletedTask;
+    }
+
+    // Defense in depth behind the controller (which no longer routes DELETE): a fault report is never
+    // physically removed - it is closed through the state machine (Resolve), which keeps the audit trail.
+    public override Task DeleteAsync(int id)
+        => throw new ClientException("Fault reports are not deleted; close them through the status actions (start/resolve) instead.");
+
+    private static void EnsureNotTerminal(FaultReport entity)
+    {
+        if (entity.Status == FaultReportStatus.Resolved)
+        {
+            throw new ClientException($"A fault report in status '{entity.Status}' is closed and can no longer be edited.");
+        }
+    }
+
     private async Task EnsureSettlementExistsAsync(int settlementId)
     {
         if (!await DbContext.Settlements.AnyAsync(settlement => settlement.Id == settlementId))

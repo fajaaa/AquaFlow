@@ -1,11 +1,13 @@
-using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 
 namespace AquaFlow.Services;
 
+// Read-only base (no Insert/Update/Patch/Delete): an invoice is only ever created Issued by the
+// meter-reading flow and only ever changed through the state-machine transitions below, so status,
+// amounts and readings can never be edited around the Payment/InvoiceStatusHistory audit trail.
 public interface IInvoiceService
-    : IBaseCRUDService<InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>
+    : IBaseReadService<InvoiceResponse, InvoiceSearchObject>
 {
     Task<InvoiceResponse> RecordPaymentAsync(int id, int changedById);
     Task<InvoiceResponse> CancelAsync(int id, int changedById);

@@ -579,9 +579,6 @@ public class MeterReadingServiceTests
         return new MeterReadingService(
             context,
             mapper,
-            new IValidator<MeterReadingInsertRequest>[] { new MeterReadingInsertValidator() },
-            new IValidator<MeterReadingUpdateRequest>[] { new MeterReadingUpdateValidator() },
-            new IValidator<MeterReadingPatchRequest>[] { new MeterReadingPatchValidator() },
             new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() });
     }
 }

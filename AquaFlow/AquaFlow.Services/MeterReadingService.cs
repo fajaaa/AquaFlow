@@ -9,8 +9,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AquaFlow.Services;
 
+// Read-only over the generic API: the only way a reading is written is CreateForCollectorAsync, which
+// computes PreviousReadingValue/ConsumptionM3 server-side and bills the reading in the same SaveChanges.
+// A generic insert could add a reading with no invoice that CountingReadings would then take as the
+// new baseline (silently dropping that consumption from billing), and a generic update/delete could
+// rewrite or remove an already-billed reading - so, like InvoiceService, this extends EfReadService and
+// those methods do not exist.
 public class MeterReadingService
-    : EfCrudService<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>,
+    : EfReadService<MeterReading, MeterReadingResponse, MeterReadingSearchObject>,
       IMeterReadingService
 {
     private readonly AquaFlowDbContext _dbContext;
@@ -19,11 +25,8 @@ public class MeterReadingService
     public MeterReadingService(
         AquaFlowDbContext dbContext,
         IMapper mapper,
-        IEnumerable<IValidator<MeterReadingInsertRequest>> insertValidators,
-        IEnumerable<IValidator<MeterReadingUpdateRequest>> updateValidators,
-        IEnumerable<IValidator<MeterReadingPatchRequest>> patchValidators,
         IEnumerable<IValidator<MeterReadingCollectorEntryRequest>> collectorEntryValidators)
-        : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
+        : base(dbContext, mapper)
     {
         _dbContext = dbContext;
         _collectorEntryValidator = collectorEntryValidators.FirstOrDefault();
@@ -214,7 +217,7 @@ public class MeterReadingService
     // suggestion from the generic GET /MeterReadings?WaterMeterId=..&SortDescending=true listing, which
     // returns the raw last row regardless of VoidedAt/cancelled-invoice status. That could block a new
     // reading the server would actually accept (the cooldown check here is CountingReadings-filtered).
-    // The generic listing itself is left untouched - admin/backfill still needs to see voided/cancelled
+    // The generic listing itself is left untouched - the admin still needs to see voided/cancelled
     // rows for audit purposes.
     public async Task<MeterReadingResponse?> GetLastCountingReadingAsync(int waterMeterId)
     {
@@ -255,42 +258,6 @@ public class MeterReadingService
         if (!validationResult.IsValid)
         {
             throw new ValidationException(validationResult.Errors);
-        }
-    }
-
-    // Generic admin-facing CRUD (backfill): TariffId is optional, but when supplied must reference an
-    // existing tariff. Unlike the collector-entry path, an inactive tariff is allowed here (historical
-    // backfill may legitimately reference a tariff that has since been deactivated).
-    protected override async Task BeforeInsertAsync(MeterReadingInsertRequest request)
-    {
-        if (request.TariffId.HasValue)
-        {
-            await EnsureTariffExistsAsync(request.TariffId.Value);
-        }
-    }
-
-    protected override async Task BeforeUpdateAsync(int id, MeterReadingUpdateRequest request, MeterReading entity)
-    {
-        if (request.TariffId.HasValue)
-        {
-            await EnsureTariffExistsAsync(request.TariffId.Value);
-        }
-    }
-
-    protected override async Task BeforePatchAsync(int id, MeterReadingPatchRequest request, MeterReading entity)
-    {
-        if (request.TariffId.HasValue)
-        {
-            await EnsureTariffExistsAsync(request.TariffId.Value);
-        }
-    }
-
-    private async Task EnsureTariffExistsAsync(int tariffId)
-    {
-        var exists = await _dbContext.Tariffs.AnyAsync(t => t.Id == tariffId);
-        if (!exists)
-        {
-            throw new ClientException($"Tariff with id {tariffId} was not found.");
         }
     }
 }

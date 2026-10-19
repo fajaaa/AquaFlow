@@ -12,7 +12,12 @@ using CustomerProfileCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.M
 
 namespace AquaFlow.WebAPI.Controllers;
 
-public class InvoicesController : BaseCRUDController<InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest, IInvoiceService>
+// Derives from BaseReadController, not BaseCRUDController: there is no generic POST/PUT/PATCH/DELETE
+// on /Invoices at all (the routes do not exist, rather than merely being permission-gated). Every
+// invoice is created Issued by the collector meter-reading flow, and every later change goes through
+// the state-machine actions below (checkout/payments/cancel), which also write the Payment and
+// InvoiceStatusHistory rows a raw edit of Status/TotalAmount/readings would have skipped.
+public class InvoicesController : BaseReadController<InvoiceResponse, InvoiceSearchObject, IInvoiceService>
 {
     private const string ManagePermission = "Invoices.Manage";
 
@@ -152,22 +157,6 @@ public class InvoicesController : BaseCRUDController<InvoiceResponse, InvoiceSea
         var claimValue = User.FindFirst(ClaimNames.Id)?.Value;
         return int.TryParse(claimValue, out userId);
     }
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<ActionResult<InvoiceResponse>> Create([FromBody] InvoiceInsertRequest request)
-        => base.Create(request);
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<ActionResult<InvoiceResponse>> Update(int id, [FromBody] InvoiceUpdateRequest request)
-        => base.Update(id, request);
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<ActionResult<InvoiceResponse>> Patch(int id, [FromBody] InvoicePatchRequest request)
-        => base.Patch(id, request);
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<IActionResult> Delete(int id)
-        => base.Delete(id);
 
     // Customer self-service checkout: gated on Invoices.Pay (granted to Customer only, not
     // Invoices.Manage) and pinned to the caller's own CustomerProfile.Id, same ownership pattern as

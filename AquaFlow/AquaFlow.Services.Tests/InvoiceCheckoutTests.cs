@@ -2,8 +2,6 @@ using AquaFlow.Model.Exceptions;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Payments;
-using AquaFlow.Services.Validators;
-using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
@@ -205,9 +203,6 @@ public class InvoiceCheckoutTests
         return new InvoiceService(
             context,
             mapper,
-            new IValidator<Model.Requests.InvoiceInsertRequest>[] { new InvoiceInsertValidator() },
-            new IValidator<Model.Requests.InvoiceUpdateRequest>[] { new InvoiceUpdateValidator() },
-            new IValidator<Model.Requests.InvoicePatchRequest>[] { new InvoicePatchValidator() },
             stateResolver,
             new ManualPaymentProvider(),
             Options.Create(new PaymentsOptions()),

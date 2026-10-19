@@ -183,9 +183,15 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     public override Task<ActionResult<FaultReportResponse>> Patch(int id, [FromBody] FaultReportPatchRequest request)
         => base.Patch(id, request);
 
-    [RequirePermission(ManagePermission)]
+    // No DELETE /FaultReports/{id}: a report is closed through the state machine (Resolve), which keeps
+    // its FaultStatusHistory trail, never physically removed. [NonAction] takes the inherited
+    // BaseCRUDController.Delete out of MVC action discovery, so the route is not registered at all;
+    // the override exists only because a C# override cannot remove a virtual member. Photo deletion
+    // (DELETE {id}/photos/{photoId}, DeletePhoto below) is a separate action and is unaffected.
+    // FaultReportService.DeleteAsync also throws, as defense in depth.
+    [NonAction]
     public override Task<IActionResult> Delete(int id)
-        => base.Delete(id);
+        => throw new NotSupportedException("Fault reports cannot be deleted.");
 
     [HttpPost("{id:int}/assign")]
     [RequirePermission(ManagePermission)]

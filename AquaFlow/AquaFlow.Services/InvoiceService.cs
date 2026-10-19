@@ -1,19 +1,22 @@
 using AquaFlow.Model.Exceptions;
-using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Payments;
-using FluentValidation;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AquaFlow.Services;
 
+// Read-only over the generic API: every invoice is created already Issued by
+// MeterReadingService.CreateForCollectorAsync (in the same SaveChanges as its reading), and every later
+// change is a state-machine transition (RecordPayment/Cancel/ConfirmPayment) that also writes the
+// Payment and InvoiceStatusHistory rows. A generic Insert/Update/Patch/Delete would bypass all of that,
+// so this extends EfReadService rather than EfCrudService - those methods do not exist here at all.
 public class InvoiceService
-    : EfCrudService<Invoice, InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>,
+    : EfReadService<Invoice, InvoiceResponse, InvoiceSearchObject>,
       IInvoiceService
 {
     private readonly AquaFlowDbContext _dbContext;
@@ -25,14 +28,11 @@ public class InvoiceService
     public InvoiceService(
         AquaFlowDbContext dbContext,
         IMapper mapper,
-        IEnumerable<IValidator<InvoiceInsertRequest>> insertValidators,
-        IEnumerable<IValidator<InvoiceUpdateRequest>> updateValidators,
-        IEnumerable<IValidator<InvoicePatchRequest>> patchValidators,
         IInvoiceStateResolver stateResolver,
         IPaymentProvider paymentProvider,
         IOptions<PaymentsOptions> paymentsOptions,
         IOptions<StripeOptions> stripeOptions)
-        : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
+        : base(dbContext, mapper)
     {
         _dbContext = dbContext;
         _stateResolver = stateResolver;
@@ -41,21 +41,8 @@ public class InvoiceService
         _stripeOptions = stripeOptions.Value;
     }
 
-    // Auto-generated invoices from meter readings start in Issued state.
-    protected override Task BeforeInsertAsync(InvoiceInsertRequest request)
-    {
-        request.Status = InvoiceStatus.Issued;
-        return Task.CompletedTask;
-    }
-
     protected override IQueryable<Invoice> IncludeForRead(IQueryable<Invoice> query) =>
         query.Include(i => i.Customer).Include(i => i.WaterMeter);
-
-    protected override async Task LoadReferencesAsync(Invoice entity)
-    {
-        await DbContext.Entry(entity).Reference(i => i.Customer).LoadAsync();
-        await DbContext.Entry(entity).Reference(i => i.WaterMeter).LoadAsync();
-    }
 
     // Attaches PaidAmount as a correlated subquery (InvoicePaymentAmounts.WithPaidAmount) so a page of
     // invoices gets its paid totals in the same query as the rest of the row, not one query per invoice.

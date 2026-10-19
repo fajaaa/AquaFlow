@@ -29,7 +29,6 @@ public class FaultReportsControllerTests
     [Theory]
     [InlineData(nameof(FaultReportsController.Update))]
     [InlineData(nameof(FaultReportsController.Patch))]
-    [InlineData(nameof(FaultReportsController.Delete))]
     [InlineData(nameof(FaultReportsController.Assign))]
     public void WriteAction_RequiresFaultReportsManagePermission(string methodName)
     {
@@ -45,6 +44,34 @@ public class FaultReportsControllerTests
         Assert.NotNull(attribute);
         var codes = Assert.IsType<string[]>(attribute!.Arguments![0]);
         Assert.Contains(ManagePermission, codes);
+    }
+
+    // DELETE /FaultReports/{id} must not exist: a report is closed through the state machine
+    // (Resolve), never physically removed. The inherited BaseCRUDController.Delete is overridden with
+    // [NonAction], which is exactly what MVC's action discovery checks to skip a public method, so
+    // pinning the attribute pins that the route is not registered.
+    [Fact]
+    public void Delete_IsNotAnMvcAction()
+    {
+        var method = typeof(FaultReportsController)
+            .GetMethods()
+            .Single(m => m.Name == nameof(FaultReportsController.Delete));
+
+        Assert.Equal(typeof(FaultReportsController), method.DeclaringType);
+        Assert.True(method.IsDefined(typeof(NonActionAttribute), inherit: false));
+    }
+
+    // Photo deletion is a different action (DELETE {id}/photos/{photoId}) and must stay routable.
+    [Fact]
+    public void DeletePhoto_IsStillAnHttpDeleteAction()
+    {
+        var method = typeof(FaultReportsController)
+            .GetMethods()
+            .Single(m => m.Name == nameof(FaultReportsController.DeletePhoto));
+
+        Assert.False(method.IsDefined(typeof(NonActionAttribute), inherit: false));
+        var route = Assert.Single(method.GetCustomAttributes(typeof(HttpDeleteAttribute), inherit: false).Cast<HttpDeleteAttribute>());
+        Assert.Equal("{id:int}/photos/{photoId:int}", route.Template);
     }
 
     // Ownership is keyed on the reporting account (ReportedById), not the CustomerProfile - no

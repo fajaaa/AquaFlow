@@ -210,8 +210,9 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         Assert.Null(reading.VoidedAt);
     }
 
-    // Last reading has no invoice at all (e.g. admin backfill via InsertAsync): cooldown still enforced,
-    // since there's no cancelled invoice to bypass it
+    // Last reading has no invoice at all (e.g. a zero-consumption reading, or a historical seed row):
+    // cooldown still enforced, since there's no cancelled invoice to bypass it. Seeded straight through
+    // the DbContext - there is no generic insert path on MeterReadingService any more.
     [Fact]
     public async Task CreateForCollectorAsync_LastReadingHasNoInvoice_ThrowsClientException()
     {
@@ -219,7 +220,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         SeedTestData(context);
         var service = CreateService(context);
 
-        var backfillRequest = new MeterReadingInsertRequest
+        context.MeterReadings.Add(new MeterReading
         {
             WaterMeterId = 1,
             CollectorId = 1,
@@ -230,11 +231,11 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             ReadingDate = DateTime.UtcNow.AddDays(-5),
             Source = "Collector",
             SyncStatus = "Synced"
-        };
-        await service.InsertAsync(backfillRequest);
+        });
+        await context.SaveChangesAsync();
 
-        var backfilledReading = await context.MeterReadings.FirstAsync();
-        Assert.Null(backfilledReading.InvoiceId);
+        var seededReading = await context.MeterReadings.FirstAsync();
+        Assert.Null(seededReading.InvoiceId);
 
         var request = new MeterReadingCollectorEntryRequest
         {
@@ -357,9 +358,6 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         return new MeterReadingService(
             context,
             mapper,
-            new IValidator<MeterReadingInsertRequest>[] { new MeterReadingInsertValidator() },
-            new IValidator<MeterReadingUpdateRequest>[] { new MeterReadingUpdateValidator() },
-            new IValidator<MeterReadingPatchRequest>[] { new MeterReadingPatchValidator() },
             new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() });
     }
 

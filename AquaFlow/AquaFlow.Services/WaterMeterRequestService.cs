@@ -57,6 +57,37 @@ public class WaterMeterRequestService
     public override Task<WaterMeterRequestResponse> InsertAsync(WaterMeterRequestInsertRequest request)
         => throw new ClientException("Water meter requests are created through the authenticated endpoint on behalf of the signed-in customer.");
 
+    // Defense in depth behind the controller (which no longer routes DELETE): a request is never
+    // physically removed - it ends through a status transition (cancel/reject/register), which keeps
+    // the WaterMeterRequestStatusHistory audit trail.
+    public override Task DeleteAsync(int id)
+        => throw new ClientException("Water meter requests are not deleted; end them through the status actions (cancel/reject/register) instead.");
+
+    // Update/Patch carry no Status (it changes only through the state machine), but a Registered,
+    // Rejected or Cancelled request is closed history - for Registered its address is the one the
+    // meter was actually installed at - so it can no longer be edited.
+    protected override Task BeforeUpdateAsync(int id, WaterMeterRequestUpdateRequest request, WaterMeterRequest entity)
+    {
+        EnsureNotTerminal(entity);
+        return Task.CompletedTask;
+    }
+
+    protected override Task BeforePatchAsync(int id, WaterMeterRequestPatchRequest request, WaterMeterRequest entity)
+    {
+        EnsureNotTerminal(entity);
+        return Task.CompletedTask;
+    }
+
+    private static void EnsureNotTerminal(WaterMeterRequest entity)
+    {
+        if (entity.Status == WaterMeterRequestStatus.Registered ||
+            entity.Status == WaterMeterRequestStatus.Rejected ||
+            entity.Status == WaterMeterRequestStatus.Cancelled)
+        {
+            throw new ClientException($"A water meter request in status '{entity.Status}' is closed and can no longer be edited.");
+        }
+    }
+
     public async Task<WaterMeterRequestResponse> CreateForUserAsync(int callerUserId, WaterMeterRequestInsertRequest request)
     {
         await ValidateInsertAsync(request);

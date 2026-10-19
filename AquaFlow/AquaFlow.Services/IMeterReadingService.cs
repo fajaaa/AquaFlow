@@ -4,14 +4,17 @@ using AquaFlow.Model.SearchObjects;
 
 namespace AquaFlow.Services;
 
+// Read-only base (no generic Insert/Update/Patch/Delete): a reading is only ever written through
+// CreateForCollectorAsync, and once billed it is part of the invoice's history - it is voided by
+// cancelling that invoice (IssuedInvoiceState.CancelAsync), never edited or deleted.
 public interface IMeterReadingService
-    : IBaseCRUDService<MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>
+    : IBaseReadService<MeterReadingResponse, MeterReadingSearchObject>
 {
     // Records a reading on behalf of the signed-in collector: CollectorId is resolved from the
-    // caller's user id (never from the request body), the target billing cycle is resolved/validated,
-    // PreviousReadingValue/ConsumptionM3/ReadingDate/Source are computed server-side, and the water
-    // meter's LastReading is updated to match. Also auto-creates a Draft Invoice + InvoiceItem priced
-    // from the request's TariffId, so the response carries the resulting invoice's id/number/total.
+    // caller's user id (never from the request body), PreviousReadingValue/ConsumptionM3/ReadingDate/
+    // Source are computed server-side, and the water meter's LastReading is updated to match. When
+    // consumption is above zero it also auto-creates an Issued Invoice + InvoiceItem priced from the
+    // request's TariffId, so the response carries the resulting invoice's id/number/total.
     Task<MeterReadingCollectorEntryResponse> CreateForCollectorAsync(int callerUserId, MeterReadingCollectorEntryRequest request);
 
     // The most recent reading for a water meter that still counts towards its billing history (same

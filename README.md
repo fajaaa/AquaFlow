@@ -466,8 +466,16 @@ The Flutter clients do this automatically and keep tokens in the platform secure
 | Operations | `/ActivityLogs`, `/CompanySettings`, `/PaymentSettings` |
 
 Unless stated otherwise, a resource supports `GET` (list), `GET /{id}`, `POST`, `PUT /{id}`,
-`PATCH /{id}` and `DELETE /{id}`. `/Payments` and `/ActivityLogs` are read-only — their rows are
-written by the flows that produce them.
+`PATCH /{id}` and `DELETE /{id}`. The exceptions are the records whose history matters:
+
+- `/Invoices`, `/InvoiceItems`, `/MeterReadings`, `/Payments` and `/ActivityLogs` are read-only
+  over the generic API (only `GET` and `GET /{id}`). Their rows are written by the flows that
+  produce them: a reading and its Issued invoice (with its items) are created together by
+  `POST /MeterReadings/collector-entry`, and an invoice then changes only through the transitions
+  below.
+- `/FaultReports` and `/WaterMeterRequests` have no `DELETE /{id}`. They are closed through a status
+  transition, never physically removed, and a closed record (a resolved report; a registered,
+  rejected or cancelled request) can no longer be edited with `PUT`/`PATCH`.
 
 ### Workflow endpoints
 
@@ -484,8 +492,8 @@ permitted:
 
 Meter readings have their own entry points: `POST /MeterReadings/collector-entry` (validated
 field entry, auto-invoicing, idempotent on retry) and `GET /MeterReadings/last-counting` (the
-most recent reading that still counts towards billing). The generic `/MeterReadings` CRUD
-surface remains available for administrative backfill.
+most recent reading that still counts towards billing). There is no generic create, update or
+delete for readings: a billed reading is voided only by cancelling its invoice.
 
 ### Paging, filtering and sorting
 
