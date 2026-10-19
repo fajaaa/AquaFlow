@@ -6,6 +6,7 @@ using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Payments;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace AquaFlow.Services;
@@ -24,6 +25,7 @@ public class InvoiceService
     private readonly IPaymentProvider _paymentProvider;
     private readonly PaymentsOptions _paymentsOptions;
     private readonly StripeOptions _stripeOptions;
+    private readonly ILogger<InvoiceService> _logger;
 
     public InvoiceService(
         AquaFlowDbContext dbContext,
@@ -31,7 +33,8 @@ public class InvoiceService
         IInvoiceStateResolver stateResolver,
         IPaymentProvider paymentProvider,
         IOptions<PaymentsOptions> paymentsOptions,
-        IOptions<StripeOptions> stripeOptions)
+        IOptions<StripeOptions> stripeOptions,
+        ILogger<InvoiceService> logger)
         : base(dbContext, mapper)
     {
         _dbContext = dbContext;
@@ -39,6 +42,7 @@ public class InvoiceService
         _paymentProvider = paymentProvider;
         _paymentsOptions = paymentsOptions.Value;
         _stripeOptions = stripeOptions.Value;
+        _logger = logger;
     }
 
     protected override IQueryable<Invoice> IncludeForRead(IQueryable<Invoice> query) =>
@@ -103,25 +107,77 @@ public class InvoiceService
 
         var providerName = _paymentProvider.Name;
 
-        // App-level idempotency on top of the (Provider, ProviderTransactionId) unique index: a
-        // second checkout call for the same invoice/amount (e.g. a client retry, or the customer
-        // reopening the invoice before finishing a previous attempt) reuses the still-open Pending
-        // payment instead of creating a second one.
-        var existingPending = await _dbContext.Payments
+        // App-level idempotency on top of the (Provider, ProviderTransactionId) unique index: before
+        // anything new is created, every still-Pending attempt for this invoice is checked against the
+        // provider, because our local "Pending" says nothing about what happened there since (the
+        // customer may have closed the PaymentSheet, had a card declined, paid without our webhook
+        // having arrived yet, or the intent may have been canceled). Per attempt:
+        // - Open, same amount  -> resume it: the same Payment row, with the provider's ClientSecret,
+        //                          so the client can always reopen the PaymentSheet (never null for Stripe).
+        // - Open, other amount -> cancel it at the provider and mark it Failed: its amount is stale.
+        //   (also a second Open attempt, so at most one stays live)
+        // - Succeeded          -> the customer already paid: confirm it through the webhook's own path
+        //                          and tell the client not to open another PaymentSheet.
+        // - Canceled           -> dead for good: mark it Failed and fall through to a new attempt.
+        var pendingAttempts = await _dbContext.Payments
             .Where(payment => payment.InvoiceId == invoice.Id
                 && payment.Status == PaymentStatus.Pending
                 && payment.Provider == providerName
-                && payment.Amount == remaining)
+                && payment.ProviderTransactionId != null)
             .OrderByDescending(payment => payment.CreatedAt)
-            .FirstOrDefaultAsync();
+            .ThenByDescending(payment => payment.Id)
+            .ToListAsync();
 
-        if (existingPending != null)
+        Payment? resumablePayment = null;
+        PaymentResumeResult? resumeResult = null;
+        foreach (var attempt in pendingAttempts)
         {
-            return ToCheckoutSessionResponse(existingPending, redirectUrl: null, clientSecret: null);
+            var transactionId = attempt.ProviderTransactionId!;
+            var resume = await _paymentProvider.ResumeCheckoutAsync(transactionId);
+            var state = resume.State;
+
+            if (state == PaymentAttemptState.Open && (attempt.Amount != remaining || resumablePayment != null))
+            {
+                state = await _paymentProvider.CancelCheckoutAsync(transactionId);
+                if (state == PaymentAttemptState.Open)
+                {
+                    throw new InvalidOperationException(
+                        $"Payment provider '{providerName}' did not cancel attempt '{transactionId}'.");
+                }
+            }
+
+            switch (state)
+            {
+                case PaymentAttemptState.Succeeded:
+                    // Persist any attempts already marked Failed in this loop before confirming.
+                    await _dbContext.SaveChangesAsync();
+                    return await ConfirmAlreadySucceededAttemptAsync(attempt);
+                case PaymentAttemptState.Canceled:
+                    attempt.Status = PaymentStatus.Failed;
+                    attempt.UpdatedAt = DateTime.UtcNow;
+                    break;
+                default:
+                    resumablePayment = attempt;
+                    resumeResult = resume;
+                    break;
+            }
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        if (resumablePayment != null)
+        {
+            // Resuming never creates anything at the provider, so the idempotency key is not used here.
+            return ToCheckoutSessionResponse(resumablePayment, resumeResult!.RedirectUrl, resumeResult.ClientSecret);
         }
 
         var checkoutResult = await _paymentProvider.CreateCheckoutAsync(
-            new PaymentCheckoutContext(invoice.Id, invoice.CustomerId, remaining, _paymentsOptions.Currency, idempotencyKey));
+            new PaymentCheckoutContext(
+                invoice.Id,
+                invoice.CustomerId,
+                remaining,
+                _paymentsOptions.Currency,
+                await DeriveAttemptIdempotencyKeyAsync(invoice.Id, providerName, idempotencyKey)));
 
         var payment = new Payment
         {
@@ -141,7 +197,7 @@ public class InvoiceService
         return ToCheckoutSessionResponse(payment, checkoutResult.RedirectUrl, checkoutResult.ClientSecret);
     }
 
-    public async Task<PaymentResponse> ConfirmPaymentAsync(string provider, string providerTransactionId, bool succeeded)
+    public async Task<PaymentResponse> ConfirmPaymentAsync(string provider, string providerTransactionId, PaymentConfirmationOutcome outcome)
     {
         var payment = await _dbContext.Payments
             .FirstOrDefaultAsync(payment => payment.Provider == provider && payment.ProviderTransactionId == providerTransactionId);
@@ -152,22 +208,39 @@ public class InvoiceService
         }
 
         // Idempotent no-op: a retried provider webhook delivery after the payment already completed
-        // must not credit the invoice a second time.
+        // must not credit the invoice a second time (and nothing can un-complete it).
         if (payment.Status == PaymentStatus.Completed)
         {
             return Mapper.Map<PaymentResponse>(payment);
         }
 
-        if (payment.Status != PaymentStatus.Pending)
+        switch (outcome)
         {
-            throw new ClientException($"Payment is in status '{payment.Status}' and cannot be confirmed.");
+            case PaymentConfirmationOutcome.AttemptFailed:
+                // A declined charge does not end the attempt: Stripe puts the PaymentIntent back into
+                // requires_payment_method and the very same intent can still succeed (the customer
+                // retries with another card through the resumed PaymentSheet). Marking the Payment
+                // Failed here used to make that later success unconfirmable, so the row is left as is.
+                return Mapper.Map<PaymentResponse>(payment);
+
+            case PaymentConfirmationOutcome.Canceled:
+                if (payment.Status == PaymentStatus.Pending)
+                {
+                    payment.Status = PaymentStatus.Failed;
+                    payment.UpdatedAt = DateTime.UtcNow;
+                    await _dbContext.SaveChangesAsync();
+                }
+
+                return Mapper.Map<PaymentResponse>(payment);
         }
 
-        if (!succeeded)
+        // Succeeded. A Failed row is accepted too: before AttemptFailed existed, payment_intent.payment_failed
+        // marked rows Failed even though their intent could still succeed - the provider is the source of
+        // truth about the money, so such a row is completed as long as its invoice is still Issued (the
+        // state machine rejects ConfirmPayment for any other invoice status).
+        if (payment.Status != PaymentStatus.Pending && payment.Status != PaymentStatus.Failed)
         {
-            payment.Status = PaymentStatus.Failed;
-            await _dbContext.SaveChangesAsync();
-            return Mapper.Map<PaymentResponse>(payment);
+            throw new ClientException($"Payment is in status '{payment.Status}' and cannot be confirmed.");
         }
 
         var invoice = await LoadInvoiceAsync(payment.InvoiceId);
@@ -177,7 +250,58 @@ public class InvoiceService
         return Mapper.Map<PaymentResponse>(payment);
     }
 
-    private CheckoutSessionResponse ToCheckoutSessionResponse(Payment payment, string? redirectUrl, string? clientSecret)
+    // The provider says the customer already paid this attempt, but our webhook may not have arrived
+    // yet. Rather than waiting for it, the payment is confirmed right here through the exact path the
+    // webhook uses (ConfirmPaymentAsync -> CreditInvoiceAsync), which is idempotent: whichever of the
+    // two runs second finds the payment Completed and does nothing. A ClientException means the
+    // confirmation lost that race (the webhook credited the invoice in between) or was rejected (e.g.
+    // a stale amount); either way the client must not start another payment, so the response still
+    // reports AlreadySucceeded and the app only refreshes the invoice.
+    private async Task<CheckoutSessionResponse> ConfirmAlreadySucceededAttemptAsync(Payment attempt)
+    {
+        try
+        {
+            await ConfirmPaymentAsync(attempt.Provider, attempt.ProviderTransactionId!, PaymentConfirmationOutcome.Succeeded);
+        }
+        catch (ClientException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Checkout found succeeded payment attempt {Provider}/{TransactionId} but could not confirm it: {Message}",
+                attempt.Provider, attempt.ProviderTransactionId, ex.Message);
+        }
+
+        return ToCheckoutSessionResponse(attempt, redirectUrl: null, clientSecret: null, alreadySucceeded: true);
+    }
+
+    // Stripe rejects a reused idempotency key whose request parameters differ, and replays the original
+    // result when they match - so the client's key must never be forwarded as-is for a second attempt
+    // (after a cancel or an amount change it would either fail, or hand back the old dead intent). Each
+    // new attempt therefore gets "{clientKey}:{attemptNumber}", where attemptNumber counts this invoice's
+    // existing online attempts with this provider. That stays deterministic across a network retry of
+    // the same checkout: if the provider call succeeded but our insert did not, the retry computes the
+    // same number, sends the same derived key, and the provider replays the same intent instead of
+    // creating a duplicate. A client that sends no key gets no provider idempotency, as before.
+    private async Task<string?> DeriveAttemptIdempotencyKeyAsync(int invoiceId, string providerName, string? idempotencyKey)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            return null;
+        }
+
+        var previousAttempts = await _dbContext.Payments
+            .CountAsync(payment => payment.InvoiceId == invoiceId
+                && payment.Provider == providerName
+                && payment.PaymentMethod == PaymentMethod.Online);
+
+        return $"{idempotencyKey.Trim()}:{previousAttempts + 1}";
+    }
+
+    private CheckoutSessionResponse ToCheckoutSessionResponse(
+        Payment payment,
+        string? redirectUrl,
+        string? clientSecret,
+        bool alreadySucceeded = false)
     {
         return new CheckoutSessionResponse
         {
@@ -190,7 +314,8 @@ public class InvoiceService
             RedirectUrl = redirectUrl,
             ClientSecret = clientSecret,
             PublishableKey = payment.Provider == PaymentProvider.Stripe ? _stripeOptions.PublishableKey : null,
-            Status = payment.Status
+            Status = payment.Status,
+            AlreadySucceeded = alreadySucceeded
         };
     }
 

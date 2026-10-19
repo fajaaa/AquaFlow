@@ -12,6 +12,7 @@ class CustomerCheckoutSession {
     required this.redirectUrl,
     required this.clientSecret,
     required this.status,
+    required this.alreadySucceeded,
   });
 
   final int paymentId;
@@ -25,6 +26,11 @@ class CustomerCheckoutSession {
   // providers with no such flow (e.g. the Manual stub always returns null).
   final String? clientSecret;
   final String status;
+  // True when the provider already took the money for the invoice's open
+  // attempt and only the server-side confirmation is outstanding: no
+  // PaymentSheet may be opened then (clientSecret is null), the app just
+  // waits for the invoice to read Paid.
+  final bool alreadySucceeded;
 
   factory CustomerCheckoutSession.fromJson(Map<String, dynamic> json) {
     return CustomerCheckoutSession(
@@ -37,6 +43,7 @@ class CustomerCheckoutSession {
       redirectUrl: json['redirectUrl'] as String?,
       clientSecret: json['clientSecret'] as String?,
       status: (json['status'] ?? '') as String,
+      alreadySucceeded: json['alreadySucceeded'] == true,
     );
   }
 }

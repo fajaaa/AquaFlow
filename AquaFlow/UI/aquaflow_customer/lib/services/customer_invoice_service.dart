@@ -165,9 +165,18 @@ class CustomerInvoiceService {
 
   /// Starts (or resumes) a checkout for the invoice's current remaining
   /// balance. The server always computes the charged amount - this never
-  /// sends one. There is no real payment provider behind this yet, so the
-  /// returned session is Pending, not a completed payment.
-  Future<CustomerCheckoutSession> checkout(int invoiceId) async {
+  /// sends one. The returned session is never a completed payment by itself:
+  /// either it carries what the client needs to keep paying (`clientSecret`
+  /// for Stripe), or `alreadySucceeded` says the money was already taken and
+  /// only the server-side confirmation is outstanding.
+  ///
+  /// [idempotencyKey] identifies one payment attempt: the caller must resend
+  /// the SAME key when retrying after a network error/timeout, so a request
+  /// that actually reached the server never opens a second attempt.
+  Future<CustomerCheckoutSession> checkout(
+    int invoiceId,
+    String idempotencyKey,
+  ) async {
     final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices/$invoiceId/checkout');
 
@@ -178,7 +187,7 @@ class CustomerInvoiceService {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode(const {}),
+        body: jsonEncode({'idempotencyKey': idempotencyKey}),
       ),
     );
 
@@ -276,13 +285,18 @@ class CustomerInvoiceService {
     } on SocketException {
       throw CustomerInvoiceException(
         'Server nije dostupan na ${ApiConfig.baseUrl}.',
+        isNetworkError: true,
       );
     } on TimeoutException {
       throw const CustomerInvoiceException(
         'Server nije odgovorio na vrijeme.',
+        isNetworkError: true,
       );
     } on http.ClientException catch (e) {
-      throw CustomerInvoiceException('Greška mreže: ${e.message}');
+      throw CustomerInvoiceException(
+        'Greška mreže: ${e.message}',
+        isNetworkError: true,
+      );
     }
   }
 

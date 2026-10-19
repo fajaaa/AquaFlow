@@ -633,6 +633,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentProcessingMessage => 'Payment processing.';
 
   @override
+  String get paymentAlreadySucceededMessage =>
+      'Payment processing. The payment was already made and is awaiting confirmation.';
+
+  @override
   String get paymentCancelledMessage => 'Payment cancelled.';
 
   @override

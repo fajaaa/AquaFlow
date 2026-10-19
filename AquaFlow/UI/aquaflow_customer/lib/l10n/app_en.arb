@@ -223,6 +223,7 @@
   "paymentConfirmMessage": "Are you sure you want to pay {amount} BAM?",
   "paymentStartedMessage": "Payment started: {amount} {currency} (status: {statusLabel}).",
   "paymentProcessingMessage": "Payment processing.",
+  "paymentAlreadySucceededMessage": "Payment processing. The payment was already made and is awaiting confirmation.",
   "paymentCancelledMessage": "Payment cancelled.",
   "paymentFailedMessage": "Payment failed.",
   "paymentStatusCompleted": "Completed",

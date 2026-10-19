@@ -13,7 +13,7 @@ using Xunit;
 namespace AquaFlow.WebAPI.Tests.Payments;
 
 // Covers PaymentsWebhookController.StripeWebhook: Stripe-Signature verification (valid/invalid,
-// missing header) and the payment_intent.succeeded/payment_intent.payment_failed dispatch into
+// missing header) and the payment_intent.succeeded/payment_failed/canceled dispatch into
 // IInvoiceService.ConfirmPaymentAsync - see the checkout bullet in AGENTS.md for the full flow.
 // There is no HTTP host here, same as every other controller test in this project: the controller
 // is newed up directly with a hand-built HttpContext carrying the raw JSON body and header, and a
@@ -24,39 +24,29 @@ public class PaymentsWebhookControllerTests
 {
     private const string WebhookSecret = "whsec_test_secret";
 
-    [Fact]
-    public async Task StripeWebhook_ValidSignatureSucceededEvent_ConfirmsPaymentAsSucceeded()
+    // payment_failed is deliberately NOT terminal (the same PaymentIntent can still succeed after a
+    // declined card), so it must map to AttemptFailed; only payment_intent.canceled maps to Canceled.
+    [Theory]
+    [InlineData("payment_intent.succeeded", "pi_123", PaymentConfirmationOutcome.Succeeded)]
+    [InlineData("payment_intent.payment_failed", "pi_456", PaymentConfirmationOutcome.AttemptFailed)]
+    [InlineData("payment_intent.canceled", "pi_789", PaymentConfirmationOutcome.Canceled)]
+    public async Task StripeWebhook_ValidSignatureHandledEvent_DispatchesMatchingOutcome(
+        string eventType, string paymentIntentId, PaymentConfirmationOutcome expectedOutcome)
     {
         var invoiceService = new FakeInvoiceService();
         var controller = CreateController(invoiceService);
-        var json = BuildPaymentIntentEventJson("payment_intent.succeeded", "pi_123");
+        var json = BuildPaymentIntentEventJson(eventType, paymentIntentId);
 
         var result = await InvokeAsync(controller, json);
 
         Assert.IsType<OkResult>(result);
         var call = Assert.Single(invoiceService.ConfirmPaymentCalls);
         Assert.Equal(PaymentProvider.Stripe, call.Provider);
-        Assert.Equal("pi_123", call.ProviderTransactionId);
-        Assert.True(call.Succeeded);
+        Assert.Equal(paymentIntentId, call.ProviderTransactionId);
+        Assert.Equal(expectedOutcome, call.Outcome);
     }
 
-    [Fact]
-    public async Task StripeWebhook_ValidSignatureFailedEvent_ConfirmsPaymentAsFailed()
-    {
-        var invoiceService = new FakeInvoiceService();
-        var controller = CreateController(invoiceService);
-        var json = BuildPaymentIntentEventJson("payment_intent.payment_failed", "pi_456");
-
-        var result = await InvokeAsync(controller, json);
-
-        Assert.IsType<OkResult>(result);
-        var call = Assert.Single(invoiceService.ConfirmPaymentCalls);
-        Assert.Equal(PaymentProvider.Stripe, call.Provider);
-        Assert.Equal("pi_456", call.ProviderTransactionId);
-        Assert.False(call.Succeeded);
-    }
-
-    // Every event type other than the two above is ignored - a payment_intent.created delivery
+    // Every event type other than the three above is ignored - a payment_intent.created delivery
     // (or any other Stripe event) must never reach ConfirmPaymentAsync.
     [Fact]
     public async Task StripeWebhook_UnhandledEventType_ReturnsOkWithoutConfirmingPayment()

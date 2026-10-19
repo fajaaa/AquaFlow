@@ -90,7 +90,8 @@ public abstract class BaseInvoiceState
     // (e.g. another payment landed in the meantime) that fixed amount no longer pays the invoice off
     // in full, so the callback below rejects the confirmation instead of silently accepting a stale
     // amount. The caller (InvoiceService.ConfirmPaymentAsync) has already checked payment.Status is
-    // still Pending, so a retried confirmation never reaches here a second time.
+    // Pending (or a legacy Failed row whose provider attempt did succeed) - never Completed - so a
+    // retried confirmation never reaches here a second time.
     protected Task<InvoiceResponse> ConfirmPendingPaymentAsync(Invoice invoice, Payment payment, int changedById)
     {
         return CreditInvoiceAsync(invoice, changedById, remaining =>

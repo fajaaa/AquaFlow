@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart' as stripe;
 import 'package:printing/printing.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/models/customer_invoice.dart';
@@ -47,6 +48,14 @@ class _CustomerInvoiceDetailScreenState
   List<CustomerPayment> _payments = const [];
   bool _paying = false;
   bool _downloadingPdf = false;
+
+  // Idempotency key of the payment attempt in progress (UUID v4), same
+  // pattern as `_clientUuid` in the collector's meter-reading entry screen:
+  // generated when the customer confirms a new payment, resent unchanged when
+  // the checkout call is retried after a network error/timeout (its outcome is
+  // unknown, so the server must recognise it as the same attempt), and
+  // cleared once the attempt is finished - i.e. the server answered.
+  String? _checkoutIdempotencyKey;
 
   @override
   void initState() {
@@ -267,7 +276,10 @@ class _CustomerInvoiceDetailScreenState
   // customer finished entering card details; the actual charge is confirmed
   // asynchronously by Payments/webhook/stripe (see AGENTS.md), so
   // _refreshInvoiceWithRetry polls for the Paid status for a few seconds
-  // instead of assuming it landed immediately.
+  // instead of assuming it landed immediately. Pressing "Plati" again after
+  // closing the sheet (or after a declined card) resumes the same attempt:
+  // the server hands back the same client secret, or reports
+  // alreadySucceeded when the money was taken but not yet confirmed.
   Future<void> _payInvoice(CustomerInvoice invoice) async {
     final loc = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
@@ -293,12 +305,27 @@ class _CustomerInvoiceDetailScreenState
 
     setState(() => _paying = true);
 
+    // Reuse the pending key if the previous checkout call never got an
+    // answer; otherwise this is a new attempt with a fresh key.
+    final idempotencyKey = _checkoutIdempotencyKey ??= const Uuid().v4();
+
     try {
-      final session = await _service.checkout(invoice.id);
+      final session = await _service.checkout(invoice.id, idempotencyKey);
+      // The server answered, so this attempt is settled on its side: a later
+      // "Plati" resumes the open attempt server-side, never via this key.
+      _checkoutIdempotencyKey = null;
       if (!mounted) return;
 
       final clientSecret = session.clientSecret;
-      if (clientSecret != null && clientSecret.isNotEmpty) {
+      if (session.alreadySucceeded) {
+        // The provider already took the money (e.g. the sheet finished before
+        // the webhook arrived) - opening another PaymentSheet could charge the
+        // customer twice, so just wait for the invoice to read Paid.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(loc.paymentAlreadySucceededMessage)),
+        );
+        await _refreshInvoiceWithRetry();
+      } else if (clientSecret != null && clientSecret.isNotEmpty) {
         final presented = await _presentStripePaymentSheet(clientSecret);
         if (presented) {
           await _refreshInvoiceWithRetry();
@@ -329,6 +356,11 @@ class _CustomerInvoiceDetailScreenState
         await _load();
       }
     } on CustomerInvoiceException catch (e) {
+      // Only an unanswered request keeps the key for the retry; a server
+      // rejection (e.g. the invoice was paid meanwhile) ends the attempt.
+      if (!e.isNetworkError) {
+        _checkoutIdempotencyKey = null;
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,

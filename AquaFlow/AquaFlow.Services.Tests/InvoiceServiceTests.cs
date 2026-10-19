@@ -5,6 +5,7 @@ using AquaFlow.Services.Payments;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -260,7 +261,8 @@ public class InvoiceServiceTests
             new NotSupportedInvoiceStateResolver(),
             new NotSupportedPaymentProvider(),
             Options.Create(new PaymentsOptions()),
-            Options.Create(new StripeOptions()));
+            Options.Create(new StripeOptions()),
+            NullLogger<InvoiceService>.Instance);
     }
 
     // GetAllAsync never touches the state resolver, so a minimal stub that throws if it were ever
@@ -278,6 +280,12 @@ public class InvoiceServiceTests
         public string Name => throw new NotSupportedException("InvoiceServiceTests does not exercise checkout.");
 
         public Task<PaymentCheckoutResult> CreateCheckoutAsync(PaymentCheckoutContext context) =>
+            throw new NotSupportedException("InvoiceServiceTests does not exercise checkout.");
+
+        public Task<PaymentResumeResult> ResumeCheckoutAsync(string providerTransactionId) =>
+            throw new NotSupportedException("InvoiceServiceTests does not exercise checkout.");
+
+        public Task<PaymentAttemptState> CancelCheckoutAsync(string providerTransactionId) =>
             throw new NotSupportedException("InvoiceServiceTests does not exercise checkout.");
     }
 }

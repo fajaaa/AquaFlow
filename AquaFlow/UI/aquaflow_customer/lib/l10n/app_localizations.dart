@@ -1254,6 +1254,12 @@ abstract class AppLocalizations {
   /// **'Plaćanje u obradi.'**
   String get paymentProcessingMessage;
 
+  /// Snackbar shown when checkout reports the invoice's open payment attempt already succeeded at the provider (awaiting server confirmation), so no payment sheet is opened.
+  ///
+  /// In bs, this message translates to:
+  /// **'Plaćanje u obradi. Uplata je već izvršena i čeka potvrdu.'**
+  String get paymentAlreadySucceededMessage;
+
   /// Error message shown when the customer cancels the Stripe payment sheet.
   ///
   /// In bs, this message translates to:

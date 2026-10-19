@@ -630,6 +630,10 @@ class AppLocalizationsBs extends AppLocalizations {
   String get paymentProcessingMessage => 'Plaćanje u obradi.';
 
   @override
+  String get paymentAlreadySucceededMessage =>
+      'Plaćanje u obradi. Uplata je već izvršena i čeka potvrdu.';
+
+  @override
   String get paymentCancelledMessage => 'Plaćanje je otkazano.';
 
   @override

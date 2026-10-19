@@ -65,13 +65,19 @@ public class PaymentsWebhookController : ControllerBase
             return BadRequest();
         }
 
+        // payment_failed is NOT terminal at Stripe: the PaymentIntent returns to requires_payment_method
+        // and the same intent can still succeed later, so it maps to AttemptFailed (the local Payment
+        // stays Pending). Only payment_intent.canceled ends an attempt for good.
         switch (stripeEvent.Type)
         {
             case "payment_intent.succeeded":
-                await ConfirmPaymentAsync(stripeEvent, succeeded: true);
+                await ConfirmPaymentAsync(stripeEvent, PaymentConfirmationOutcome.Succeeded);
                 break;
             case "payment_intent.payment_failed":
-                await ConfirmPaymentAsync(stripeEvent, succeeded: false);
+                await ConfirmPaymentAsync(stripeEvent, PaymentConfirmationOutcome.AttemptFailed);
+                break;
+            case "payment_intent.canceled":
+                await ConfirmPaymentAsync(stripeEvent, PaymentConfirmationOutcome.Canceled);
                 break;
         }
 
@@ -81,7 +87,7 @@ public class PaymentsWebhookController : ControllerBase
         return Ok();
     }
 
-    private async Task ConfirmPaymentAsync(Event stripeEvent, bool succeeded)
+    private async Task ConfirmPaymentAsync(Event stripeEvent, PaymentConfirmationOutcome outcome)
     {
         if (stripeEvent.Data.Object is not PaymentIntent paymentIntent)
         {
@@ -91,15 +97,25 @@ public class PaymentsWebhookController : ControllerBase
             return;
         }
 
+        if (outcome == PaymentConfirmationOutcome.AttemptFailed)
+        {
+            // The decline reason is deliberately only logged, not persisted: the customer already sees it
+            // in the PaymentSheet, the Stripe dashboard keeps the full history, and no screen in this app
+            // would ever read a stored copy.
+            _logger.LogInformation(
+                "Stripe payment attempt failed; payment stays Pending. TransactionId={TransactionId} Code={Code} Reason={Reason}",
+                paymentIntent.Id, paymentIntent.LastPaymentError?.Code, paymentIntent.LastPaymentError?.Message);
+        }
+
         try
         {
-            await _invoiceService.ConfirmPaymentAsync(PaymentProvider.Stripe, paymentIntent.Id, succeeded);
+            await _invoiceService.ConfirmPaymentAsync(PaymentProvider.Stripe, paymentIntent.Id, outcome);
         }
         catch (Exception ex) when (ex is ClientException or KeyNotFoundException)
         {
             // Not retryable: this payment will never resolve differently on a future Stripe retry of
-            // the same event (e.g. it's already confirmed under a different outcome, or the
-            // transaction id is unknown to us), so log for investigation and still return 200 above.
+            // the same event (e.g. its invoice is no longer Issued, or the transaction id is unknown
+            // to us), so log for investigation and still return 200 above.
             _logger.LogError(
                 ex,
                 "Failed to confirm Stripe payment. Provider={Provider} TransactionId={TransactionId} Message={Message}",

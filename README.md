@@ -66,7 +66,13 @@ meter's invoices are cancelled newest-to-oldest and no consumption range is ever
 **Payments**
 A pluggable payment provider abstraction ships with a manual provider (payments recorded by
 staff) and an optional Stripe provider that creates a PaymentIntent for the mobile
-PaymentSheet flow and confirms the payment through a signed webhook.
+PaymentSheet flow and confirms the payment through a signed webhook. A checkout that is
+retried resumes the invoice's still-open attempt (same PaymentIntent and client secret)
+instead of creating a new one; a declined card (`payment_intent.payment_failed`) keeps the
+attempt open, and only `payment_intent.canceled` ends it. If the customer already paid but
+the webhook has not arrived yet, checkout confirms the payment instead of opening a second
+PaymentSheet. The mobile app sends one idempotency key per payment attempt and reuses it when
+retrying after a network error.
 
 **Fault reports and support tickets**
 Customers report faults against their own account (with photo attachments) and staff triage

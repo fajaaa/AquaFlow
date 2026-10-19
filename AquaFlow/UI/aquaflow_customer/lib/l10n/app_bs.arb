@@ -889,6 +889,10 @@
   "@paymentProcessingMessage": {
     "description": "Snackbar shown after the Stripe payment sheet is presented successfully."
   },
+  "paymentAlreadySucceededMessage": "Plaćanje u obradi. Uplata je već izvršena i čeka potvrdu.",
+  "@paymentAlreadySucceededMessage": {
+    "description": "Snackbar shown when checkout reports the invoice's open payment attempt already succeeded at the provider (awaiting server confirmation), so no payment sheet is opened."
+  },
   "paymentCancelledMessage": "Plaćanje je otkazano.",
   "@paymentCancelledMessage": {
     "description": "Error message shown when the customer cancels the Stripe payment sheet."
