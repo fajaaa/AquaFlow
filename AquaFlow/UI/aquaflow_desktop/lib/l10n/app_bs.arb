@@ -421,6 +421,10 @@
   "@dashboardOverviewSubtitle": {
     "description": "Subtitle under the dashboard overview heading."
   },
+  "dashboardNoAccessMessage": "Nemate pravo pristupa dashboardu. Odjavite se i prijavite ponovo.",
+  "@dashboardNoAccessMessage": {
+    "description": "Shown instead of the dashboard charts when the session lacks the Dashboard.Read permission (e.g. a token issued before that permission was added) or the API returns 403."
+  },
   "dashboardRevenueTrendChartTitle": "Prihod od naplate",
   "@dashboardRevenueTrendChartTitle": {
     "description": "Title for the revenue-over-time chart card on the dashboard overview."

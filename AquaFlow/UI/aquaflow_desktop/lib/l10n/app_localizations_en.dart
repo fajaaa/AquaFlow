@@ -312,6 +312,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardOverviewSubtitle => 'Overview of key metrics';
 
   @override
+  String get dashboardNoAccessMessage =>
+      'You don\'t have access to the dashboard. Log out and sign in again.';
+
+  @override
   String get dashboardRevenueTrendChartTitle => 'Revenue';
 
   @override

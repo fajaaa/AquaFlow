@@ -296,6 +296,19 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            // Id 22 is deliberately skipped: it belonged to the removed Recommendations.Manage
+            // permission (migration RemoveRecommendations) and must not be reused.
+            new
+            {
+                Id = 24,
+                Code = "Dashboard.Read",
+                Name = "View dashboard",
+                Module = "Dashboard",
+                Description = "Allows viewing company-wide dashboard statistics (revenue, invoices, consumption, fault reports, user growth).",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -498,6 +511,15 @@ public partial class AquaFlowDbContext
                 Id = 27,
                 UserRoleId = 1,
                 PermissionId = 23,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            // Id 26 is deliberately skipped (removed Recommendations.Manage assignment).
+            new
+            {
+                Id = 28,
+                UserRoleId = 1,
+                PermissionId = 24,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });

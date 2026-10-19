@@ -402,6 +402,10 @@ Authorization is enforced server-side, not by hiding actions in the user interfa
   meters, invoices, requests, reports and tickets; a collector sees the work assigned to them.
   Write requests that carry an owner field have it forced back to the caller's own value, which
   blocks mass-assignment attempts.
+- **Admin-only reads.** Endpoints whose responses describe other people or the company as a
+  whole are permission-gated on reads too, not only on writes: the user directory (`/Users`
+  requires `Users.Read` or `Users.Manage`) and the dashboard statistics (`/Dashboard` requires
+  `Dashboard.Read`). Hiding a menu entry in a client is never treated as access control.
 - **Non-disclosure responses.** Reads outside the caller's scope return `404` rather than `403`,
   so a response never confirms that another user's record exists.
 - **Password storage.** Passwords are hashed with PBKDF2 (SHA-256, per-user salt); plaintext is

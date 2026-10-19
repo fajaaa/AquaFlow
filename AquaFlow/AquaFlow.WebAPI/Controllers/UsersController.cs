@@ -21,8 +21,19 @@ public class UsersController : BaseCRUDController<UserResponse, UserSearchObject
         _activityLogService = activityLogService;
     }
 
-    // Reads (GetAll/GetById) stay available to any authenticated caller; writing users
-    // requires the Users.Manage permission on top of [Authorize].
+    // UserResponse carries every account's email, phone, name and role, so reads are admin-only too:
+    // either Users.Read or Users.Manage lets the caller through (Admin holds both). Customers and
+    // collectors have no self-service reason to list accounts - their own record comes from
+    // GET /Account/me (AccountController), which is pinned to the JWT Id claim instead.
+    [RequirePermission("Users.Read", "Users.Manage")]
+    public override Task<ActionResult<PageResult<UserResponse>>> GetAll([FromQuery] UserSearchObject? search)
+        => base.GetAll(search);
+
+    [RequirePermission("Users.Read", "Users.Manage")]
+    public override Task<ActionResult<UserResponse>> GetById(int id)
+        => base.GetById(id);
+
+    // Writing users requires the Users.Manage permission on top of [Authorize].
     [RequirePermission("Users.Manage")]
     public override Task<ActionResult<UserResponse>> Create([FromBody] UserInsertRequest request)
         => base.Create(request);

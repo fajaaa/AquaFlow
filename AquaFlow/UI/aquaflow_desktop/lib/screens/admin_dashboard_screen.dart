@@ -19,6 +19,7 @@ import 'package:aquaflow_desktop/screens/admin_support_tickets_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_tariffs_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_users_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_water_meter_requests_screen.dart';
+import 'package:aquaflow_desktop/services/admin_dashboard_exception.dart';
 import 'package:aquaflow_desktop/services/admin_dashboard_service.dart';
 import 'package:aquaflow_desktop/shared/models/auth_session.dart';
 import 'package:aquaflow_desktop/shared/models/city_lookup.dart';
@@ -713,6 +714,11 @@ class _DashboardOverviewState extends State<_DashboardOverview> {
   DashboardStats? _stats;
   bool _loading = true;
   String? _error;
+  // Set when the session lacks `Dashboard.Read` (e.g. an admin token issued
+  // before that permission existed) or the API answered 403. The backend gate
+  // is the real protection; this only swaps the charts for a clear message
+  // instead of a raw HTTP error with a pointless retry button.
+  bool _forbidden = false;
 
   final _dashboardService = AdminDashboardService();
   final _locationService = LocationLookupService();
@@ -730,6 +736,12 @@ class _DashboardOverviewState extends State<_DashboardOverview> {
   @override
   void initState() {
     super.initState();
+    final session = context.read<AuthProvider>().session;
+    if (!(session?.hasPermission('Dashboard.Read') ?? false)) {
+      _forbidden = true;
+      _loading = false;
+      return;
+    }
     _loadCities();
     _loadStats();
   }
@@ -771,7 +783,11 @@ class _DashboardOverviewState extends State<_DashboardOverview> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = '$e';
+        if (e is AdminDashboardException && e.isForbidden) {
+          _forbidden = true;
+        } else {
+          _error = '$e';
+        }
         _loading = false;
       });
     }
@@ -818,24 +834,28 @@ class _DashboardOverviewState extends State<_DashboardOverview> {
             ),
           ),
           const SizedBox(height: 20),
-          _DashboardFilterBar(
-            range: _range,
-            cityId: _cityId,
-            cities: _cities,
-            onRangeChanged: _onRangeChanged,
-            onCityChanged: _onCityChanged,
-            onReset: _onReset,
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 420,
-            child: AsyncStateView(
-              loading: _loading,
-              error: _error,
-              onRetry: _loadStats,
-              builder: (context) => _buildCharts(context, _stats!),
+          if (_forbidden)
+            const SizedBox(height: 420, child: _DashboardNoAccess())
+          else ...[
+            _DashboardFilterBar(
+              range: _range,
+              cityId: _cityId,
+              cities: _cities,
+              onRangeChanged: _onRangeChanged,
+              onCityChanged: _onCityChanged,
+              onReset: _onReset,
             ),
-          ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 420,
+              child: AsyncStateView(
+                loading: _loading,
+                error: _error,
+                onRetry: _loadStats,
+                builder: (context) => _buildCharts(context, _stats!),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -897,6 +917,43 @@ class _DashboardOverviewState extends State<_DashboardOverview> {
           ],
         );
       },
+    );
+  }
+}
+
+/// Shown in place of the filter bar and charts when the caller lacks
+/// `Dashboard.Read`. Permissions are baked into the JWT at login, so the fix
+/// for an admin is a fresh login - hence the inline logout action.
+class _DashboardNoAccess extends StatelessWidget {
+  const _DashboardNoAccess();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context);
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.lock_outline,
+            size: 56,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            loc.dashboardNoAccessMessage,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () => context.read<AuthProvider>().logout(),
+            icon: const Icon(Icons.logout),
+            label: Text(loc.logoutLabel),
+          ),
+        ],
+      ),
     );
   }
 }

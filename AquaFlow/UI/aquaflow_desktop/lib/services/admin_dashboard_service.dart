@@ -91,6 +91,15 @@ class AdminDashboardService {
       () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
     );
 
+    // ForbidResult carries no body, so without this branch a 403 would only
+    // surface as the generic "(HTTP 403)" fallback below.
+    if (response.statusCode == 403) {
+      throw const AdminDashboardException(
+        'Nemate pravo pristupa dashboardu. Odjavite se i prijavite ponovo.',
+        isForbidden: true,
+      );
+    }
+
     if (response.statusCode != 200) {
       throw AdminDashboardException(
         _messageFor(response, 'Statistiku nije moguće učitati'),

@@ -1,16 +1,20 @@
 using AquaFlow.Model.Responses;
 using AquaFlow.Services;
+using AquaFlow.WebAPI.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AquaFlow.WebAPI.Controllers;
 
-// Feeds the admin desktop dashboard's chart cards. Ungated beyond [Authorize] - the Dashboard tab
-// is the admin panel's landing page, visible to every admin regardless of other permissions, so its
-// stats stay visible to everyone who can reach that tab (no [RequirePermission], unlike e.g.
-// WaterConsumptionAlertsController). Every action shares the same (from, to, cityId) query filter
-// triple - see IDashboardService for their defaulting/filtering semantics.
+// Feeds the admin desktop dashboard's chart cards with company-wide aggregates (revenue, invoice
+// status, consumption, fault reports, user growth, water meter requests). That is business data no
+// customer or collector should see, and hiding the tab in the desktop app is not a security control,
+// so the whole controller is gated at class level with Dashboard.Read (seeded onto Admin only) - same
+// "no self-service caller at all" reasoning as WaterConsumptionAlertsController. Every action shares
+// the same (from, to, cityId) query filter triple - see IDashboardService for their
+// defaulting/filtering semantics.
 [Authorize]
+[RequirePermission("Dashboard.Read")]
 [ApiController]
 [Route("[controller]")]
 public class DashboardController : ControllerBase

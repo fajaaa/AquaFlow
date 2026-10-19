@@ -310,6 +310,10 @@ class AppLocalizationsBs extends AppLocalizations {
   String get dashboardOverviewSubtitle => 'Pregled ključnih pokazatelja';
 
   @override
+  String get dashboardNoAccessMessage =>
+      'Nemate pravo pristupa dashboardu. Odjavite se i prijavite ponovo.';
+
+  @override
   String get dashboardRevenueTrendChartTitle => 'Prihod od naplate';
 
   @override

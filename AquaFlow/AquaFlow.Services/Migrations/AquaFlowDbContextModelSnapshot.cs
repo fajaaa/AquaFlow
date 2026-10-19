@@ -3558,6 +3558,16 @@ namespace AquaFlow.Services.Migrations
                             IsActive = true,
                             Module = "ConsumptionAlerts",
                             Name = "Manage consumption alerts"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            Code = "Dashboard.Read",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows viewing company-wide dashboard statistics (revenue, invoices, consumption, fault reports, user growth).",
+                            IsActive = true,
+                            Module = "Dashboard",
+                            Name = "View dashboard"
                         });
                 });
 
@@ -4538,6 +4548,13 @@ namespace AquaFlow.Services.Migrations
                             Id = 27,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 23,
+                            UserRoleId = 1
+                        },
+                        new
+                        {
+                            Id = 28,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 24,
                             UserRoleId = 1
                         });
                 });

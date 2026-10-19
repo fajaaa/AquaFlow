@@ -668,6 +668,12 @@ abstract class AppLocalizations {
   /// **'Pregled ključnih pokazatelja'**
   String get dashboardOverviewSubtitle;
 
+  /// Shown instead of the dashboard charts when the session lacks the Dashboard.Read permission (e.g. a token issued before that permission was added) or the API returns 403.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nemate pravo pristupa dashboardu. Odjavite se i prijavite ponovo.'**
+  String get dashboardNoAccessMessage;
+
   /// Title for the revenue-over-time chart card on the dashboard overview.
   ///
   /// In bs, this message translates to:
