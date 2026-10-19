@@ -117,12 +117,13 @@ public class AccessManager : IAccessManager
             throw new ClientException("User account is not active.");
         }
 
-        await _refreshTokenService.DeleteAllUserRefreshTokensAsync(user.Id);
-
+        // Build both tokens first (the JWT needs a permission lookup that could fail), then swap the
+        // user's stored refresh tokens for the new one atomically: a failure anywhere leaves the old
+        // refresh token valid, instead of deleting it and returning an error.
         var accessToken = await GenerateJwtTokenAsync(user);
         var refreshTokenValue = GenerateRefreshTokenValue();
 
-        await _refreshTokenService.InsertAsync(new RefreshToken
+        await _refreshTokenService.RotateAsync(new RefreshToken
         {
             UserId = user.Id,
             Token = refreshTokenValue,

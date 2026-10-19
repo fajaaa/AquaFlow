@@ -229,6 +229,7 @@ builder.Services.AddScoped<IMapper, ServiceMapper>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDeviceTokenService, DeviceTokenService>();
 builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
+builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IPermissionLookupService, PermissionLookupService>();
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();

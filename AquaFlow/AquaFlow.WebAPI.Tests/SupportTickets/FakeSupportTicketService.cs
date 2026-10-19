@@ -24,6 +24,12 @@ public class FakeSupportTicketService : ISupportTicketService
     public int? LastSenderId { get; private set; }
     public bool? LastIsFromStaff { get; private set; }
 
+    // Every call counts (even one the fake then rejects), so a test can pin that the controller
+    // rejected a bad upload before reaching the service at all - i.e. before anything was written.
+    public int CreateForUserCallCount { get; private set; }
+    public int AddMessageCallCount { get; private set; }
+    public IReadOnlyCollection<SupportTicketPhotoUpload>? LastPhotos { get; private set; }
+
     public Task<PageResult<SupportTicketResponse>> GetAllAsync(SupportTicketSearchObject? search = null)
     {
         var items = _rows.AsEnumerable();
@@ -57,8 +63,10 @@ public class FakeSupportTicketService : ISupportTicketService
         return Task.FromResult(row is null ? null : new SupportTicketOwnership(row.CustomerId, row.Status));
     }
 
-    public Task<SupportTicketMessageResponse> AddMessageAsync(int ticketId, int senderId, bool isFromStaff, string body)
+    public Task<SupportTicketMessageResponse> AddMessageAsync(int ticketId, int senderId, bool isFromStaff, string body, IReadOnlyCollection<SupportTicketPhotoUpload> photos)
     {
+        AddMessageCallCount++;
+
         // Model the real service's contract: a missing ticket is a 404 and a non-Open ticket is a
         // 400, so the controller's ownership gate and the closed-ticket rule are both exercised.
         var row = _rows.SingleOrDefault(row => row.Id == ticketId)
@@ -71,6 +79,7 @@ public class FakeSupportTicketService : ISupportTicketService
         LastMessageTicketId = ticketId;
         LastSenderId = senderId;
         LastIsFromStaff = isFromStaff;
+        LastPhotos = photos;
 
         return Task.FromResult(new SupportTicketMessageResponse
         {
@@ -79,20 +88,38 @@ public class FakeSupportTicketService : ISupportTicketService
             SenderId = senderId,
             IsFromStaff = isFromStaff,
             Body = body,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            Photos = photos
+                .Select((photo, index) => new SupportTicketPhotoResponse
+                {
+                    Id = index + 1,
+                    FileName = photo.FileName,
+                    ContentType = photo.ContentType,
+                    SizeBytes = photo.Data.LongLength
+                })
+                .ToList()
         });
     }
 
-    public Task<SupportTicketResponse> CreateForUserAsync(int userId, string subject, string body)
-        => throw new NotSupportedException();
+    public Task<SupportTicketResponse> CreateForUserAsync(int userId, string subject, string body, IReadOnlyCollection<SupportTicketPhotoUpload> photos)
+    {
+        CreateForUserCallCount++;
+        LastPhotos = photos;
+
+        var ticket = new SupportTicketResponse
+        {
+            Id = _rows.Count == 0 ? 1 : _rows.Max(row => row.Id) + 1,
+            Subject = subject,
+            Status = SupportTicketStatus.Open
+        };
+        _rows.Add(ticket);
+        return Task.FromResult(ticket);
+    }
 
     public Task<SupportTicketResponse> CloseAsync(int ticketId)
         => throw new NotSupportedException();
 
     public Task<SupportTicketResponse> ReopenAsync(int ticketId)
-        => throw new NotSupportedException();
-
-    public Task<int> AddPhotoAsync(int messageId, byte[] data, string contentType, string fileName)
         => throw new NotSupportedException();
 
     public Task<(byte[] Data, string ContentType, string FileName)> GetPhotoAsync(int ticketId, int messageId, int photoId)

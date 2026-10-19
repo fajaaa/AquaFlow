@@ -79,7 +79,7 @@ public class SupportTicketService
         return base.ApplySorting(query, search);
     }
 
-    public async Task<SupportTicketResponse> CreateForUserAsync(int userId, string subject, string body)
+    public async Task<SupportTicketResponse> CreateForUserAsync(int userId, string subject, string body, IReadOnlyCollection<SupportTicketPhotoUpload> photos)
     {
         // Resolve the caller's CustomerProfile, same lookup as WaterMeterRequestService.CreateForUserAsync.
         var customerId = await _dbContext.CustomerProfiles
@@ -107,18 +107,21 @@ public class SupportTicketService
                     SenderId = userId,
                     IsFromStaff = false,
                     Body = body,
-                    CreatedAt = now
+                    CreatedAt = now,
+                    Photos = ToPhotoEntities(photos, now)
                 }
             }
         };
 
+        // Ticket, opening message and its photos are one object graph, so this single SaveChanges
+        // inserts all of them atomically (EF wraps one SaveChanges in its own transaction).
         _dbContext.SupportTickets.Add(ticket);
         await _dbContext.SaveChangesAsync();
 
         return await GetByIdAsync(ticket.Id);
     }
 
-    public async Task<SupportTicketMessageResponse> AddMessageAsync(int ticketId, int senderId, bool isFromStaff, string body)
+    public async Task<SupportTicketMessageResponse> AddMessageAsync(int ticketId, int senderId, bool isFromStaff, string body, IReadOnlyCollection<SupportTicketPhotoUpload> photos)
     {
         var ticket = await LoadTicketAsync(ticketId);
         if (ticket.Status != SupportTicketStatus.Open)
@@ -133,16 +136,18 @@ public class SupportTicketService
             SenderId = senderId,
             IsFromStaff = isFromStaff,
             Body = body,
-            CreatedAt = now
+            CreatedAt = now,
+            Photos = ToPhotoEntities(photos, now)
         };
 
+        // Message, its photos and the ticket's LastMessage* bump land in one SaveChanges.
         _dbContext.SupportTicketMessages.Add(message);
         ticket.LastMessageAt = now;
         ticket.LastMessageFromStaff = isFromStaff;
         await _dbContext.SaveChangesAsync();
 
         // Load the sender's profile so the flattened SenderName populates (mirrors GetByIdAsync's
-        // includes); a brand-new message has no photos yet.
+        // includes); Photos are already the saved entities, so their metadata (incl. ids) maps as-is.
         await _dbContext.Entry(message).Reference(m => m.Sender).LoadAsync();
         if (message.Sender != null)
         {
@@ -182,23 +187,6 @@ public class SupportTicketService
         return await GetByIdAsync(ticketId);
     }
 
-    public async Task<int> AddPhotoAsync(int messageId, byte[] data, string contentType, string fileName)
-    {
-        var photo = new SupportTicketMessagePhoto
-        {
-            SupportTicketMessageId = messageId,
-            Data = data,
-            ContentType = contentType,
-            FileName = fileName,
-            SizeBytes = data.LongLength
-        };
-
-        _dbContext.SupportTicketMessagePhotos.Add(photo);
-        await _dbContext.SaveChangesAsync();
-
-        return photo.Id;
-    }
-
     public async Task<(byte[] Data, string ContentType, string FileName)> GetPhotoAsync(int ticketId, int messageId, int photoId)
     {
         // Scope the lookup to the full ticket -> message -> photo chain so a photo id from another
@@ -226,6 +214,20 @@ public class SupportTicketService
             .Where(ticket => ticket.Id == ticketId)
             .Select(ticket => new SupportTicketOwnership(ticket.CustomerId, ticket.Status))
             .FirstOrDefaultAsync();
+    }
+
+    private static List<SupportTicketMessagePhoto> ToPhotoEntities(IReadOnlyCollection<SupportTicketPhotoUpload> photos, DateTime createdAt)
+    {
+        return photos
+            .Select(photo => new SupportTicketMessagePhoto
+            {
+                Data = photo.Data,
+                ContentType = photo.ContentType,
+                FileName = photo.FileName,
+                SizeBytes = photo.Data.LongLength,
+                CreatedAt = createdAt
+            })
+            .ToList();
     }
 
     // Loads the tracked ticket once so a transition (reply/close/reopen) can both read its Status

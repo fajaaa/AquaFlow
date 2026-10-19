@@ -13,23 +13,21 @@ public interface ISupportTicketService : IBaseReadService<SupportTicketResponse,
 {
     // Opens a ticket on behalf of the signed-in user: resolves their CustomerProfile (400
     // ClientException when they have none, same rule as WaterMeterRequestService.CreateForUserAsync),
-    // sets Status=Open and LastMessageAt=now, and records the customer's first message (IsFromStaff=false).
-    Task<SupportTicketResponse> CreateForUserAsync(int userId, string subject, string body);
+    // sets Status=Open and LastMessageAt=now, and records the customer's first message (IsFromStaff=false)
+    // with the given (already validated) photos attached. Ticket, message and photos are stored by
+    // one SaveChanges, so they are persisted together or not at all.
+    Task<SupportTicketResponse> CreateForUserAsync(int userId, string subject, string body, IReadOnlyCollection<SupportTicketPhotoUpload> photos);
 
-    // Appends a message to the thread and bumps LastMessageAt. Throws ClientException when the
-    // ticket is not Open (a closed thread cannot receive new messages).
-    Task<SupportTicketMessageResponse> AddMessageAsync(int ticketId, int senderId, bool isFromStaff, string body);
+    // Appends a message (with its already validated photos) to the thread and bumps LastMessageAt,
+    // all in one SaveChanges. Throws ClientException before writing anything when the ticket is not
+    // Open (a closed thread cannot receive new messages).
+    Task<SupportTicketMessageResponse> AddMessageAsync(int ticketId, int senderId, bool isFromStaff, string body, IReadOnlyCollection<SupportTicketPhotoUpload> photos);
 
     // Closes the ticket (Status=Closed, ClosedAt=now); ClientException when it is already Closed.
     Task<SupportTicketResponse> CloseAsync(int ticketId);
 
     // Reopens the ticket (Status=Open, ClosedAt=null); ClientException when it is already Open.
     Task<SupportTicketResponse> ReopenAsync(int ticketId);
-
-    // Pure photo-table CRUD against an already-trusted messageId, same trust model as
-    // FaultReportPhotoService: the controller is responsible for verifying the caller may write to
-    // the ticket/message before calling this. Returns the new photo's id.
-    Task<int> AddPhotoAsync(int messageId, byte[] data, string contentType, string fileName);
 
     // Loads a photo's bytes scoped to the ticket -> message -> photo chain, so a photo id from
     // another ticket/message cannot be read through this ticket. Throws KeyNotFoundException when

@@ -35,11 +35,35 @@ public class RefreshTokenService : IRefreshTokenService
         await _context.SaveChangesAsync();
     }
 
-    public async Task DeleteAllUserRefreshTokensAsync(int userId)
+    public async Task RotateAsync(RefreshToken newToken)
     {
+        // ExecuteDeleteAsync runs immediately (outside SaveChanges), so without the transaction a
+        // failed insert below would leave the user with NO refresh token at all - logged out on
+        // every device although the request only returned an error. Inside it, the deletes and the
+        // insert commit together or not at all (same pattern as NotificationService.InsertAsync).
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
         await _context.RefreshTokens
-            .Where(rt => rt.UserId == userId)
+            .Where(rt => rt.UserId == newToken.UserId)
             .ExecuteDeleteAsync();
+        await DeleteExpiredTokensAsync();
+
+        newToken.Token = HashToken(newToken.Token);
+        _context.RefreshTokens.Add(newToken);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            // Don't leave the unsaved token tracked as Added, or a later SaveChanges in this scope
+            // (e.g. ActivityLogService.LogAsync) would try to insert it again.
+            _context.Entry(newToken).State = EntityState.Detached;
+            throw;
+        }
     }
 
     private async Task DeleteExpiredTokensAsync()

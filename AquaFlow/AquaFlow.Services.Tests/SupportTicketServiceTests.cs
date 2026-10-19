@@ -19,7 +19,7 @@ public class SupportTicketServiceTests
         var service = CreateService(context);
 
         var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.CreateForUserAsync(1, "Nema vode", "Voda ne dolazi vec dva dana."));
+            () => service.CreateForUserAsync(1, "Nema vode", "Voda ne dolazi vec dva dana.", []));
 
         Assert.Contains("no customer profile", exception.Message);
     }
@@ -32,7 +32,7 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        var response = await service.CreateForUserAsync(1, "Nema vode", "Voda ne dolazi vec dva dana.");
+        var response = await service.CreateForUserAsync(1, "Nema vode", "Voda ne dolazi vec dva dana.", []);
 
         Assert.Equal(5, response.CustomerId);
         Assert.Equal(SupportTicketStatus.Open, response.Status);
@@ -43,6 +43,86 @@ public class SupportTicketServiceTests
         Assert.False(message.IsFromStaff);
         Assert.Equal("Voda ne dolazi vec dva dana.", message.Body);
         Assert.Equal(1, message.SenderId);
+    }
+
+    [Fact]
+    public async Task CreateForUserAsync_WithTwoPhotos_StoresTicketMessageAndBothPhotos()
+    {
+        await using var context = CreateContext();
+        SeedCustomer(context, userId: 1, customerId: 5);
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var response = await service.CreateForUserAsync(1, "Nema vode", "Saljem slike.",
+        [
+            new SupportTicketPhotoUpload([0xFF, 0xD8, 0xFF, 0x01], "image/jpeg", "prva.jpg"),
+            new SupportTicketPhotoUpload([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], "image/png", "druga.png")
+        ]);
+
+        Assert.Equal(1, await context.SupportTickets.CountAsync());
+        var storedMessage = await context.SupportTicketMessages.SingleAsync();
+        var storedPhotos = await context.SupportTicketMessagePhotos.OrderBy(photo => photo.Id).ToListAsync();
+        Assert.Equal(2, storedPhotos.Count);
+        Assert.All(storedPhotos, photo => Assert.Equal(storedMessage.Id, photo.SupportTicketMessageId));
+        Assert.Equal(["prva.jpg", "druga.png"], storedPhotos.Select(photo => photo.FileName));
+        Assert.Equal([4L, 8L], storedPhotos.Select(photo => photo.SizeBytes));
+
+        var message = Assert.Single(response.Messages);
+        Assert.Equal(storedPhotos.Select(photo => photo.Id).Order(), message.Photos.Select(photo => photo.Id).Order());
+    }
+
+    [Fact]
+    public async Task AddMessageAsync_ClosedTicketWithPhotos_ThrowsClientException_AndStoresNothing()
+    {
+        await using var context = CreateContext();
+        context.SupportTickets.Add(new SupportTicket
+        {
+            Id = 1,
+            CustomerId = 5,
+            Subject = "Nema vode",
+            Status = SupportTicketStatus.Closed,
+            LastMessageAt = DateTime.UtcNow.AddDays(-1),
+            ClosedAt = DateTime.UtcNow.AddDays(-1)
+        });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(() => service.AddMessageAsync(1, senderId: 1, isFromStaff: false,
+            body: "Ima li novosti?",
+            photos: [new SupportTicketPhotoUpload([0xFF, 0xD8, 0xFF, 0x01], "image/jpeg", "slika.jpg")]));
+
+        Assert.Equal(0, await context.SupportTicketMessages.CountAsync());
+        Assert.Equal(0, await context.SupportTicketMessagePhotos.CountAsync());
+    }
+
+    [Fact]
+    public async Task AddMessageAsync_OpenTicketWithPhotos_ReturnsMetadataOfStoredPhotos()
+    {
+        await using var context = CreateContext();
+        context.SupportTickets.Add(new SupportTicket
+        {
+            Id = 1,
+            CustomerId = 5,
+            Subject = "Nema vode",
+            Status = SupportTicketStatus.Open,
+            LastMessageAt = DateTime.UtcNow.AddDays(-1)
+        });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var message = await service.AddMessageAsync(1, senderId: 1, isFromStaff: false, body: "Evo slika.",
+            photos:
+            [
+                new SupportTicketPhotoUpload([0xFF, 0xD8, 0xFF, 0x01], "image/jpeg", "prva.jpg"),
+                new SupportTicketPhotoUpload([0xFF, 0xD8, 0xFF, 0x02, 0x03], "image/jpeg", "druga.jpg")
+            ]);
+
+        var storedPhotos = await context.SupportTicketMessagePhotos.ToListAsync();
+        Assert.Equal(2, storedPhotos.Count);
+        Assert.All(storedPhotos, photo => Assert.Equal(message.Id, photo.SupportTicketMessageId));
+        Assert.Equal(storedPhotos.Select(photo => photo.Id).Order(), message.Photos.Select(photo => photo.Id).Order());
+        Assert.All(message.Photos, photo => Assert.Equal("image/jpeg", photo.ContentType));
+        Assert.Equal([4L, 5L], message.Photos.OrderBy(photo => photo.Id).Select(photo => photo.SizeBytes));
     }
 
     [Fact]
@@ -62,7 +142,7 @@ public class SupportTicketServiceTests
         var service = CreateService(context);
 
         var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.AddMessageAsync(1, senderId: 1, isFromStaff: false, body: "Ima li novosti?"));
+            () => service.AddMessageAsync(1, senderId: 1, isFromStaff: false, body: "Ima li novosti?", photos: []));
 
         Assert.Contains("open ticket", exception.Message);
     }
@@ -83,7 +163,7 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        var message = await service.AddMessageAsync(1, senderId: 1, isFromStaff: true, body: "Radimo na tome.");
+        var message = await service.AddMessageAsync(1, senderId: 1, isFromStaff: true, body: "Radimo na tome.", photos: []);
 
         var ticket = await context.SupportTickets.SingleAsync(t => t.Id == 1);
         Assert.NotNull(ticket.LastMessageAt);
@@ -109,7 +189,7 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        await service.AddMessageAsync(1, senderId: 1, isFromStaff: false, body: "Hvala, i dalje nema vode.");
+        await service.AddMessageAsync(1, senderId: 1, isFromStaff: false, body: "Hvala, i dalje nema vode.", photos: []);
 
         var ticket = await context.SupportTickets.SingleAsync(t => t.Id == 1);
         Assert.False(ticket.LastMessageFromStaff);

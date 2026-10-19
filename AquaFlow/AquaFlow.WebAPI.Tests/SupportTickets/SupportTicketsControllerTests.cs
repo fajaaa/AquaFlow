@@ -151,6 +151,105 @@ public class SupportTicketsControllerTests
         Assert.Equal(1, service.LastSenderId);
     }
 
+    // A bad SECOND file must reject the whole request before the service is ever called: previously
+    // the ticket and the first photo were already saved by the time the second one failed.
+    [Fact]
+    public async Task Create_InvalidSecondPhoto_ThrowsClientException_AndServiceIsNotCalled()
+    {
+        var service = new FakeSupportTicketService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 1, role: CustomerRole),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }]);
+
+        await Assert.ThrowsAsync<ClientException>(() => controller.Create(
+            new SupportTicketCreateRequest { Subject = "Nema vode", Body = "Voda ne dolazi." },
+            new FormFileCollection { ValidPng("prva.png"), FakePng("druga.png") }));
+
+        Assert.Equal(0, service.CreateForUserCallCount);
+    }
+
+    [Fact]
+    public async Task Create_ValidPhotos_PassesAllPhotosInOneServiceCall()
+    {
+        var service = new FakeSupportTicketService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 1, role: CustomerRole),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }]);
+
+        var result = await controller.Create(
+            new SupportTicketCreateRequest { Subject = "Nema vode", Body = "Voda ne dolazi." },
+            new FormFileCollection { ValidPng("prva.png"), ValidPng("druga.png") });
+
+        Assert.IsType<CreatedAtActionResult>(result.Result);
+        Assert.Equal(1, service.CreateForUserCallCount);
+        Assert.Equal(2, service.LastPhotos!.Count);
+        Assert.All(service.LastPhotos, photo => Assert.Equal("image/png", photo.ContentType));
+    }
+
+    [Fact]
+    public async Task AddMessage_InvalidSecondPhoto_ThrowsClientException_AndServiceIsNotCalled()
+    {
+        var service = new FakeSupportTicketService(
+            [new SupportTicketResponse { Id = 1, CustomerId = 10, Subject = "Nema vode", Status = SupportTicketStatus.Open }]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 1, role: CustomerRole),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }]);
+
+        await Assert.ThrowsAsync<ClientException>(() => controller.AddMessage(
+            1,
+            new SupportTicketMessageCreateRequest { Body = "Saljem slike." },
+            new FormFileCollection { ValidPng("prva.png"), FakePng("druga.png") }));
+
+        Assert.Equal(0, service.AddMessageCallCount);
+    }
+
+    [Fact]
+    public async Task AddMessage_TooManyPhotos_ThrowsClientException_AndServiceIsNotCalled()
+    {
+        var service = new FakeSupportTicketService(
+            [new SupportTicketResponse { Id = 1, CustomerId = 10, Subject = "Nema vode", Status = SupportTicketStatus.Open }]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 1, role: CustomerRole),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }]);
+        var files = new FormFileCollection();
+        for (var i = 0; i < 6; i++)
+        {
+            files.Add(ValidPng($"slika{i}.png"));
+        }
+
+        await Assert.ThrowsAsync<ClientException>(() => controller.AddMessage(
+            1,
+            new SupportTicketMessageCreateRequest { Body = "Saljem slike." },
+            files));
+
+        Assert.Equal(0, service.AddMessageCallCount);
+    }
+
+    [Fact]
+    public async Task AddMessage_ValidPhotos_ReturnsPhotoMetadataFromService()
+    {
+        var service = new FakeSupportTicketService(
+            [new SupportTicketResponse { Id = 1, CustomerId = 10, Subject = "Nema vode", Status = SupportTicketStatus.Open }]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 1, role: CustomerRole),
+            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }]);
+
+        var result = await controller.AddMessage(
+            1,
+            new SupportTicketMessageCreateRequest { Body = "Saljem slike." },
+            new FormFileCollection { ValidPng("prva.png"), ValidPng("druga.png") });
+
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var message = Assert.IsType<SupportTicketMessageResponse>(created.Value);
+        Assert.Equal(1, service.AddMessageCallCount);
+        Assert.Equal(["prva.png", "druga.png"], message.Photos.Select(photo => photo.FileName));
+    }
+
     // close/reopen enforcement runs in the MVC authorization filter pipeline, which a direct method
     // call bypasses (see AquaFlow.WebAPI.Tests remarks in AGENTS.md), so this pins the declarative
     // gate itself: if [RequirePermission] is ever dropped from either action, this test fails
@@ -196,6 +295,23 @@ public class SupportTicketsControllerTests
             {
                 HttpContext = new DefaultHttpContext { User = user }
             }
+        };
+    }
+
+    // Real PNG signature, so ImageUploadHelper accepts it.
+    private static IFormFile ValidPng(string fileName)
+        => BuildFile(fileName, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x01]);
+
+    // Declared as image/png but the bytes are not an image - rejected by the magic-byte check.
+    private static IFormFile FakePng(string fileName)
+        => BuildFile(fileName, "not an image"u8.ToArray());
+
+    private static IFormFile BuildFile(string fileName, byte[] bytes)
+    {
+        return new FormFile(new MemoryStream(bytes), 0, bytes.Length, "files", fileName)
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "image/png"
         };
     }
 

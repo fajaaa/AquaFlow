@@ -45,7 +45,9 @@ public class SupportTicketsController : BaseReadController<SupportTicketResponse
     // body (the DTO does not carry it): the service resolves it from the JWT user id and throws a
     // ClientException (-> 400) when the caller has no CustomerProfile, same trust model as
     // WaterMeterRequestsController.Create. Photos are optional and attach to the ticket's first
-    // message; the whole detail (with the freshly-stored photo metadata) is reloaded for the 201.
+    // message. Every check that can reject the request (body, photo count, each file's size/type/
+    // magic bytes) runs before the single service call, which stores ticket + message + photos in
+    // one SaveChanges - so a 400 never leaves a half-created ticket behind.
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -59,22 +61,9 @@ public class SupportTicketsController : BaseReadController<SupportTicketResponse
         }
 
         await _createValidator.ValidateAndThrowAsync(request);
-        EnsurePhotoCountWithinLimit(files);
+        var photos = await ReadValidatedPhotosAsync(files);
 
-        var result = await Service.CreateForUserAsync(userId, request.Subject, request.Body);
-
-        if (HasPhotos(files))
-        {
-            // CreateForUserAsync always persists exactly one (customer) opening message.
-            var firstMessageId = result.Messages.First().Id;
-            foreach (var file in files)
-            {
-                var (data, contentType) = await ImageUploadHelper.ReadValidatedImageAsync(file);
-                await Service.AddPhotoAsync(firstMessageId, data, contentType, file.FileName);
-            }
-
-            result = await Service.GetByIdAsync(result.Id);
-        }
+        var result = await Service.CreateForUserAsync(userId, request.Subject, request.Body, photos);
 
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
@@ -155,7 +144,8 @@ public class SupportTicketsController : BaseReadController<SupportTicketResponse
     // Appends a message to the thread. Authorized exactly like GetById (Manage or the owning
     // customer, else 404). isFromStaff is derived from the caller's permission, never the request.
     // AddMessageAsync enforces the "ticket must still be Open" rule and throws ClientException
-    // (-> 400) otherwise. Photos are optional and attach to the new message.
+    // (-> 400) before writing anything. Photos are optional and attach to the new message; like
+    // Create, all of them are validated before the one service call that stores message + photos.
     [HttpPost("{id:int}/messages")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -177,34 +167,17 @@ public class SupportTicketsController : BaseReadController<SupportTicketResponse
         }
 
         await _messageValidator.ValidateAndThrowAsync(request);
-        EnsurePhotoCountWithinLimit(files);
+        var photos = await ReadValidatedPhotosAsync(files);
 
         SupportTicketMessageResponse message;
         try
         {
-            message = await Service.AddMessageAsync(id, userId, HasManagePermission(), request.Body);
+            // The response's Photos are mapped from the photo entities this call actually saved.
+            message = await Service.AddMessageAsync(id, userId, HasManagePermission(), request.Body, photos);
         }
         catch (KeyNotFoundException)
         {
             return NotFound();
-        }
-
-        if (HasPhotos(files))
-        {
-            // No re-fetch route for a single message, so build the photo metadata from the freshly
-            // stored values (AddPhotoAsync returns the new photo's id) to complete the response.
-            foreach (var file in files)
-            {
-                var (data, contentType) = await ImageUploadHelper.ReadValidatedImageAsync(file);
-                var photoId = await Service.AddPhotoAsync(message.Id, data, contentType, file.FileName);
-                message.Photos.Add(new SupportTicketPhotoResponse
-                {
-                    Id = photoId,
-                    FileName = file.FileName,
-                    ContentType = contentType,
-                    SizeBytes = data.LongLength
-                });
-            }
         }
 
         return CreatedAtAction(nameof(GetById), new { id }, message);
@@ -300,14 +273,29 @@ public class SupportTicketsController : BaseReadController<SupportTicketResponse
         return (ownership, null);
     }
 
-    private static bool HasPhotos(IFormFileCollection? files) => files is { Count: > 0 };
-
-    private static void EnsurePhotoCountWithinLimit(IFormFileCollection? files)
+    // Checks the photo count, then reads and validates EVERY file (ImageUploadHelper: size cap,
+    // type whitelist, magic bytes) into memory. Throws ClientException (-> 400) on the first bad
+    // file, which - since this runs before any service call - means nothing has been written yet.
+    private static async Task<List<SupportTicketPhotoUpload>> ReadValidatedPhotosAsync(IFormFileCollection? files)
     {
-        if (files is not null && files.Count > MaxPhotosPerMessage)
+        var photos = new List<SupportTicketPhotoUpload>();
+        if (files is null)
+        {
+            return photos;
+        }
+
+        if (files.Count > MaxPhotosPerMessage)
         {
             throw new ClientException("A support ticket message can have at most 5 photos.");
         }
+
+        foreach (var file in files)
+        {
+            var (data, contentType) = await ImageUploadHelper.ReadValidatedImageAsync(file);
+            photos.Add(new SupportTicketPhotoUpload(data, contentType, file.FileName));
+        }
+
+        return photos;
     }
 
     private async Task<int?> ResolveCustomerProfileIdAsync(int userId)
