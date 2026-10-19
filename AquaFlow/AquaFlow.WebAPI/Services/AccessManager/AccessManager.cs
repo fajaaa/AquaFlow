@@ -102,15 +102,8 @@ public class AccessManager : IAccessManager
             throw new ClientException("Refresh token has expired.");
         }
 
-        UserResponse user;
-        try
-        {
-            user = await _userService.GetByIdAsync(storedToken.UserId);
-        }
-        catch (KeyNotFoundException)
-        {
-            throw new ClientException("User not found.");
-        }
+        var user = await _userService.GetSensitiveByIdAsync(storedToken.UserId)
+            ?? throw new ClientException("User not found.");
 
         if (!user.IsActive)
         {
@@ -118,12 +111,13 @@ public class AccessManager : IAccessManager
         }
 
         // Build both tokens first (the JWT needs a permission lookup that could fail), then swap the
-        // user's stored refresh tokens for the new one atomically: a failure anywhere leaves the old
-        // refresh token valid, instead of deleting it and returning an error.
+        // presented refresh token for the new one atomically: a failure anywhere leaves the old
+        // refresh token valid, instead of deleting it and returning an error. Only this device's
+        // token is rotated - the user's other devices stay signed in.
         var accessToken = await GenerateJwtTokenAsync(user);
         var refreshTokenValue = GenerateRefreshTokenValue();
 
-        await _refreshTokenService.RotateAsync(new RefreshToken
+        await _refreshTokenService.RotateAsync(storedToken, new RefreshToken
         {
             UserId = user.Id,
             Token = refreshTokenValue,
@@ -139,7 +133,24 @@ public class AccessManager : IAccessManager
         };
     }
 
-    private async Task<string> GenerateJwtTokenAsync(UserResponse user)
+    public async Task LogoutAsync(LogoutRequest request)
+    {
+        if (string.IsNullOrEmpty(request.RefreshToken))
+        {
+            throw new ClientException("Refresh token is required.");
+        }
+
+        // Possession of the refresh token is the proof of identity here (the access token may have
+        // expired already). Only that one device's session ends; the access token it still holds
+        // stays valid until it expires (at most JwtToken:DurationInMinutes) - the client discards it.
+        var userId = await _refreshTokenService.RevokeAsync(request.RefreshToken);
+        if (userId.HasValue)
+        {
+            await _activityLogService.LogAsync(userId.Value, ActivityEventTypes.Logout, "Odjava", GetClientIpAddress());
+        }
+    }
+
+    private async Task<string> GenerateJwtTokenAsync(UserSensitiveResponse user)
     {
         var secretKey = Encoding.UTF8.GetBytes(_configuration["JwtToken:SecretKey"] ?? string.Empty);
 
@@ -148,7 +159,8 @@ public class AccessManager : IAccessManager
             new Claim(ClaimNames.Id, user.Id.ToString()),
             new Claim(ClaimNames.Email, user.Email),
             new Claim(ClaimNames.UserRole, user.UserRole),
-            new Claim(ClaimNames.IsActive, user.IsActive.ToString())
+            new Claim(ClaimNames.IsActive, user.IsActive.ToString()),
+            new Claim(ClaimNames.SecurityStamp, user.SecurityStamp)
         };
 
         var permissionCodes = await _permissionLookupService.GetPermissionCodesForRoleAsync(user.UserRoleId);
@@ -160,8 +172,7 @@ public class AccessManager : IAccessManager
         var descriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(
-                int.Parse(_configuration["JwtToken:DurationInMinutes"] ?? "60")),
+            Expires = DateTime.UtcNow.AddMinutes(GetAccessTokenLifetimeMinutes()),
             Issuer = _configuration["JwtToken:Issuer"],
             Audience = _configuration["JwtToken:Audience"],
             SigningCredentials = new SigningCredentials(
@@ -172,6 +183,17 @@ public class AccessManager : IAccessManager
         var handler = new JwtSecurityTokenHandler();
         return handler.WriteToken(handler.CreateToken(descriptor));
     }
+
+    // Short-lived on purpose: the access token is the one credential that is not stored server
+    // side. Revocation (SecurityStamp) normally kills it earlier; this is the fallback lifetime.
+    // A blank/invalid value (e.g. an empty key in .env) falls back to the default instead of
+    // failing every login.
+    private int GetAccessTokenLifetimeMinutes() =>
+        int.TryParse(_configuration["JwtToken:DurationInMinutes"], out var minutes) && minutes > 0
+            ? minutes
+            : DefaultAccessTokenLifetimeMinutes;
+
+    private const int DefaultAccessTokenLifetimeMinutes = 15;
 
     private static string GenerateRefreshTokenValue() =>
         Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));

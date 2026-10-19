@@ -232,6 +232,7 @@ public class UserServiceTests
         return new UserService(
             context,
             cryptoService ?? new CryptoService(),
+            TestSecurityStamps.Create(context),
             mapper,
             new IValidator<UserInsertRequest>[] { new UserInsertValidator() },
             Array.Empty<IValidator<UserUpdateRequest>>(),

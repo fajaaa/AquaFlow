@@ -4071,6 +4071,11 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -4100,6 +4105,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38762111000",
+                            SecurityStamp = "seedsecuritystamp000000000000001",
                             UserRoleId = 1
                         },
                         new
@@ -4114,6 +4120,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38761111001",
+                            SecurityStamp = "seedsecuritystamp000000000000002",
                             UserRoleId = 2
                         },
                         new
@@ -4128,6 +4135,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38761111002",
+                            SecurityStamp = "seedsecuritystamp000000000000003",
                             UserRoleId = 2
                         },
                         new
@@ -4142,6 +4150,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38762111004",
+                            SecurityStamp = "seedsecuritystamp000000000000004",
                             UserRoleId = 3
                         },
                         new
@@ -4156,6 +4165,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38762111005",
+                            SecurityStamp = "seedsecuritystamp000000000000005",
                             UserRoleId = 3
                         },
                         new
@@ -4170,6 +4180,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38762111006",
+                            SecurityStamp = "seedsecuritystamp000000000000006",
                             UserRoleId = 3
                         });
                 });

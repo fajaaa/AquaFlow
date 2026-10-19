@@ -4,4 +4,5 @@ public class UserSensitiveResponse : UserResponse
 {
     public string PasswordHash { get; set; } = string.Empty;
     public string PasswordSalt { get; set; } = string.Empty;
+    public string SecurityStamp { get; set; } = string.Empty;
 }

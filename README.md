@@ -347,7 +347,7 @@ Configuration is resolved by the standard ASP.NET Core provider chain. Later sou
 | `ConnectionStrings__DefaultConnection` | Yes | SQL Server connection string. Start-up fails if absent. |
 | `JwtToken__Issuer`, `JwtToken__Audience` | Yes | Token issuer and audience. |
 | `JwtToken__SecretKey` | Yes | Signing key, minimum 32 characters. Use a random, per-environment value. |
-| `JwtToken__DurationInMinutes` | No | Access token lifetime, default `60`. |
+| `JwtToken__DurationInMinutes` | No | Access token lifetime, default `15`. |
 | `RabbitMQ__ConnectionString` | No | Broker connection string (`host=...;username=...;password=...`). Blank registers a no-op publisher; every other feature keeps working. |
 | `Payments__Provider` | No | `Manual` (default) or `Stripe`. |
 | `Payments__Currency` | No | Currency code used for checkout amounts. |
@@ -393,7 +393,12 @@ Authorization is enforced server-side, not by hiding actions in the user interfa
 
 - **Authentication.** Every controller that derives from the read/CRUD base requires a valid
   bearer token; unauthenticated calls return `401`. Only `/Access/login`, `/Access/refresh`,
-  `/Access/register` and the payment webhook are anonymous.
+  `/Access/logout`, `/Access/register` and the payment webhook are anonymous.
+- **Session revocation.** Access tokens live 15 minutes by default and carry the user's security
+  stamp, which is re-checked on every request. A password change, deactivation, role change or
+  account deletion rotates the stamp and deletes all of the user's refresh tokens, so every
+  device is signed out on its next request. Changing a role's permissions only rotates the stamp:
+  clients silently refresh into a token with the updated permissions.
 - **Permissions.** A `RequirePermission` authorization filter gates actions on permission codes
   carried as JWT claims (`403` when the caller is authenticated but not entitled). Codes are
   granted per role and stored in the database, so entitlements change without a code change.
@@ -415,8 +420,9 @@ Authorization is enforced server-side, not by hiding actions in the user interfa
   never stored. Changing a password requires the current one, so a stolen access token alone
   cannot take over an account.
 - **Refresh tokens.** Only SHA-256 hashes are persisted; the raw token is returned to the client
-  once. Refreshing rotates the token, expired tokens are purged, and a soft-deleted user's
-  tokens are removed so the account can neither sign in nor refresh.
+  once. There is one refresh token per signed-in device: refreshing rotates only that device's
+  token (a used token can never be exchanged twice), `POST /Access/logout` deletes it, and expired
+  tokens are purged.
 - **Rate limiting.** `/Access/login` and `/Access/refresh` are limited to 5 requests per minute
   per client IP; every other endpoint is covered by a global 300 requests per minute limit
   partitioned per authenticated user (or per IP when anonymous). Exceeded limits return `429`.
@@ -462,8 +468,9 @@ shared or public environment:
 1. `POST /Access/login` with `{ "email": "<email>", "password": "<password>" }`.
 2. Read `accessToken` from the response.
 3. Send `Authorization: Bearer <accessToken>` on every subsequent request.
-4. When the access token expires, exchange the refresh token at `POST /Access/refresh`; both
-   tokens are rotated.
+4. When the access token expires (or is revoked - any `401`), exchange the refresh token at
+   `POST /Access/refresh`; both tokens are rotated.
+5. To sign out, send `{ "refreshToken": "<refreshToken>" }` to `POST /Access/logout` (`204`).
 
 The Flutter clients do this automatically and keep tokens in the platform secure store.
 
@@ -471,7 +478,7 @@ The Flutter clients do this automatically and keep tokens in the platform secure
 
 | Area | Endpoints |
 | --- | --- |
-| Access & account | `/Access/login`, `/Access/refresh`, `/Access/register`, `/Account/me`, `/Account/me/password`, `/Account/preferences` |
+| Access & account | `/Access/login`, `/Access/refresh`, `/Access/logout`, `/Access/register`, `/Account/me`, `/Account/me/password`, `/Account/preferences` |
 | Users & roles | `/Users`, `/UserRoles`, `/Permissions`, `/UserRolePermissions`, `/CustomerProfiles`, `/CollectorProfiles` |
 | Locations | `/Cities`, `/Municipalities`, `/Settlements` |
 | Meters & readings | `/WaterMeters`, `/WaterMeterRequests`, `/MeterReadings`, `/Tariffs` |

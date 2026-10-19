@@ -18,6 +18,7 @@ AquaFlow/AquaFlow.WebAPI/appsettings.Development.json
 
 # Local-only AI agent instructions, not shared with the repository
 AGENTS.md
+CLAUDE.md
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

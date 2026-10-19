@@ -49,7 +49,7 @@ services:
       - JwtToken__Issuer=AquaFlow
       - JwtToken__Audience=AquaFlowClients
       - JwtToken__SecretKey=dev-only-secret-change-me-at-least-32-chars
-      - JwtToken__DurationInMinutes=60
+      - JwtToken__DurationInMinutes=15
       - RabbitMQ__ConnectionString=host=aquaflow-rabbitmq;username=admin;password=admin
     ports:
       - "5161:5161"

@@ -530,6 +530,9 @@ public partial class AquaFlowDbContext
     private const string SeedPasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=";
     private const string SeedPasswordSalt = "AquaFlowSalt2026==";
 
+    // Each seeded user carries a FIXED SecurityStamp: User.SecurityStamp otherwise defaults to a
+    // new Guid, which would make every future migration re-emit UpdateData for these rows.
+
     private static void SeedUsers(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasData(
@@ -539,6 +542,7 @@ public partial class AquaFlowDbContext
                 Email = "kenan.fajic@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000001",
                 Phone = "+38762111000",
                 UserRoleId = 1,
                 FirstName = "Kenan",
@@ -556,6 +560,7 @@ public partial class AquaFlowDbContext
                 Email = "amel.fajic@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000002",
                 Phone = "+38761111001",
                 UserRoleId = 2,
                 FirstName = "Amel",
@@ -573,6 +578,7 @@ public partial class AquaFlowDbContext
                 Email = "kemal.fajic@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000003",
                 Phone = "+38761111002",
                 UserRoleId = 2,
                 FirstName = "Kemal",
@@ -590,6 +596,7 @@ public partial class AquaFlowDbContext
                 Email = "denis.music@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000004",
                 Phone = "+38762111004",
                 UserRoleId = 3,
                 FirstName = "",
@@ -607,6 +614,7 @@ public partial class AquaFlowDbContext
                 Email = "elmir.babovic@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000005",
                 Phone = "+38762111005",
                 UserRoleId = 3,
                 FirstName = "",
@@ -624,6 +632,7 @@ public partial class AquaFlowDbContext
                 Email = "adil.joldic@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000006",
                 Phone = "+38762111006",
                 UserRoleId = 3,
                 FirstName = "",

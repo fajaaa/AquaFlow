@@ -45,6 +45,18 @@ public class AccessController : ControllerBase
         return Ok(result);
     }
 
+    // Anonymous on purpose: the access token may already have expired, and holding the refresh
+    // token is proof enough to end that device's session. Always 204 - an unknown or already
+    // revoked token is not an error and the response never reveals whether it existed. The global
+    // rate limiter covers it; no stricter policy is needed since it cannot be used to guess anything.
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Logout([FromBody] LogoutRequest request)
+    {
+        await _accessManager.LogoutAsync(request);
+        return NoContent();
+    }
+
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<ActionResult<UserResponse>> Register([FromBody] UserRegisterRequest request)

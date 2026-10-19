@@ -164,6 +164,7 @@ public sealed class RegistrationServiceTests : IDisposable
         var userService = new UserService(
             context,
             new CryptoService(),
+            TestSecurityStamps.Create(context),
             mapper,
             new IValidator<UserInsertRequest>[] { new UserInsertValidator() },
             Array.Empty<IValidator<UserUpdateRequest>>(),

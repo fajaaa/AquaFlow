@@ -231,6 +231,8 @@ builder.Services.AddScoped<IDeviceTokenService, DeviceTokenService>();
 builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ISecurityStampService, SecurityStampService>();
 builder.Services.AddScoped<IPermissionLookupService, PermissionLookupService>();
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 builder.Services.AddScoped<IBaseReadService<ActivityLogResponse, ActivityLogSearchObject>>(
@@ -468,6 +470,33 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
         ClockSkew = TimeSpan.Zero
+    };
+
+    // A valid signature/lifetime is not enough: the token's SecurityStamp must still match the
+    // user's current one, and the user must still exist and be active. Password change,
+    // deactivation, role change, soft delete and role-permission changes rotate the stamp, so
+    // every access token issued before that gets a 401 on its next request instead of living on
+    // until it expires. Tokens without the claim (issued before this check existed) are rejected
+    // too. SecurityStampService caches the lookup for at most 60 s per user (evicted immediately
+    // on change within this process - see SecurityStampService.CacheDuration).
+    o.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var userIdClaim = context.Principal?.FindFirst(ClaimNames.Id)?.Value;
+            var securityStamp = context.Principal?.FindFirst(ClaimNames.SecurityStamp)?.Value;
+            if (!int.TryParse(userIdClaim, out var userId) || string.IsNullOrEmpty(securityStamp))
+            {
+                context.Fail("Token is missing the user id or security stamp.");
+                return;
+            }
+
+            var securityStampService = context.HttpContext.RequestServices.GetRequiredService<ISecurityStampService>();
+            if (!await securityStampService.IsValidAsync(userId, securityStamp))
+            {
+                context.Fail("Token has been revoked.");
+            }
+        }
     };
 });
 builder.Services.AddAuthorization();
