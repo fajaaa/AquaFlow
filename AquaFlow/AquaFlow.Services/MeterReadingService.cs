@@ -45,6 +45,10 @@ public class MeterReadingService
             throw new ClientException("The signed-in user has no collector profile, so a meter reading cannot be recorded.");
         }
 
+        // Deliberately no per-collector meter assignment check: AquaFlow is a small utility where any
+        // collector may read any meter (there is no MeterAssignment concept - it was removed by the
+        // RemoveMeterAssignments migration). The boundary is the MeterReadings.Manage permission on the
+        // controller plus the meter status gate below (Removed/Inactive meters are rejected).
         var waterMeter = await _dbContext.WaterMeters.FirstOrDefaultAsync(meter => meter.Id == request.WaterMeterId);
         if (waterMeter == null)
         {

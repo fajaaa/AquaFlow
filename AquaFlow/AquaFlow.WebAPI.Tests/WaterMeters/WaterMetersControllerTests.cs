@@ -128,7 +128,8 @@ public class WaterMetersControllerTests
     public async Task GetAll_CollectorRole_PassesSearchThroughWithoutPinning()
     {
         // A collector may read any water meter (unlike Customer), so the search is not pinned to
-        // any profile - it passes through to the service unmodified, same as Admin.
+        // any profile - it passes through to the service unmodified, same as Admin. This is a
+        // deliberate product decision: there is no per-collector meter assignment.
         var controller = CreateController(
             BuildUser(userId: 5, role: CollectorRole),
             profiles: [],
@@ -328,6 +329,33 @@ public class WaterMetersControllerTests
         Assert.Equal(ActivityEventTypes.WaterMeterMarkedBroken, call.EventType);
         Assert.Contains("WM-1", call.Description);
         Assert.Contains("Vodomjer ne registruje potrosnju.", call.Description);
+    }
+
+    // Mirror of GetAll_CollectorRole_PassesSearchThroughWithoutPinning for the write side: there is
+    // no per-collector meter assignment, so any collector holding MeterReadings.Manage may mark any
+    // meter broken, whichever customer owns it.
+    [Fact]
+    public async Task MarkBroken_AnyCollector_CanMarkAnyCustomersMeter()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 7, role: CollectorRole, permissions: [ReadingsManagePermission]),
+            profiles:
+            [
+                new CustomerProfileResponse { Id = 10, UserId = 1 },
+                new CustomerProfileResponse { Id = 20, UserId = 2 }
+            ],
+            meters:
+            [
+                new WaterMeterResponse { Id = 1, CustomerId = 10, SerialNumber = "WM-1", Status = "Active" },
+                new WaterMeterResponse { Id = 2, CustomerId = 20, SerialNumber = "WM-2", Status = "Active" }
+            ]);
+
+        var result = await controller.MarkBroken(2, new WaterMeterMarkBrokenRequest { Reason = "Vodomjer ne registruje potrosnju." });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<WaterMeterResponse>(ok.Value);
+        Assert.Equal(2, response.Id);
+        Assert.Equal("Removed", response.Status);
     }
 
     [Fact]

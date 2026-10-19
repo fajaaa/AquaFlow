@@ -1970,44 +1970,6 @@ namespace AquaFlow.Services.Migrations
                     b.ToTable("InvoiceStatusHistories");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.MeterAssignment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("AssignedFrom")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("AssignedTo")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CollectorId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("WaterMeterId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CollectorId");
-
-                    b.HasIndex("WaterMeterId");
-
-                    b.ToTable("MeterAssignments");
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.MeterReading", b =>
                 {
                     b.Property<int>("Id")
@@ -5108,25 +5070,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Invoice");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.MeterAssignment", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.CollectorProfile", "Collector")
-                        .WithMany("MeterAssignments")
-                        .HasForeignKey("CollectorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AquaFlow.Services.Database.WaterMeter", "WaterMeter")
-                        .WithMany("MeterAssignments")
-                        .HasForeignKey("WaterMeterId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Collector");
-
-                    b.Navigation("WaterMeter");
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.MeterReading", b =>
                 {
                     b.HasOne("AquaFlow.Services.Database.CollectorProfile", "Collector")
@@ -5471,11 +5414,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Municipalities");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.CollectorProfile", b =>
-                {
-                    b.Navigation("MeterAssignments");
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.CustomerProfile", b =>
                 {
                     b.Navigation("Invoices");
@@ -5573,8 +5511,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("FaultReports");
 
                     b.Navigation("Invoices");
-
-                    b.Navigation("MeterAssignments");
 
                     b.Navigation("MeterReadings");
                 });

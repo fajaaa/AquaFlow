@@ -23,7 +23,6 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
     public DbSet<InvoiceStatusHistory> InvoiceStatusHistories => Set<InvoiceStatusHistory>();
-    public DbSet<MeterAssignment> MeterAssignments => Set<MeterAssignment>();
     public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
     public DbSet<Municipality> Municipalities => Set<Municipality>();
     public DbSet<Notification> Notifications => Set<Notification>();

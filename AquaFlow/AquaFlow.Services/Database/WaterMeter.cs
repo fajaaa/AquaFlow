@@ -30,5 +30,4 @@ public class WaterMeter : EntityBase
     public ICollection<MeterReading> MeterReadings { get; set; } = new List<MeterReading>();
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public ICollection<FaultReport> FaultReports { get; set; } = new List<FaultReport>();
-    public ICollection<MeterAssignment> MeterAssignments { get; set; } = new List<MeterAssignment>();
 }

@@ -8,7 +8,7 @@ single ASP.NET Core Web API and three role-specific Flutter clients.
 | Role | Client | Platforms | Scope |
 | --- | --- | --- | --- |
 | Admin | `aquaflow_desktop` | Windows / macOS / Linux | Users, tariffs, invoices, payments, location codebook, requests, fault reports, support tickets, notifications, company settings |
-| Collector | `aquaflow_collector` | Android / iOS | Meter lookup, reading entry, assigned connection requests and fault reports |
+| Collector | `aquaflow_collector` | Android / iOS | Meter lookup and reading entry for any active meter, assigned connection requests and fault reports |
 | Customer | `aquaflow_customer` | Android / iOS | Own meters and invoices, invoice payment, new-connection requests, fault reports, support tickets, notification inbox |
 
 ---
@@ -399,8 +399,11 @@ Authorization is enforced server-side, not by hiding actions in the user interfa
   granted per role and stored in the database, so entitlements change without a code change.
 - **Ownership pinning.** Self-service endpoints derive the acting user from the token's `Id`
   claim and ignore any client-supplied identity: a customer only ever sees their own profile,
-  meters, invoices, requests, reports and tickets; a collector sees the work assigned to them.
-  Write requests that carry an owner field have it forced back to the caller's own value, which
+  meters, invoices, requests, reports and tickets; a collector only sees the new-connection
+  requests and fault reports assigned to them. Meters are deliberately *not* assigned to
+  collectors: meter search, reading entry and marking a meter broken are open to every collector
+  for every active meter, bounded by the `MeterReadings.Manage` permission and the meter's status
+  (a `Removed` or `Inactive` meter accepts no new readings). Write requests that carry an owner field have it forced back to the caller's own value, which
   blocks mass-assignment attempts.
 - **Admin-only reads.** Endpoints whose responses describe other people or the company as a
   whole are permission-gated on reads too, not only on writes: the user directory (`/Users`
