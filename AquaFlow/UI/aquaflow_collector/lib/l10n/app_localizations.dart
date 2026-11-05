@@ -1349,6 +1349,108 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.'**
   String get notificationOpenRelatedFailed;
+
+  /// Tooltip/label for the entry point that opens the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova prijava kvara'**
+  String get newFaultReportTooltip;
+
+  /// Title of the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova prijava kvara'**
+  String get newFaultReportDialogTitle;
+
+  /// Submit button of the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pošalji prijavu'**
+  String get newFaultReportSubmitButton;
+
+  /// SnackBar after a fault report was filed.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijava kvara je poslana.'**
+  String get newFaultReportCreatedMessage;
+
+  /// Title field label of the fault report form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Naslov'**
+  String get faultReportTitleLabel;
+
+  /// Description field label of the fault report form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Opis'**
+  String get faultReportDescriptionLabel;
+
+  /// Validation error for an over-long fault report title.
+  ///
+  /// In bs, this message translates to:
+  /// **'Naslov može imati najviše 150 znakova.'**
+  String get faultReportTitleTooLongError;
+
+  /// Label of the optional water meter section.
+  ///
+  /// In bs, this message translates to:
+  /// **'Vodomjer (opcionalno)'**
+  String get waterMeterOptionalLabel;
+
+  /// Hint of the water meter search field in the fault report form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pretraži vodomjer (serijski broj, vlasnik, adresa)'**
+  String get waterMeterSearchHint;
+
+  /// Shown when the water meter search returned nothing.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema pronađenih vodomjera.'**
+  String get waterMeterNoResults;
+
+  /// Tooltip of the button that clears the selected water meter.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ukloni vodomjer'**
+  String get waterMeterClearTooltip;
+
+  /// Optional street field label.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ulica (opcionalno)'**
+  String get streetOptionalLabel;
+
+  /// Optional house number field label.
+  ///
+  /// In bs, this message translates to:
+  /// **'Kućni broj (opcionalno)'**
+  String get houseNumberOptionalLabel;
+
+  /// Number of attached photos out of the maximum.
+  ///
+  /// In bs, this message translates to:
+  /// **'Fotografije: {count}/{max}'**
+  String photoCountLabel(int count, int max);
+
+  /// Button that opens the camera/gallery chooser.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dodaj sliku'**
+  String get addPhotoButtonLabel;
+
+  /// Image source option: camera.
+  ///
+  /// In bs, this message translates to:
+  /// **'Slikaj'**
+  String get takePhotoOption;
+
+  /// Image source option: gallery.
+  ///
+  /// In bs, this message translates to:
+  /// **'Iz galerije'**
+  String get chooseFromGalleryOption;
 }
 
 class _AppLocalizationsDelegate

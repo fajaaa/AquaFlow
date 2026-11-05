@@ -17,6 +17,7 @@ public class FaultReportService
 {
     // Staff who handle fault reports - recipients of the "new report" notification.
     private const string ManagePermission = "FaultReports.Manage";
+    private const int MaxPhotosPerReport = 5;
 
     private readonly IFaultReportStateResolver _stateResolver;
     private readonly ISystemNotificationService _systemNotifications;
@@ -42,13 +43,49 @@ public class FaultReportService
     public override Task<FaultReportResponse> InsertAsync(FaultReportInsertRequest request)
         => CreateAsync(request, request.ReportedById);
 
-    public async Task<FaultReportResponse> CreateAsync(FaultReportInsertRequest request, int actorUserId)
+    public Task<FaultReportResponse> CreateAsync(FaultReportInsertRequest request, int actorUserId)
+        => CreateCoreAsync(request, Array.Empty<FaultReportPhotoUpload>(), actorUserId);
+
+    // Report + photos in ONE transaction: every check (request validation, photo count/content)
+    // runs before the first write, and the photos hang off the report's object graph, so the
+    // report's INSERT stores them too. Any failure leaves nothing behind.
+    public Task<FaultReportResponse> CreateWithPhotosAsync(
+        FaultReportInsertRequest request,
+        IReadOnlyCollection<FaultReportPhotoUpload> photos,
+        int actorUserId)
+        => CreateCoreAsync(request, photos, actorUserId);
+
+    private async Task<FaultReportResponse> CreateCoreAsync(
+        FaultReportInsertRequest request,
+        IReadOnlyCollection<FaultReportPhotoUpload> photos,
+        int actorUserId)
     {
+        if (photos.Count > MaxPhotosPerReport)
+        {
+            throw new ClientException("A fault report can have at most 5 photos.");
+        }
+
+        if (photos.Any(photo => photo.Data is null || photo.Data.Length == 0))
+        {
+            throw new ClientException("A photo must not be empty.");
+        }
+
         await ValidateInsertAsync(request);
         await BeforeInsertAsync(request);
 
         var entity = MapInsertRequestToEntity(request);
         entity.CreatedAt = DateTime.UtcNow;
+        foreach (var photo in photos)
+        {
+            entity.Photos.Add(new FaultReportPhoto
+            {
+                Data = photo.Data,
+                ContentType = photo.ContentType,
+                FileName = photo.FileName,
+                SizeBytes = photo.Data.LongLength,
+                CreatedAt = entity.CreatedAt
+            });
+        }
 
         // Only a genuinely new report needs the staff's attention; an admin backfilling an
         // already InProgress/Resolved report is recording history, not raising a new fault.
@@ -270,7 +307,24 @@ public class FaultReportService
             query = query.Where(f => f.SettlementId == search.SettlementId.Value);
         }
 
-        if (search.AssignedCollectorId.HasValue)
+        // Collector's own view: when OrReportedById is set, AssignedCollectorId (if any) and
+        // OrReportedById are OR-ed - "assigned to me OR filed by me". Both are pinned from the JWT by
+        // the controller, never trusted from the client. Works with no collector profile (only the
+        // reporter branch applies).
+        if (search.OrReportedById.HasValue)
+        {
+            var reporterId = search.OrReportedById.Value;
+            if (search.AssignedCollectorId.HasValue)
+            {
+                var collectorId = search.AssignedCollectorId.Value;
+                query = query.Where(f => f.AssignedCollectorId == collectorId || f.ReportedById == reporterId);
+            }
+            else
+            {
+                query = query.Where(f => f.ReportedById == reporterId);
+            }
+        }
+        else if (search.AssignedCollectorId.HasValue)
         {
             query = query.Where(f => f.AssignedCollectorId == search.AssignedCollectorId.Value);
         }

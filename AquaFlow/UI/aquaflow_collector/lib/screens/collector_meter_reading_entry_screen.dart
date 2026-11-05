@@ -14,6 +14,7 @@ import 'package:aquaflow_collector/shared/services/tariff_lookup_exception.dart'
 import 'package:aquaflow_collector/shared/services/tariff_lookup_service.dart';
 import 'package:aquaflow_collector/shared/theme/app_theme.dart';
 import 'package:aquaflow_collector/widgets/collector_water_meter_status_pill.dart';
+import 'package:aquaflow_collector/widgets/new_fault_report_dialog.dart';
 
 /// Meter detail + reading entry, pushed when a collector taps a result on
 /// [CollectorWaterMetersScreen]. Submits via
@@ -230,6 +231,21 @@ class _CollectorMeterReadingEntryScreenState
   // Marks the meter as no longer functional (Status -> Removed), independent of the reading form
   // above. Requires a non-empty reason, mirroring the mandatory-reason rule the backend validator
   // enforces (WaterMeterMarkBrokenValidator).
+  Future<void> _openNewFaultReport() async {
+    final created = await showNewFaultReportDialog(
+      context,
+      initialMeter: widget.meter,
+    );
+    if (!mounted || created != true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context).newFaultReportCreatedMessage,
+        ),
+      ),
+    );
+  }
+
   Future<void> _markBroken() async {
     final reason = await showDialog<String>(
       context: context,
@@ -280,6 +296,11 @@ class _CollectorMeterReadingEntryScreenState
       appBar: AppBar(
         title: Text(meter.serialNumber),
         actions: [
+          IconButton(
+            tooltip: loc.newFaultReportTooltip,
+            icon: const Icon(Icons.add_alert_outlined),
+            onPressed: _openNewFaultReport,
+          ),
           IconButton(
             tooltip: loc.markBrokenTooltip,
             icon: _markingBroken

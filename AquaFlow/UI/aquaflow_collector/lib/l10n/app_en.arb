@@ -236,5 +236,77 @@
   "passwordChangedSignInAgain": "Your password has been changed. Please sign in again.",
   "notificationsNewBanner": "You have new notifications",
   "notificationOpenAction": "Open",
-  "notificationOpenRelatedFailed": "The related item couldn't be opened. It may no longer be available."
+  "notificationOpenRelatedFailed": "The related item couldn't be opened. It may no longer be available.",
+  "newFaultReportTooltip": "New fault report",
+  "@newFaultReportTooltip": {
+    "description": "Tooltip/label for the entry point that opens the new fault report dialog."
+  },
+  "newFaultReportDialogTitle": "New fault report",
+  "@newFaultReportDialogTitle": {
+    "description": "Title of the new fault report dialog."
+  },
+  "newFaultReportSubmitButton": "Submit report",
+  "@newFaultReportSubmitButton": {
+    "description": "Submit button of the new fault report dialog."
+  },
+  "newFaultReportCreatedMessage": "Fault report submitted.",
+  "@newFaultReportCreatedMessage": {
+    "description": "SnackBar after a fault report was filed."
+  },
+  "faultReportTitleLabel": "Title",
+  "@faultReportTitleLabel": {
+    "description": "Title field label of the fault report form."
+  },
+  "faultReportDescriptionLabel": "Description",
+  "@faultReportDescriptionLabel": {
+    "description": "Description field label of the fault report form."
+  },
+  "faultReportTitleTooLongError": "Title can be at most 150 characters.",
+  "@faultReportTitleTooLongError": {
+    "description": "Validation error for an over-long fault report title."
+  },
+  "waterMeterOptionalLabel": "Water meter (optional)",
+  "@waterMeterOptionalLabel": {
+    "description": "Label of the optional water meter section."
+  },
+  "waterMeterSearchHint": "Search water meter (serial, owner, address)",
+  "@waterMeterSearchHint": {
+    "description": "Hint of the water meter search field in the fault report form."
+  },
+  "waterMeterNoResults": "No water meters found.",
+  "@waterMeterNoResults": {
+    "description": "Shown when the water meter search returned nothing."
+  },
+  "waterMeterClearTooltip": "Remove water meter",
+  "@waterMeterClearTooltip": {
+    "description": "Tooltip of the button that clears the selected water meter."
+  },
+  "streetOptionalLabel": "Street (optional)",
+  "@streetOptionalLabel": {
+    "description": "Optional street field label."
+  },
+  "houseNumberOptionalLabel": "House number (optional)",
+  "@houseNumberOptionalLabel": {
+    "description": "Optional house number field label."
+  },
+  "photoCountLabel": "Photos: {count}/{max}",
+  "@photoCountLabel": {
+    "description": "Number of attached photos out of the maximum.",
+    "placeholders": {
+      "count": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "addPhotoButtonLabel": "Add photo",
+  "@addPhotoButtonLabel": {
+    "description": "Button that opens the camera/gallery chooser."
+  },
+  "takePhotoOption": "Take photo",
+  "@takePhotoOption": {
+    "description": "Image source option: camera."
+  },
+  "chooseFromGalleryOption": "From gallery",
+  "@chooseFromGalleryOption": {
+    "description": "Image source option: gallery."
+  }
 }

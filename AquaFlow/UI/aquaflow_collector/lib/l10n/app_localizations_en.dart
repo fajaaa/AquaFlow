@@ -686,4 +686,59 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notificationOpenRelatedFailed =>
       'The related item couldn\'t be opened. It may no longer be available.';
+
+  @override
+  String get newFaultReportTooltip => 'New fault report';
+
+  @override
+  String get newFaultReportDialogTitle => 'New fault report';
+
+  @override
+  String get newFaultReportSubmitButton => 'Submit report';
+
+  @override
+  String get newFaultReportCreatedMessage => 'Fault report submitted.';
+
+  @override
+  String get faultReportTitleLabel => 'Title';
+
+  @override
+  String get faultReportDescriptionLabel => 'Description';
+
+  @override
+  String get faultReportTitleTooLongError =>
+      'Title can be at most 150 characters.';
+
+  @override
+  String get waterMeterOptionalLabel => 'Water meter (optional)';
+
+  @override
+  String get waterMeterSearchHint =>
+      'Search water meter (serial, owner, address)';
+
+  @override
+  String get waterMeterNoResults => 'No water meters found.';
+
+  @override
+  String get waterMeterClearTooltip => 'Remove water meter';
+
+  @override
+  String get streetOptionalLabel => 'Street (optional)';
+
+  @override
+  String get houseNumberOptionalLabel => 'House number (optional)';
+
+  @override
+  String photoCountLabel(int count, int max) {
+    return 'Photos: $count/$max';
+  }
+
+  @override
+  String get addPhotoButtonLabel => 'Add photo';
+
+  @override
+  String get takePhotoOption => 'Take photo';
+
+  @override
+  String get chooseFromGalleryOption => 'From gallery';
 }

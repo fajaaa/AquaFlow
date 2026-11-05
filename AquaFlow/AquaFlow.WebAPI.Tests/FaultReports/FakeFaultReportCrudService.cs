@@ -38,7 +38,13 @@ public class FakeFaultReportCrudService : IFaultReportService
             items = items.Where(row => row.CustomerId == search.CustomerId);
         }
 
-        if (search?.AssignedCollectorId is > 0)
+        if (search?.OrReportedById is > 0)
+        {
+            items = items.Where(row =>
+                row.ReportedById == search.OrReportedById ||
+                (search.AssignedCollectorId is > 0 && row.AssignedCollectorId == search.AssignedCollectorId));
+        }
+        else if (search?.AssignedCollectorId is > 0)
         {
             items = items.Where(row => row.AssignedCollectorId == search.AssignedCollectorId);
         }
@@ -74,6 +80,14 @@ public class FakeFaultReportCrudService : IFaultReportService
     {
         LastCreateActorUserId = actorUserId;
         return InsertAsync(request);
+    }
+
+    public IReadOnlyCollection<FaultReportPhotoUpload>? LastCreatePhotos { get; private set; }
+
+    public Task<FaultReportResponse> CreateWithPhotosAsync(FaultReportInsertRequest request, IReadOnlyCollection<FaultReportPhotoUpload> photos, int actorUserId)
+    {
+        LastCreatePhotos = photos;
+        return CreateAsync(request, actorUserId);
     }
 
     public Task<FaultReportResponse> InsertAsync(FaultReportInsertRequest request)

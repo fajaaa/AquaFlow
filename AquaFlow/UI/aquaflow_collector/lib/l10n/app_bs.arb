@@ -954,5 +954,77 @@
   "notificationOpenRelatedFailed": "Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.",
   "@notificationOpenRelatedFailed": {
     "description": "SnackBar shown when the record a notification links to cannot be loaded (e.g. deleted or no longer visible)."
+  },
+  "newFaultReportTooltip": "Nova prijava kvara",
+  "@newFaultReportTooltip": {
+    "description": "Tooltip/label for the entry point that opens the new fault report dialog."
+  },
+  "newFaultReportDialogTitle": "Nova prijava kvara",
+  "@newFaultReportDialogTitle": {
+    "description": "Title of the new fault report dialog."
+  },
+  "newFaultReportSubmitButton": "Pošalji prijavu",
+  "@newFaultReportSubmitButton": {
+    "description": "Submit button of the new fault report dialog."
+  },
+  "newFaultReportCreatedMessage": "Prijava kvara je poslana.",
+  "@newFaultReportCreatedMessage": {
+    "description": "SnackBar after a fault report was filed."
+  },
+  "faultReportTitleLabel": "Naslov",
+  "@faultReportTitleLabel": {
+    "description": "Title field label of the fault report form."
+  },
+  "faultReportDescriptionLabel": "Opis",
+  "@faultReportDescriptionLabel": {
+    "description": "Description field label of the fault report form."
+  },
+  "faultReportTitleTooLongError": "Naslov može imati najviše 150 znakova.",
+  "@faultReportTitleTooLongError": {
+    "description": "Validation error for an over-long fault report title."
+  },
+  "waterMeterOptionalLabel": "Vodomjer (opcionalno)",
+  "@waterMeterOptionalLabel": {
+    "description": "Label of the optional water meter section."
+  },
+  "waterMeterSearchHint": "Pretraži vodomjer (serijski broj, vlasnik, adresa)",
+  "@waterMeterSearchHint": {
+    "description": "Hint of the water meter search field in the fault report form."
+  },
+  "waterMeterNoResults": "Nema pronađenih vodomjera.",
+  "@waterMeterNoResults": {
+    "description": "Shown when the water meter search returned nothing."
+  },
+  "waterMeterClearTooltip": "Ukloni vodomjer",
+  "@waterMeterClearTooltip": {
+    "description": "Tooltip of the button that clears the selected water meter."
+  },
+  "streetOptionalLabel": "Ulica (opcionalno)",
+  "@streetOptionalLabel": {
+    "description": "Optional street field label."
+  },
+  "houseNumberOptionalLabel": "Kućni broj (opcionalno)",
+  "@houseNumberOptionalLabel": {
+    "description": "Optional house number field label."
+  },
+  "photoCountLabel": "Fotografije: {count}/{max}",
+  "@photoCountLabel": {
+    "description": "Number of attached photos out of the maximum.",
+    "placeholders": {
+      "count": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "addPhotoButtonLabel": "Dodaj sliku",
+  "@addPhotoButtonLabel": {
+    "description": "Button that opens the camera/gallery chooser."
+  },
+  "takePhotoOption": "Slikaj",
+  "@takePhotoOption": {
+    "description": "Image source option: camera."
+  },
+  "chooseFromGalleryOption": "Iz galerije",
+  "@chooseFromGalleryOption": {
+    "description": "Image source option: gallery."
   }
 }

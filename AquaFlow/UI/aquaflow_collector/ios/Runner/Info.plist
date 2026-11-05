@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>AquaFlow treba pristup kameri da biste slikali fotografiju za prijavu kvara.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>AquaFlow treba pristup galeriji da biste odabrali fotografiju za prijavu kvara.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<!-- DEV-ONLY: the AquaFlow backend runs over plain HTTP (http://...:5161).

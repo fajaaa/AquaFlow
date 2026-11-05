@@ -681,4 +681,59 @@ class AppLocalizationsBs extends AppLocalizations {
   @override
   String get notificationOpenRelatedFailed =>
       'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.';
+
+  @override
+  String get newFaultReportTooltip => 'Nova prijava kvara';
+
+  @override
+  String get newFaultReportDialogTitle => 'Nova prijava kvara';
+
+  @override
+  String get newFaultReportSubmitButton => 'Pošalji prijavu';
+
+  @override
+  String get newFaultReportCreatedMessage => 'Prijava kvara je poslana.';
+
+  @override
+  String get faultReportTitleLabel => 'Naslov';
+
+  @override
+  String get faultReportDescriptionLabel => 'Opis';
+
+  @override
+  String get faultReportTitleTooLongError =>
+      'Naslov može imati najviše 150 znakova.';
+
+  @override
+  String get waterMeterOptionalLabel => 'Vodomjer (opcionalno)';
+
+  @override
+  String get waterMeterSearchHint =>
+      'Pretraži vodomjer (serijski broj, vlasnik, adresa)';
+
+  @override
+  String get waterMeterNoResults => 'Nema pronađenih vodomjera.';
+
+  @override
+  String get waterMeterClearTooltip => 'Ukloni vodomjer';
+
+  @override
+  String get streetOptionalLabel => 'Ulica (opcionalno)';
+
+  @override
+  String get houseNumberOptionalLabel => 'Kućni broj (opcionalno)';
+
+  @override
+  String photoCountLabel(int count, int max) {
+    return 'Fotografije: $count/$max';
+  }
+
+  @override
+  String get addPhotoButtonLabel => 'Dodaj sliku';
+
+  @override
+  String get takePhotoOption => 'Slikaj';
+
+  @override
+  String get chooseFromGalleryOption => 'Iz galerije';
 }

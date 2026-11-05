@@ -7,13 +7,15 @@ import 'package:aquaflow_collector/models/collector_fault_report.dart';
 import 'package:aquaflow_collector/screens/collector_fault_report_detail_screen.dart';
 import 'package:aquaflow_collector/services/collector_fault_report_exception.dart';
 import 'package:aquaflow_collector/services/collector_fault_report_service.dart';
+import 'package:aquaflow_collector/widgets/new_fault_report_dialog.dart';
 import 'package:aquaflow_collector/widgets/fault_report_status_pill.dart';
 import 'package:aquaflow_collector/shared/navigation/app_navigation.dart';
 
-// No 'New' option: a New report is by definition not yet assigned, so the
-// pinned listing below can never contain one.
+// 'New' is included: a report the collector filed themselves stays New until
+// the admin assigns it.
 Map<String, String> _statusOptions(AppLocalizations loc) => <String, String>{
   '': loc.allStatusesOption,
+  'New': loc.faultReportStatusNew,
   'Assigned': loc.faultReportStatusAssigned,
   'InProgress': loc.faultReportStatusInProgress,
   'Resolved': loc.faultReportStatusResolved,
@@ -117,6 +119,19 @@ class _CollectorFaultReportsScreenState
     });
   }
 
+  Future<void> _openNewReport() async {
+    final created = await showNewFaultReportDialog(context);
+    if (!mounted || created != true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context).newFaultReportCreatedMessage,
+        ),
+      ),
+    );
+    await _load();
+  }
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
@@ -130,6 +145,11 @@ class _CollectorFaultReportsScreenState
     final loc = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(loc.faultReportsScreenTitle)),
+      floatingActionButton: FloatingActionButton(
+        tooltip: loc.newFaultReportTooltip,
+        onPressed: _openNewReport,
+        child: const Icon(Icons.add),
+      ),
       body: SafeArea(
         child: Column(
           children: [

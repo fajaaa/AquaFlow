@@ -192,6 +192,43 @@ public class FaultReportsControllerTests
     }
 
     [Fact]
+    public async Task GetAll_Collector_SeesReportTheyFiledThemselves_EvenWithoutProfile()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            reports:
+            [
+                new FaultReportResponse { Id = 1, ReportedById = 5, Title = "Mine", AssignedCollectorId = null },
+                new FaultReportResponse { Id = 2, ReportedById = 9, Title = "Someone else's", AssignedCollectorId = null }
+            ]);
+
+        var result = await controller.GetAll(new FaultReportSearchObject { OrReportedById = 9 });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var page = Assert.IsType<PageResult<FaultReportResponse>>(ok.Value);
+        Assert.Equal(1, Assert.Single(page.Items).Id);
+    }
+
+    [Fact]
+    public async Task CreateWithPhotos_CollectorWithNonExistentMeter_ReturnsBadRequest()
+    {
+        var service = new FakeFaultReportCrudService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            waterMeters: []);
+
+        var result = await controller.CreateWithPhotos(
+            new FaultReportWithPhotosRequest { Title = "Leak", Description = "Wet", SettlementId = 1, WaterMeterId = 999 },
+            null);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Null(service.LastInsertRequest);
+    }
+
+    [Fact]
     public async Task GetById_AssignedCollector_ReturnsOk()
     {
         var controller = CreateController(

@@ -25,6 +25,9 @@ public interface IFaultReportService
     // customer carries the customer in ReportedById, so InsertAsync alone can't tell who acted.
     Task<FaultReportResponse> CreateAsync(FaultReportInsertRequest request, int actorUserId);
 
+    // CreateAsync plus already-validated photos, stored with the report in one transaction.
+    Task<FaultReportResponse> CreateWithPhotosAsync(FaultReportInsertRequest request, IReadOnlyCollection<FaultReportPhotoUpload> photos, int actorUserId);
+
     // State-machine transitions (see AquaFlow.Services/FaultReportStateMachine): each loads the
     // tracked entity once, resolves the state from its Status, and delegates to the state action.
     // changedById is the acting user stamped onto the FaultStatusHistory row. AssignAsync also
