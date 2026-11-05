@@ -97,6 +97,48 @@ class CollectorMeterReadingService {
     return CollectorMeterReading.fromJson(decoded);
   }
 
+  /// Reading history of one meter, newest first (voided rows included so the
+  /// UI can flag them). Sorting is opt-in server-side, hence `SortBy`.
+  Future<({List<CollectorMeterReading> items, int totalCount})> fetchHistory({
+    required int waterMeterId,
+    required int page,
+    required int pageSize,
+  }) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/MeterReadings').replace(
+      queryParameters: {
+        'WaterMeterId': '$waterMeterId',
+        'SortBy': 'ReadingDate',
+        'SortDescending': 'true',
+        'Page': '$page',
+        'PageSize': '$pageSize',
+      },
+    );
+
+    final response = await _send(() => _client.get(uri));
+
+    if (response.statusCode != 200) {
+      throw CollectorMeterReadingException(
+        _messageFor(response, 'Historiju očitanja nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    final itemsJson = decoded is Map<String, dynamic> ? decoded['items'] : null;
+    if (itemsJson is! List) {
+      throw const CollectorMeterReadingException(
+        'Odgovor servera je u neispravnom formatu.',
+      );
+    }
+    final items = itemsJson
+        .whereType<Map<String, dynamic>>()
+        .map(CollectorMeterReading.fromJson)
+        .toList();
+    return (
+      items: items,
+      totalCount: (decoded['totalCount'] as num?)?.toInt() ?? items.length,
+    );
+  }
+
   Future<http.Response> _send(Future<http.Response> Function() call) async {
     try {
       return await call().timeout(_timeout);

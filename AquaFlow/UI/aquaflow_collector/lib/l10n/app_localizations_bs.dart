@@ -465,6 +465,29 @@ class AppLocalizationsBs extends AppLocalizations {
   String get faultReportsTooltip => 'Prijave kvarova';
 
   @override
+  String get readingHistoryTooltip => 'Historija očitanja';
+
+  @override
+  String get readingHistoryTitle => 'Historija očitanja';
+
+  @override
+  String get readingHistoryEmptyMessage =>
+      'Za ovaj vodomjer još nema evidentiranih očitanja.';
+
+  @override
+  String get readingHistoryVoidedPill => 'Stornirano';
+
+  @override
+  String readingHistoryConsumption(String value) {
+    return 'Potrošnja: $value m³';
+  }
+
+  @override
+  String readingHistoryPageIndicator(int page, int total) {
+    return 'Stranica $page / $total';
+  }
+
+  @override
   String get collectorMeterSearchHint =>
       'Ime vlasnika, naselje, serijski broj ili adresa';
 

@@ -15,4 +15,6 @@ public class MeterReadingResponse : AuditableResponse
     public string? ClientUuid { get; set; }
     public string SyncStatus { get; set; } = string.Empty;
     public DateTime? SyncedAt { get; set; }
+    public DateTime? VoidedAt { get; set; }
+    public int? InvoiceId { get; set; }
 }

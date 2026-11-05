@@ -7,7 +7,6 @@ namespace AquaFlow.Model.Responses;
 // (same reason a negative one is), so no invoice is created for that reading at all.
 public class MeterReadingCollectorEntryResponse : MeterReadingResponse
 {
-    public int? InvoiceId { get; set; }
     public string? InvoiceNumber { get; set; }
     public decimal? InvoiceTotalAmount { get; set; }
 }

@@ -968,6 +968,42 @@ abstract class AppLocalizations {
   /// **'Prijave kvarova'**
   String get faultReportsTooltip;
 
+  /// No description provided for @readingHistoryTooltip.
+  ///
+  /// In bs, this message translates to:
+  /// **'Historija očitanja'**
+  String get readingHistoryTooltip;
+
+  /// No description provided for @readingHistoryTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Historija očitanja'**
+  String get readingHistoryTitle;
+
+  /// No description provided for @readingHistoryEmptyMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Za ovaj vodomjer još nema evidentiranih očitanja.'**
+  String get readingHistoryEmptyMessage;
+
+  /// No description provided for @readingHistoryVoidedPill.
+  ///
+  /// In bs, this message translates to:
+  /// **'Stornirano'**
+  String get readingHistoryVoidedPill;
+
+  /// No description provided for @readingHistoryConsumption.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potrošnja: {value} m³'**
+  String readingHistoryConsumption(String value);
+
+  /// No description provided for @readingHistoryPageIndicator.
+  ///
+  /// In bs, this message translates to:
+  /// **'Stranica {page} / {total}'**
+  String readingHistoryPageIndicator(int page, int total);
+
   /// Hint text for the free-text search field on the collector water meters screen.
   ///
   /// In bs, this message translates to:

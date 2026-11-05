@@ -351,6 +351,41 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         Assert.Contains("day(s) ago", exception.Message);
     }
 
+    // History listing used by the collector app: only the requested meter, newest first, VoidedAt mapped.
+    [Fact]
+    public async Task GetAllAsync_FilterByWaterMeter_ReturnsOnlyThatMeterNewestFirstWithVoidedAt()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        context.WaterMeters.Add(new WaterMeter
+        {
+            Id = 2, SerialNumber = "WM-2", CustomerId = 1, SettlementId = 1,
+            Street = "X", HouseNumber = "1", Status = "Active", InitialReading = 0, LastReading = 0
+        });
+        var voidedAt = DateTime.UtcNow.AddDays(-30);
+        MeterReading Make(int id, int meterId, int daysAgo, DateTime? voided = null) => new()
+        {
+            Id = id, WaterMeterId = meterId, CollectorId = 1, TariffId = 1,
+            ReadingValue = id * 10, PreviousReadingValue = 0, ConsumptionM3 = id * 10,
+            ReadingDate = DateTime.UtcNow.AddDays(-daysAgo), Source = "Collector",
+            CreatedAt = DateTime.UtcNow.AddDays(-daysAgo), VoidedAt = voided
+        };
+        context.MeterReadings.AddRange(
+            Make(1, 1, 60, voidedAt), Make(2, 1, 20), Make(3, 2, 10), Make(4, 1, 5));
+        context.SaveChanges();
+
+        var result = await CreateService(context).GetAllAsync(new Model.SearchObjects.MeterReadingSearchObject
+        {
+            WaterMeterId = 1,
+            SortBy = "ReadingDate",
+            SortDescending = true
+        });
+
+        Assert.Equal(new[] { 4, 2, 1 }, result.Items.Select(r => r.Id).ToArray());
+        Assert.NotNull(result.Items.Last().VoidedAt);
+        Assert.Null(result.Items.First().VoidedAt);
+    }
+
     private static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()

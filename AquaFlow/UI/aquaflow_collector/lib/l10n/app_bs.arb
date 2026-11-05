@@ -640,6 +640,14 @@
   },
 
   "faultReportsTooltip": "Prijave kvarova",
+  "readingHistoryTooltip": "Historija očitanja",
+  "readingHistoryTitle": "Historija očitanja",
+  "readingHistoryEmptyMessage": "Za ovaj vodomjer još nema evidentiranih očitanja.",
+  "readingHistoryVoidedPill": "Stornirano",
+  "readingHistoryConsumption": "Potrošnja: {value} m³",
+  "@readingHistoryConsumption": {"placeholders": {"value": {"type": "String"}}},
+  "readingHistoryPageIndicator": "Stranica {page} / {total}",
+  "@readingHistoryPageIndicator": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
   "@faultReportsTooltip": {
     "description": "Tooltip for the icon button on the water meters screen that opens the fault reports screen."
   },

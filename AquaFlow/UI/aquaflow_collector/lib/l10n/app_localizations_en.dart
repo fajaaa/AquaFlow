@@ -468,6 +468,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get faultReportsTooltip => 'Fault reports';
 
   @override
+  String get readingHistoryTooltip => 'Reading history';
+
+  @override
+  String get readingHistoryTitle => 'Reading history';
+
+  @override
+  String get readingHistoryEmptyMessage =>
+      'No readings recorded for this meter yet.';
+
+  @override
+  String get readingHistoryVoidedPill => 'Voided';
+
+  @override
+  String readingHistoryConsumption(String value) {
+    return 'Consumption: $value m³';
+  }
+
+  @override
+  String readingHistoryPageIndicator(int page, int total) {
+    return 'Page $page / $total';
+  }
+
+  @override
   String get collectorMeterSearchHint =>
       'Owner name, settlement, serial number, or address';
 

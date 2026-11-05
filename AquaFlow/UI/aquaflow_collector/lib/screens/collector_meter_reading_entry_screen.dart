@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:aquaflow_collector/l10n/app_localizations.dart';
 import 'package:aquaflow_collector/models/collector_meter_reading.dart';
 import 'package:aquaflow_collector/models/collector_water_meter.dart';
+import 'package:aquaflow_collector/screens/collector_meter_reading_history_screen.dart';
 import 'package:aquaflow_collector/services/collector_meter_reading_exception.dart';
 import 'package:aquaflow_collector/services/collector_meter_reading_service.dart';
 import 'package:aquaflow_collector/services/collector_water_meter_exception.dart';
@@ -296,6 +297,15 @@ class _CollectorMeterReadingEntryScreenState
       appBar: AppBar(
         title: Text(meter.serialNumber),
         actions: [
+          IconButton(
+            tooltip: loc.readingHistoryTooltip,
+            icon: const Icon(Icons.history),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => CollectorMeterReadingHistoryScreen(meter: meter),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: loc.newFaultReportTooltip,
             icon: const Icon(Icons.add_alert_outlined),
