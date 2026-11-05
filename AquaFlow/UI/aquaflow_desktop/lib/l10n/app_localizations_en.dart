@@ -1413,4 +1413,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationsManageNavLabel => 'Manage notifications';
+
+  @override
+  String get reportsNavLabel => 'Reports';
+
+  @override
+  String get reportsScreenTitle => 'Reports';
+
+  @override
+  String get reportsScreenSubtitle =>
+      'Download or print PDF reports for the selected period.';
+
+  @override
+  String get reportsConsumptionTitle => 'Water consumption by settlement';
+
+  @override
+  String get reportsConsumptionDescription =>
+      'Total water consumption per settlement for the selected period and city.';
+
+  @override
+  String get reportsBillingTitle => 'Invoices and collection';
+
+  @override
+  String get reportsBillingDescription =>
+      'Issued, paid and unpaid invoices with collected amounts for the selected period.';
+
+  @override
+  String get reportsDownloadPdf => 'Download PDF';
+
+  @override
+  String get reportsPrint => 'Print';
+
+  @override
+  String get reportsInvalidRange =>
+      'The start date must not be after the end date.';
+
+  @override
+  String reportsSavedTo(String path) {
+    return 'Saved: $path';
+  }
 }

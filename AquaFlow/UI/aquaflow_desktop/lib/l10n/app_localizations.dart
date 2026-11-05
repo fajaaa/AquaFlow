@@ -2665,6 +2665,72 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Upravljanje obavijestima'**
   String get notificationsManageNavLabel;
+
+  /// No description provided for @reportsNavLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izvještaji'**
+  String get reportsNavLabel;
+
+  /// No description provided for @reportsScreenTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izvještaji'**
+  String get reportsScreenTitle;
+
+  /// No description provided for @reportsScreenSubtitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preuzmite ili ispišite PDF izvještaje za odabrani period.'**
+  String get reportsScreenSubtitle;
+
+  /// No description provided for @reportsConsumptionTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potrošnja vode po naseljima'**
+  String get reportsConsumptionTitle;
+
+  /// No description provided for @reportsConsumptionDescription.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ukupna potrošnja vode po naseljima za odabrani period i grad.'**
+  String get reportsConsumptionDescription;
+
+  /// No description provided for @reportsBillingTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Računi i naplata'**
+  String get reportsBillingTitle;
+
+  /// No description provided for @reportsBillingDescription.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izdati, plaćeni i neplaćeni računi sa iznosima naplate za odabrani period.'**
+  String get reportsBillingDescription;
+
+  /// No description provided for @reportsDownloadPdf.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preuzmi PDF'**
+  String get reportsDownloadPdf;
+
+  /// No description provided for @reportsPrint.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ispiši'**
+  String get reportsPrint;
+
+  /// No description provided for @reportsInvalidRange.
+  ///
+  /// In bs, this message translates to:
+  /// **'Početni datum mora biti prije ili jednak krajnjem datumu.'**
+  String get reportsInvalidRange;
+
+  /// No description provided for @reportsSavedTo.
+  ///
+  /// In bs, this message translates to:
+  /// **'Sačuvano: {path}'**
+  String reportsSavedTo(String path);
 }
 
 class _AppLocalizationsDelegate

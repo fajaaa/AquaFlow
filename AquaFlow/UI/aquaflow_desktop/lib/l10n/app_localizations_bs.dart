@@ -1408,4 +1408,43 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get notificationsManageNavLabel => 'Upravljanje obavijestima';
+
+  @override
+  String get reportsNavLabel => 'Izvještaji';
+
+  @override
+  String get reportsScreenTitle => 'Izvještaji';
+
+  @override
+  String get reportsScreenSubtitle =>
+      'Preuzmite ili ispišite PDF izvještaje za odabrani period.';
+
+  @override
+  String get reportsConsumptionTitle => 'Potrošnja vode po naseljima';
+
+  @override
+  String get reportsConsumptionDescription =>
+      'Ukupna potrošnja vode po naseljima za odabrani period i grad.';
+
+  @override
+  String get reportsBillingTitle => 'Računi i naplata';
+
+  @override
+  String get reportsBillingDescription =>
+      'Izdati, plaćeni i neplaćeni računi sa iznosima naplate za odabrani period.';
+
+  @override
+  String get reportsDownloadPdf => 'Preuzmi PDF';
+
+  @override
+  String get reportsPrint => 'Ispiši';
+
+  @override
+  String get reportsInvalidRange =>
+      'Početni datum mora biti prije ili jednak krajnjem datumu.';
+
+  @override
+  String reportsSavedTo(String path) {
+    return 'Sačuvano: $path';
+  }
 }

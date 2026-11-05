@@ -460,5 +460,23 @@
   "notificationOpenAction": "Open",
   "notificationOpenRelatedFailed": "The related item couldn't be opened. It may no longer be available.",
   "notificationsInboxNavLabel": "My notifications",
-  "notificationsManageNavLabel": "Manage notifications"
+  "notificationsManageNavLabel": "Manage notifications",
+  "reportsNavLabel": "Reports",
+  "reportsScreenTitle": "Reports",
+  "reportsScreenSubtitle": "Download or print PDF reports for the selected period.",
+  "reportsConsumptionTitle": "Water consumption by settlement",
+  "reportsConsumptionDescription": "Total water consumption per settlement for the selected period and city.",
+  "reportsBillingTitle": "Invoices and collection",
+  "reportsBillingDescription": "Issued, paid and unpaid invoices with collected amounts for the selected period.",
+  "reportsDownloadPdf": "Download PDF",
+  "reportsPrint": "Print",
+  "reportsInvalidRange": "The start date must not be after the end date.",
+  "reportsSavedTo": "Saved: {path}",
+  "@reportsSavedTo": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  }
 }

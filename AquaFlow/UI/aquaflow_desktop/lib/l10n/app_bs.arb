@@ -1929,5 +1929,23 @@
   "notificationsManageNavLabel": "Upravljanje obavijestima",
   "@notificationsManageNavLabel": {
     "description": "Admin sidebar sub-item under 'Obavijesti': the CRUD table for admin-authored notifications."
+  },
+  "reportsNavLabel": "Izvještaji",
+  "reportsScreenTitle": "Izvještaji",
+  "reportsScreenSubtitle": "Preuzmite ili ispišite PDF izvještaje za odabrani period.",
+  "reportsConsumptionTitle": "Potrošnja vode po naseljima",
+  "reportsConsumptionDescription": "Ukupna potrošnja vode po naseljima za odabrani period i grad.",
+  "reportsBillingTitle": "Računi i naplata",
+  "reportsBillingDescription": "Izdati, plaćeni i neplaćeni računi sa iznosima naplate za odabrani period.",
+  "reportsDownloadPdf": "Preuzmi PDF",
+  "reportsPrint": "Ispiši",
+  "reportsInvalidRange": "Početni datum mora biti prije ili jednak krajnjem datumu.",
+  "reportsSavedTo": "Sačuvano: {path}",
+  "@reportsSavedTo": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
   }
 }

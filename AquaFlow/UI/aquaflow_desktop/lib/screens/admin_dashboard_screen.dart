@@ -13,6 +13,7 @@ import 'package:aquaflow_desktop/screens/admin_account_edit_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_codebook_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_collectors_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_consumption_alerts_screen.dart';
+import 'package:aquaflow_desktop/screens/admin_reports_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_fault_reports_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_invoices_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_notifications_screen.dart';
@@ -157,6 +158,14 @@ List<_AdminNavEntry> _buildNavEntries(
         selectedIcon: Icons.grid_view,
         label: loc.dashboardLabel,
         builder: (_) => const _DashboardOverview(),
+      ),
+    ),
+    _AdminNavLeaf(
+      _AdminNavItem(
+        icon: Icons.picture_as_pdf_outlined,
+        selectedIcon: Icons.picture_as_pdf,
+        label: loc.reportsNavLabel,
+        builder: (_) => const AdminReportsScreen(),
       ),
     ),
     _AdminNavGroup(
