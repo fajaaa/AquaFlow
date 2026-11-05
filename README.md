@@ -244,12 +244,14 @@ notepad .\AquaFlow\AquaFlow.WebAPI\.env
 At minimum, set:
 
 ```env
-ConnectionStrings__DefaultConnection=Server=localhost,1435;Database=AquaFlow;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False
+ConnectionStrings__DefaultConnection=Server=localhost,1435;Database=210126;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False
 JwtToken__Issuer=AquaFlow
 JwtToken__Audience=AquaFlowClients
 JwtToken__SecretKey=<random-value-at-least-32-characters>
 RabbitMQ__ConnectionString=host=localhost;username=admin;password=admin
 ```
+
+The database is named after the student index number (`210126`), as required by the course rules.
 
 See [Configuration](#configuration) for the full key reference, why `.env` isn't committed, and
 how the submitted archive replaces this step for a grader. `TrustServerCertificate=True` and
