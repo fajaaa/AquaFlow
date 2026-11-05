@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/widgets/lookup_dropdown.dart';
 import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_collector_profile.dart';
 import 'package:aquaflow_desktop/models/admin_fault_report.dart';
@@ -275,18 +276,12 @@ class _AdminFaultReportsScreenState extends State<AdminFaultReportsScreen>
         ),
         SizedBox(
           width: 190,
-          child: DropdownButtonFormField<String>(
-            initialValue: _statusFilter ?? '',
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: loc.statusFieldLabel,
-              prefixIcon: const Icon(Icons.filter_alt_outlined),
-            ),
-            items: [
-              DropdownMenuItem(value: '', child: Text(loc.allOption)),
-              for (final entry in _statusOptions(loc).entries)
-                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
-            ],
+          child: LookupDropdown(
+            route: 'FaultReportStatuses',
+            value: _statusFilter ?? '',
+            includeAllOption: true,
+            label: loc.statusFieldLabel,
+            icon: Icons.filter_alt_outlined,
             onChanged: loading || mutating
                 ? null
                 : (value) => _setStatusFilter(value ?? ''),

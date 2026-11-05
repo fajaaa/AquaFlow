@@ -229,12 +229,8 @@ class _AdminConsumptionAlertsScreenState
                         DataRow(
                           cells: [
                             DataCell(Text(_textOrDash(item.alertType))),
-                            DataCell(
-                              Text(_formatDecimal(item.measuredValue)),
-                            ),
-                            DataCell(
-                              Text(_formatDecimal(item.thresholdValue)),
-                            ),
+                            DataCell(Text(_formatDecimal(item.measuredValue))),
+                            DataCell(Text(_formatDecimal(item.thresholdValue))),
                             DataCell(_WrappedText(item.message)),
                             DataCell(
                               Text(
@@ -248,9 +244,7 @@ class _AdminConsumptionAlertsScreenState
                             ),
                             DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
-                              _ResolvedStatusPill(
-                                isResolved: item.isResolved,
-                              ),
+                              _ResolvedStatusPill(isResolved: item.isResolved),
                             ),
                             DataCell(
                               TableRowActions(
@@ -261,9 +255,7 @@ class _AdminConsumptionAlertsScreenState
                                     onPressed: mutating || item.isResolved
                                         ? null
                                         : () => _markAsResolved(item),
-                                    icon: const Icon(
-                                      Icons.task_alt_outlined,
-                                    ),
+                                    icon: const Icon(Icons.task_alt_outlined),
                                   ),
                                 ],
                               ),
@@ -289,10 +281,7 @@ class _WrappedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 280,
-      child: Text(_textOrDash(text), softWrap: true),
-    );
+    return SizedBox(width: 280, child: Text(_textOrDash(text), softWrap: true));
   }
 }
 
@@ -307,10 +296,10 @@ class _ResolvedStatusPill extends StatelessWidget {
     final color = isResolved
         ? const Color(0xFF2E7D32)
         : const Color(0xFFB91C1C);
-    final label = isResolved ? loc.resolvedStatusLabel : loc.unresolvedStatusLabel;
-    final icon = isResolved
-        ? Icons.check_circle_outline
-        : Icons.error_outline;
+    final label = isResolved
+        ? loc.resolvedStatusLabel
+        : loc.unresolvedStatusLabel;
+    final icon = isResolved ? Icons.check_circle_outline : Icons.error_outline;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),

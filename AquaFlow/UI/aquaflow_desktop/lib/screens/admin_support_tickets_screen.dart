@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/widgets/lookup_dropdown.dart';
 import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_support_ticket.dart';
 import 'package:aquaflow_desktop/models/admin_support_ticket_page.dart';
@@ -14,11 +15,6 @@ import 'package:aquaflow_desktop/shared/widgets/paged_table_pagination_bar.dart'
 import 'package:aquaflow_desktop/shared/widgets/refresh_button.dart';
 
 const Color _awaitingReplyColor = Color(0xFFF9A825);
-
-Map<String, String> _statusOptions(AppLocalizations loc) => <String, String>{
-  'Open': loc.supportTicketFilterOpen,
-  'Closed': loc.supportTicketFilterClosed,
-};
 
 /// Admin table over `/SupportTickets` (`AdminSupportTicketService`/`AdminSupportTicket`
 /// data layer) - every customer's ticket, not just the signed-in admin's, same
@@ -223,17 +219,12 @@ class _AdminSupportTicketsScreenState extends State<AdminSupportTicketsScreen> {
         ),
         SizedBox(
           width: 200,
-          child: DropdownButtonFormField<String>(
-            initialValue: _statusFilter ?? '',
-            decoration: InputDecoration(
-              labelText: loc.statusFieldLabel,
-              prefixIcon: const Icon(Icons.filter_alt_outlined),
-            ),
-            items: [
-              DropdownMenuItem(value: '', child: Text(loc.allOption)),
-              for (final entry in _statusOptions(loc).entries)
-                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
-            ],
+          child: LookupDropdown(
+            route: 'SupportTicketStatuses',
+            value: _statusFilter ?? '',
+            includeAllOption: true,
+            label: loc.statusFieldLabel,
+            icon: Icons.filter_alt_outlined,
             onChanged: _loading
                 ? null
                 : (value) => _setStatusFilter(value ?? ''),

@@ -313,6 +313,85 @@ class AppLocalizationsDe extends AppLocalizations {
   String get codebookLabel => 'Codebuch';
 
   @override
+  String get statusCodebooksNavLabel => 'Status und Typen';
+
+  @override
+  String get statusCodebooksScreenSubtitle =>
+      'Verwaltung der Status und Typen, die in Filtern und Formularen verwendet werden.';
+
+  @override
+  String get lookupInvoiceStatuses => 'Rechnungsstatus';
+
+  @override
+  String get lookupPaymentStatuses => 'Zahlungsstatus';
+
+  @override
+  String get lookupPaymentMethods => 'Zahlungsarten';
+
+  @override
+  String get lookupFaultReportStatuses => 'Störungsmeldungsstatus';
+
+  @override
+  String get lookupWaterMeterRequestStatuses => 'Wasserzähler-Anfragestatus';
+
+  @override
+  String get lookupWaterMeterStatuses => 'Wasserzählerstatus';
+
+  @override
+  String get lookupSupportTicketStatuses => 'Support-Ticket-Status';
+
+  @override
+  String get lookupNotificationTypes => 'Benachrichtigungstypen';
+
+  @override
+  String get lookupConsumptionAlertTypes => 'Verbrauchswarnungstypen';
+
+  @override
+  String get lookupNameEnColumn => 'EN';
+
+  @override
+  String get lookupNameDeColumn => 'DE';
+
+  @override
+  String get lookupSortOrderLabel => 'Reihenfolge';
+
+  @override
+  String get lookupSystemColumn => 'System';
+
+  @override
+  String get lookupActiveColumn => 'Aktiv';
+
+  @override
+  String get newLookupItemTitle => 'Neuer Eintrag';
+
+  @override
+  String get editLookupItemTitle => 'Eintrag bearbeiten';
+
+  @override
+  String get newLookupItemButton => 'Eintrag hinzufügen';
+
+  @override
+  String get lookupItemCreatedSuccess => 'Eintrag hinzugefügt.';
+
+  @override
+  String get lookupItemSavedSuccess => 'Eintrag gespeichert.';
+
+  @override
+  String get lookupItemDeletedSuccess => 'Eintrag gelöscht.';
+
+  @override
+  String deleteLookupItemDialogContent(Object name) {
+    return 'Möchten Sie den Eintrag \"$name\" wirklich löschen?';
+  }
+
+  @override
+  String get noLookupItemsMessage => 'Keine Einträge.';
+
+  @override
+  String get lookupItemsEmptyFilteredMessage =>
+      'Keine Einträge entsprechen der Suche.';
+
+  @override
   String get dashboardOverviewSubtitle =>
       'Übersicht der wichtigsten Kennzahlen';
 

@@ -664,6 +664,156 @@ abstract class AppLocalizations {
   /// **'Šifarnik'**
   String get codebookLabel;
 
+  /// No description provided for @statusCodebooksNavLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi i tipovi'**
+  String get statusCodebooksNavLabel;
+
+  /// No description provided for @statusCodebooksScreenSubtitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upravljanje statusima i tipovima koji se koriste u filterima i formama.'**
+  String get statusCodebooksScreenSubtitle;
+
+  /// No description provided for @lookupInvoiceStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi računa'**
+  String get lookupInvoiceStatuses;
+
+  /// No description provided for @lookupPaymentStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi plaćanja'**
+  String get lookupPaymentStatuses;
+
+  /// No description provided for @lookupPaymentMethods.
+  ///
+  /// In bs, this message translates to:
+  /// **'Načini plaćanja'**
+  String get lookupPaymentMethods;
+
+  /// No description provided for @lookupFaultReportStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi prijava kvarova'**
+  String get lookupFaultReportStatuses;
+
+  /// No description provided for @lookupWaterMeterRequestStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi zahtjeva za vodomjer'**
+  String get lookupWaterMeterRequestStatuses;
+
+  /// No description provided for @lookupWaterMeterStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi vodomjera'**
+  String get lookupWaterMeterStatuses;
+
+  /// No description provided for @lookupSupportTicketStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi tiketa podrške'**
+  String get lookupSupportTicketStatuses;
+
+  /// No description provided for @lookupNotificationTypes.
+  ///
+  /// In bs, this message translates to:
+  /// **'Tipovi obavještenja'**
+  String get lookupNotificationTypes;
+
+  /// No description provided for @lookupConsumptionAlertTypes.
+  ///
+  /// In bs, this message translates to:
+  /// **'Tipovi upozorenja o potrošnji'**
+  String get lookupConsumptionAlertTypes;
+
+  /// No description provided for @lookupNameEnColumn.
+  ///
+  /// In bs, this message translates to:
+  /// **'EN'**
+  String get lookupNameEnColumn;
+
+  /// No description provided for @lookupNameDeColumn.
+  ///
+  /// In bs, this message translates to:
+  /// **'DE'**
+  String get lookupNameDeColumn;
+
+  /// No description provided for @lookupSortOrderLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Redoslijed'**
+  String get lookupSortOrderLabel;
+
+  /// No description provided for @lookupSystemColumn.
+  ///
+  /// In bs, this message translates to:
+  /// **'Sistemski'**
+  String get lookupSystemColumn;
+
+  /// No description provided for @lookupActiveColumn.
+  ///
+  /// In bs, this message translates to:
+  /// **'Aktivan'**
+  String get lookupActiveColumn;
+
+  /// No description provided for @newLookupItemTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova stavka'**
+  String get newLookupItemTitle;
+
+  /// No description provided for @editLookupItemTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Uredi stavku'**
+  String get editLookupItemTitle;
+
+  /// No description provided for @newLookupItemButton.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dodaj stavku'**
+  String get newLookupItemButton;
+
+  /// No description provided for @lookupItemCreatedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Stavka je dodana.'**
+  String get lookupItemCreatedSuccess;
+
+  /// No description provided for @lookupItemSavedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Stavka je sačuvana.'**
+  String get lookupItemSavedSuccess;
+
+  /// No description provided for @lookupItemDeletedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Stavka je obrisana.'**
+  String get lookupItemDeletedSuccess;
+
+  /// No description provided for @deleteLookupItemDialogContent.
+  ///
+  /// In bs, this message translates to:
+  /// **'Jeste li sigurni da želite obrisati stavku \"{name}\"?'**
+  String deleteLookupItemDialogContent(Object name);
+
+  /// No description provided for @noLookupItemsMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema stavki.'**
+  String get noLookupItemsMessage;
+
+  /// No description provided for @lookupItemsEmptyFilteredMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nijedna stavka ne odgovara pretrazi.'**
+  String get lookupItemsEmptyFilteredMessage;
+
   /// Subtitle under the dashboard overview heading.
   ///
   /// In bs, this message translates to:

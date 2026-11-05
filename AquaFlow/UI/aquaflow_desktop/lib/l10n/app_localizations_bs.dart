@@ -307,6 +307,85 @@ class AppLocalizationsBs extends AppLocalizations {
   String get codebookLabel => 'Šifarnik';
 
   @override
+  String get statusCodebooksNavLabel => 'Statusi i tipovi';
+
+  @override
+  String get statusCodebooksScreenSubtitle =>
+      'Upravljanje statusima i tipovima koji se koriste u filterima i formama.';
+
+  @override
+  String get lookupInvoiceStatuses => 'Statusi računa';
+
+  @override
+  String get lookupPaymentStatuses => 'Statusi plaćanja';
+
+  @override
+  String get lookupPaymentMethods => 'Načini plaćanja';
+
+  @override
+  String get lookupFaultReportStatuses => 'Statusi prijava kvarova';
+
+  @override
+  String get lookupWaterMeterRequestStatuses => 'Statusi zahtjeva za vodomjer';
+
+  @override
+  String get lookupWaterMeterStatuses => 'Statusi vodomjera';
+
+  @override
+  String get lookupSupportTicketStatuses => 'Statusi tiketa podrške';
+
+  @override
+  String get lookupNotificationTypes => 'Tipovi obavještenja';
+
+  @override
+  String get lookupConsumptionAlertTypes => 'Tipovi upozorenja o potrošnji';
+
+  @override
+  String get lookupNameEnColumn => 'EN';
+
+  @override
+  String get lookupNameDeColumn => 'DE';
+
+  @override
+  String get lookupSortOrderLabel => 'Redoslijed';
+
+  @override
+  String get lookupSystemColumn => 'Sistemski';
+
+  @override
+  String get lookupActiveColumn => 'Aktivan';
+
+  @override
+  String get newLookupItemTitle => 'Nova stavka';
+
+  @override
+  String get editLookupItemTitle => 'Uredi stavku';
+
+  @override
+  String get newLookupItemButton => 'Dodaj stavku';
+
+  @override
+  String get lookupItemCreatedSuccess => 'Stavka je dodana.';
+
+  @override
+  String get lookupItemSavedSuccess => 'Stavka je sačuvana.';
+
+  @override
+  String get lookupItemDeletedSuccess => 'Stavka je obrisana.';
+
+  @override
+  String deleteLookupItemDialogContent(Object name) {
+    return 'Jeste li sigurni da želite obrisati stavku \"$name\"?';
+  }
+
+  @override
+  String get noLookupItemsMessage => 'Nema stavki.';
+
+  @override
+  String get lookupItemsEmptyFilteredMessage =>
+      'Nijedna stavka ne odgovara pretrazi.';
+
+  @override
   String get dashboardOverviewSubtitle => 'Pregled ključnih pokazatelja';
 
   @override

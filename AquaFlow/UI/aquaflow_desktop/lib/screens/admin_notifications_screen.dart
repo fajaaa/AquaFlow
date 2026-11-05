@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_desktop/widgets/lookup_dropdown.dart';
 import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_notification_draft.dart';
 import 'package:aquaflow_desktop/models/admin_notification_image.dart';
@@ -250,23 +251,12 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         ),
         SizedBox(
           width: 210,
-          child: DropdownButtonFormField<String>(
-            initialValue: _typeFilter ?? '',
-            decoration: InputDecoration(
-              labelText: loc.typeFieldLabel,
-              prefixIcon: const Icon(Icons.category_outlined),
-            ),
-            items: [
-              DropdownMenuItem(
-                value: '',
-                child: Text(loc.notificationsAllTypesOption),
-              ),
-              for (final option in _notificationTypeOptions(loc))
-                DropdownMenuItem(
-                  value: option.value,
-                  child: Text(option.label),
-                ),
-            ],
+          child: LookupDropdown(
+            route: 'NotificationTypes',
+            value: _typeFilter ?? '',
+            includeAllOption: true,
+            label: loc.typeFieldLabel,
+            icon: Icons.category_outlined,
             onChanged: loading || mutating
                 ? null
                 : (value) => _setTypeFilter(value ?? ''),
@@ -666,10 +656,6 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    final typeOptions = _optionsWithCurrent(
-      _notificationTypeOptions(loc),
-      _type,
-    );
     final audienceOptions = _optionsWithCurrent(
       _audienceOptions(loc),
       _audience,
@@ -722,19 +708,11 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                 Row(
                   children: [
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _type,
-                        decoration: InputDecoration(
-                          labelText: loc.typeFieldLabel,
-                          prefixIcon: const Icon(Icons.category_outlined),
-                        ),
-                        items: [
-                          for (final option in typeOptions)
-                            DropdownMenuItem(
-                              value: option.value,
-                              child: Text(option.label),
-                            ),
-                        ],
+                      child: LookupDropdown(
+                        route: 'NotificationTypes',
+                        value: _type,
+                        label: loc.typeFieldLabel,
+                        icon: Icons.category_outlined,
                         onChanged: enabled
                             ? (value) {
                                 if (value == null) return;
@@ -1004,15 +982,6 @@ class _SelectOption {
   final String value;
   final String label;
 }
-
-List<_SelectOption> _notificationTypeOptions(AppLocalizations loc) => [
-  _SelectOption(value: 'Info', label: loc.notificationTypeInfoLabel),
-  _SelectOption(
-    value: 'PlannedWorks',
-    label: loc.notificationTypePlannedWorksLabel,
-  ),
-  _SelectOption(value: 'Warning', label: loc.notificationTypeWarningLabel),
-];
 
 List<_SelectOption> _audienceOptions(AppLocalizations loc) => [
   _SelectOption(value: 'All', label: loc.allUsersAudienceLabel),

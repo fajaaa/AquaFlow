@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/widgets/lookup_dropdown.dart';
 import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_invoice.dart';
 import 'package:aquaflow_desktop/services/admin_invoice_exception.dart';
@@ -25,12 +26,6 @@ class AdminInvoicesScreen extends StatefulWidget {
   @override
   State<AdminInvoicesScreen> createState() => _AdminInvoicesScreenState();
 }
-
-Map<String, String> _statusOptions(AppLocalizations loc) => <String, String>{
-  'Issued': loc.invoiceStatusIssued,
-  'Paid': loc.invoiceStatusPaid,
-  'Cancelled': loc.invoiceStatusCancelled,
-};
 
 class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
     with PagedListController<AdminInvoice, AdminInvoicesScreen> {
@@ -227,18 +222,12 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
         ),
         SizedBox(
           width: 200,
-          child: DropdownButtonFormField<String>(
-            initialValue: _statusFilter ?? '',
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: loc.statusFieldLabel,
-              prefixIcon: const Icon(Icons.filter_alt_outlined),
-            ),
-            items: [
-              DropdownMenuItem(value: '', child: Text(loc.allOption)),
-              for (final entry in _statusOptions(loc).entries)
-                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
-            ],
+          child: LookupDropdown(
+            route: 'InvoiceStatuses',
+            value: _statusFilter ?? '',
+            includeAllOption: true,
+            label: loc.statusFieldLabel,
+            icon: Icons.filter_alt_outlined,
             onChanged: loading || mutating
                 ? null
                 : (value) => _setStatusFilter(value ?? ''),

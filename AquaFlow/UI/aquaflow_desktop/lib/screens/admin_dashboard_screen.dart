@@ -11,6 +11,7 @@ import 'package:aquaflow_desktop/models/dashboard_status_breakdown.dart';
 import 'package:aquaflow_desktop/models/dashboard_trend_point.dart';
 import 'package:aquaflow_desktop/screens/admin_account_edit_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_codebook_screen.dart';
+import 'package:aquaflow_desktop/screens/admin_status_codebooks_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_collectors_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_consumption_alerts_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_reports_screen.dart';
@@ -288,6 +289,12 @@ List<_AdminNavEntry> _buildNavEntries(
           selectedIcon: Icons.location_city,
           label: loc.codebookLabel,
           builder: (_) => const AdminCodebookScreen(),
+        ),
+        _AdminNavItem(
+          icon: Icons.list_alt_outlined,
+          selectedIcon: Icons.list_alt,
+          label: loc.statusCodebooksNavLabel,
+          builder: (_) => const AdminStatusCodebooksScreen(),
         ),
         _AdminNavItem(
           icon: Icons.business_outlined,
@@ -1098,8 +1105,7 @@ class _DashboardOverviewState extends State<_DashboardOverview> {
           children: [
             for (final card in cards)
               SizedBox(
-                width:
-                    (constraints.maxWidth - (columns - 1) * 16) / columns,
+                width: (constraints.maxWidth - (columns - 1) * 16) / columns,
                 child: card,
               ),
           ],
@@ -1360,10 +1366,7 @@ class _TrendLineView extends StatelessWidget {
         ),
       );
     }
-    return CustomPaint(
-      size: Size.infinite,
-      painter: _TrendLinePainter(points),
-    );
+    return CustomPaint(size: Size.infinite, painter: _TrendLinePainter(points));
   }
 }
 
@@ -1498,7 +1501,10 @@ class _StatusDonutView extends StatelessWidget {
 
     final slices = <(double, Color)>[
       for (var i = 0; i < data.length; i++)
-        (data[i].count / total * 100, _statusPalette[i % _statusPalette.length]),
+        (
+          data[i].count / total * 100,
+          _statusPalette[i % _statusPalette.length],
+        ),
     ];
 
     return Column(
@@ -1683,7 +1689,8 @@ class _StatusBarPainter extends CustomPainter {
 /// Rounds [value] up to a "nice" number (1/2/5 x a power of 10) for chart
 /// y-axis ticks, e.g. 83 -> 100, 340 -> 500, 4 -> 5.
 double _niceCeil(double value) {
-  final magnitude = math.pow(10, (math.log(value) / math.ln10).floor())
+  final magnitude = math
+      .pow(10, (math.log(value) / math.ln10).floor())
       .toDouble();
   final residual = value / magnitude;
   final niceResidual = residual <= 1

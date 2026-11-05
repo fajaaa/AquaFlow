@@ -309,6 +309,84 @@ class AppLocalizationsEn extends AppLocalizations {
   String get codebookLabel => 'Codebook';
 
   @override
+  String get statusCodebooksNavLabel => 'Statuses and types';
+
+  @override
+  String get statusCodebooksScreenSubtitle =>
+      'Manage the statuses and types used in filters and forms.';
+
+  @override
+  String get lookupInvoiceStatuses => 'Invoice statuses';
+
+  @override
+  String get lookupPaymentStatuses => 'Payment statuses';
+
+  @override
+  String get lookupPaymentMethods => 'Payment methods';
+
+  @override
+  String get lookupFaultReportStatuses => 'Fault report statuses';
+
+  @override
+  String get lookupWaterMeterRequestStatuses => 'Water meter request statuses';
+
+  @override
+  String get lookupWaterMeterStatuses => 'Water meter statuses';
+
+  @override
+  String get lookupSupportTicketStatuses => 'Support ticket statuses';
+
+  @override
+  String get lookupNotificationTypes => 'Notification types';
+
+  @override
+  String get lookupConsumptionAlertTypes => 'Consumption alert types';
+
+  @override
+  String get lookupNameEnColumn => 'EN';
+
+  @override
+  String get lookupNameDeColumn => 'DE';
+
+  @override
+  String get lookupSortOrderLabel => 'Sort order';
+
+  @override
+  String get lookupSystemColumn => 'System';
+
+  @override
+  String get lookupActiveColumn => 'Active';
+
+  @override
+  String get newLookupItemTitle => 'New item';
+
+  @override
+  String get editLookupItemTitle => 'Edit item';
+
+  @override
+  String get newLookupItemButton => 'Add item';
+
+  @override
+  String get lookupItemCreatedSuccess => 'Item added.';
+
+  @override
+  String get lookupItemSavedSuccess => 'Item saved.';
+
+  @override
+  String get lookupItemDeletedSuccess => 'Item deleted.';
+
+  @override
+  String deleteLookupItemDialogContent(Object name) {
+    return 'Are you sure you want to delete the item \"$name\"?';
+  }
+
+  @override
+  String get noLookupItemsMessage => 'No items.';
+
+  @override
+  String get lookupItemsEmptyFilteredMessage => 'No items match your search.';
+
+  @override
   String get dashboardOverviewSubtitle => 'Overview of key metrics';
 
   @override
