@@ -261,6 +261,7 @@ public class InvoiceServiceTests
             mapper,
             new NotSupportedInvoiceStateResolver(),
             new NotSupportedPaymentProvider(),
+            new NotSupportedPaymentCardService(),
             Options.Create(new PaymentsOptions()),
             Options.Create(new StripeOptions()),
             NullLogger<InvoiceService>.Instance,

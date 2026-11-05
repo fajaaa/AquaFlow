@@ -75,6 +75,12 @@ public partial class AquaFlowDbContext : DbContext
             .HasIndex(profile => profile.CustomerCode)
             .IsUnique();
 
+        // One Stripe Customer per profile; filtered so the many profiles without one (NULL) don't collide.
+        modelBuilder.Entity<CustomerProfile>()
+            .HasIndex(profile => profile.StripeCustomerId)
+            .IsUnique()
+            .HasFilter("[StripeCustomerId] IS NOT NULL");
+
         // EmployeeCode is generated server-side (CollectorProfileService.GenerateEmployeeCodeAsync);
         // the unique index is the hard backstop behind that generation.
         modelBuilder.Entity<CollectorProfile>()

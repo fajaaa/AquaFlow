@@ -29,6 +29,13 @@ public class StripePaymentProvider : IPaymentProvider
             }
         };
 
+        // Attaching the Customer lets the PaymentSheet list/save cards; SetupFutureUsage is deliberately
+        // not set - the PaymentSheet's own "save card" checkbox decides that.
+        if (!string.IsNullOrWhiteSpace(context.StripeCustomerId))
+        {
+            options.Customer = context.StripeCustomerId;
+        }
+
         var requestOptions = string.IsNullOrWhiteSpace(context.IdempotencyKey)
             ? null
             : new RequestOptions { IdempotencyKey = context.IdempotencyKey };

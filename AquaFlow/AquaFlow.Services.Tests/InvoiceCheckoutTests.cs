@@ -391,7 +391,11 @@ public class InvoiceCheckoutTests
         context.SaveChanges();
     }
 
-    internal static InvoiceService CreateService(AquaFlowDbContext context, IPaymentProvider paymentProvider, IPushNotificationSender? pushSender = null)
+    internal static InvoiceService CreateService(
+        AquaFlowDbContext context,
+        IPaymentProvider paymentProvider,
+        IPushNotificationSender? pushSender = null,
+        IPaymentCardService? cardService = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<Invoice, Model.Responses.InvoiceResponse>()
@@ -408,6 +412,7 @@ public class InvoiceCheckoutTests
             mapper,
             stateResolver,
             paymentProvider,
+            cardService ?? new NotSupportedPaymentCardService(),
             Options.Create(new PaymentsOptions()),
             Options.Create(new StripeOptions()),
             NullLogger<InvoiceService>.Instance,

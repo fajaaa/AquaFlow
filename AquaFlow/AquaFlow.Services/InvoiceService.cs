@@ -23,6 +23,7 @@ public class InvoiceService
     private readonly AquaFlowDbContext _dbContext;
     private readonly IInvoiceStateResolver _stateResolver;
     private readonly IPaymentProvider _paymentProvider;
+    private readonly IPaymentCardService _paymentCardService;
     private readonly PaymentsOptions _paymentsOptions;
     private readonly StripeOptions _stripeOptions;
     private readonly ILogger<InvoiceService> _logger;
@@ -33,6 +34,7 @@ public class InvoiceService
         IMapper mapper,
         IInvoiceStateResolver stateResolver,
         IPaymentProvider paymentProvider,
+        IPaymentCardService paymentCardService,
         IOptions<PaymentsOptions> paymentsOptions,
         IOptions<StripeOptions> stripeOptions,
         ILogger<InvoiceService> logger,
@@ -42,6 +44,7 @@ public class InvoiceService
         _dbContext = dbContext;
         _stateResolver = stateResolver;
         _paymentProvider = paymentProvider;
+        _paymentCardService = paymentCardService;
         _paymentsOptions = paymentsOptions.Value;
         _stripeOptions = stripeOptions.Value;
         _logger = logger;
@@ -175,8 +178,16 @@ public class InvoiceService
         if (resumablePayment != null)
         {
             // Resuming never creates anything at the provider, so the idempotency key is not used here.
-            return ToCheckoutSessionResponse(resumablePayment, resumeResult!.RedirectUrl, resumeResult.ClientSecret);
+            return await AttachSavedCardSupportAsync(
+                ToCheckoutSessionResponse(resumablePayment, resumeResult!.RedirectUrl, resumeResult.ClientSecret),
+                resumablePayment.CustomerId);
         }
+
+        // With a saved-card capable provider the Stripe customer is attached to the new intent so the
+        // PaymentSheet can list the customer's cards and offer "save card"; Manual leaves it null.
+        var stripeCustomerId = _paymentCardService.IsSupported
+            ? await _paymentCardService.EnsureStripeCustomerAsync(invoice.CustomerId)
+            : null;
 
         var checkoutResult = await _paymentProvider.CreateCheckoutAsync(
             new PaymentCheckoutContext(
@@ -184,7 +195,8 @@ public class InvoiceService
                 invoice.CustomerId,
                 remaining,
                 _paymentsOptions.Currency,
-                await DeriveAttemptIdempotencyKeyAsync(invoice.Id, providerName, idempotencyKey)));
+                await DeriveAttemptIdempotencyKeyAsync(invoice.Id, providerName, idempotencyKey),
+                stripeCustomerId));
 
         var payment = new Payment
         {
@@ -201,7 +213,24 @@ public class InvoiceService
         _dbContext.Payments.Add(payment);
         await _dbContext.SaveChangesAsync();
 
-        return ToCheckoutSessionResponse(payment, checkoutResult.RedirectUrl, checkoutResult.ClientSecret);
+        return await AttachSavedCardSupportAsync(
+            ToCheckoutSessionResponse(payment, checkoutResult.RedirectUrl, checkoutResult.ClientSecret),
+            payment.CustomerId);
+    }
+
+    // Fills StripeCustomerId + a fresh ephemeral key (short-lived, so never cached or stored) for a
+    // session the client will open a PaymentSheet for. No-op when saved cards are unsupported.
+    private async Task<CheckoutSessionResponse> AttachSavedCardSupportAsync(CheckoutSessionResponse response, int customerId)
+    {
+        if (!_paymentCardService.IsSupported)
+        {
+            return response;
+        }
+
+        var stripeCustomerId = await _paymentCardService.EnsureStripeCustomerAsync(customerId);
+        response.StripeCustomerId = stripeCustomerId;
+        response.EphemeralKeySecret = await _paymentCardService.CreateEphemeralKeyAsync(stripeCustomerId);
+        return response;
     }
 
     public async Task<PaymentResponse> ConfirmPaymentAsync(string provider, string providerTransactionId, PaymentConfirmationOutcome outcome)

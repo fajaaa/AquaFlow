@@ -317,6 +317,10 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("StripeCustomerId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("Theme")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -334,6 +338,10 @@ namespace AquaFlow.Services.Migrations
                         .IsUnique();
 
                     b.HasIndex("SettlementId");
+
+                    b.HasIndex("StripeCustomerId")
+                        .IsUnique()
+                        .HasFilter("[StripeCustomerId] IS NOT NULL");
 
                     b.HasIndex("UserId")
                         .IsUnique();

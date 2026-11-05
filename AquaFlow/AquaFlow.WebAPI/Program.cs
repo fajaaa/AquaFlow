@@ -328,6 +328,16 @@ builder.Services.AddScoped<IPaymentProvider>(_ =>
             $"Unknown payment provider '{providerName}'. Configure Payments:Provider to a supported value.")
     };
 });
+// Saved cards follow the same provider switch: real Stripe customers/cards for Stripe, a NotSupported
+// stub (IsSupported = false) for Manual.
+builder.Services.AddScoped<IPaymentCardService>(serviceProvider =>
+{
+    return providerName switch
+    {
+        PaymentProvider.Stripe => ActivatorUtilities.CreateInstance<StripePaymentCardService>(serviceProvider),
+        _ => new NotSupportedPaymentCardService()
+    };
+});
 // Invoice uses the state machine (InvoiceService) instead of the generic CRUD service and is
 // read-only over the generic API (InvoiceService extends EfReadService), so there is no patch mapping
 // and no generic IBaseCRUDService alias - InvoicesController depends on IInvoiceService directly.

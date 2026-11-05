@@ -36,7 +36,8 @@ public sealed record PaymentCheckoutContext(
     int CustomerId,
     decimal Amount,
     string Currency,
-    string? IdempotencyKey);
+    string? IdempotencyKey,
+    string? StripeCustomerId = null);
 
 // RedirectUrl is null for a provider with no hosted checkout page (e.g. the manual stub); a real
 // provider would return the URL the client should send the customer to. ClientSecret is null for a

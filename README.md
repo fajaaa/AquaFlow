@@ -77,6 +77,12 @@ attempt open, and only `payment_intent.canceled` ends it. If the customer alread
 the webhook has not arrived yet, checkout confirms the payment instead of opening a second
 PaymentSheet. The mobile app sends one idempotency key per payment attempt and reuses it when
 retrying after a network error.
+With Stripe, customers also manage saved cards (a Stripe Customer is created lazily and stored
+as `CustomerProfile.StripeCustomerId`): `GET /PaymentCards` lists them, `POST /PaymentCards/setup`
+adds one without paying (SetupIntent + ephemeral key) and `DELETE /PaymentCards/{paymentMethodId}`
+removes one (404 for a card that is not the caller's). The checkout response carries
+`StripeCustomerId`/`EphemeralKeySecret` so the PaymentSheet offers saved cards and "save card";
+with the Manual provider `IsSupported` is `false` and those fields stay null.
 
 **Fault reports and support tickets**
 Customers report faults against their own account (with photo attachments) and staff triage

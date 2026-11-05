@@ -26,6 +26,10 @@ public class CustomerProfile : EntityBase
     // String, not int: house numbers like "12A" or "bb" are common in this address format.
     [MaxLength(20)]
     public string? HouseNumber { get; set; }
+    // Stripe Customer id ("cus_..."), created lazily the first time the customer opens saved cards or
+    // checks out with Stripe; null until then and always null with the Manual provider.
+    [MaxLength(64)]
+    public string? StripeCustomerId { get; set; }
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     public ICollection<WaterConsumptionAlert> WaterConsumptionAlerts { get; set; } = new List<WaterConsumptionAlert>();
