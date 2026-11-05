@@ -48,6 +48,10 @@ endpoint. The server validates the reading (minimum 15-day spacing from the last
 reading, no lower value than the previous one unless the meter was physically replaced,
 retry-safe through a client-supplied idempotency key) and, when consumption is greater than
 zero, generates the priced invoice in the same transaction.
+If the customer is present and pays in cash, the collector ticks "customer pays cash" and the
+invoice is paid (Issued → Paid through the invoice state machine) in that same transaction.
+The collector app also shows each meter's reading history, and collectors can file a new fault
+report with photos from the field (the report and its photos are saved atomically).
 
 **New-connection requests**
 A customer requests service at an address, an administrator assigns it to a collector, and the

@@ -4,6 +4,7 @@ using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.InvoiceStateMachine;
 using FluentValidation;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
@@ -23,17 +24,23 @@ public class MeterReadingService
     private readonly AquaFlowDbContext _dbContext;
     private readonly IValidator<MeterReadingCollectorEntryRequest>? _collectorEntryValidator;
     private readonly ISystemNotificationService _systemNotifications;
+    // Same resolver InvoiceService uses: a cash payment taken at reading entry goes through the
+    // invoice state machine (Issued -> Paid) instead of setting Status directly. The states depend
+    // only on DbContext/mapper/notifications, so there is no DI cycle back to this service.
+    private readonly IInvoiceStateResolver _invoiceStateResolver;
 
     public MeterReadingService(
         AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<MeterReadingCollectorEntryRequest>> collectorEntryValidators,
-        ISystemNotificationService systemNotifications)
+        ISystemNotificationService systemNotifications,
+        IInvoiceStateResolver invoiceStateResolver)
         : base(dbContext, mapper)
     {
         _dbContext = dbContext;
         _collectorEntryValidator = collectorEntryValidators.FirstOrDefault();
         _systemNotifications = systemNotifications;
+        _invoiceStateResolver = invoiceStateResolver;
     }
 
     public async Task<MeterReadingCollectorEntryResponse> CreateForCollectorAsync(int callerUserId, MeterReadingCollectorEntryRequest request)
@@ -88,6 +95,15 @@ public class MeterReadingService
                 replayResponse.InvoiceId = existingReading.Invoice?.Id;
                 replayResponse.InvoiceNumber = existingReading.Invoice?.InvoiceNumber;
                 replayResponse.InvoiceTotalAmount = existingReading.Invoice?.TotalAmount;
+                replayResponse.InvoiceStatus = existingReading.Invoice?.Status;
+                // A replay never records a payment (even with PaidInCash): it only reports the one the
+                // original request may have recorded.
+                replayResponse.PaymentMethod = existingReading.Invoice == null
+                    ? null
+                    : await _dbContext.Payments
+                        .Where(payment => payment.InvoiceId == existingReading.Invoice.Id && payment.Status == PaymentStatus.Completed)
+                        .Select(payment => payment.PaymentMethod)
+                        .FirstOrDefaultAsync();
                 return replayResponse;
             }
         }
@@ -195,6 +211,7 @@ public class MeterReadingService
             // after the INSERT - so it is staged after the first save and committed in the same
             // transaction as the reading, the invoice and the LastReading update.
             var customerUserId = await _systemNotifications.GetCustomerUserIdAsync(waterMeter.CustomerId);
+            string? paymentMethod = null;
 
             await using (var transaction = await _dbContext.Database.BeginTransactionAsync())
             {
@@ -214,6 +231,17 @@ public class MeterReadingService
                     await _dbContext.SaveChangesAsync();
                 }
 
+                // Cash taken on the spot: credited through the Issued state's RecordPaymentAsync, which
+                // joins this transaction (BaseInvoiceState.CreditInvoiceAsync), so the reading, the
+                // invoice and the payment commit together or not at all. The amount is the invoice's
+                // server-computed remaining balance - nothing amount-related comes from the client.
+                if (request.PaidInCash)
+                {
+                    await _invoiceStateResolver.Resolve(invoice.Status)
+                        .RecordPaymentAsync(invoice, callerUserId, PaymentMethod.Cash);
+                    paymentMethod = PaymentMethod.Cash;
+                }
+
                 await transaction.CommitAsync();
             }
 
@@ -223,6 +251,8 @@ public class MeterReadingService
             response.InvoiceId = invoice.Id;
             response.InvoiceNumber = invoice.InvoiceNumber;
             response.InvoiceTotalAmount = invoice.TotalAmount;
+            response.InvoiceStatus = invoice.Status;
+            response.PaymentMethod = paymentMethod;
         }
         else
         {

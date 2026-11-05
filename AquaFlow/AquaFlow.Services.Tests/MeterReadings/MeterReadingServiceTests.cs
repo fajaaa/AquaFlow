@@ -2,6 +2,7 @@ using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Tests.Notifications;
 using AquaFlow.Services.Validators;
 using FluentValidation;
@@ -576,16 +577,24 @@ public class MeterReadingServiceTests
         context.SaveChanges();
     }
 
-    internal static MeterReadingService CreateService(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
+    // issuedStateOverride lets a test swap in its own Issued invoice state (e.g. one whose payment step
+    // throws); otherwise the real states are used.
+    internal static MeterReadingService CreateService(
+        AquaFlowDbContext context,
+        IPushNotificationSender? pushSender = null,
+        Func<AquaFlowDbContext, IMapper, ISystemNotificationService, BaseInvoiceState>? issuedStateOverride = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<MeterReading, Model.Responses.MeterReadingResponse>();
+        mapperConfig.NewConfig<Invoice, Model.Responses.InvoiceResponse>();
         IMapper mapper = new Mapper(mapperConfig);
+        var systemNotifications = TestSystemNotifications.Create(context, pushSender);
 
         return new MeterReadingService(
             context,
             mapper,
             new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() },
-            TestSystemNotifications.Create(context, pushSender));
+            systemNotifications,
+            new TestInvoiceStateResolver(context, mapper, systemNotifications, issuedStateOverride?.Invoke(context, mapper, systemNotifications)));
     }
 }

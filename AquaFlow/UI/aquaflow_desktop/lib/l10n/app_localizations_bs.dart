@@ -1129,6 +1129,9 @@ class AppLocalizationsBs extends AppLocalizations {
   String get manualPaymentMethodLabel => 'Ručno';
 
   @override
+  String get cashPaymentMethodLabel => 'Gotovina';
+
+  @override
   String get cannotDetermineAdminUserError =>
       'Nije moguće odrediti admin korisnika.';
 

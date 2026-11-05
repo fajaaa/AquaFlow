@@ -809,6 +809,39 @@
       }
     }
   },
+  "readingSubmittedPaidInCashSuccess": "Očitanje je snimljeno. Račun {invoiceNumber} ({total} BAM) je plaćen gotovinom.",
+  "@readingSubmittedPaidInCashSuccess": {
+    "description": "Snackbar message after a reading is submitted and the collector recorded that the customer paid the generated invoice in cash.",
+    "placeholders": {
+      "invoiceNumber": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "paidInCashCheckboxLabel": "Kupac plaća gotovinom",
+  "@paidInCashCheckboxLabel": {
+    "description": "Checkbox on the reading entry screen: the present customer pays the invoice in cash right away."
+  },
+  "paidInCashCheckboxSubtitle": "Račun će odmah biti evidentiran kao plaćen.",
+  "@paidInCashCheckboxSubtitle": {
+    "description": "Subtitle under the cash payment checkbox."
+  },
+  "paidInCashConfirmTitle": "Potvrda gotovinske uplate",
+  "@paidInCashConfirmTitle": {
+    "description": "Title of the confirm dialog before submitting a reading with a cash payment."
+  },
+  "paidInCashConfirmMessage": "Potvrđujete da ste od kupca primili {total} BAM u gotovini? Račun će biti evidentiran kao plaćen.",
+  "@paidInCashConfirmMessage": {
+    "description": "Body of the cash payment confirm dialog, with the already-formatted previewed invoice total.",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
   "readingSubmittedNoInvoiceSuccess": "Očitanje je snimljeno. Potrošnja: {consumption} m³. Račun nije kreiran (potrošnja je 0).",
   "@readingSubmittedNoInvoiceSuccess": {
     "description": "Snackbar message shown after a meter reading is submitted with zero consumption, so the server created no invoice.",

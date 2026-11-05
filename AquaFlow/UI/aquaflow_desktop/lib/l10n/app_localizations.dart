@@ -2156,6 +2156,12 @@ abstract class AppLocalizations {
   /// **'Ručno'**
   String get manualPaymentMethodLabel;
 
+  /// Display label for the 'Cash' payment method (collector took cash at reading entry).
+  ///
+  /// In bs, this message translates to:
+  /// **'Gotovina'**
+  String get cashPaymentMethodLabel;
+
   /// Error shown when creating a notification but the signed-in admin's user id can't be resolved.
   ///
   /// In bs, this message translates to:

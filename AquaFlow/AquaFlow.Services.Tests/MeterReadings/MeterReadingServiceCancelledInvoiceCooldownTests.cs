@@ -510,17 +510,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             .SumAsync(i => i.ConsumptionM3);
 
     internal static MeterReadingService CreateService(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
-    {
-        var mapperConfig = new TypeAdapterConfig();
-        mapperConfig.NewConfig<MeterReading, Model.Responses.MeterReadingResponse>();
-        IMapper mapper = new Mapper(mapperConfig);
-
-        return new MeterReadingService(
-            context,
-            mapper,
-            new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() },
-            TestSystemNotifications.Create(context, pushSender));
-    }
+        => MeterReadingServiceTests.CreateService(context, pushSender);
 
     private static IMapper CreateInvoiceMapper()
     {

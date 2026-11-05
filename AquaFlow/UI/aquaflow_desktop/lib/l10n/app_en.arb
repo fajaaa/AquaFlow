@@ -371,6 +371,7 @@
   "invoiceColumnLabel": "Invoice",
   "methodColumnLabel": "Method",
   "manualPaymentMethodLabel": "Manual",
+  "cashPaymentMethodLabel": "Cash",
 
   "cannotDetermineAdminUserError": "Could not determine the admin user.",
   "notificationCreatedSuccess": "Notification added.",

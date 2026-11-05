@@ -1133,6 +1133,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manualPaymentMethodLabel => 'Manual';
 
   @override
+  String get cashPaymentMethodLabel => 'Cash';
+
+  @override
   String get cannotDetermineAdminUserError =>
       'Could not determine the admin user.';
 

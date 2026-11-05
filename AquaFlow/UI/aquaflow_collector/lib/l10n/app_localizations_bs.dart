@@ -597,6 +597,26 @@ class AppLocalizationsBs extends AppLocalizations {
   }
 
   @override
+  String readingSubmittedPaidInCashSuccess(String invoiceNumber, String total) {
+    return 'Očitanje je snimljeno. Račun $invoiceNumber ($total BAM) je plaćen gotovinom.';
+  }
+
+  @override
+  String get paidInCashCheckboxLabel => 'Kupac plaća gotovinom';
+
+  @override
+  String get paidInCashCheckboxSubtitle =>
+      'Račun će odmah biti evidentiran kao plaćen.';
+
+  @override
+  String get paidInCashConfirmTitle => 'Potvrda gotovinske uplate';
+
+  @override
+  String paidInCashConfirmMessage(String total) {
+    return 'Potvrđujete da ste od kupca primili $total BAM u gotovini? Račun će biti evidentiran kao plaćen.';
+  }
+
+  @override
   String readingSubmittedNoInvoiceSuccess(String consumption) {
     return 'Očitanje je snimljeno. Potrošnja: $consumption m³. Račun nije kreiran (potrošnja je 0).';
   }

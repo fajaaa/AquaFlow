@@ -1544,6 +1544,10 @@
   "@manualPaymentMethodLabel": {
     "description": "Display label for the 'Manual' payment method."
   },
+  "cashPaymentMethodLabel": "Gotovina",
+  "@cashPaymentMethodLabel": {
+    "description": "Display label for the 'Cash' payment method (collector took cash at reading entry)."
+  },
 
   "cannotDetermineAdminUserError": "Nije moguće odrediti admin korisnika.",
   "@cannotDetermineAdminUserError": {

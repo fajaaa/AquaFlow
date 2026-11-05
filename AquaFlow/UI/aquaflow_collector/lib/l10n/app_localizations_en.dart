@@ -601,6 +601,26 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String readingSubmittedPaidInCashSuccess(String invoiceNumber, String total) {
+    return 'Reading saved. Invoice $invoiceNumber ($total BAM) was paid in cash.';
+  }
+
+  @override
+  String get paidInCashCheckboxLabel => 'Customer pays in cash';
+
+  @override
+  String get paidInCashCheckboxSubtitle =>
+      'The invoice will be recorded as paid right away.';
+
+  @override
+  String get paidInCashConfirmTitle => 'Confirm cash payment';
+
+  @override
+  String paidInCashConfirmMessage(String total) {
+    return 'Confirm that you received $total BAM in cash from the customer? The invoice will be recorded as paid.';
+  }
+
+  @override
   String readingSubmittedNoInvoiceSuccess(String consumption) {
     return 'Reading saved. Consumption: $consumption m³. No invoice created (consumption is 0).';
   }

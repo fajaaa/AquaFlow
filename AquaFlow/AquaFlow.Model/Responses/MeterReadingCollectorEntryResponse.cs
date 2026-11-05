@@ -9,4 +9,8 @@ public class MeterReadingCollectorEntryResponse : MeterReadingResponse
 {
     public string? InvoiceNumber { get; set; }
     public decimal? InvoiceTotalAmount { get; set; }
+    // Issued, or Paid when the collector recorded a cash payment (request PaidInCash).
+    public string? InvoiceStatus { get; set; }
+    // Method of the invoice's Completed payment (e.g. "Cash"); null while unpaid or without an invoice.
+    public string? PaymentMethod { get; set; }
 }

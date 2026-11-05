@@ -74,6 +74,11 @@ class _CollectorMeterReadingEntryScreenState
   String? _nextReadingAllowedDate;
   double? _lastCountingReadingValue;
 
+  // The present customer pays the auto-issued invoice in cash. Only offered
+  // when the preview shows consumption > 0 (otherwise no invoice is created);
+  // the server always pays the invoice's own total, not the preview.
+  bool _paidInCash = false;
+
   // Generated once per form open and reused for every retry (timeout/network error) of the same
   // submission, so the server can recognize a resubmit as the same request instead of creating a
   // second reading/invoice (see MeterReadingService.CreateForCollectorAsync). A fresh UUID is only
@@ -101,6 +106,35 @@ class _CollectorMeterReadingEntryScreenState
     final baseline = _lastCountingReadingValue ?? widget.meter.lastReading;
     final consumption = reading - baseline;
     return consumption >= 0 ? consumption : null;
+  }
+
+  bool get _showCashOption => (_consumptionPreview ?? 0) > 0;
+
+  Future<bool> _confirmCashPayment() async {
+    final loc = AppLocalizations.of(context);
+    final tariff = _selectedTariff;
+    final consumption = _consumptionPreview;
+    final total = (tariff != null && consumption != null)
+        ? _formatReading(consumption * tariff.pricePerM3)
+        : '-';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(loc.paidInCashConfirmTitle),
+        content: Text(loc.paidInCashConfirmMessage(total)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(loc.dialogDismissButton),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(loc.commonConfirm),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
   }
 
   TariffLookup? get _selectedTariff {
@@ -177,6 +211,10 @@ class _CollectorMeterReadingEntryScreenState
     final form = _formKey.currentState;
     if (form == null || !form.validate()) return;
 
+    final paidInCash = _paidInCash && _showCashOption;
+    if (paidInCash && !await _confirmCashPayment()) return;
+    if (!mounted) return;
+
     setState(() {
       _submitting = true;
       _error = null;
@@ -192,6 +230,7 @@ class _CollectorMeterReadingEntryScreenState
         clientUuid: _clientUuid,
         note: _noteCtrl.text,
         photoUrl: _photoUrlCtrl.text,
+        paidInCash: paidInCash,
       );
       if (!mounted) return;
       final loc = AppLocalizations.of(context);
@@ -199,7 +238,12 @@ class _CollectorMeterReadingEntryScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            result.hasInvoice
+            result.hasInvoice && result.paidInCash
+                ? loc.readingSubmittedPaidInCashSuccess(
+                    result.invoiceNumber!,
+                    _formatReading(result.invoiceTotalAmount!),
+                  )
+                : result.hasInvoice
                 ? loc.readingSubmittedWithInvoiceSuccess(
                     _formatReading(result.consumptionM3),
                     result.invoiceNumber!,
@@ -302,7 +346,8 @@ class _CollectorMeterReadingEntryScreenState
             icon: const Icon(Icons.history),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => CollectorMeterReadingHistoryScreen(meter: meter),
+                builder: (_) =>
+                    CollectorMeterReadingHistoryScreen(meter: meter),
               ),
             ),
           ),
@@ -551,6 +596,23 @@ class _CollectorMeterReadingEntryScreenState
                             tariff: _selectedTariff,
                             accent: accent,
                           ),
+                          if (_showCashOption)
+                            CheckboxListTile(
+                              value: _paidInCash,
+                              onChanged: _submitting
+                                  ? null
+                                  : (value) => setState(
+                                      () => _paidInCash = value ?? false,
+                                    ),
+                              title: Text(loc.paidInCashCheckboxLabel),
+                              subtitle: Text(loc.paidInCashCheckboxSubtitle),
+                              secondary: Icon(
+                                Icons.payments_outlined,
+                                color: accent,
+                              ),
+                              controlAffinity: ListTileControlAffinity.trailing,
+                              contentPadding: EdgeInsets.zero,
+                            ),
                           const SizedBox(height: 14),
                           TextFormField(
                             controller: _noteCtrl,

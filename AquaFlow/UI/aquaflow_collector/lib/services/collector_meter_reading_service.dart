@@ -17,11 +17,9 @@ import 'package:aquaflow_collector/shared/services/authenticated_client.dart';
 /// Also fetches the last reading of a meter to suggest a tariff and check
 /// minimum spacing before the next reading.
 class CollectorMeterReadingService {
-  CollectorMeterReadingService({
-    http.Client? client,
-    Duration? timeout,
-  }) : _client = client ?? AuthenticatedClient.instance,
-       _timeout = timeout ?? const Duration(seconds: 15);
+  CollectorMeterReadingService({http.Client? client, Duration? timeout})
+    : _client = client ?? AuthenticatedClient.instance,
+      _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
   final Duration _timeout;
@@ -33,20 +31,22 @@ class CollectorMeterReadingService {
     required String clientUuid,
     String? note,
     String? photoUrl,
+    bool paidInCash = false,
   }) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/MeterReadings/collector-entry');
 
     final response = await _send(
       () => _client.post(
         uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'waterMeterId': waterMeterId,
           'readingValue': readingValue,
           'tariffId': tariffId,
           'clientUuid': clientUuid,
+          // Only a flag: the server pays the invoice's own total, never an
+          // amount sent by the app.
+          'paidInCash': paidInCash,
           if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
           if (photoUrl != null && photoUrl.trim().isNotEmpty)
             'photoUrl': photoUrl.trim(),
@@ -80,9 +80,7 @@ class CollectorMeterReadingService {
       '${ApiConfig.baseUrl}/MeterReadings/last-counting',
     ).replace(queryParameters: {'waterMeterId': '$waterMeterId'});
 
-    final response = await _send(
-      () => _client.get(uri),
-    );
+    final response = await _send(() => _client.get(uri));
 
     if (response.statusCode != 200) {
       throw CollectorMeterReadingException(

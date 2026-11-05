@@ -300,7 +300,11 @@ class _PaymentStatusPill extends StatelessWidget {
 }
 
 String _paymentMethodLabel(String method, AppLocalizations loc) =>
-    method == 'Manual' ? loc.manualPaymentMethodLabel : method;
+    switch (method) {
+      'Manual' => loc.manualPaymentMethodLabel,
+      'Cash' => loc.cashPaymentMethodLabel,
+      _ => method,
+    };
 
 String _formatDate(DateTime? date) {
   if (date == null) return '—';

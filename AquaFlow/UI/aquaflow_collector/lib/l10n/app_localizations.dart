@@ -1188,6 +1188,36 @@ abstract class AppLocalizations {
     String total,
   );
 
+  /// Snackbar message after a reading is submitted and the collector recorded that the customer paid the generated invoice in cash.
+  ///
+  /// In bs, this message translates to:
+  /// **'Očitanje je snimljeno. Račun {invoiceNumber} ({total} BAM) je plaćen gotovinom.'**
+  String readingSubmittedPaidInCashSuccess(String invoiceNumber, String total);
+
+  /// Checkbox on the reading entry screen: the present customer pays the invoice in cash right away.
+  ///
+  /// In bs, this message translates to:
+  /// **'Kupac plaća gotovinom'**
+  String get paidInCashCheckboxLabel;
+
+  /// Subtitle under the cash payment checkbox.
+  ///
+  /// In bs, this message translates to:
+  /// **'Račun će odmah biti evidentiran kao plaćen.'**
+  String get paidInCashCheckboxSubtitle;
+
+  /// Title of the confirm dialog before submitting a reading with a cash payment.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potvrda gotovinske uplate'**
+  String get paidInCashConfirmTitle;
+
+  /// Body of the cash payment confirm dialog, with the already-formatted previewed invoice total.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potvrđujete da ste od kupca primili {total} BAM u gotovini? Račun će biti evidentiran kao plaćen.'**
+  String paidInCashConfirmMessage(String total);
+
   /// Snackbar message shown after a meter reading is submitted with zero consumption, so the server created no invoice.
   ///
   /// In bs, this message translates to:

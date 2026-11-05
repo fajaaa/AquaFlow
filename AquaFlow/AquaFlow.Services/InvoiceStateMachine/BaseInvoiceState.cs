@@ -41,7 +41,10 @@ public abstract class BaseInvoiceState
     // entity in, so a state never re-reads the invoice for a plain transition. The id of the user
     // performing the transition is passed through each action call so that TransitionToAsync can stamp
     // the InvoiceStatusHistory row with who made the change.
-    public virtual Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, int changedById) => throw NotAllowed("Record payment");
+    // paymentMethod is a PaymentMethod constant: Manual for an admin-recorded payment, Cash for one a
+    // collector took on the spot at reading entry.
+    public virtual Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, int changedById, string paymentMethod = PaymentMethod.Manual)
+        => throw NotAllowed("Record payment");
 
     public virtual Task<InvoiceResponse> CancelAsync(Invoice invoice, int changedById) => throw NotAllowed("Cancel");
 
@@ -75,7 +78,7 @@ public abstract class BaseInvoiceState
     // always for the invoice's full remaining balance - partial payments are no longer supported.
     // Shares its balance-computation/transition guarantees with ConfirmPendingPaymentAsync below via
     // CreditInvoiceAsync - see that method for the transaction/remaining-balance reasoning.
-    protected Task<InvoiceResponse> RecordPaymentInternalAsync(Invoice invoice, int changedById)
+    protected Task<InvoiceResponse> RecordPaymentInternalAsync(Invoice invoice, int changedById, string paymentMethod = PaymentMethod.Manual)
     {
         // changedById is the admin who recorded the payment - the customer is told, the admin isn't.
         return CreditInvoiceAsync(invoice, changedById, notifyActor: false, remaining => DbContext.Payments.Add(new Payment
@@ -83,7 +86,7 @@ public abstract class BaseInvoiceState
             InvoiceId = invoice.Id,
             CustomerId = invoice.CustomerId,
             Amount = remaining,
-            PaymentMethod = PaymentMethod.Manual,
+            PaymentMethod = paymentMethod,
             Provider = PaymentProvider.Manual,
             Status = CompletedPaymentStatus,
             PaidAt = DateTime.UtcNow,
@@ -152,8 +155,13 @@ public abstract class BaseInvoiceState
         // being locked.
         var customerUserId = await SystemNotifications.GetCustomerUserIdAsync(invoice.CustomerId);
 
-        await using var transaction = await DbContext.Database
-            .BeginTransactionAsync(IsolationLevel.Serializable);
+        // A caller already inside a transaction (MeterReadingService.CreateForCollectorAsync recording a
+        // cash payment for the invoice it just created) needs the payment to commit or roll back with
+        // its own writes, so we join that transaction and leave the commit to its owner.
+        var ownsTransaction = DbContext.Database.CurrentTransaction == null;
+        await using var transaction = ownsTransaction
+            ? await DbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable)
+            : null;
 
         // Bring the invoice-row read inside the transaction so it is locked together with the payments.
         await DbContext.Entry(invoice).ReloadAsync();
@@ -180,7 +188,11 @@ public abstract class BaseInvoiceState
 
         await TransitionToAsync(invoice, InvoiceStatus.Paid, changedById, $"Uplata {remaining:0.00}; račun plaćen.");
 
-        await transaction.CommitAsync();
+        if (transaction != null)
+        {
+            await transaction.CommitAsync();
+        }
+
         return await InvoicePaymentAmounts.ToResponseAsync(DbContext, Mapper, invoice);
     }
 
