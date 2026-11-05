@@ -288,5 +288,15 @@
   "passwordChangedSignInAgain": "Your password has been changed. Please sign in again.",
   "notificationsNewBanner": "You have new notifications",
   "notificationOpenAction": "Open",
-  "notificationOpenRelatedFailed": "The related item couldn't be opened. It may no longer be available."
+  "notificationOpenRelatedFailed": "The related item couldn't be opened. It may no longer be available.",
+  "savedCardsTitle": "My cards",
+  "savedCardsSubtitle": "Saved cards for paying invoices",
+  "savedCardsAdd": "Add card",
+  "savedCardsEmpty": "You have no saved cards.",
+  "savedCardsUnsupported": "Saving cards is currently not available.",
+  "savedCardsExpired": "Expired",
+  "savedCardsDeleteTitle": "Delete card?",
+  "savedCardsDeleteMessage": "The {brand} card •••• {last4} will be removed.",
+  "savedCardsDeleted": "Card deleted.",
+  "savedCardsAdded": "Card added."
 }

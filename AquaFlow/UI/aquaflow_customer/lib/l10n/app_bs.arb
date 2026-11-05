@@ -1172,5 +1172,49 @@
   "notificationOpenRelatedFailed": "Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.",
   "@notificationOpenRelatedFailed": {
     "description": "SnackBar shown when the record a notification links to cannot be loaded (e.g. deleted or no longer visible)."
+  },
+  "savedCardsTitle": "Moje kartice",
+  "@savedCardsTitle": {
+    "description": "Saved payment cards screen: savedCardsTitle."
+  },
+  "savedCardsSubtitle": "Spremljene kartice za plaćanje računa",
+  "@savedCardsSubtitle": {
+    "description": "Saved payment cards screen: savedCardsSubtitle."
+  },
+  "savedCardsAdd": "Dodaj karticu",
+  "@savedCardsAdd": {
+    "description": "Saved payment cards screen: savedCardsAdd."
+  },
+  "savedCardsEmpty": "Nemate spremljenih kartica.",
+  "@savedCardsEmpty": {
+    "description": "Saved payment cards screen: savedCardsEmpty."
+  },
+  "savedCardsUnsupported": "Spremanje kartica trenutno nije dostupno.",
+  "@savedCardsUnsupported": {
+    "description": "Saved payment cards screen: savedCardsUnsupported."
+  },
+  "savedCardsExpired": "Isteklo",
+  "@savedCardsExpired": {
+    "description": "Saved payment cards screen: savedCardsExpired."
+  },
+  "savedCardsDeleteTitle": "Obrisati karticu?",
+  "@savedCardsDeleteTitle": {
+    "description": "Saved payment cards screen: savedCardsDeleteTitle."
+  },
+  "savedCardsDeleteMessage": "Kartica {brand} •••• {last4} bit će uklonjena.",
+  "@savedCardsDeleteMessage": {
+    "description": "Saved payment cards screen: savedCardsDeleteMessage.",
+    "placeholders": {
+      "brand": { "type": "String" },
+      "last4": { "type": "String" }
+    }
+  },
+  "savedCardsDeleted": "Kartica je obrisana.",
+  "@savedCardsDeleted": {
+    "description": "Saved payment cards screen: savedCardsDeleted."
+  },
+  "savedCardsAdded": "Kartica je dodana.",
+  "@savedCardsAdded": {
+    "description": "Saved payment cards screen: savedCardsAdded."
   }
 }

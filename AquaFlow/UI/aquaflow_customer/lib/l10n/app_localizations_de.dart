@@ -843,4 +843,37 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get notificationOpenRelatedFailed =>
       'Das zugehörige Element konnte nicht geöffnet werden. Möglicherweise ist es nicht mehr verfügbar.';
+
+  @override
+  String get savedCardsTitle => 'Meine Karten';
+
+  @override
+  String get savedCardsSubtitle => 'Gespeicherte Karten zur Rechnungszahlung';
+
+  @override
+  String get savedCardsAdd => 'Karte hinzufügen';
+
+  @override
+  String get savedCardsEmpty => 'Sie haben keine gespeicherten Karten.';
+
+  @override
+  String get savedCardsUnsupported =>
+      'Das Speichern von Karten ist derzeit nicht verfügbar.';
+
+  @override
+  String get savedCardsExpired => 'Abgelaufen';
+
+  @override
+  String get savedCardsDeleteTitle => 'Karte löschen?';
+
+  @override
+  String savedCardsDeleteMessage(String brand, String last4) {
+    return 'Die Karte $brand •••• $last4 wird entfernt.';
+  }
+
+  @override
+  String get savedCardsDeleted => 'Karte gelöscht.';
+
+  @override
+  String get savedCardsAdded => 'Karte hinzugefügt.';
 }

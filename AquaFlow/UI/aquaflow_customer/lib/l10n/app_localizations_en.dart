@@ -837,4 +837,37 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notificationOpenRelatedFailed =>
       'The related item couldn\'t be opened. It may no longer be available.';
+
+  @override
+  String get savedCardsTitle => 'My cards';
+
+  @override
+  String get savedCardsSubtitle => 'Saved cards for paying invoices';
+
+  @override
+  String get savedCardsAdd => 'Add card';
+
+  @override
+  String get savedCardsEmpty => 'You have no saved cards.';
+
+  @override
+  String get savedCardsUnsupported =>
+      'Saving cards is currently not available.';
+
+  @override
+  String get savedCardsExpired => 'Expired';
+
+  @override
+  String get savedCardsDeleteTitle => 'Delete card?';
+
+  @override
+  String savedCardsDeleteMessage(String brand, String last4) {
+    return 'The $brand card •••• $last4 will be removed.';
+  }
+
+  @override
+  String get savedCardsDeleted => 'Card deleted.';
+
+  @override
+  String get savedCardsAdded => 'Card added.';
 }

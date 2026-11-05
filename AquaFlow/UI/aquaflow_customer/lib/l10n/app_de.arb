@@ -255,5 +255,15 @@
   "passwordChangedSignInAgain": "Ihr Passwort wurde geändert. Bitte melden Sie sich erneut an.",
   "notificationsNewBanner": "Sie haben neue Benachrichtigungen",
   "notificationOpenAction": "Öffnen",
-  "notificationOpenRelatedFailed": "Das zugehörige Element konnte nicht geöffnet werden. Möglicherweise ist es nicht mehr verfügbar."
+  "notificationOpenRelatedFailed": "Das zugehörige Element konnte nicht geöffnet werden. Möglicherweise ist es nicht mehr verfügbar.",
+  "savedCardsTitle": "Meine Karten",
+  "savedCardsSubtitle": "Gespeicherte Karten zur Rechnungszahlung",
+  "savedCardsAdd": "Karte hinzufügen",
+  "savedCardsEmpty": "Sie haben keine gespeicherten Karten.",
+  "savedCardsUnsupported": "Das Speichern von Karten ist derzeit nicht verfügbar.",
+  "savedCardsExpired": "Abgelaufen",
+  "savedCardsDeleteTitle": "Karte löschen?",
+  "savedCardsDeleteMessage": "Die Karte {brand} •••• {last4} wird entfernt.",
+  "savedCardsDeleted": "Karte gelöscht.",
+  "savedCardsAdded": "Karte hinzugefügt."
 }

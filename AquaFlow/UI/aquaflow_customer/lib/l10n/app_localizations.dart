@@ -1639,6 +1639,66 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.'**
   String get notificationOpenRelatedFailed;
+
+  /// Saved payment cards screen: savedCardsTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Moje kartice'**
+  String get savedCardsTitle;
+
+  /// Saved payment cards screen: savedCardsSubtitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Spremljene kartice za plaćanje računa'**
+  String get savedCardsSubtitle;
+
+  /// Saved payment cards screen: savedCardsAdd.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dodaj karticu'**
+  String get savedCardsAdd;
+
+  /// Saved payment cards screen: savedCardsEmpty.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nemate spremljenih kartica.'**
+  String get savedCardsEmpty;
+
+  /// Saved payment cards screen: savedCardsUnsupported.
+  ///
+  /// In bs, this message translates to:
+  /// **'Spremanje kartica trenutno nije dostupno.'**
+  String get savedCardsUnsupported;
+
+  /// Saved payment cards screen: savedCardsExpired.
+  ///
+  /// In bs, this message translates to:
+  /// **'Isteklo'**
+  String get savedCardsExpired;
+
+  /// Saved payment cards screen: savedCardsDeleteTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obrisati karticu?'**
+  String get savedCardsDeleteTitle;
+
+  /// Saved payment cards screen: savedCardsDeleteMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Kartica {brand} •••• {last4} bit će uklonjena.'**
+  String savedCardsDeleteMessage(String brand, String last4);
+
+  /// Saved payment cards screen: savedCardsDeleted.
+  ///
+  /// In bs, this message translates to:
+  /// **'Kartica je obrisana.'**
+  String get savedCardsDeleted;
+
+  /// Saved payment cards screen: savedCardsAdded.
+  ///
+  /// In bs, this message translates to:
+  /// **'Kartica je dodana.'**
+  String get savedCardsAdded;
 }
 
 class _AppLocalizationsDelegate

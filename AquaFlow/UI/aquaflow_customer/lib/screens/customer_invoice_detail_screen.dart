@@ -326,7 +326,11 @@ class _CustomerInvoiceDetailScreenState
         );
         await _refreshInvoiceWithRetry();
       } else if (clientSecret != null && clientSecret.isNotEmpty) {
-        final presented = await _presentStripePaymentSheet(clientSecret);
+        final presented = await _presentStripePaymentSheet(
+          clientSecret,
+          customerId: session.stripeCustomerId,
+          ephemeralKeySecret: session.ephemeralKeySecret,
+        );
         if (presented) {
           await _refreshInvoiceWithRetry();
         } else {
@@ -376,12 +380,22 @@ class _CustomerInvoiceDetailScreenState
   // cancelling or the sheet reporting an error - never true-because-paid,
   // just true-because-the-sheet-finished (see the _payInvoice comment above
   // for why that distinction matters).
-  Future<bool> _presentStripePaymentSheet(String clientSecret) async {
+  Future<bool> _presentStripePaymentSheet(
+    String clientSecret, {
+    String? customerId,
+    String? ephemeralKeySecret,
+  }) async {
+    final withCustomer = customerId != null &&
+        customerId.isNotEmpty &&
+        ephemeralKeySecret != null &&
+        ephemeralKeySecret.isNotEmpty;
     try {
       await stripe.Stripe.instance.initPaymentSheet(
         paymentSheetParameters: stripe.SetupPaymentSheetParameters(
           paymentIntentClientSecret: clientSecret,
           merchantDisplayName: 'AquaFlow',
+          customerId: withCustomer ? customerId : null,
+          customerEphemeralKeySecret: withCustomer ? ephemeralKeySecret : null,
         ),
       );
       await stripe.Stripe.instance.presentPaymentSheet();

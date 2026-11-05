@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:aquaflow_customer/app/notification_deep_link_handlers.dart';
 import 'package:aquaflow_customer/l10n/app_localizations.dart';
 import 'package:aquaflow_customer/screens/customer_fault_reports_screen.dart';
+import 'package:aquaflow_customer/screens/customer_payment_cards_screen.dart';
 import 'package:aquaflow_customer/screens/customer_support_tickets_screen.dart';
 import 'package:aquaflow_customer/screens/customer_water_meters_screen.dart';
 import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
@@ -82,6 +83,13 @@ class _CustomerShellState extends State<CustomerShell> {
           label: loc.tabAccount,
           body: AccountScreen(
             extraEntries: [
+              AccountEntry(
+                icon: Icons.credit_card,
+                title: loc.savedCardsTitle,
+                subtitle: loc.savedCardsSubtitle,
+                onTap: (context) =>
+                    context.pushScreen(const CustomerPaymentCardsScreen()),
+              ),
               AccountEntry(
                 icon: Icons.support_agent_outlined,
                 title: loc.supportTitle,

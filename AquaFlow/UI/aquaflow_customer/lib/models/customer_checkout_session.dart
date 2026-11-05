@@ -13,7 +13,14 @@ class CustomerCheckoutSession {
     required this.clientSecret,
     required this.status,
     required this.alreadySucceeded,
+    this.stripeCustomerId,
+    this.ephemeralKeySecret,
   });
+
+  // Stripe Customer + ephemeral key so the PaymentSheet can list/save cards;
+  // null when the provider has no saved-card support.
+  final String? stripeCustomerId;
+  final String? ephemeralKeySecret;
 
   final int paymentId;
   final int invoiceId;
@@ -44,6 +51,8 @@ class CustomerCheckoutSession {
       clientSecret: json['clientSecret'] as String?,
       status: (json['status'] ?? '') as String,
       alreadySucceeded: json['alreadySucceeded'] == true,
+      stripeCustomerId: json['stripeCustomerId'] as String?,
+      ephemeralKeySecret: json['ephemeralKeySecret'] as String?,
     );
   }
 }

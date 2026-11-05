@@ -833,4 +833,37 @@ class AppLocalizationsBs extends AppLocalizations {
   @override
   String get notificationOpenRelatedFailed =>
       'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.';
+
+  @override
+  String get savedCardsTitle => 'Moje kartice';
+
+  @override
+  String get savedCardsSubtitle => 'Spremljene kartice za plaćanje računa';
+
+  @override
+  String get savedCardsAdd => 'Dodaj karticu';
+
+  @override
+  String get savedCardsEmpty => 'Nemate spremljenih kartica.';
+
+  @override
+  String get savedCardsUnsupported =>
+      'Spremanje kartica trenutno nije dostupno.';
+
+  @override
+  String get savedCardsExpired => 'Isteklo';
+
+  @override
+  String get savedCardsDeleteTitle => 'Obrisati karticu?';
+
+  @override
+  String savedCardsDeleteMessage(String brand, String last4) {
+    return 'Kartica $brand •••• $last4 bit će uklonjena.';
+  }
+
+  @override
+  String get savedCardsDeleted => 'Kartica je obrisana.';
+
+  @override
+  String get savedCardsAdded => 'Kartica je dodana.';
 }
