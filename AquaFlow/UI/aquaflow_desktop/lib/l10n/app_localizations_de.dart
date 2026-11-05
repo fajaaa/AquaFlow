@@ -1549,4 +1549,94 @@ class AppLocalizationsDe extends AppLocalizations {
   String reportsSavedTo(String path) {
     return 'Gespeichert: $path';
   }
+
+  @override
+  String get rolesPermissionsNavLabel => 'Rollen und Berechtigungen';
+
+  @override
+  String get rolesPermissionsSubtitle =>
+      'Rollen, Berechtigungen und deren Zuweisungen verwalten.';
+
+  @override
+  String get rolesTabRoles => 'Rollen';
+
+  @override
+  String get rolesTabPermissions => 'Berechtigungen';
+
+  @override
+  String get moduleColumnLabel => 'Modul';
+
+  @override
+  String get systemColumnLabel => 'System';
+
+  @override
+  String get systemBadgeLabel => 'System';
+
+  @override
+  String get newRoleButtonLabel => 'Neue Rolle';
+
+  @override
+  String get editRoleDialogTitle => 'Rolle bearbeiten';
+
+  @override
+  String get newPermissionButtonLabel => 'Neue Berechtigung';
+
+  @override
+  String get editPermissionDialogTitle => 'Berechtigung bearbeiten';
+
+  @override
+  String get systemItemLockedHint =>
+      'Systemeintrag: Dieses Feld kann nicht geändert werden.';
+
+  @override
+  String get rolePermissionsAction => 'Berechtigungen';
+
+  @override
+  String get rolePermissionsDialogTitle => 'Berechtigungen der Rolle';
+
+  @override
+  String get rolePermissionsDialogHint =>
+      'Änderungen gelten sofort. Benutzer mit dieser Rolle werden still aktualisiert.';
+
+  @override
+  String get roleCreatedSuccess => 'Rolle hinzugefügt.';
+
+  @override
+  String get roleSavedSuccess => 'Rolle gespeichert.';
+
+  @override
+  String get roleDeletedSuccess => 'Rolle gelöscht.';
+
+  @override
+  String get permissionCreatedSuccess => 'Berechtigung hinzugefügt.';
+
+  @override
+  String get permissionSavedSuccess => 'Berechtigung gespeichert.';
+
+  @override
+  String get permissionDeletedSuccess => 'Berechtigung gelöscht.';
+
+  @override
+  String get deleteRoleDialogTitle => 'Rolle löschen';
+
+  @override
+  String get deleteRoleDialogContent =>
+      'Möchten Sie diese Rolle wirklich löschen? Das Löschen ist nicht möglich, solange Benutzer diese Rolle haben.';
+
+  @override
+  String get deletePermissionDialogTitle => 'Berechtigung löschen';
+
+  @override
+  String get deletePermissionDialogContent =>
+      'Möchten Sie diese Berechtigung wirklich löschen? Das Löschen ist nicht möglich, solange sie einer Rolle zugewiesen ist.';
+
+  @override
+  String get noRolesMessage => 'Keine Rollen.';
+
+  @override
+  String get noPermissionsMessage => 'Keine Berechtigungen.';
+
+  @override
+  String get rolesPermissionsEmptyFilteredMessage =>
+      'Keine Ergebnisse für die gewählten Filter.';
 }

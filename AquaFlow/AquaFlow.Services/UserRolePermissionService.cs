@@ -58,6 +58,7 @@ public class UserRolePermissionService
     protected override async Task BeforeUpdateAsync(int id, UserRolePermissionUpdateRequest request, UserRolePermission entity)
     {
         await EnsureReferencesExistAsync(request.UserRoleId, request.PermissionId);
+        await EnsureNotLastAdminManageAsync(entity.UserRoleId, entity.PermissionId, request.UserRoleId, request.PermissionId);
         await EnsureUniqueAssignmentAsync(request.UserRoleId, request.PermissionId, id);
 
         await RotateAffectedRolesAsync(entity, request.UserRoleId, request.PermissionId);
@@ -74,6 +75,7 @@ public class UserRolePermissionService
         var permissionId = request.PermissionId ?? entity.PermissionId;
 
         await EnsureReferencesExistAsync(userRoleId, permissionId);
+        await EnsureNotLastAdminManageAsync(entity.UserRoleId, entity.PermissionId, userRoleId, permissionId);
         await EnsureUniqueAssignmentAsync(userRoleId, permissionId, id);
 
         await RotateAffectedRolesAsync(entity, userRoleId, permissionId);
@@ -84,6 +86,8 @@ public class UserRolePermissionService
         // Same as the base delete, plus the stamp rotation staged into the same SaveChanges.
         var entity = await DbSet.FirstOrDefaultAsync(item => item.Id == id)
             ?? throw new KeyNotFoundException($"{nameof(UserRolePermission)} with id {id} was not found.");
+
+        await EnsureNotLastAdminManageAsync(entity.UserRoleId, entity.PermissionId);
 
         await _securityStampService.RotateForRoleAsync(entity.UserRoleId);
 
@@ -109,6 +113,24 @@ public class UserRolePermissionService
         if (newUserRoleId != entity.UserRoleId)
         {
             await _securityStampService.RotateForRoleAsync(newUserRoleId);
+        }
+    }
+
+    // Lockout guard: the Admin role must always keep Roles.Manage, otherwise nobody could reach this
+    // screen again. Blocks deleting that assignment and moving it to another role/permission.
+    private async Task EnsureNotLastAdminManageAsync(int currentRoleId, int currentPermissionId, int? newRoleId = null, int? newPermissionId = null)
+    {
+        if (newRoleId == currentRoleId && newPermissionId == currentPermissionId)
+        {
+            return;
+        }
+
+        var isAdminManage = await _dbContext.UserRoles.AnyAsync(role => role.Id == currentRoleId && role.Name == "Admin" && role.IsSystem)
+            && await _dbContext.Permissions.AnyAsync(permission => permission.Id == currentPermissionId && permission.Code == "Roles.Manage");
+
+        if (isAdminManage)
+        {
+            throw new ClientException("The Roles.Manage permission cannot be removed from the Admin role.");
         }
     }
 

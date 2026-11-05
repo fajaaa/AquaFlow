@@ -1974,5 +1974,33 @@
         "type": "String"
       }
     }
-  }
+  },
+  "rolesPermissionsNavLabel": "Role i dozvole",
+  "rolesPermissionsSubtitle": "Upravljanje rolama, dozvolama i njihovim dodjelama.",
+  "rolesTabRoles": "Role",
+  "rolesTabPermissions": "Dozvole",
+  "moduleColumnLabel": "Modul",
+  "systemColumnLabel": "Sistemska",
+  "systemBadgeLabel": "Sistemska",
+  "newRoleButtonLabel": "Nova rola",
+  "editRoleDialogTitle": "Uredi rolu",
+  "newPermissionButtonLabel": "Nova dozvola",
+  "editPermissionDialogTitle": "Uredi dozvolu",
+  "systemItemLockedHint": "Sistemska stavka: ovo polje se ne može mijenjati.",
+  "rolePermissionsAction": "Dozvole",
+  "rolePermissionsDialogTitle": "Dozvole role",
+  "rolePermissionsDialogHint": "Promjena se primjenjuje odmah. Korisnici sa ovom rolom će se tiho osvježiti.",
+  "roleCreatedSuccess": "Rola je dodana.",
+  "roleSavedSuccess": "Rola je sačuvana.",
+  "roleDeletedSuccess": "Rola je obrisana.",
+  "permissionCreatedSuccess": "Dozvola je dodana.",
+  "permissionSavedSuccess": "Dozvola je sačuvana.",
+  "permissionDeletedSuccess": "Dozvola je obrisana.",
+  "deleteRoleDialogTitle": "Obriši rolu",
+  "deleteRoleDialogContent": "Da li ste sigurni da želite obrisati ovu rolu? Brisanje nije moguće ako postoje korisnici sa tom rolom.",
+  "deletePermissionDialogTitle": "Obriši dozvolu",
+  "deletePermissionDialogContent": "Da li ste sigurni da želite obrisati ovu dozvolu? Brisanje nije moguće ako je dodijeljena nekoj roli.",
+  "noRolesMessage": "Nema rola.",
+  "noPermissionsMessage": "Nema dozvola.",
+  "rolesPermissionsEmptyFilteredMessage": "Nema rezultata za odabrane filtere."
 }

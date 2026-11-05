@@ -41,6 +41,7 @@ public partial class AquaFlowDbContext
                 Name = "Admin",
                 Description = "System administrator with full access.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -50,6 +51,7 @@ public partial class AquaFlowDbContext
                 Name = "Collector",
                 Description = "Field collector responsible for meter readings.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -59,6 +61,7 @@ public partial class AquaFlowDbContext
                 Name = "Customer",
                 Description = "Customer portal user.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
@@ -75,6 +78,7 @@ public partial class AquaFlowDbContext
                 Module = "Users",
                 Description = "Allows reading user accounts.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -86,6 +90,7 @@ public partial class AquaFlowDbContext
                 Module = "Users",
                 Description = "Allows creating, updating, and deleting user accounts.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -97,6 +102,7 @@ public partial class AquaFlowDbContext
                 Module = "MeterReadings",
                 Description = "Allows collectors to create and update meter readings.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -108,6 +114,7 @@ public partial class AquaFlowDbContext
                 Module = "Invoices",
                 Description = "Allows reading invoices.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -119,6 +126,7 @@ public partial class AquaFlowDbContext
                 Module = "Payments",
                 Description = "Allows reading payment records.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -130,6 +138,7 @@ public partial class AquaFlowDbContext
                 Module = "FaultReports",
                 Description = "Allows managing fault reports and related work.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -141,6 +150,7 @@ public partial class AquaFlowDbContext
                 Module = "Notifications",
                 Description = "Allows publishing and updating notifications.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -152,6 +162,7 @@ public partial class AquaFlowDbContext
                 Module = "Roles",
                 Description = "Allows managing user roles, permissions, and their assignments.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -163,6 +174,7 @@ public partial class AquaFlowDbContext
                 Module = "WaterMeterRequests",
                 Description = "Allows assigning and rejecting water meter requests.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -174,6 +186,7 @@ public partial class AquaFlowDbContext
                 Module = "Locations",
                 Description = "Allows creating, updating, and deleting settlements and service locations.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -185,6 +198,7 @@ public partial class AquaFlowDbContext
                 Module = "Tariffs",
                 Description = "Allows creating, updating, and deleting tariffs.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -196,6 +210,7 @@ public partial class AquaFlowDbContext
                 Module = "Invoices",
                 Description = "Allows issuing, cancelling, and recording payments against invoices.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -207,6 +222,7 @@ public partial class AquaFlowDbContext
                 Module = "CompanySettings",
                 Description = "Allows viewing and editing company-wide settings.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -218,6 +234,7 @@ public partial class AquaFlowDbContext
                 Module = "PaymentSettings",
                 Description = "Allows viewing and editing payment gateway settings.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -229,6 +246,7 @@ public partial class AquaFlowDbContext
                 Module = "ActivityLogs",
                 Description = "Allows reading the security/activity audit trail for all users.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -240,6 +258,7 @@ public partial class AquaFlowDbContext
                 Module = "SupportTickets",
                 Description = "Allows reading and responding to customer support tickets.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -251,6 +270,7 @@ public partial class AquaFlowDbContext
                 Module = "Customers",
                 Description = "Allows creating, updating, and deleting customer profiles.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -262,6 +282,7 @@ public partial class AquaFlowDbContext
                 Module = "Collectors",
                 Description = "Allows creating, updating, and deleting collector profiles.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -273,6 +294,7 @@ public partial class AquaFlowDbContext
                 Module = "WaterMeters",
                 Description = "Allows creating, updating, and deleting water meters.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -284,6 +306,7 @@ public partial class AquaFlowDbContext
                 Module = "Invoices",
                 Description = "Allows a customer to check out and pay their own issued invoices.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -295,6 +318,7 @@ public partial class AquaFlowDbContext
                 Module = "ConsumptionAlerts",
                 Description = "Allows viewing, resolving, and recomputing water consumption anomaly alerts.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -308,6 +332,7 @@ public partial class AquaFlowDbContext
                 Module = "Dashboard",
                 Description = "Allows viewing company-wide dashboard statistics (revenue, invoices, consumption, fault reports, user growth).",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -319,6 +344,7 @@ public partial class AquaFlowDbContext
                 Module = "Codebooks",
                 Description = "Allows creating, updating, and deleting codebook values (statuses, payment methods, notification and alert types).",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });

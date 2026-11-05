@@ -40,18 +40,57 @@ public class PermissionService : EfCrudService<Permission, PermissionResponse, P
 
     protected override async Task BeforeUpdateAsync(int id, PermissionUpdateRequest request, Permission entity)
     {
+        EnsureSystemPermissionRules(entity, request.Code, request.IsActive);
         await EnsureUniqueCodeAsync(request.Code, id);
         await RotateIfTokenRelevantChangeAsync(entity, request.Code, request.IsActive);
     }
 
     protected override async Task BeforePatchAsync(int id, PermissionPatchRequest request, Permission entity)
     {
+        EnsureSystemPermissionRules(entity, request.Code ?? entity.Code, request.IsActive ?? entity.IsActive);
         if (request.Code != null)
         {
             await EnsureUniqueCodeAsync(request.Code, id);
         }
 
         await RotateIfTokenRelevantChangeAsync(entity, request.Code ?? entity.Code, request.IsActive ?? entity.IsActive);
+    }
+
+    public override async Task DeleteAsync(int id)
+    {
+        var entity = await DbSet.FirstOrDefaultAsync(item => item.Id == id)
+            ?? throw new KeyNotFoundException($"{nameof(Permission)} with id {id} was not found.");
+
+        if (entity.IsSystem)
+        {
+            throw new ClientException("System permissions cannot be deleted.");
+        }
+
+        if (await _dbContext.UserRolePermissions.AnyAsync(item => item.PermissionId == id))
+        {
+            throw new ClientException("The permission cannot be deleted because it is assigned to a user role.");
+        }
+
+        DbSet.Remove(entity);
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private static void EnsureSystemPermissionRules(Permission entity, string newCode, bool newIsActive)
+    {
+        if (!entity.IsSystem)
+        {
+            return;
+        }
+
+        if (!string.Equals(entity.Code, newCode, StringComparison.Ordinal))
+        {
+            throw new ClientException("The code of a system permission cannot be changed.");
+        }
+
+        if (!newIsActive)
+        {
+            throw new ClientException("A system permission cannot be deactivated.");
+        }
     }
 
     private async Task RotateIfTokenRelevantChangeAsync(Permission entity, string newCode, bool newIsActive)

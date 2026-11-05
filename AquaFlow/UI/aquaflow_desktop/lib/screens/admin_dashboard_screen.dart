@@ -21,6 +21,7 @@ import 'package:aquaflow_desktop/screens/admin_notifications_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_payments_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_support_ticket_detail_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_support_tickets_screen.dart';
+import 'package:aquaflow_desktop/screens/admin_roles_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_tariffs_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_users_screen.dart';
 import 'package:aquaflow_desktop/screens/admin_water_meter_requests_screen.dart';
@@ -295,6 +296,12 @@ List<_AdminNavEntry> _buildNavEntries(
           selectedIcon: Icons.list_alt,
           label: loc.statusCodebooksNavLabel,
           builder: (_) => const AdminStatusCodebooksScreen(),
+        ),
+        _AdminNavItem(
+          icon: Icons.admin_panel_settings_outlined,
+          selectedIcon: Icons.admin_panel_settings,
+          label: loc.rolesPermissionsNavLabel,
+          builder: (_) => const AdminRolesScreen(),
         ),
         _AdminNavItem(
           icon: Icons.business_outlined,

@@ -1537,4 +1537,94 @@ class AppLocalizationsEn extends AppLocalizations {
   String reportsSavedTo(String path) {
     return 'Saved: $path';
   }
+
+  @override
+  String get rolesPermissionsNavLabel => 'Roles and permissions';
+
+  @override
+  String get rolesPermissionsSubtitle =>
+      'Manage roles, permissions and their assignments.';
+
+  @override
+  String get rolesTabRoles => 'Roles';
+
+  @override
+  String get rolesTabPermissions => 'Permissions';
+
+  @override
+  String get moduleColumnLabel => 'Module';
+
+  @override
+  String get systemColumnLabel => 'System';
+
+  @override
+  String get systemBadgeLabel => 'System';
+
+  @override
+  String get newRoleButtonLabel => 'New role';
+
+  @override
+  String get editRoleDialogTitle => 'Edit role';
+
+  @override
+  String get newPermissionButtonLabel => 'New permission';
+
+  @override
+  String get editPermissionDialogTitle => 'Edit permission';
+
+  @override
+  String get systemItemLockedHint =>
+      'System item: this field cannot be changed.';
+
+  @override
+  String get rolePermissionsAction => 'Permissions';
+
+  @override
+  String get rolePermissionsDialogTitle => 'Role permissions';
+
+  @override
+  String get rolePermissionsDialogHint =>
+      'Changes apply immediately. Users with this role are refreshed silently.';
+
+  @override
+  String get roleCreatedSuccess => 'Role added.';
+
+  @override
+  String get roleSavedSuccess => 'Role saved.';
+
+  @override
+  String get roleDeletedSuccess => 'Role deleted.';
+
+  @override
+  String get permissionCreatedSuccess => 'Permission added.';
+
+  @override
+  String get permissionSavedSuccess => 'Permission saved.';
+
+  @override
+  String get permissionDeletedSuccess => 'Permission deleted.';
+
+  @override
+  String get deleteRoleDialogTitle => 'Delete role';
+
+  @override
+  String get deleteRoleDialogContent =>
+      'Are you sure you want to delete this role? Deletion is not possible while users have this role.';
+
+  @override
+  String get deletePermissionDialogTitle => 'Delete permission';
+
+  @override
+  String get deletePermissionDialogContent =>
+      'Are you sure you want to delete this permission? Deletion is not possible while it is assigned to a role.';
+
+  @override
+  String get noRolesMessage => 'No roles.';
+
+  @override
+  String get noPermissionsMessage => 'No permissions.';
+
+  @override
+  String get rolesPermissionsEmptyFilteredMessage =>
+      'No results match the selected filters.';
 }

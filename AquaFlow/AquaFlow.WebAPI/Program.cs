@@ -251,7 +251,8 @@ builder.Services.AddScoped<ICryptoService, CryptoService>();
 AddPatchMapping<UserPatchRequest, User>();
 builder.Services.AddScoped<IBaseCRUDService<UserResponse, UserSearchObject, UserInsertRequest, UserUpdateRequest, UserPatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IUserService>());
-AddCrud<UserRole, UserRoleResponse, UserRoleSearchObject, UserRoleInsertRequest, UserRoleUpdateRequest, UserRolePatchRequest>();
+AddPatchMapping<UserRolePatchRequest, UserRole>();
+builder.Services.AddScoped<IBaseCRUDService<UserRoleResponse, UserRoleSearchObject, UserRoleInsertRequest, UserRoleUpdateRequest, UserRolePatchRequest>, UserRoleService>();
 AddPatchMapping<PermissionPatchRequest, Permission>();
 builder.Services.AddScoped<IBaseCRUDService<PermissionResponse, PermissionSearchObject, PermissionInsertRequest, PermissionUpdateRequest, PermissionPatchRequest>, PermissionService>();
 AddPatchMapping<UserRolePermissionPatchRequest, UserRolePermission>();

@@ -2895,6 +2895,174 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Sačuvano: {path}'**
   String reportsSavedTo(String path);
+
+  /// No description provided for @rolesPermissionsNavLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Role i dozvole'**
+  String get rolesPermissionsNavLabel;
+
+  /// No description provided for @rolesPermissionsSubtitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upravljanje rolama, dozvolama i njihovim dodjelama.'**
+  String get rolesPermissionsSubtitle;
+
+  /// No description provided for @rolesTabRoles.
+  ///
+  /// In bs, this message translates to:
+  /// **'Role'**
+  String get rolesTabRoles;
+
+  /// No description provided for @rolesTabPermissions.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvole'**
+  String get rolesTabPermissions;
+
+  /// No description provided for @moduleColumnLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Modul'**
+  String get moduleColumnLabel;
+
+  /// No description provided for @systemColumnLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Sistemska'**
+  String get systemColumnLabel;
+
+  /// No description provided for @systemBadgeLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Sistemska'**
+  String get systemBadgeLabel;
+
+  /// No description provided for @newRoleButtonLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova rola'**
+  String get newRoleButtonLabel;
+
+  /// No description provided for @editRoleDialogTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Uredi rolu'**
+  String get editRoleDialogTitle;
+
+  /// No description provided for @newPermissionButtonLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova dozvola'**
+  String get newPermissionButtonLabel;
+
+  /// No description provided for @editPermissionDialogTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Uredi dozvolu'**
+  String get editPermissionDialogTitle;
+
+  /// No description provided for @systemItemLockedHint.
+  ///
+  /// In bs, this message translates to:
+  /// **'Sistemska stavka: ovo polje se ne može mijenjati.'**
+  String get systemItemLockedHint;
+
+  /// No description provided for @rolePermissionsAction.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvole'**
+  String get rolePermissionsAction;
+
+  /// No description provided for @rolePermissionsDialogTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvole role'**
+  String get rolePermissionsDialogTitle;
+
+  /// No description provided for @rolePermissionsDialogHint.
+  ///
+  /// In bs, this message translates to:
+  /// **'Promjena se primjenjuje odmah. Korisnici sa ovom rolom će se tiho osvježiti.'**
+  String get rolePermissionsDialogHint;
+
+  /// No description provided for @roleCreatedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Rola je dodana.'**
+  String get roleCreatedSuccess;
+
+  /// No description provided for @roleSavedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Rola je sačuvana.'**
+  String get roleSavedSuccess;
+
+  /// No description provided for @roleDeletedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Rola je obrisana.'**
+  String get roleDeletedSuccess;
+
+  /// No description provided for @permissionCreatedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvola je dodana.'**
+  String get permissionCreatedSuccess;
+
+  /// No description provided for @permissionSavedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvola je sačuvana.'**
+  String get permissionSavedSuccess;
+
+  /// No description provided for @permissionDeletedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvola je obrisana.'**
+  String get permissionDeletedSuccess;
+
+  /// No description provided for @deleteRoleDialogTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obriši rolu'**
+  String get deleteRoleDialogTitle;
+
+  /// No description provided for @deleteRoleDialogContent.
+  ///
+  /// In bs, this message translates to:
+  /// **'Da li ste sigurni da želite obrisati ovu rolu? Brisanje nije moguće ako postoje korisnici sa tom rolom.'**
+  String get deleteRoleDialogContent;
+
+  /// No description provided for @deletePermissionDialogTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obriši dozvolu'**
+  String get deletePermissionDialogTitle;
+
+  /// No description provided for @deletePermissionDialogContent.
+  ///
+  /// In bs, this message translates to:
+  /// **'Da li ste sigurni da želite obrisati ovu dozvolu? Brisanje nije moguće ako je dodijeljena nekoj roli.'**
+  String get deletePermissionDialogContent;
+
+  /// No description provided for @noRolesMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema rola.'**
+  String get noRolesMessage;
+
+  /// No description provided for @noPermissionsMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema dozvola.'**
+  String get noPermissionsMessage;
+
+  /// No description provided for @rolesPermissionsEmptyFilteredMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema rezultata za odabrane filtere.'**
+  String get rolesPermissionsEmptyFilteredMessage;
 }
 
 class _AppLocalizationsDelegate

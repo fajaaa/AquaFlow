@@ -3870,6 +3870,9 @@ namespace AquaFlow.Services.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Module")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -3895,6 +3898,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows reading user accounts.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Users",
                             Name = "View users"
                         },
@@ -3905,6 +3909,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting user accounts.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Users",
                             Name = "Manage users"
                         },
@@ -3915,6 +3920,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows collectors to create and update meter readings.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "MeterReadings",
                             Name = "Manage meter readings"
                         },
@@ -3925,6 +3931,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows reading invoices.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Invoices",
                             Name = "View invoices"
                         },
@@ -3935,6 +3942,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows reading payment records.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Payments",
                             Name = "View payments"
                         },
@@ -3945,6 +3953,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows managing fault reports and related work.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "FaultReports",
                             Name = "Manage fault reports"
                         },
@@ -3955,6 +3964,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows publishing and updating notifications.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Notifications",
                             Name = "Manage notifications"
                         },
@@ -3965,6 +3975,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows managing user roles, permissions, and their assignments.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Roles",
                             Name = "Manage roles and permissions"
                         },
@@ -3975,6 +3986,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows assigning and rejecting water meter requests.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "WaterMeterRequests",
                             Name = "Manage water meter requests"
                         },
@@ -3985,6 +3997,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting settlements and service locations.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Locations",
                             Name = "Manage locations"
                         },
@@ -3995,6 +4008,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting tariffs.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Tariffs",
                             Name = "Manage tariffs"
                         },
@@ -4005,6 +4019,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows issuing, cancelling, and recording payments against invoices.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Invoices",
                             Name = "Manage invoices"
                         },
@@ -4015,6 +4030,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows viewing and editing company-wide settings.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "CompanySettings",
                             Name = "Manage company settings"
                         },
@@ -4025,6 +4041,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows viewing and editing payment gateway settings.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "PaymentSettings",
                             Name = "Manage payment settings"
                         },
@@ -4035,6 +4052,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows reading the security/activity audit trail for all users.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "ActivityLogs",
                             Name = "Pregled aktivnosti korisnika"
                         },
@@ -4045,6 +4063,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows reading and responding to customer support tickets.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "SupportTickets",
                             Name = "Manage support tickets"
                         },
@@ -4055,6 +4074,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting customer profiles.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Customers",
                             Name = "Manage customers"
                         },
@@ -4065,6 +4085,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting collector profiles.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Collectors",
                             Name = "Manage collectors"
                         },
@@ -4075,6 +4096,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting water meters.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "WaterMeters",
                             Name = "Manage water meters"
                         },
@@ -4085,6 +4107,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows a customer to check out and pay their own issued invoices.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Invoices",
                             Name = "Pay own invoices"
                         },
@@ -4095,6 +4118,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows viewing, resolving, and recomputing water consumption anomaly alerts.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "ConsumptionAlerts",
                             Name = "Manage consumption alerts"
                         },
@@ -4105,6 +4129,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows viewing company-wide dashboard statistics (revenue, invoices, consumption, fault reports, user growth).",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Dashboard",
                             Name = "View dashboard"
                         },
@@ -4115,6 +4140,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting codebook values (statuses, payment methods, notification and alert types).",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Codebooks",
                             Name = "Manage codebooks"
                         });
@@ -4948,6 +4974,9 @@ namespace AquaFlow.Services.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -4967,6 +4996,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "System administrator with full access.",
                             IsActive = true,
+                            IsSystem = true,
                             Name = "Admin"
                         },
                         new
@@ -4975,6 +5005,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Field collector responsible for meter readings.",
                             IsActive = true,
+                            IsSystem = true,
                             Name = "Collector"
                         },
                         new
@@ -4983,6 +5014,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Customer portal user.",
                             IsActive = true,
+                            IsSystem = true,
                             Name = "Customer"
                         });
                 });

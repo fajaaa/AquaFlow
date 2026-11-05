@@ -505,5 +505,33 @@
         "type": "String"
       }
     }
-  }
+  },
+  "rolesPermissionsNavLabel": "Roles and permissions",
+  "rolesPermissionsSubtitle": "Manage roles, permissions and their assignments.",
+  "rolesTabRoles": "Roles",
+  "rolesTabPermissions": "Permissions",
+  "moduleColumnLabel": "Module",
+  "systemColumnLabel": "System",
+  "systemBadgeLabel": "System",
+  "newRoleButtonLabel": "New role",
+  "editRoleDialogTitle": "Edit role",
+  "newPermissionButtonLabel": "New permission",
+  "editPermissionDialogTitle": "Edit permission",
+  "systemItemLockedHint": "System item: this field cannot be changed.",
+  "rolePermissionsAction": "Permissions",
+  "rolePermissionsDialogTitle": "Role permissions",
+  "rolePermissionsDialogHint": "Changes apply immediately. Users with this role are refreshed silently.",
+  "roleCreatedSuccess": "Role added.",
+  "roleSavedSuccess": "Role saved.",
+  "roleDeletedSuccess": "Role deleted.",
+  "permissionCreatedSuccess": "Permission added.",
+  "permissionSavedSuccess": "Permission saved.",
+  "permissionDeletedSuccess": "Permission deleted.",
+  "deleteRoleDialogTitle": "Delete role",
+  "deleteRoleDialogContent": "Are you sure you want to delete this role? Deletion is not possible while users have this role.",
+  "deletePermissionDialogTitle": "Delete permission",
+  "deletePermissionDialogContent": "Are you sure you want to delete this permission? Deletion is not possible while it is assigned to a role.",
+  "noRolesMessage": "No roles.",
+  "noPermissionsMessage": "No permissions.",
+  "rolesPermissionsEmptyFilteredMessage": "No results match the selected filters."
 }

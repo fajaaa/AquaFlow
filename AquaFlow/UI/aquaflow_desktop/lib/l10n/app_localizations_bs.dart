@@ -1533,4 +1533,94 @@ class AppLocalizationsBs extends AppLocalizations {
   String reportsSavedTo(String path) {
     return 'Sačuvano: $path';
   }
+
+  @override
+  String get rolesPermissionsNavLabel => 'Role i dozvole';
+
+  @override
+  String get rolesPermissionsSubtitle =>
+      'Upravljanje rolama, dozvolama i njihovim dodjelama.';
+
+  @override
+  String get rolesTabRoles => 'Role';
+
+  @override
+  String get rolesTabPermissions => 'Dozvole';
+
+  @override
+  String get moduleColumnLabel => 'Modul';
+
+  @override
+  String get systemColumnLabel => 'Sistemska';
+
+  @override
+  String get systemBadgeLabel => 'Sistemska';
+
+  @override
+  String get newRoleButtonLabel => 'Nova rola';
+
+  @override
+  String get editRoleDialogTitle => 'Uredi rolu';
+
+  @override
+  String get newPermissionButtonLabel => 'Nova dozvola';
+
+  @override
+  String get editPermissionDialogTitle => 'Uredi dozvolu';
+
+  @override
+  String get systemItemLockedHint =>
+      'Sistemska stavka: ovo polje se ne može mijenjati.';
+
+  @override
+  String get rolePermissionsAction => 'Dozvole';
+
+  @override
+  String get rolePermissionsDialogTitle => 'Dozvole role';
+
+  @override
+  String get rolePermissionsDialogHint =>
+      'Promjena se primjenjuje odmah. Korisnici sa ovom rolom će se tiho osvježiti.';
+
+  @override
+  String get roleCreatedSuccess => 'Rola je dodana.';
+
+  @override
+  String get roleSavedSuccess => 'Rola je sačuvana.';
+
+  @override
+  String get roleDeletedSuccess => 'Rola je obrisana.';
+
+  @override
+  String get permissionCreatedSuccess => 'Dozvola je dodana.';
+
+  @override
+  String get permissionSavedSuccess => 'Dozvola je sačuvana.';
+
+  @override
+  String get permissionDeletedSuccess => 'Dozvola je obrisana.';
+
+  @override
+  String get deleteRoleDialogTitle => 'Obriši rolu';
+
+  @override
+  String get deleteRoleDialogContent =>
+      'Da li ste sigurni da želite obrisati ovu rolu? Brisanje nije moguće ako postoje korisnici sa tom rolom.';
+
+  @override
+  String get deletePermissionDialogTitle => 'Obriši dozvolu';
+
+  @override
+  String get deletePermissionDialogContent =>
+      'Da li ste sigurni da želite obrisati ovu dozvolu? Brisanje nije moguće ako je dodijeljena nekoj roli.';
+
+  @override
+  String get noRolesMessage => 'Nema rola.';
+
+  @override
+  String get noPermissionsMessage => 'Nema dozvola.';
+
+  @override
+  String get rolesPermissionsEmptyFilteredMessage =>
+      'Nema rezultata za odabrane filtere.';
 }
