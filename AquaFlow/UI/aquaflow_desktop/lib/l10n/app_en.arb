@@ -171,6 +171,8 @@
   "collectorCreatedSuccess": "Collector added.",
   "collectorProfileSavedSuccess": "Collector profile saved.",
   "collectorsEmptyMessage": "No collector profiles.",
+  "collectorsSearchHint": "Name, email or employee code",
+  "collectorsEmptyFilteredMessage": "No collectors match the current filters.",
   "collectorCodeColumnLabel": "Collector code",
   "editProfileTooltip": "Edit profile",
   "collectorCodeGeneratedHint": "The collector code is generated automatically after saving, e.g. COL-0002.",

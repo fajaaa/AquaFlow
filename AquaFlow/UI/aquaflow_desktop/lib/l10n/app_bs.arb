@@ -676,6 +676,8 @@
     "description": "Snackbar message shown after a collector profile is saved."
   },
   "collectorsEmptyMessage": "Nema profila inkasanata.",
+  "collectorsSearchHint": "Ime, email ili šifra radnika",
+  "collectorsEmptyFilteredMessage": "Nema inkasanata za odabrane filtere.",
   "@collectorsEmptyMessage": {
     "description": "Empty-state message on the 'Inkasanti' screen when there are no rows."
   },

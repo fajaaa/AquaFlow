@@ -1028,6 +1028,18 @@ abstract class AppLocalizations {
   /// **'Nema profila inkasanata.'**
   String get collectorsEmptyMessage;
 
+  /// No description provided for @collectorsSearchHint.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ime, email ili šifra radnika'**
+  String get collectorsSearchHint;
+
+  /// No description provided for @collectorsEmptyFilteredMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema inkasanata za odabrane filtere.'**
+  String get collectorsEmptyFilteredMessage;
+
   /// Table column header for a collector's employee code.
   ///
   /// In bs, this message translates to:

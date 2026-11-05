@@ -23,6 +23,7 @@ class AdminConsumptionAlertService {
   Future<AdminConsumptionAlertPage> fetch({
     required int page,
     required int pageSize,
+    bool? isResolved,
   }) async {
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/WaterConsumptionAlerts',
@@ -33,6 +34,7 @@ class AdminConsumptionAlertService {
         'IncludeTotalCount': 'true',
         'SortBy': 'CreatedAt',
         'SortDescending': 'true',
+        if (isResolved != null) 'IsResolved': '$isResolved',
       },
     );
 

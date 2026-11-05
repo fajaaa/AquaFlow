@@ -95,6 +95,38 @@ public class WaterConsumptionAlertService
         return created.Select(alert => Mapper.Map<WaterConsumptionAlertResponse>(alert)).ToList();
     }
 
+    protected override IQueryable<WaterConsumptionAlert> ApplyFilters(IQueryable<WaterConsumptionAlert> query, WaterConsumptionAlertSearchObject? search)
+    {
+        if (search == null)
+        {
+            return query;
+        }
+
+        if (search.CustomerId.HasValue)
+        {
+            query = query.Where(alert => alert.CustomerId == search.CustomerId.Value);
+        }
+
+        if (search.WaterMeterId.HasValue)
+        {
+            query = query.Where(alert => alert.WaterMeterId == search.WaterMeterId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search.AlertType))
+        {
+            var alertType = search.AlertType.Trim();
+            query = query.Where(alert => alert.AlertType == alertType);
+        }
+
+        if (search.IsResolved.HasValue)
+        {
+            var isResolved = search.IsResolved.Value;
+            query = query.Where(alert => alert.IsResolved == isResolved);
+        }
+
+        return query;
+    }
+
     protected override IQueryable<WaterConsumptionAlert> IncludeForRead(IQueryable<WaterConsumptionAlert> query) =>
         query.Include(a => a.Customer).Include(a => a.WaterMeter);
 

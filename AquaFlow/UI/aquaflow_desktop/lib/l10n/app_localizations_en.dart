@@ -510,6 +510,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectorsEmptyMessage => 'No collector profiles.';
 
   @override
+  String get collectorsSearchHint => 'Name, email or employee code';
+
+  @override
+  String get collectorsEmptyFilteredMessage =>
+      'No collectors match the current filters.';
+
+  @override
   String get collectorCodeColumnLabel => 'Collector code';
 
   @override

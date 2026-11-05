@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -27,6 +28,8 @@ class AdminCollectorsScreen extends StatefulWidget {
 class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
     with PagedListController<AdminCollectorProfile, AdminCollectorsScreen> {
   final AdminCollectorService _service = AdminCollectorService();
+  Timer? _filterDebounce;
+  bool? _activeFilter;
 
   @override
   void initState() {
@@ -34,12 +37,42 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
     load();
   }
 
+  void _onSearchChanged(String _) {
+    setState(() {});
+    _filterDebounce?.cancel();
+    _filterDebounce = Timer(
+      const Duration(milliseconds: 400),
+      () => load(resetPage: true),
+    );
+  }
+
+  void _clearSearchField() {
+    _filterDebounce?.cancel();
+    searchController.clear();
+    setState(() {});
+    load(resetPage: true);
+  }
+
+  void _setActiveFilter(String value) {
+    final selected = value == 'active'
+        ? true
+        : (value == 'inactive' ? false : null);
+    if (selected == _activeFilter) return;
+    setState(() => _activeFilter = selected);
+    load(resetPage: true);
+  }
+
+  bool get _hasFilters =>
+      searchController.text.trim().isNotEmpty || _activeFilter != null;
+
   @override
   Future<({List<AdminCollectorProfile> items, int totalCount})>
   fetchPage() async {
     final pageData = await _service.fetchCollectors(
       page: page,
       pageSize: pageSize,
+      term: searchController.text,
+      isActive: _activeFilter,
     );
     return (items: pageData.items, totalCount: pageData.totalCount);
   }
@@ -141,9 +174,71 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
 
   @override
   void dispose() {
+    _filterDebounce?.cancel();
     disposeController();
     _service.dispose();
     super.dispose();
+  }
+
+  Widget _buildFilters(AppLocalizations loc) {
+    final activeValue = _activeFilter == null
+        ? ''
+        : (_activeFilter! ? 'active' : 'inactive');
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 0, 28, 12),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          SizedBox(
+            width: 320,
+            child: TextField(
+              controller: searchController,
+              textInputAction: TextInputAction.search,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                labelText: loc.commonSearch,
+                hintText: loc.collectorsSearchHint,
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: searchController.text.trim().isNotEmpty
+                    ? IconButton(
+                        tooltip: loc.clearSearchTooltip,
+                        onPressed: _clearSearchField,
+                        icon: const Icon(Icons.clear),
+                      )
+                    : null,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 200,
+            child: DropdownButtonFormField<String>(
+              initialValue: activeValue,
+              decoration: InputDecoration(
+                labelText: loc.statusFieldLabel,
+                prefixIcon: const Icon(Icons.toggle_on_outlined),
+              ),
+              items: [
+                DropdownMenuItem(value: '', child: Text(loc.allOption)),
+                DropdownMenuItem(
+                  value: 'active',
+                  child: Text(loc.statusActive),
+                ),
+                DropdownMenuItem(
+                  value: 'inactive',
+                  child: Text(loc.statusInactive),
+                ),
+              ],
+              onChanged: mutating
+                  ? null
+                  : (value) => _setActiveFilter(value ?? ''),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -169,6 +264,7 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
               ],
             ),
           ),
+          _buildFilters(loc),
           if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent(loc)),
@@ -200,7 +296,9 @@ class _AdminCollectorsScreenState extends State<AdminCollectorsScreen>
     if (items.isEmpty) {
       return EmptyStateView(
         icon: Icons.assignment_ind_outlined,
-        message: loc.collectorsEmptyMessage,
+        message: _hasFilters
+            ? loc.collectorsEmptyFilteredMessage
+            : loc.collectorsEmptyMessage,
       );
     }
 

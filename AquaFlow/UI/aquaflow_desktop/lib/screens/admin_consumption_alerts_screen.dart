@@ -29,16 +29,72 @@ class _AdminConsumptionAlertsScreenState
         > {
   final AdminConsumptionAlertService _service = AdminConsumptionAlertService();
 
+  // Default view: unresolved alerts only. null = all.
+  bool? _resolvedFilter = false;
+
   @override
   void initState() {
     super.initState();
     load();
   }
 
+  void _setResolvedFilter(String value) {
+    final selected = switch (value) {
+      'resolved' => true,
+      'open' => false,
+      _ => null,
+    };
+    if (selected == _resolvedFilter) return;
+    setState(() => _resolvedFilter = selected);
+    load(resetPage: true);
+  }
+
+  Widget _buildFilters(AppLocalizations loc) {
+    final value = switch (_resolvedFilter) {
+      false => 'open',
+      true => 'resolved',
+      null => 'all',
+    };
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 0, 28, 12),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: 220,
+          child: DropdownButtonFormField<String>(
+            initialValue: value,
+            decoration: InputDecoration(
+              labelText: loc.statusFieldLabel,
+              prefixIcon: const Icon(Icons.toggle_on_outlined),
+            ),
+            items: [
+              DropdownMenuItem(
+                value: 'open',
+                child: Text(loc.unresolvedStatusLabel),
+              ),
+              DropdownMenuItem(
+                value: 'resolved',
+                child: Text(loc.resolvedStatusLabel),
+              ),
+              DropdownMenuItem(value: 'all', child: Text(loc.allOption)),
+            ],
+            onChanged: mutating
+                ? null
+                : (selected) => _setResolvedFilter(selected ?? 'all'),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Future<({List<AdminConsumptionAlert> items, int totalCount})>
   fetchPage() async {
-    final pageData = await _service.fetch(page: page, pageSize: pageSize);
+    final pageData = await _service.fetch(
+      page: page,
+      pageSize: pageSize,
+      isResolved: _resolvedFilter,
+    );
     return (items: pageData.items, totalCount: pageData.totalCount);
   }
 
@@ -61,6 +117,12 @@ class _AdminConsumptionAlertsScreenState
       () => _service.markAsResolved(alert.id),
       AppLocalizations.of(context).alertMarkedResolvedSuccess,
     );
+    // runMutation reloads the current page; if the resolved item was the last
+    // one on a trailing page of the Neriješeni view, step back one page.
+    if (mounted && items.isEmpty && page > 1 && error == null) {
+      setState(() => page = page - 1);
+      await load();
+    }
   }
 
   @override
@@ -93,6 +155,7 @@ class _AdminConsumptionAlertsScreenState
               ],
             ),
           ),
+          _buildFilters(loc),
           if ((loading && !isInitialLoad) || mutating)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent(loc)),

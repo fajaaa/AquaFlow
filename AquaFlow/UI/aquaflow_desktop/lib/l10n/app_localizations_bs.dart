@@ -508,6 +508,13 @@ class AppLocalizationsBs extends AppLocalizations {
   String get collectorsEmptyMessage => 'Nema profila inkasanata.';
 
   @override
+  String get collectorsSearchHint => 'Ime, email ili šifra radnika';
+
+  @override
+  String get collectorsEmptyFilteredMessage =>
+      'Nema inkasanata za odabrane filtere.';
+
+  @override
   String get collectorCodeColumnLabel => 'Šifra inkasanta';
 
   @override

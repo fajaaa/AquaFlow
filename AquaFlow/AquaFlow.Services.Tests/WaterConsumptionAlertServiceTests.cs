@@ -1,5 +1,6 @@
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
+using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.Forecasting;
 using AquaFlow.Services.Validators;
@@ -61,6 +62,26 @@ public class WaterConsumptionAlertServiceTests
 
         Assert.Empty(created);
         Assert.Empty(await context.WaterConsumptionAlerts.ToListAsync());
+    }
+
+    [Fact]
+    public async Task GetAllAsync_IsResolved_FiltersAlerts()
+    {
+        await using var context = CreateContext();
+        SeedWaterMeter(context, waterMeterId: 1);
+        context.WaterConsumptionAlerts.AddRange(
+            new WaterConsumptionAlert { Id = 1, CustomerId = 1, WaterMeterId = 1, AlertType = "UnusualConsumptionSpike", Message = "open", IsResolved = false },
+            new WaterConsumptionAlert { Id = 2, CustomerId = 1, WaterMeterId = 1, AlertType = "UnusualConsumptionSpike", Message = "done", IsResolved = true });
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var open = await service.GetAllAsync(new WaterConsumptionAlertSearchObject { IsResolved = false });
+        var resolved = await service.GetAllAsync(new WaterConsumptionAlertSearchObject { IsResolved = true });
+        var all = await service.GetAllAsync(new WaterConsumptionAlertSearchObject());
+
+        Assert.Equal(1, Assert.Single(open.Items).Id);
+        Assert.Equal(2, Assert.Single(resolved.Items).Id);
+        Assert.Equal(2, all.Items.Count);
     }
 
     private static AquaFlowDbContext CreateContext()

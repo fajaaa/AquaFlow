@@ -28,14 +28,24 @@ class AdminCollectorService {
   Future<AdminCollectorProfilePage> fetch({
     required int page,
     required int pageSize,
+    String? term,
+    bool? isActive,
   }) {
-    return fetchCollectors(page: page, pageSize: pageSize);
+    return fetchCollectors(
+      page: page,
+      pageSize: pageSize,
+      term: term,
+      isActive: isActive,
+    );
   }
 
   Future<AdminCollectorProfilePage> fetchCollectors({
     int page = 1,
     int pageSize = 10,
+    String? term,
+    bool? isActive,
   }) async {
+    final trimmedTerm = term?.trim() ?? '';
     final uri = Uri.parse('${ApiConfig.baseUrl}/CollectorProfiles').replace(
       queryParameters: {
         'Page': '$page',
@@ -43,6 +53,8 @@ class AdminCollectorService {
         'IncludeTotalCount': 'true',
         'SortBy': 'EmployeeCode',
         'SortDescending': 'true',
+        if (trimmedTerm.isNotEmpty) 'Term': trimmedTerm,
+        if (isActive != null) 'IsActive': '$isActive',
       },
     );
 

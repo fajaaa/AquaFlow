@@ -58,6 +58,39 @@ public class CollectorProfileService
         }
     }
 
+    protected override IQueryable<CollectorProfile> ApplyFilters(IQueryable<CollectorProfile> query, CollectorProfileSearchObject? search)
+    {
+        // Base handles UserId / EmployeeCode (same-named entity properties); Term and IsActive have no
+        // entity counterpart, so they are applied here.
+        query = base.ApplyFilters(query, search);
+        if (search == null)
+        {
+            return query;
+        }
+
+        if (!string.IsNullOrWhiteSpace(search.Term))
+        {
+            var term = search.Term.Trim().ToLower();
+            query = query.Where(profile =>
+                profile.EmployeeCode.ToLower().Contains(term)
+                || (profile.User != null && (
+                    profile.User.Email.ToLower().Contains(term)
+                    || profile.User.FirstName.ToLower().Contains(term)
+                    || profile.User.LastName.ToLower().Contains(term)
+                    || (profile.User.CustomerProfile != null && (
+                        profile.User.CustomerProfile.FirstName.ToLower().Contains(term)
+                        || profile.User.CustomerProfile.LastName.ToLower().Contains(term))))));
+        }
+
+        if (search.IsActive.HasValue)
+        {
+            var isActive = search.IsActive.Value;
+            query = query.Where(profile => profile.User != null && profile.User.IsActive == isActive);
+        }
+
+        return query;
+    }
+
     protected override IQueryable<CollectorProfile> IncludeForRead(IQueryable<CollectorProfile> query)
     {
         return query
