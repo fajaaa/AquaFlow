@@ -275,6 +275,66 @@ namespace AquaFlow.Services.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.ConsumptionAlertTypeLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ConsumptionAlertTypes", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "UnusualConsumptionSpike",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Neuobičajen skok potrošnje",
+                            NameDe = "Ungewöhnlicher Verbrauchsanstieg",
+                            NameEn = "Unusual consumption spike",
+                            SortOrder = 10
+                        });
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.CustomerProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -512,8 +572,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Street")
                         .HasMaxLength(200)
@@ -539,6 +599,8 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("ReportedById");
 
                     b.HasIndex("SettlementId");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("WaterMeterId");
 
@@ -600,6 +662,102 @@ namespace AquaFlow.Services.Migrations
                     b.ToTable("FaultReportPhotos");
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.FaultReportStatusLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FaultReportStatuses", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "New",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Nova",
+                            NameDe = "Neu",
+                            NameEn = "New",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Assigned",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Dodijeljena",
+                            NameDe = "Zugewiesen",
+                            NameEn = "Assigned",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "InProgress",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "U toku",
+                            NameDe = "In Bearbeitung",
+                            NameEn = "In progress",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "Resolved",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Riješena",
+                            NameDe = "Gelöst",
+                            NameEn = "Resolved",
+                            SortOrder = 40
+                        });
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.FaultStatusHistory", b =>
                 {
                     b.Property<int>("Id")
@@ -622,16 +780,16 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("NewStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OldStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -641,6 +799,10 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("ChangedById");
 
                     b.HasIndex("FaultReportId");
+
+                    b.HasIndex("NewStatus");
+
+                    b.HasIndex("OldStatus");
 
                     b.ToTable("FaultStatusHistories");
                 });
@@ -690,8 +852,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<decimal>("Subtotal")
                         .HasColumnType("decimal(18,2)");
@@ -710,6 +872,8 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("WaterMeterId");
 
@@ -1955,16 +2119,16 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("NewStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OldStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1975,7 +2139,95 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasIndex("InvoiceId");
 
+                    b.HasIndex("NewStatus");
+
+                    b.HasIndex("OldStatus");
+
                     b.ToTable("InvoiceStatusHistories");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.InvoiceStatusLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("InvoiceStatuses", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Issued",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Izdana",
+                            NameDe = "Ausgestellt",
+                            NameEn = "Issued",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Paid",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Plaćena",
+                            NameDe = "Bezahlt",
+                            NameEn = "Paid",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Cancelled",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Stornirana",
+                            NameDe = "Storniert",
+                            NameEn = "Cancelled",
+                            SortOrder = 30
+                        });
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.MeterReading", b =>
@@ -2751,8 +3003,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -2760,6 +3012,8 @@ namespace AquaFlow.Services.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedById");
+
+                    b.HasIndex("Type");
 
                     b.ToTable("Notifications");
 
@@ -2858,6 +3112,102 @@ namespace AquaFlow.Services.Migrations
                     b.ToTable("NotificationTemplates");
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.NotificationTypeLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("NotificationTypes", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Info",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Informacija",
+                            NameDe = "Information",
+                            NameEn = "Information",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Billing",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Naplata",
+                            NameDe = "Abrechnung",
+                            NameEn = "Billing",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Warning",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Upozorenje",
+                            NameDe = "Warnung",
+                            NameEn = "Warning",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "PlannedWorks",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Planirani radovi",
+                            NameDe = "Geplante Arbeiten",
+                            NameEn = "Planned works",
+                            SortOrder = 40
+                        });
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.Payment", b =>
                 {
                     b.Property<int>("Id")
@@ -2883,8 +3233,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Provider")
                         .IsRequired()
@@ -2897,8 +3247,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -2908,6 +3258,10 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("InvoiceId");
+
+                    b.HasIndex("PaymentMethod");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("Provider", "ProviderTransactionId")
                         .IsUnique()
@@ -3230,6 +3584,114 @@ namespace AquaFlow.Services.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.PaymentMethodLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PaymentMethods", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Manual",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Ručno evidentirano",
+                            NameDe = "Manuell erfasst",
+                            NameEn = "Manual",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Online",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Online",
+                            NameDe = "Online",
+                            NameEn = "Online",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Cash",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Gotovina",
+                            NameDe = "Bargeld",
+                            NameEn = "Cash",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "BankTransfer",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = false,
+                            Name = "Bankovni transfer",
+                            NameDe = "Banküberweisung",
+                            NameEn = "Bank transfer",
+                            SortOrder = 40
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Code = "Card",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = false,
+                            Name = "Kartica",
+                            NameDe = "Karte",
+                            NameEn = "Card",
+                            SortOrder = 50
+                        });
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.PaymentSettings", b =>
                 {
                     b.Property<int>("Id")
@@ -3285,6 +3747,102 @@ namespace AquaFlow.Services.Migrations
                             IsTestMode = true,
                             UpdatedAt = new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Utc),
                             UpdatedById = 1
+                        });
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.PaymentStatusLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PaymentStatuses", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Pending",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Na čekanju",
+                            NameDe = "Ausstehend",
+                            NameEn = "Pending",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Completed",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Završena",
+                            NameDe = "Abgeschlossen",
+                            NameEn = "Completed",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Failed",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Neuspješna",
+                            NameDe = "Fehlgeschlagen",
+                            NameEn = "Failed",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "Refunded",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Refundirana",
+                            NameDe = "Erstattet",
+                            NameEn = "Refunded",
+                            SortOrder = 40
                         });
                 });
 
@@ -3549,6 +4107,16 @@ namespace AquaFlow.Services.Migrations
                             IsActive = true,
                             Module = "Dashboard",
                             Name = "View dashboard"
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Code = "Codebooks.Manage",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows creating, updating, and deleting codebook values (statuses, payment methods, notification and alert types).",
+                            IsActive = true,
+                            Module = "Codebooks",
+                            Name = "Manage codebooks"
                         });
                 });
 
@@ -3841,8 +4409,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Subject")
                         .IsRequired()
@@ -3855,6 +4423,8 @@ namespace AquaFlow.Services.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("SupportTickets");
                 });
@@ -3934,6 +4504,78 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("SupportTicketMessageId");
 
                     b.ToTable("SupportTicketMessagePhotos");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.SupportTicketStatusLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SupportTicketStatuses", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Open",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Otvoren",
+                            NameDe = "Offen",
+                            NameEn = "Open",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Closed",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Zatvoren",
+                            NameDe = "Geschlossen",
+                            NameEn = "Closed",
+                            SortOrder = 20
+                        });
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.SyncOperation", b =>
@@ -4548,6 +5190,13 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 24,
                             UserRoleId = 1
+                        },
+                        new
+                        {
+                            Id = 29,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 25,
+                            UserRoleId = 1
                         });
                 });
 
@@ -4561,8 +5210,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("AlertType")
                         .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -4593,6 +5242,8 @@ namespace AquaFlow.Services.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AlertType");
 
                     b.HasIndex("CustomerId");
 
@@ -4638,8 +5289,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Street")
                         .HasMaxLength(200)
@@ -4653,6 +5304,8 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("SettlementId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("WaterMeters");
 
@@ -4777,8 +5430,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Street")
                         .IsRequired()
@@ -4797,6 +5450,8 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("ResultingWaterMeterId");
 
                     b.HasIndex("SettlementId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("WaterMeterRequests");
                 });
@@ -4820,16 +5475,16 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("NewStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OldStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -4841,9 +5496,205 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasIndex("ChangedById");
 
+                    b.HasIndex("NewStatus");
+
+                    b.HasIndex("OldStatus");
+
                     b.HasIndex("WaterMeterRequestId");
 
                     b.ToTable("WaterMeterRequestStatusHistories");
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterRequestStatusLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WaterMeterRequestStatuses", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Pending",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Na čekanju",
+                            NameDe = "Ausstehend",
+                            NameEn = "Pending",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Assigned",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Dodijeljen",
+                            NameDe = "Zugewiesen",
+                            NameEn = "Assigned",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Registered",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Registrovan",
+                            NameDe = "Registriert",
+                            NameEn = "Registered",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "Rejected",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Odbijen",
+                            NameDe = "Abgelehnt",
+                            NameEn = "Rejected",
+                            SortOrder = 40
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Code = "Cancelled",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Otkazan",
+                            NameDe = "Storniert",
+                            NameEn = "Cancelled",
+                            SortOrder = 50
+                        });
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterStatusLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WaterMeterStatuses", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Active",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Aktivan",
+                            NameDe = "Aktiv",
+                            NameEn = "Active",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Inactive",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Neaktivan",
+                            NameDe = "Inaktiv",
+                            NameEn = "Inactive",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Removed",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Uklonjen",
+                            NameDe = "Entfernt",
+                            NameEn = "Removed",
+                            SortOrder = 30
+                        });
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.WorkOrder", b =>
@@ -4989,6 +5840,13 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AquaFlow.Services.Database.FaultReportStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AquaFlow.Services.Database.WaterMeter", "WaterMeter")
                         .WithMany("FaultReports")
                         .HasForeignKey("WaterMeterId")
@@ -5030,6 +5888,20 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AquaFlow.Services.Database.FaultReportStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("NewStatus")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.FaultReportStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("OldStatus")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("ChangedBy");
 
                     b.Navigation("FaultReport");
@@ -5046,6 +5918,13 @@ namespace AquaFlow.Services.Migrations
                     b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
                         .WithMany("Invoices")
                         .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.InvoiceStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -5092,6 +5971,20 @@ namespace AquaFlow.Services.Migrations
                     b.HasOne("AquaFlow.Services.Database.Invoice", "Invoice")
                         .WithMany("StatusHistory")
                         .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.InvoiceStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("NewStatus")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.InvoiceStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("OldStatus")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -5152,6 +6045,13 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AquaFlow.Services.Database.NotificationTypeLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Type")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("CreatedBy");
                 });
 
@@ -5177,6 +6077,20 @@ namespace AquaFlow.Services.Migrations
                     b.HasOne("AquaFlow.Services.Database.Invoice", "Invoice")
                         .WithMany("Payments")
                         .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.PaymentMethodLookup", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentMethod")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.PaymentStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -5223,6 +6137,13 @@ namespace AquaFlow.Services.Migrations
                     b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
                         .WithMany("SupportTickets")
                         .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.SupportTicketStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -5332,6 +6253,13 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.WaterConsumptionAlert", b =>
                 {
+                    b.HasOne("AquaFlow.Services.Database.ConsumptionAlertTypeLookup", null)
+                        .WithMany()
+                        .HasForeignKey("AlertType")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
                         .WithMany("WaterConsumptionAlerts")
                         .HasForeignKey("CustomerId")
@@ -5360,6 +6288,13 @@ namespace AquaFlow.Services.Migrations
                     b.HasOne("AquaFlow.Services.Database.Settlement", "Settlement")
                         .WithMany("WaterMeters")
                         .HasForeignKey("SettlementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.WaterMeterStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -5392,6 +6327,13 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AquaFlow.Services.Database.WaterMeterRequestStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("AssignedCollector");
 
                     b.Navigation("Customer");
@@ -5406,6 +6348,20 @@ namespace AquaFlow.Services.Migrations
                     b.HasOne("AquaFlow.Services.Database.User", "ChangedBy")
                         .WithMany()
                         .HasForeignKey("ChangedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.WaterMeterRequestStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("NewStatus")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.WaterMeterRequestStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("OldStatus")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

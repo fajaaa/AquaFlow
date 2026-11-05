@@ -15,7 +15,7 @@ public class WaterMeterRequest : EntityBase
     // String, not int: house numbers like "12A" or "bb" are common in this address format.
     [MaxLength(30)]
     public string HouseNumber { get; set; } = string.Empty;
-    [MaxLength(30)]
+    [MaxLength(50)]
     public string Status { get; set; } = WaterMeterRequestStatus.Pending;
     public int? AssignedCollectorId { get; set; }
     public CollectorProfile? AssignedCollector { get; set; }

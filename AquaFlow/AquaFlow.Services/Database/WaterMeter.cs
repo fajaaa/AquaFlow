@@ -21,7 +21,7 @@ public class WaterMeter : EntityBase
     [MaxLength(30)]
     public string? HouseNumber { get; set; }
     public DateTime InstalledAt { get; set; } = DateTime.UtcNow;
-    [MaxLength(30)]
+    [MaxLength(50)]
     public string Status { get; set; } = "Active";
     [Column(TypeName = "decimal(18,2)")]
     public decimal InitialReading { get; set; }

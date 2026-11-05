@@ -49,6 +49,17 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<WaterMeterRequestStatusHistory> WaterMeterRequestStatusHistories => Set<WaterMeterRequestStatusHistory>();
     public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
 
+    // Codebooks (lookup tables) - see LookupEntityBase and ConfigureLookups.
+    public DbSet<InvoiceStatusLookup> InvoiceStatuses => Set<InvoiceStatusLookup>();
+    public DbSet<PaymentStatusLookup> PaymentStatuses => Set<PaymentStatusLookup>();
+    public DbSet<PaymentMethodLookup> PaymentMethods => Set<PaymentMethodLookup>();
+    public DbSet<FaultReportStatusLookup> FaultReportStatuses => Set<FaultReportStatusLookup>();
+    public DbSet<WaterMeterRequestStatusLookup> WaterMeterRequestStatuses => Set<WaterMeterRequestStatusLookup>();
+    public DbSet<WaterMeterStatusLookup> WaterMeterStatuses => Set<WaterMeterStatusLookup>();
+    public DbSet<SupportTicketStatusLookup> SupportTicketStatuses => Set<SupportTicketStatusLookup>();
+    public DbSet<NotificationTypeLookup> NotificationTypes => Set<NotificationTypeLookup>();
+    public DbSet<ConsumptionAlertTypeLookup> ConsumptionAlertTypes => Set<ConsumptionAlertTypeLookup>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -220,6 +231,61 @@ public partial class AquaFlowDbContext : DbContext
             .Property(log => log.IpAddress)
             .HasMaxLength(45);
 
+        ConfigureLookups(modelBuilder);
+
         CreateSeed(modelBuilder);
+    }
+
+    // Codebook FKs reference the lookup's unique Code (HasPrincipalKey), not its Id, so the
+    // existing string columns stay as they are and the state machines / constant classes keep
+    // writing the same literals - the database now rejects any value that is not in the codebook.
+    private static void ConfigureLookups(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<InvoiceStatusLookup>().ToTable("InvoiceStatuses");
+        modelBuilder.Entity<PaymentStatusLookup>().ToTable("PaymentStatuses");
+        modelBuilder.Entity<PaymentMethodLookup>().ToTable("PaymentMethods");
+        modelBuilder.Entity<FaultReportStatusLookup>().ToTable("FaultReportStatuses");
+        modelBuilder.Entity<WaterMeterRequestStatusLookup>().ToTable("WaterMeterRequestStatuses");
+        modelBuilder.Entity<WaterMeterStatusLookup>().ToTable("WaterMeterStatuses");
+        modelBuilder.Entity<SupportTicketStatusLookup>().ToTable("SupportTicketStatuses");
+        modelBuilder.Entity<NotificationTypeLookup>().ToTable("NotificationTypes");
+        modelBuilder.Entity<ConsumptionAlertTypeLookup>().ToTable("ConsumptionAlertTypes");
+        // Code needs no separate unique index: HasPrincipalKey(Code) below makes it an alternate
+        // key, i.e. a unique constraint.
+
+        modelBuilder.Entity<Invoice>().HasOne<InvoiceStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<InvoiceStatusHistory>().HasOne<InvoiceStatusLookup>().WithMany()
+            .HasForeignKey(x => x.NewStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<InvoiceStatusHistory>().HasOne<InvoiceStatusLookup>().WithMany()
+            .HasForeignKey(x => x.OldStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Payment>().HasOne<PaymentStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Payment>().HasOne<PaymentMethodLookup>().WithMany()
+            .HasForeignKey(x => x.PaymentMethod).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<FaultReport>().HasOne<FaultReportStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<FaultStatusHistory>().HasOne<FaultReportStatusLookup>().WithMany()
+            .HasForeignKey(x => x.NewStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<FaultStatusHistory>().HasOne<FaultReportStatusLookup>().WithMany()
+            .HasForeignKey(x => x.OldStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<WaterMeterRequest>().HasOne<WaterMeterRequestStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<WaterMeterRequestStatusHistory>().HasOne<WaterMeterRequestStatusLookup>().WithMany()
+            .HasForeignKey(x => x.NewStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<WaterMeterRequestStatusHistory>().HasOne<WaterMeterRequestStatusLookup>().WithMany()
+            .HasForeignKey(x => x.OldStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<WaterMeter>().HasOne<WaterMeterStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<SupportTicket>().HasOne<SupportTicketStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Notification>().HasOne<NotificationTypeLookup>().WithMany()
+            .HasForeignKey(x => x.Type).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<WaterConsumptionAlert>().HasOne<ConsumptionAlertTypeLookup>().WithMany()
+            .HasForeignKey(x => x.AlertType).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
     }
 }

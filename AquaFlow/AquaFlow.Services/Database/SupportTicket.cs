@@ -8,7 +8,7 @@ public class SupportTicket : EntityBase
     public CustomerProfile? Customer { get; set; }
     [MaxLength(150)]
     public string Subject { get; set; } = string.Empty;
-    [MaxLength(30)]
+    [MaxLength(50)]
     public string Status { get; set; } = "Open";
     public DateTime? LastMessageAt { get; set; }
     // Denormalized alongside LastMessageAt (same reasoning: the admin ticket list needs to know

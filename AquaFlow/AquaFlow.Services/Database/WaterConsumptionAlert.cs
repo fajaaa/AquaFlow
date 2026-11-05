@@ -9,7 +9,7 @@ public class WaterConsumptionAlert : EntityBase
     public CustomerProfile? Customer { get; set; }
     public int WaterMeterId { get; set; }
     public WaterMeter? WaterMeter { get; set; }
-    [MaxLength(60)]
+    [MaxLength(50)]
     public string AlertType { get; set; } = string.Empty;
     [Column(TypeName = "decimal(18,2)")]
     public decimal MeasuredValue { get; set; }

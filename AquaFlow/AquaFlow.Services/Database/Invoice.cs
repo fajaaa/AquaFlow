@@ -23,7 +23,7 @@ public class Invoice : EntityBase
     public decimal Subtotal { get; set; }
     [Column(TypeName = "decimal(18,2)")]
     public decimal TotalAmount { get; set; }
-    [MaxLength(30)]
+    [MaxLength(50)]
     public string Status { get; set; } = InvoiceStatus.Issued;
     public int CreatedById { get; set; }
     public User? CreatedBy { get; set; }

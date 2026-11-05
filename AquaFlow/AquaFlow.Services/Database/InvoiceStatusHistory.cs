@@ -7,9 +7,9 @@ public class InvoiceStatusHistory : EntityBase
 {
     public int InvoiceId { get; set; }
     public Invoice? Invoice { get; set; }
-    [MaxLength(30)]
+    [MaxLength(50)]
     public string OldStatus { get; set; } = string.Empty;
-    [MaxLength(30)]
+    [MaxLength(50)]
     public string NewStatus { get; set; } = string.Empty;
     public int ChangedById { get; set; }
     public User? ChangedBy { get; set; }

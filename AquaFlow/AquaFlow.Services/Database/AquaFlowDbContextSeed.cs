@@ -29,6 +29,7 @@ public partial class AquaFlowDbContext
         SeedNotifications(modelBuilder);
         SeedUserNotifications(modelBuilder);
         SeedPaymentSettings(modelBuilder);
+        SeedLookups(modelBuilder);
     }
 
     private static void SeedUserRoles(ModelBuilder modelBuilder)
@@ -309,6 +310,17 @@ public partial class AquaFlowDbContext
                 IsActive = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 25,
+                Code = "Codebooks.Manage",
+                Name = "Manage codebooks",
+                Module = "Codebooks",
+                Description = "Allows creating, updating, and deleting codebook values (statuses, payment methods, notification and alert types).",
+                IsActive = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -520,6 +532,14 @@ public partial class AquaFlowDbContext
                 Id = 28,
                 UserRoleId = 1,
                 PermissionId = 24,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 29,
+                UserRoleId = 1,
+                PermissionId = 25,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
@@ -1031,7 +1051,7 @@ public partial class AquaFlowDbContext
                 InvoiceId = reading.ReadingId,
                 CustomerId = meter.CustomerId,
                 Amount = GetInvoiceAmount(reading.Consumption),
-                PaymentMethod = PaymentMethods[(paymentId - 1) % PaymentMethods.Length],
+                PaymentMethod = SeedPaymentMethodCodes[(paymentId - 1) % SeedPaymentMethodCodes.Length],
                 Status = PaymentStatus.Completed,
                 PaidAt = (DateTime?)billingTo.AddHours(2),
                 Provider = PaymentProvider.Manual,
@@ -1045,7 +1065,7 @@ public partial class AquaFlowDbContext
         modelBuilder.Entity<Payment>().HasData(payments);
     }
 
-    private static readonly string[] PaymentMethods = { "BankTransfer", "Card", "Cash" };
+    private static readonly string[] SeedPaymentMethodCodes = { "BankTransfer", "Card", "Cash" };
 
     private static void SeedFaultReports(ModelBuilder modelBuilder)
     {
@@ -1118,5 +1138,82 @@ public partial class AquaFlowDbContext
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)new DateTime(2026, 1, 10, 0, 0, 0, DateTimeKind.Utc)
             });
+    }
+
+    // Codebook rows. Every value the code writes (constant classes, state machines, system
+    // notifications, the consumption alert job) is an IsSystem row, in lifecycle order; Ids are
+    // fixed per table so the seed stays stable across migrations.
+    private static void SeedLookups(ModelBuilder modelBuilder)
+    {
+        SeedLookup<InvoiceStatusLookup>(modelBuilder,
+            (InvoiceStatus.Issued, "Izdana", "Issued", "Ausgestellt", true),
+            (InvoiceStatus.Paid, "Plaćena", "Paid", "Bezahlt", true),
+            (InvoiceStatus.Cancelled, "Stornirana", "Cancelled", "Storniert", true));
+
+        SeedLookup<PaymentStatusLookup>(modelBuilder,
+            (PaymentStatus.Pending, "Na čekanju", "Pending", "Ausstehend", true),
+            (PaymentStatus.Completed, "Završena", "Completed", "Abgeschlossen", true),
+            (PaymentStatus.Failed, "Neuspješna", "Failed", "Fehlgeschlagen", true),
+            (PaymentStatus.Refunded, "Refundirana", "Refunded", "Erstattet", true));
+
+        // BankTransfer and Card are not code constants - only the demo payment seed uses them
+        // (see SeedPaymentMethodCodes) - so they are ordinary, admin-manageable rows.
+        SeedLookup<PaymentMethodLookup>(modelBuilder,
+            (PaymentMethod.Manual, "Ručno evidentirano", "Manual", "Manuell erfasst", true),
+            (PaymentMethod.Online, "Online", "Online", "Online", true),
+            (PaymentMethod.Cash, "Gotovina", "Cash", "Bargeld", true),
+            ("BankTransfer", "Bankovni transfer", "Bank transfer", "Banküberweisung", false),
+            ("Card", "Kartica", "Card", "Karte", false));
+
+        SeedLookup<FaultReportStatusLookup>(modelBuilder,
+            (FaultReportStatus.New, "Nova", "New", "Neu", true),
+            (FaultReportStatus.Assigned, "Dodijeljena", "Assigned", "Zugewiesen", true),
+            (FaultReportStatus.InProgress, "U toku", "In progress", "In Bearbeitung", true),
+            (FaultReportStatus.Resolved, "Riješena", "Resolved", "Gelöst", true));
+
+        SeedLookup<WaterMeterRequestStatusLookup>(modelBuilder,
+            (WaterMeterRequestStatus.Pending, "Na čekanju", "Pending", "Ausstehend", true),
+            (WaterMeterRequestStatus.Assigned, "Dodijeljen", "Assigned", "Zugewiesen", true),
+            (WaterMeterRequestStatus.Registered, "Registrovan", "Registered", "Registriert", true),
+            (WaterMeterRequestStatus.Rejected, "Odbijen", "Rejected", "Abgelehnt", true),
+            (WaterMeterRequestStatus.Cancelled, "Otkazan", "Cancelled", "Storniert", true));
+
+        SeedLookup<WaterMeterStatusLookup>(modelBuilder,
+            (WaterMeterStatus.Active, "Aktivan", "Active", "Aktiv", true),
+            (WaterMeterStatus.Inactive, "Neaktivan", "Inactive", "Inaktiv", true),
+            (WaterMeterStatus.Removed, "Uklonjen", "Removed", "Entfernt", true));
+
+        SeedLookup<SupportTicketStatusLookup>(modelBuilder,
+            (AquaFlow.Model.SupportTicketStatus.Open, "Otvoren", "Open", "Offen", true),
+            (AquaFlow.Model.SupportTicketStatus.Closed, "Zatvoren", "Closed", "Geschlossen", true));
+
+        SeedLookup<NotificationTypeLookup>(modelBuilder,
+            (AquaFlow.Model.NotificationType.Info, "Informacija", "Information", "Information", true),
+            (AquaFlow.Model.NotificationType.Billing, "Naplata", "Billing", "Abrechnung", true),
+            (AquaFlow.Model.NotificationType.Warning, "Upozorenje", "Warning", "Warnung", true),
+            (AquaFlow.Model.NotificationType.PlannedWorks, "Planirani radovi", "Planned works", "Geplante Arbeiten", true));
+
+        SeedLookup<ConsumptionAlertTypeLookup>(modelBuilder,
+            (WaterConsumptionAlertService.UnusualConsumptionSpikeType, "Neuobičajen skok potrošnje", "Unusual consumption spike", "Ungewöhnlicher Verbrauchsanstieg", true));
+    }
+
+    private static void SeedLookup<TLookup>(
+        ModelBuilder modelBuilder,
+        params (string Code, string Name, string NameEn, string NameDe, bool IsSystem)[] rows)
+        where TLookup : LookupEntityBase, new()
+    {
+        modelBuilder.Entity<TLookup>().HasData(rows.Select((row, index) => new TLookup
+        {
+            Id = index + 1,
+            Code = row.Code,
+            Name = row.Name,
+            NameEn = row.NameEn,
+            NameDe = row.NameDe,
+            SortOrder = (index + 1) * 10,
+            IsSystem = row.IsSystem,
+            IsActive = true,
+            CreatedAt = SeedCreatedAt,
+            UpdatedAt = null
+        }).ToArray());
     }
 }

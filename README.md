@@ -42,6 +42,14 @@ access token plus a rotating refresh token. Self-registration always creates a C
 A City → Municipality → Settlement hierarchy backs every address in the system: customer
 profiles, water meters, connection requests and fault reports.
 
+**Status and type codebooks**
+Invoice/payment/fault report/meter request/meter/support ticket statuses, payment methods,
+notification types and consumption alert types are lookup tables (`/InvoiceStatuses`,
+`/PaymentMethods`, ...; read by any signed-in user, edited with `Codebooks.Manage`). Business
+columns keep their string values but are real FKs to each codebook's unique `Code`, so the
+state machines are unchanged and the database rejects unknown values. Seeded system rows cannot
+be deleted or deactivated and cannot change their `Code`; other rows can be deleted only while unused.
+
 **Water meters and readings**
 Collectors search the meter register on site and submit a reading through a dedicated entry
 endpoint. The server validates the reading (minimum 15-day spacing from the last billable

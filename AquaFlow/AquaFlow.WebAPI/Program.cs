@@ -293,6 +293,17 @@ builder.Services.AddScoped<IBaseCRUDService<WaterConsumptionAlertResponse, Water
     serviceProvider => serviceProvider.GetRequiredService<IWaterConsumptionAlertService>());
 AddPatchMapping<TariffPatchRequest, Tariff>();
 builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>, TariffService>();
+// Codebooks (lookup tables): one generic LookupService<T>, a thin subclass per table (LookupServices.cs).
+// No patch mapping: LookupService maps requests by hand.
+builder.Services.AddScoped<ILookupService<InvoiceStatusLookup>, InvoiceStatusLookupService>();
+builder.Services.AddScoped<ILookupService<PaymentStatusLookup>, PaymentStatusLookupService>();
+builder.Services.AddScoped<ILookupService<PaymentMethodLookup>, PaymentMethodLookupService>();
+builder.Services.AddScoped<ILookupService<FaultReportStatusLookup>, FaultReportStatusLookupService>();
+builder.Services.AddScoped<ILookupService<WaterMeterRequestStatusLookup>, WaterMeterRequestStatusLookupService>();
+builder.Services.AddScoped<ILookupService<WaterMeterStatusLookup>, WaterMeterStatusLookupService>();
+builder.Services.AddScoped<ILookupService<SupportTicketStatusLookup>, SupportTicketStatusLookupService>();
+builder.Services.AddScoped<ILookupService<NotificationTypeLookup>, NotificationTypeLookupService>();
+builder.Services.AddScoped<ILookupService<ConsumptionAlertTypeLookup>, ConsumptionAlertTypeLookupService>();
 // Payments:Provider selects which IPaymentProvider is registered ("Manual" by default, or "Stripe");
 // Payments:Currency has no column to persist against and is only surfaced in
 // CheckoutSessionResponse. Adding another provider means adding one case here plus a new

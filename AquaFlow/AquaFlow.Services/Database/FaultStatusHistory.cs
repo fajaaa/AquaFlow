@@ -7,9 +7,9 @@ public class FaultStatusHistory : EntityBase
 {
     public int FaultReportId { get; set; }
     public FaultReport? FaultReport { get; set; }
-    [MaxLength(30)]
+    [MaxLength(50)]
     public string OldStatus { get; set; } = string.Empty;
-    [MaxLength(30)]
+    [MaxLength(50)]
     public string NewStatus { get; set; } = string.Empty;
     public int ChangedById { get; set; }
     public User? ChangedBy { get; set; }

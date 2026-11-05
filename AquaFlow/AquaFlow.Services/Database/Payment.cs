@@ -11,9 +11,9 @@ public class Payment : EntityBase
     public CustomerProfile? Customer { get; set; }
     [Column(TypeName = "decimal(18,2)")]
     public decimal Amount { get; set; }
-    [MaxLength(40)]
+    [MaxLength(50)]
     public string PaymentMethod { get; set; } = string.Empty;
-    [MaxLength(30)]
+    [MaxLength(50)]
     public string Status { get; set; } = "Pending";
     public DateTime? PaidAt { get; set; }
     [MaxLength(40)]

@@ -13,7 +13,7 @@ public class WaterConsumptionAlertService
     : EfCrudService<WaterConsumptionAlert, WaterConsumptionAlertResponse, WaterConsumptionAlertSearchObject, WaterConsumptionAlertInsertRequest, WaterConsumptionAlertUpdateRequest, WaterConsumptionAlertPatchRequest>,
       IWaterConsumptionAlertService
 {
-    private const string UnusualConsumptionSpikeType = "UnusualConsumptionSpike";
+    public const string UnusualConsumptionSpikeType = "UnusualConsumptionSpike";
 
     private readonly IConsumptionForecastingService _forecastingService;
 

@@ -8,7 +8,7 @@ public class Notification : EntityBase
     [MaxLength(150)]
     public string Title { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
-    [MaxLength(40)]
+    [MaxLength(50)]
     public string Type { get; set; } = "Info";
     [MaxLength(40)]
     public string Audience { get; set; } = "All";
