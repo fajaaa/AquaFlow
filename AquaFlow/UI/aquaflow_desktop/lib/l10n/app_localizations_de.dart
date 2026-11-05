@@ -12,247 +12,252 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appTitle => 'AquaFlow';
 
   @override
-  String get commonSave => 'Sačuvaj';
+  String get commonSave => 'Speichern';
 
   @override
-  String get commonCancel => 'Otkaži';
+  String get commonCancel => 'Abbrechen';
 
   @override
-  String get commonDelete => 'Obriši';
+  String get commonDelete => 'Löschen';
 
   @override
-  String get commonEdit => 'Uredi';
+  String get commonEdit => 'Bearbeiten';
 
   @override
-  String get commonRefresh => 'Osvježi';
+  String get commonRefresh => 'Aktualisieren';
 
   @override
-  String get commonSearch => 'Pretraga';
+  String get commonSearch => 'Suchen';
 
   @override
-  String get commonRetry => 'Pokušaj ponovo';
+  String get commonRetry => 'Erneut versuchen';
 
   @override
-  String get commonLogout => 'Odjava';
+  String get commonLogout => 'Abmelden';
 
   @override
-  String get desktopUnavailableTitle => 'Nedostupno na računaru';
+  String get desktopUnavailableTitle => 'Auf dem Desktop nicht verfügbar';
 
   @override
   String get desktopUnavailableMessage =>
-      'Desktop aplikacija je namijenjena samo administratorima. Za vašu ulogu koristite mobilnu aplikaciju.';
+      'Die Desktop-App ist nur für Administratoren gedacht. Verwenden Sie für Ihre Rolle die mobile App.';
 
   @override
-  String get stateLoading => 'Učitavanje...';
+  String get stateLoading => 'Wird geladen...';
 
   @override
-  String get errorGeneric => 'Greška';
+  String get errorGeneric => 'Fehler';
 
   @override
-  String get emptyGeneric => 'Nema podataka';
+  String get emptyGeneric => 'Keine Daten';
 
   @override
   String sectionNotImplementedMessage(String label) {
-    return 'Sekcija \"$label\" još nije implementirana.';
+    return 'Der Bereich „$label“ ist noch nicht implementiert.';
   }
 
   @override
-  String get emptyList => 'Prazna lista';
+  String get emptyList => 'Leere Liste';
 
   @override
-  String get paginationPrevious => 'Prethodna stranica';
+  String get paginationPrevious => 'Vorherige Seite';
 
   @override
-  String get paginationNext => 'Sljedeća stranica';
+  String get paginationNext => 'Nächste Seite';
 
   @override
   String paginationPageOf(int page, int totalPages) {
-    return 'Stranica $page od $totalPages';
+    return 'Seite $page von $totalPages';
   }
 
   @override
   String paginationTotalCount(int count) {
-    return '$count ukupno';
+    return '$count insgesamt';
   }
 
   @override
-  String get commonSaving => 'Spašavanje...';
+  String get commonSaving => 'Wird gespeichert...';
 
   @override
-  String get loginTitle => 'Prijava';
+  String get loginTitle => 'Anmeldung';
 
   @override
-  String get fieldEmailLabel => 'Email';
+  String get fieldEmailLabel => 'E-Mail';
 
   @override
-  String get emailRequiredError => 'Email je obavezan.';
+  String get emailRequiredError => 'E-Mail ist erforderlich.';
 
   @override
-  String get emailInvalidError => 'Unesite ispravan email.';
+  String get emailInvalidError => 'Geben Sie eine gültige E-Mail-Adresse ein.';
 
   @override
-  String get fieldPasswordLabel => 'Lozinka';
+  String get fieldPasswordLabel => 'Passwort';
 
   @override
-  String get passwordRequiredError => 'Lozinka je obavezna.';
+  String get passwordRequiredError => 'Passwort ist erforderlich.';
 
   @override
-  String get loginRememberMe => 'Zapamti me';
+  String get loginRememberMe => 'Angemeldet bleiben';
 
   @override
-  String get welcomeTagline => 'Svaka kap, evidentirana.';
+  String get welcomeTagline => 'Jeder Tropfen erfasst.';
 
   @override
   String get welcomeSubtitle =>
-      'Mali koraci u štednji vode prave velike valove promjena.';
+      'Kleine Schritte beim Wassersparen bewirken große Veränderungen.';
 
   @override
-  String get authLoginButton => 'Prijavi se';
+  String get authLoginButton => 'Anmelden';
 
   @override
-  String get loginFailedError => 'Prijava nije uspjela.';
+  String get loginFailedError => 'Anmeldung fehlgeschlagen.';
 
   @override
-  String get registerTitle => 'Registracija';
+  String get registerTitle => 'Registrierung';
 
   @override
-  String get fieldFirstNameLabel => 'Ime';
+  String get fieldFirstNameLabel => 'Vorname';
 
   @override
-  String get firstNameRequiredError => 'Ime je obavezno.';
+  String get firstNameRequiredError => 'Vorname ist erforderlich.';
 
   @override
-  String get fieldLastNameLabel => 'Prezime';
+  String get fieldLastNameLabel => 'Nachname';
 
   @override
-  String get lastNameRequiredError => 'Prezime je obavezno.';
+  String get lastNameRequiredError => 'Nachname ist erforderlich.';
 
   @override
   String get fieldPhoneLabel => 'Telefon';
 
   @override
   String get phoneInvalidError =>
-      'Telefon smije sadržavati samo brojeve i simbole + - ( ).';
+      'Das Telefon darf nur Ziffern und die Zeichen + - ( ) enthalten.';
 
   @override
-  String get passwordTooShortError => 'Lozinka mora imati najmanje 6 znakova.';
+  String get passwordTooShortError =>
+      'Das Passwort muss mindestens 6 Zeichen lang sein.';
 
   @override
-  String get fieldConfirmPasswordLabel => 'Potvrdi lozinku';
+  String get fieldConfirmPasswordLabel => 'Passwort bestätigen';
 
   @override
-  String get passwordMismatchError => 'Lozinke se ne podudaraju.';
+  String get passwordMismatchError => 'Die Passwörter stimmen nicht überein.';
 
   @override
-  String get registerThemeLabel => 'Tema';
+  String get registerThemeLabel => 'Design';
 
   @override
-  String get themeLightOption => 'Svijetla';
+  String get themeLightOption => 'Hell';
 
   @override
-  String get themeDarkOption => 'Tamna';
+  String get themeDarkOption => 'Dunkel';
 
   @override
-  String get authRegisterButton => 'Registruj se';
+  String get authRegisterButton => 'Registrieren';
 
   @override
-  String get registrationFailedError => 'Registracija nije uspjela.';
+  String get registrationFailedError => 'Registrierung fehlgeschlagen.';
 
   @override
-  String get passwordResetTitle => 'Promjena lozinke';
+  String get passwordResetTitle => 'Passwort ändern';
 
   @override
   String get passwordResetDescription =>
-      'Unesite trenutnu i novu lozinku da biste je promijenili.';
+      'Geben Sie Ihr aktuelles und Ihr neues Passwort ein, um es zu ändern.';
 
   @override
-  String get passwordResetCurrentLabel => 'Trenutna lozinka';
+  String get passwordResetCurrentLabel => 'Aktuelles Passwort';
 
   @override
-  String get passwordResetNewLabel => 'Nova lozinka';
+  String get passwordResetNewLabel => 'Neues Passwort';
 
   @override
-  String get passwordResetConfirmLabel => 'Potvrda nove lozinke';
+  String get passwordResetConfirmLabel => 'Neues Passwort bestätigen';
 
   @override
-  String get passwordResetSubmitButton => 'Promijeni lozinku';
+  String get passwordResetSubmitButton => 'Passwort ändern';
 
   @override
-  String get passwordResetSuccess => 'Lozinka je promijenjena.';
+  String get passwordResetSuccess => 'Passwort geändert.';
 
   @override
-  String get passwordResetCurrentRequiredError => 'Unesite trenutnu lozinku.';
+  String get passwordResetCurrentRequiredError =>
+      'Geben Sie Ihr aktuelles Passwort ein.';
 
   @override
-  String get passwordResetNewRequiredError => 'Unesite novu lozinku.';
+  String get passwordResetNewRequiredError =>
+      'Geben Sie Ihr neues Passwort ein.';
 
   @override
-  String get fieldRequiredError => 'Obavezno polje.';
+  String get fieldRequiredError => 'Pflichtfeld.';
 
   @override
-  String get notLoggedInError => 'Niste prijavljeni.';
+  String get notLoggedInError => 'Nicht angemeldet.';
 
   @override
   String themeSaveFailedError(String message) {
-    return 'Tema nije sačuvana: $message';
+    return 'Design nicht gespeichert: $message';
   }
 
   @override
   String languageSaveFailedError(String message) {
-    return 'Jezik nije sačuvan: $message';
+    return 'Sprache nicht gespeichert: $message';
   }
 
   @override
-  String get personalDetailsAppearanceSectionTitle => 'Izgled';
+  String get personalDetailsAppearanceSectionTitle => 'Darstellung';
 
   @override
-  String get nameRequiredTogetherError => 'Obavezno ako unosite ime i prezime.';
+  String get nameRequiredTogetherError =>
+      'Erforderlich, wenn Vor- und Nachname eingegeben werden.';
 
   @override
-  String get dialogDismissButton => 'Odustani';
+  String get dialogDismissButton => 'Abbrechen';
 
   @override
-  String get addressLabel => 'Adresa';
+  String get addressLabel => 'Adresse';
 
   @override
-  String get tabNotifications => 'Obavijesti';
+  String get tabNotifications => 'Benachrichtigungen';
 
   @override
-  String get faultReportsScreenTitle => 'Prijave kvarova';
+  String get faultReportsScreenTitle => 'Störungsmeldungen';
 
   @override
-  String get logoutLabel => 'Odjava';
+  String get logoutLabel => 'Abmelden';
 
   @override
-  String get companySettingsScreenTitle => 'Postavke firme';
+  String get companySettingsScreenTitle => 'Unternehmenseinstellungen';
 
   @override
-  String get companyNameLabel => 'Naziv firme';
+  String get companyNameLabel => 'Firmenname';
 
   @override
-  String get taxNumberLabel => 'Porezni broj';
+  String get taxNumberLabel => 'Steuernummer';
 
   @override
-  String get bankAccountLabel => 'Bankovni račun';
+  String get bankAccountLabel => 'Bankkonto';
 
   @override
-  String get logoUrlOptionalLabel => 'URL logotipa (opcionalno)';
+  String get logoUrlOptionalLabel => 'Logo-URL (optional)';
 
   @override
-  String get defaultLanguageLabel => 'Jezik';
+  String get defaultLanguageLabel => 'Sprache';
 
   @override
-  String get defaultCurrencyLabel => 'Valuta';
+  String get defaultCurrencyLabel => 'Währung';
 
   @override
-  String get companySettingsSaveSuccess => 'Postavke firme su sačuvane.';
+  String get companySettingsSaveSuccess =>
+      'Unternehmenseinstellungen gespeichert.';
 
   @override
-  String get myAccountTitle => 'Moj nalog';
+  String get myAccountTitle => 'Mein Konto';
 
   @override
   String get myAccountSubtitle =>
-      'Uredite svoje podatke, izgled aplikacije i lozinku.';
+      'Bearbeiten Sie Ihre Daten, die Darstellung der App und Ihr Passwort.';
 
   @override
   String get profileSectionLabel => 'Profil';
@@ -262,592 +267,596 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get passwordOptionalHint =>
-      'Ostavite prazno ako ne mijenjate lozinku.';
+      'Leer lassen, wenn Sie Ihr Passwort nicht ändern.';
 
   @override
-  String get phoneInvalidNumberError => 'Unesite ispravan broj telefona.';
+  String get phoneInvalidNumberError =>
+      'Geben Sie eine gültige Telefonnummer ein.';
 
   @override
-  String get accountDetailsSaveSuccess => 'Podaci naloga su sačuvani.';
+  String get accountDetailsSaveSuccess => 'Kontodaten gespeichert.';
 
   @override
   String get dashboardLabel => 'Dashboard';
 
   @override
-  String get usersLabel => 'Korisnici';
+  String get usersLabel => 'Benutzer';
 
   @override
-  String get collectorsNavLabel => 'Inkasanti';
+  String get collectorsNavLabel => 'Ableser';
 
   @override
-  String get administratorsLabel => 'Administratori';
+  String get administratorsLabel => 'Administratoren';
 
   @override
-  String get financeGroupLabel => 'Finansije';
+  String get financeGroupLabel => 'Finanzen';
 
   @override
-  String get invoicesLabel => 'Računi';
+  String get invoicesLabel => 'Rechnungen';
 
   @override
-  String get paymentsLabel => 'Plaćanja';
+  String get paymentsLabel => 'Zahlungen';
 
   @override
   String get tariffsNavLabel => 'Tarife';
 
   @override
-  String get supportGroupLabel => 'Podrška';
+  String get supportGroupLabel => 'Support';
 
   @override
-  String get waterMeterRequestsNavLabel => 'Zahtjevi';
+  String get waterMeterRequestsNavLabel => 'Anfragen';
 
   @override
-  String get systemGroupLabel => 'Sistem';
+  String get systemGroupLabel => 'System';
 
   @override
-  String get codebookLabel => 'Šifarnik';
+  String get codebookLabel => 'Codebuch';
 
   @override
-  String get dashboardOverviewSubtitle => 'Pregled ključnih pokazatelja';
+  String get dashboardOverviewSubtitle =>
+      'Übersicht der wichtigsten Kennzahlen';
 
   @override
   String get dashboardNoAccessMessage =>
-      'Nemate pravo pristupa dashboardu. Odjavite se i prijavite ponovo.';
+      'Sie haben keinen Zugriff auf das Dashboard. Melden Sie sich ab und erneut an.';
 
   @override
-  String get dashboardRevenueTrendChartTitle => 'Prihod od naplate';
+  String get dashboardRevenueTrendChartTitle => 'Einnahmen';
 
   @override
-  String get dashboardInvoiceStatusChartTitle => 'Status računa';
+  String get dashboardInvoiceStatusChartTitle => 'Rechnungsstatus';
 
   @override
-  String get dashboardConsumptionTrendChartTitle => 'Potrošnja vode';
+  String get dashboardConsumptionTrendChartTitle => 'Wasserverbrauch';
 
   @override
   String get dashboardFaultReportStatusChartTitle =>
-      'Prijave kvarova po statusu';
+      'Störungsmeldungen nach Status';
 
   @override
-  String get dashboardUserGrowthChartTitle => 'Rast korisničke baze';
+  String get dashboardUserGrowthChartTitle => 'Wachstum des Kundenstamms';
 
   @override
   String get dashboardWaterMeterRequestStatusChartTitle =>
-      'Zahtjevi za vodomjere po statusu';
+      'Wasserzähleranfragen nach Status';
 
   @override
-  String get dashboardFilterCityLabel => 'Grad';
+  String get dashboardFilterCityLabel => 'Stadt';
 
   @override
-  String get dashboardFilterAllCities => 'Svi gradovi';
+  String get dashboardFilterAllCities => 'Alle Städte';
 
   @override
-  String get dashboardFilterDateRangeTooltip => 'Odaberi raspon datuma';
+  String get dashboardFilterDateRangeTooltip => 'Zeitraum wählen';
 
   @override
-  String get dashboardFilterReset => 'Resetuj filtere';
+  String get dashboardFilterReset => 'Filter zurücksetzen';
 
   @override
   String get statusFieldLabel => 'Status';
 
   @override
-  String get allOption => 'Svi';
+  String get allOption => 'Alle';
 
   @override
-  String get statusActive => 'Aktivan';
+  String get statusActive => 'Aktiv';
 
   @override
-  String get statusInactive => 'Neaktivan';
+  String get statusInactive => 'Inaktiv';
 
   @override
-  String get unexpectedError => 'Došlo je do neočekivane greške.';
+  String get unexpectedError => 'Ein unerwarteter Fehler ist aufgetreten.';
 
   @override
-  String get fullNameColumnLabel => 'Ime i prezime';
+  String get fullNameColumnLabel => 'Vollständiger Name';
 
   @override
-  String get createdColumnLabel => 'Kreiran';
+  String get createdColumnLabel => 'Erstellt';
 
   @override
-  String get actionsColumnLabel => 'Akcije';
+  String get actionsColumnLabel => 'Aktionen';
 
   @override
-  String get activitiesTooltip => 'Aktivnosti';
+  String get activitiesTooltip => 'Aktivitäten';
 
   @override
-  String get accountSectionLabel => 'Nalog';
+  String get accountSectionLabel => 'Konto';
 
   @override
   String get newPasswordOptionalLabel =>
-      'Nova lozinka (ostavi prazno da zadržiš postojeću)';
+      'Neues Passwort (leer lassen, um das aktuelle zu behalten)';
 
   @override
-  String get commonClose => 'Zatvori';
+  String get commonClose => 'Schließen';
 
   @override
-  String get waterMeterStatusRemoved => 'Uklonjen';
+  String get waterMeterStatusRemoved => 'Entfernt';
 
   @override
-  String get initialReadingLabel => 'Početno očitanje';
+  String get initialReadingLabel => 'Anfangsstand';
 
   @override
   String get usersScreenSubtitle =>
-      'Pregled, dodavanje, uređivanje i brisanje korisničkih naloga.';
+      'Kundenkonten anzeigen, hinzufügen, bearbeiten und löschen.';
 
   @override
   String get administratorsScreenSubtitle =>
-      'Pregled, dodavanje, uređivanje i brisanje administratorskih naloga.';
+      'Administratorkonten anzeigen, hinzufügen, bearbeiten und löschen.';
 
   @override
-  String get newUserButtonLabel => 'Novi korisnik';
+  String get newUserButtonLabel => 'Neuer Kunde';
 
   @override
-  String get newAdministratorButtonLabel => 'Novi administrator';
+  String get newAdministratorButtonLabel => 'Neuer Administrator';
 
   @override
-  String get editUserDialogTitle => 'Uredi korisnika';
+  String get editUserDialogTitle => 'Kunde bearbeiten';
 
   @override
-  String get editAdministratorDialogTitle => 'Uredi administratora';
+  String get editAdministratorDialogTitle => 'Administrator bearbeiten';
 
   @override
-  String get userCreatedSuccess => 'Korisnik je dodan.';
+  String get userCreatedSuccess => 'Kunde hinzugefügt.';
 
   @override
-  String get administratorCreatedSuccess => 'Administrator je dodan.';
+  String get administratorCreatedSuccess => 'Administrator hinzugefügt.';
 
   @override
-  String get userSavedSuccess => 'Korisnik je sačuvan.';
+  String get userSavedSuccess => 'Kunde gespeichert.';
 
   @override
-  String get administratorSavedSuccess => 'Administrator je sačuvan.';
+  String get administratorSavedSuccess => 'Administrator gespeichert.';
 
   @override
-  String get deleteUserDialogTitle => 'Obriši korisnika';
+  String get deleteUserDialogTitle => 'Kunde löschen';
 
   @override
-  String get deleteAdministratorDialogTitle => 'Obriši administratora';
+  String get deleteAdministratorDialogTitle => 'Administrator löschen';
 
   @override
   String deleteUserDialogContent(String email) {
-    return 'Da li želite obrisati korisnika \"$email\"? Ova radnja se ne može poništiti.';
+    return 'Möchten Sie den Kunden „$email“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
   }
 
   @override
   String deleteAdministratorDialogContent(String email) {
-    return 'Da li želite obrisati administratora \"$email\"? Ova radnja se ne može poništiti.';
+    return 'Möchten Sie den Administrator „$email“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
   }
 
   @override
-  String get userDeletedSuccess => 'Korisnik je obrisan.';
+  String get userDeletedSuccess => 'Kunde gelöscht.';
 
   @override
-  String get administratorDeletedSuccess => 'Administrator je obrisan.';
+  String get administratorDeletedSuccess => 'Administrator gelöscht.';
 
   @override
-  String get usersEmptyMessage => 'Nema korisnika.';
+  String get usersEmptyMessage => 'Keine Kunden.';
 
   @override
-  String get administratorsEmptyMessage => 'Nema administratora.';
+  String get administratorsEmptyMessage => 'Keine Administratoren.';
 
   @override
-  String get usersEmptyFilteredMessage => 'Nema korisnika za zadane filtere.';
+  String get usersEmptyFilteredMessage =>
+      'Keine Kunden entsprechen den gewählten Filtern.';
 
   @override
   String get administratorsEmptyFilteredMessage =>
-      'Nema administratora za zadane filtere.';
+      'Keine Administratoren entsprechen den gewählten Filtern.';
 
   @override
-  String get nameSearchHint => 'Ime ili prezime';
+  String get nameSearchHint => 'Vor- oder Nachname';
 
   @override
-  String get clearSearchTooltip => 'Očisti pretragu';
+  String get clearSearchTooltip => 'Suche löschen';
 
   @override
-  String get applyFiltersTooltip => 'Primijeni filtere';
+  String get applyFiltersTooltip => 'Filter anwenden';
 
   @override
-  String get rolesNotLoadedError => 'Uloge nisu učitane. Pokušajte ponovo.';
+  String get rolesNotLoadedError =>
+      'Die Rollen konnten nicht geladen werden. Bitte versuchen Sie es erneut.';
 
   @override
   String roleNotFoundError(String roleName) {
-    return 'Rola \"$roleName\" nije pronađena.';
+    return 'Rolle „$roleName“ wurde nicht gefunden.';
   }
 
   @override
-  String get waterMetersTooltip => 'Vodomjeri';
+  String get waterMetersTooltip => 'Wasserzähler';
 
   @override
   String get cannotDeleteOwnAccountError =>
-      'Ne možete obrisati vlastiti korisnički nalog.';
+      'Sie können Ihr eigenes Konto nicht löschen.';
 
   @override
-  String get customerCodeFieldLabel =>
-      'Šifra korisnika (automatski dodijeljena)';
+  String get customerCodeFieldLabel => 'Kundennummer (automatisch vergeben)';
 
   @override
   String get cannotDeactivateOwnAccountError =>
-      'Ne možete deaktivirati vlastiti nalog.';
+      'Sie können Ihr eigenes Konto nicht deaktivieren.';
 
   @override
   String get nameRequiredForAddressError =>
-      'Unesite ime i prezime da biste sačuvali adresu.';
+      'Geben Sie Vor- und Nachname ein, um die Adresse zu speichern.';
 
   @override
   String get collectorsScreenSubtitle =>
-      'Pregled i uređivanje profila inkasanata za terenski rad.';
+      'Profile der Ableser im Außendienst anzeigen und bearbeiten.';
 
   @override
-  String get addCollectorButtonLabel => 'Dodaj inkasanta';
+  String get addCollectorButtonLabel => 'Ableser hinzufügen';
 
   @override
-  String get collectorCreatedSuccess => 'Inkasant je dodan.';
+  String get collectorCreatedSuccess => 'Ableser hinzugefügt.';
 
   @override
-  String get collectorProfileSavedSuccess => 'Profil inkasanta je sačuvan.';
+  String get collectorProfileSavedSuccess => 'Ableserprofil gespeichert.';
 
   @override
-  String get collectorsEmptyMessage => 'Nema profila inkasanata.';
+  String get collectorsEmptyMessage => 'Keine Ableserprofile.';
 
   @override
-  String get collectorsSearchHint => 'Ime, email ili šifra radnika';
+  String get collectorsSearchHint => 'Name, E-Mail oder Mitarbeiternummer';
 
   @override
   String get collectorsEmptyFilteredMessage =>
-      'Nema inkasanata za odabrane filtere.';
+      'Keine Ableser entsprechen den aktuellen Filtern.';
 
   @override
-  String get collectorCodeColumnLabel => 'Šifra inkasanta';
+  String get collectorCodeColumnLabel => 'Ablesernummer';
 
   @override
-  String get editProfileTooltip => 'Uredi profil';
+  String get editProfileTooltip => 'Profil bearbeiten';
 
   @override
   String get collectorCodeGeneratedHint =>
-      'Šifra inkasanta se automatski kreira nakon spremanja, npr. COL-0002.';
+      'Die Ablesernummer wird nach dem Speichern automatisch vergeben, z. B. COL-0002.';
 
   @override
-  String get editCollectorProfileDialogTitle => 'Uredi profil inkasanta';
+  String get editCollectorProfileDialogTitle => 'Ableserprofil bearbeiten';
 
   @override
-  String get collectorCodeFieldLabel =>
-      'Šifra inkasanta (automatski dodijeljena)';
+  String get collectorCodeFieldLabel => 'Ablesernummer (automatisch vergeben)';
 
   @override
   String activityLogTitle(String displayName) {
-    return 'Aktivnosti - $displayName';
+    return 'Aktivitäten – $displayName';
   }
 
   @override
-  String get eventTypeFieldLabel => 'Događaj';
+  String get eventTypeFieldLabel => 'Ereignis';
 
   @override
-  String get activityTypeLoginSuccess => 'Uspješna prijava';
+  String get activityTypeLoginSuccess => 'Erfolgreiche Anmeldung';
 
   @override
-  String get activityTypeLoginFailed => 'Neuspješna prijava';
+  String get activityTypeLoginFailed => 'Fehlgeschlagene Anmeldung';
 
   @override
-  String get activityTypeTokenRefreshed => 'Obnova sesije';
+  String get activityTypeTokenRefreshed => 'Sitzung erneuert';
 
   @override
-  String get activityTypePasswordChanged => 'Promjena lozinke';
+  String get activityTypePasswordChanged => 'Passwort geändert';
 
   @override
-  String get activityTypeAccountUpdated => 'Izmjena naloga';
+  String get activityTypeAccountUpdated => 'Konto aktualisiert';
 
   @override
-  String get activityTypeUserRoleChanged => 'Promjena role';
+  String get activityTypeUserRoleChanged => 'Rolle geändert';
 
   @override
-  String get activityTypeUserActivated => 'Korisnik aktiviran';
+  String get activityTypeUserActivated => 'Benutzer aktiviert';
 
   @override
-  String get activityTypeUserDeactivated => 'Korisnik deaktiviran';
+  String get activityTypeUserDeactivated => 'Benutzer deaktiviert';
 
   @override
-  String get activityTypeUserDeleted => 'Korisnik obrisan';
+  String get activityTypeUserDeleted => 'Benutzer gelöscht';
 
   @override
-  String get activityTypeGenericLabel => 'Aktivnost';
+  String get activityTypeGenericLabel => 'Aktivität';
 
   @override
-  String get userNoActivityMessage => 'Korisnik nema zabilježenih aktivnosti.';
+  String get userNoActivityMessage =>
+      'Für diesen Benutzer sind keine Aktivitäten erfasst.';
 
   @override
   String get activitiesEmptyFilteredMessage =>
-      'Nema aktivnosti za zadane filtere.';
+      'Keine Aktivitäten entsprechen den gewählten Filtern.';
 
   @override
-  String get descriptionColumnLabel => 'Opis';
+  String get descriptionColumnLabel => 'Beschreibung';
 
   @override
-  String get ipAddressColumnLabel => 'IP adresa';
+  String get ipAddressColumnLabel => 'IP-Adresse';
 
   @override
-  String get timeColumnLabel => 'Vrijeme';
+  String get timeColumnLabel => 'Zeit';
 
   @override
   String waterMetersTitle(String displayName) {
-    return 'Vodomjeri - $displayName';
+    return 'Wasserzähler – $displayName';
   }
 
   @override
   String get userNoProfileMessage =>
-      'Korisnik nema kreiran profil pa ni vodomjere.';
+      'Dieser Benutzer hat kein Profil und daher auch keine Wasserzähler.';
 
   @override
   String get userNoWaterMetersMessage =>
-      'Korisnik trenutno nema evidentiranih vodomjera.';
+      'Für diesen Benutzer sind derzeit keine Wasserzähler erfasst.';
 
   @override
-  String get installedLabel => 'Instaliran';
+  String get installedLabel => 'Installiert';
 
   @override
-  String get lastReadingLabel => 'Zadnje očitanje';
+  String get lastReadingLabel => 'Letzte Ablesung';
 
   @override
-  String get locationCityLabel => 'Grad';
+  String get locationCityLabel => 'Stadt';
 
   @override
-  String get locationNoCityOption => 'Bez grada';
+  String get locationNoCityOption => 'Keine Stadt';
 
   @override
-  String get locationMunicipalityLabel => 'Općina';
+  String get locationMunicipalityLabel => 'Gemeinde';
 
   @override
-  String get locationNoMunicipalityOption => 'Bez općine';
+  String get locationNoMunicipalityOption => 'Keine Gemeinde';
 
   @override
-  String get locationSettlementLabel => 'Naselje';
+  String get locationSettlementLabel => 'Siedlung';
 
   @override
-  String get locationNoSettlementOption => 'Bez naselja';
+  String get locationNoSettlementOption => 'Keine Siedlung';
 
   @override
-  String get locationStreetLabel => 'Ulica';
+  String get locationStreetLabel => 'Straße';
 
   @override
-  String get locationHouseNumberLabel => 'Broj';
+  String get locationHouseNumberLabel => 'Hausnummer';
 
   @override
   String get codebookSubtitle =>
-      'Administrativni šifarnik lokacija: gradovi, općine i naselja.';
+      'Verwaltungsverzeichnis der Orte: Städte, Gemeinden und Siedlungen.';
 
   @override
-  String get backTooltip => 'Nazad';
+  String get backTooltip => 'Zurück';
 
   @override
-  String get citiesLabel => 'Gradovi';
+  String get citiesLabel => 'Städte';
 
   @override
-  String get openTooltip => 'Otvori';
+  String get openTooltip => 'Öffnen';
 
   @override
   String get citiesScreenSubtitle =>
-      'Pregled, dodavanje, uređivanje i brisanje gradova.';
+      'Städte anzeigen, hinzufügen, bearbeiten und löschen.';
 
   @override
-  String get newCityButtonLabel => 'Novi grad';
+  String get newCityButtonLabel => 'Neue Stadt';
 
   @override
-  String get cityCreatedSuccess => 'Grad je dodan.';
+  String get cityCreatedSuccess => 'Stadt hinzugefügt.';
 
   @override
-  String get citySavedSuccess => 'Grad je sačuvan.';
+  String get citySavedSuccess => 'Stadt gespeichert.';
 
   @override
-  String get deleteCityDialogTitle => 'Obriši grad';
+  String get deleteCityDialogTitle => 'Stadt löschen';
 
   @override
   String deleteCityDialogContent(String name) {
-    return 'Da li želite obrisati grad \"$name\"? Ova radnja se ne može poništiti.';
+    return 'Möchten Sie die Stadt „$name“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
   }
 
   @override
-  String get cityDeletedSuccess => 'Grad je obrisan.';
+  String get cityDeletedSuccess => 'Stadt gelöscht.';
 
   @override
-  String get citySearchHint => 'Naziv grada';
+  String get citySearchHint => 'Stadtname';
 
   @override
-  String get citiesEmptyMessage => 'Nema gradova.';
+  String get citiesEmptyMessage => 'Keine Städte.';
 
   @override
-  String get citiesEmptyFilteredMessage => 'Nema gradova za zadanu pretragu.';
+  String get citiesEmptyFilteredMessage =>
+      'Keine Städte entsprechen der Suche.';
 
   @override
-  String get nameColumnLabel => 'Naziv';
+  String get nameColumnLabel => 'Name';
 
   @override
-  String get codeColumnLabel => 'Kod';
+  String get codeColumnLabel => 'Code';
 
   @override
-  String get editCityDialogTitle => 'Uredi grad';
+  String get editCityDialogTitle => 'Stadt bearbeiten';
 
   @override
   String municipalitiesTitle(String cityName) {
-    return 'Općine · $cityName';
+    return 'Gemeinden · $cityName';
   }
 
   @override
   String get municipalitiesScreenSubtitle =>
-      'Pregled, dodavanje, uređivanje i brisanje općina.';
+      'Gemeinden anzeigen, hinzufügen, bearbeiten und löschen.';
 
   @override
-  String get newMunicipalityButtonLabel => 'Nova općina';
+  String get newMunicipalityButtonLabel => 'Neue Gemeinde';
 
   @override
-  String get municipalityCreatedSuccess => 'Općina je dodana.';
+  String get municipalityCreatedSuccess => 'Gemeinde hinzugefügt.';
 
   @override
-  String get municipalitySavedSuccess => 'Općina je sačuvana.';
+  String get municipalitySavedSuccess => 'Gemeinde gespeichert.';
 
   @override
-  String get deleteMunicipalityDialogTitle => 'Obriši općinu';
+  String get deleteMunicipalityDialogTitle => 'Gemeinde löschen';
 
   @override
   String deleteMunicipalityDialogContent(String name) {
-    return 'Da li želite obrisati općinu \"$name\"? Ova radnja se ne može poništiti.';
+    return 'Möchten Sie die Gemeinde „$name“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
   }
 
   @override
-  String get municipalityDeletedSuccess => 'Općina je obrisana.';
+  String get municipalityDeletedSuccess => 'Gemeinde gelöscht.';
 
   @override
-  String get municipalitySearchHint => 'Naziv općine';
+  String get municipalitySearchHint => 'Gemeindename';
 
   @override
   String cityHasNoMunicipalitiesMessage(String cityName) {
-    return 'Grad \'$cityName\' još nema općina.';
+    return 'Die Stadt „$cityName“ hat noch keine Gemeinden.';
   }
 
   @override
   String get municipalitiesEmptyFilteredMessage =>
-      'Nema općina za zadanu pretragu.';
+      'Keine Gemeinden entsprechen der Suche.';
 
   @override
-  String get editMunicipalityDialogTitle => 'Uredi općinu';
+  String get editMunicipalityDialogTitle => 'Gemeinde bearbeiten';
 
   @override
   String settlementsTitle(String municipalityName) {
-    return 'Naselja · $municipalityName';
+    return 'Siedlungen · $municipalityName';
   }
 
   @override
   String get settlementsScreenSubtitle =>
-      'Pregled, dodavanje, uređivanje i brisanje naselja.';
+      'Siedlungen anzeigen, hinzufügen, bearbeiten und löschen.';
 
   @override
-  String get newSettlementButtonLabel => 'Novo naselje';
+  String get newSettlementButtonLabel => 'Neue Siedlung';
 
   @override
-  String get settlementCreatedSuccess => 'Naselje je dodano.';
+  String get settlementCreatedSuccess => 'Siedlung hinzugefügt.';
 
   @override
-  String get settlementSavedSuccess => 'Naselje je sačuvano.';
+  String get settlementSavedSuccess => 'Siedlung gespeichert.';
 
   @override
-  String get deleteSettlementDialogTitle => 'Obriši naselje';
+  String get deleteSettlementDialogTitle => 'Siedlung löschen';
 
   @override
   String deleteSettlementDialogContent(String name) {
-    return 'Da li želite obrisati naselje \"$name\"? Ova radnja se ne može poništiti.';
+    return 'Möchten Sie die Siedlung „$name“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
   }
 
   @override
-  String get settlementDeletedSuccess => 'Naselje je obrisano.';
+  String get settlementDeletedSuccess => 'Siedlung gelöscht.';
 
   @override
-  String get settlementSearchHint => 'Naziv naselja';
+  String get settlementSearchHint => 'Siedlungsname';
 
   @override
   String municipalityHasNoSettlementsMessage(String municipalityName) {
-    return 'Općina \'$municipalityName\' još nema naselja.';
+    return 'Die Gemeinde „$municipalityName“ hat noch keine Siedlungen.';
   }
 
   @override
   String get settlementsEmptyFilteredMessage =>
-      'Nema naselja za zadanu pretragu.';
+      'Keine Siedlungen entsprechen der Suche.';
 
   @override
-  String get postalCodeColumnLabel => 'Poštanski broj';
+  String get postalCodeColumnLabel => 'Postleitzahl';
 
   @override
-  String get editSettlementDialogTitle => 'Uredi naselje';
+  String get editSettlementDialogTitle => 'Siedlung bearbeiten';
 
   @override
-  String get noCollectorsAvailableError => 'Nema dostupnih inkasanata.';
+  String get noCollectorsAvailableError => 'Keine Ableser verfügbar.';
 
   @override
-  String get waterMeterRequestsPageTitle => 'Zahtjevi za vodomjer';
+  String get waterMeterRequestsPageTitle => 'Wasserzähleranfragen';
 
   @override
   String get waterMeterRequestsPageSubtitle =>
-      'Pregled, dodjela collectoru i odbijanje zahtjeva za novi vodomjer.';
+      'Anfragen für einen neuen Wasserzähler anzeigen, einem Ableser zuweisen und ablehnen.';
 
   @override
-  String get allStatusesOption => 'Svi statusi';
+  String get allStatusesOption => 'Alle Status';
 
   @override
-  String get requestStatusPending => 'Na čekanju';
+  String get requestStatusPending => 'Ausstehend';
 
   @override
-  String get requestStatusAwaitingRegistration => 'Čeka registraciju';
+  String get requestStatusAwaitingRegistration => 'Wartet auf Registrierung';
 
   @override
-  String get requestStatusRegistered => 'Registrovan';
+  String get requestStatusRegistered => 'Registriert';
 
   @override
-  String get requestStatusRejected => 'Odbijen';
+  String get requestStatusRejected => 'Abgelehnt';
 
   @override
-  String get requestStatusCancelled => 'Otkazan';
+  String get requestStatusCancelled => 'Storniert';
 
   @override
-  String get applyFilterTooltip => 'Primijeni filter';
+  String get applyFilterTooltip => 'Filter anwenden';
 
   @override
-  String get noWaterMeterRequestsMessage => 'Nema zahtjeva za novi vodomjer.';
+  String get noWaterMeterRequestsMessage => 'Keine Wasserzähleranfragen.';
 
   @override
   String get waterMeterRequestsEmptyFilteredMessage =>
-      'Nema zahtjeva za odabrani status.';
+      'Keine Anfragen entsprechen dem gewählten Status.';
 
   @override
-  String get customerColumnLabel => 'Korisnik';
+  String get customerColumnLabel => 'Kunde';
 
   @override
-  String get collectorColumnLabel => 'Collector';
+  String get collectorColumnLabel => 'Ableser';
 
   @override
   String collectorFallbackLabel(int id) {
-    return 'Collector #$id';
+    return 'Ableser #$id';
   }
 
   @override
-  String get unknownSettlementLabel => 'Naselje nepoznato';
+  String get unknownSettlementLabel => 'Unbekannte Siedlung';
 
   @override
-  String get noStreetAddressLabel => 'Bez ulice i broja';
+  String get noStreetAddressLabel => 'Keine Straßenadresse';
 
   @override
   String requestCustomerFallbackLabel(int id) {
-    return 'Korisnik #$id';
+    return 'Kunde #$id';
   }
 
   @override
-  String get noPhoneLabel => 'Bez telefona';
+  String get noPhoneLabel => 'Kein Telefon';
 
   @override
-  String get assignToCollectorTooltip => 'Dodijeli inkasantu';
+  String get assignToCollectorTooltip => 'Einem Ableser zuweisen';
 
   @override
-  String get rejectTooltip => 'Odbij';
+  String get rejectTooltip => 'Ablehnen';
 
   @override
-  String get selectionColumnLabel => 'Izbor';
+  String get selectionColumnLabel => 'Auswahl';
 
   @override
-  String get assignButtonLabel => 'Dodijeli';
+  String get assignButtonLabel => 'Zuweisen';
 
   @override
   String collectorProfileFallbackLabel(int id) {
@@ -855,603 +864,610 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get rejectRequestDialogTitle => 'Odbij zahtjev';
+  String get rejectRequestDialogTitle => 'Anfrage ablehnen';
 
   @override
-  String get reasonOptionalLabel => 'Razlog (opciono)';
+  String get reasonOptionalLabel => 'Grund (optional)';
 
   @override
-  String get requestAssignedSuccess => 'Zahtjev je dodijeljen inkasantu.';
+  String get requestAssignedSuccess => 'Anfrage dem Ableser zugewiesen.';
 
   @override
-  String get requestRejectedSuccess => 'Zahtjev je odbijen.';
+  String get requestRejectedSuccess => 'Anfrage abgelehnt.';
 
   @override
-  String get faultReportStatusNew => 'Nova';
+  String get faultReportStatusNew => 'Neu';
 
   @override
-  String get faultReportStatusAssigned => 'Dodijeljena';
+  String get faultReportStatusAssigned => 'Zugewiesen';
 
   @override
-  String get faultReportStatusInProgress => 'U toku';
+  String get faultReportStatusInProgress => 'In Bearbeitung';
 
   @override
-  String get faultReportStatusResolved => 'Riješena';
+  String get faultReportStatusResolved => 'Behoben';
 
   @override
-  String get changeStatusDialogTitle => 'Promijeni status';
+  String get changeStatusDialogTitle => 'Status ändern';
 
   @override
   String changeStatusDialogContent(String title, String status) {
-    return 'Da li želite promijeniti status prijave \"$title\" u \"$status\"?';
+    return 'Möchten Sie den Status der Meldung „$title“ wirklich auf „$status“ ändern?';
   }
 
   @override
-  String get changeButtonLabel => 'Promijeni';
+  String get changeButtonLabel => 'Ändern';
 
   @override
-  String get statusChangedSuccess => 'Status prijave je promijenjen.';
+  String get statusChangedSuccess => 'Meldungsstatus geändert.';
 
   @override
-  String get faultReportAssignedSuccess => 'Prijava je dodijeljena inkasantu.';
+  String get faultReportAssignedSuccess =>
+      'Störungsmeldung dem Ableser zugewiesen.';
 
   @override
   String get faultReportsPageSubtitle =>
-      'Pregled prijava kvarova i upravljanje statusom.';
+      'Störungsmeldungen anzeigen und ihren Status verwalten.';
 
   @override
-  String get faultReportSearchLabel => 'Naslov, kupac ili naselje';
+  String get faultReportSearchLabel => 'Titel, Kunde oder Siedlung';
 
   @override
-  String get noFaultReportsMessage => 'Nema prijava kvarova.';
+  String get noFaultReportsMessage => 'Keine Störungsmeldungen.';
 
   @override
   String get faultReportsEmptyFilteredMessage =>
-      'Nema prijava kvarova za zadane filtere.';
+      'Keine Störungsmeldungen entsprechen den gewählten Filtern.';
 
   @override
-  String get titleColumnLabel => 'Naslov';
+  String get titleColumnLabel => 'Titel';
 
   @override
-  String get customerLabel => 'Kupac';
+  String get customerLabel => 'Kunde';
 
   @override
-  String get collectorNameColumnLabel => 'Inkasant';
+  String get collectorNameColumnLabel => 'Ableser';
 
   @override
   String get dateColumnLabel => 'Datum';
 
   @override
   String collectorNumberFallbackLabel(int id) {
-    return 'Inkasant #$id';
+    return 'Ableser #$id';
   }
 
   @override
-  String get reassignTooltip => 'Preraspodijeli drugom inkasantu';
+  String get reassignTooltip => 'Einem anderen Ableser zuweisen';
 
   @override
-  String get assignmentNoLongerPossibleTooltip => 'Dodjela više nije moguća';
+  String get assignmentNoLongerPossibleTooltip =>
+      'Zuweisung ist nicht mehr möglich';
 
   @override
-  String get reportResolvedTooltip => 'Prijava je riješena';
+  String get reportResolvedTooltip => 'Meldung ist behoben';
 
   @override
   String changeStatusToTooltip(String status) {
-    return 'Promijeni status u \"$status\"';
+    return 'Status auf „$status“ ändern';
   }
 
   @override
-  String get noteOptionalFieldLabel => 'Napomena (opcionalno)';
+  String get noteOptionalFieldLabel => 'Notiz (optional)';
 
   @override
-  String get assignmentNoteHint => 'Razlog dodjele ili uputa inkasantu';
+  String get assignmentNoteHint =>
+      'Grund der Zuweisung oder Anweisungen für den Ableser';
 
   @override
-  String get reportedAtLabel => 'Prijavljeno';
+  String get reportedAtLabel => 'Gemeldet';
 
   @override
-  String get resolvedAtLabel => 'Riješeno';
+  String get resolvedAtLabel => 'Behoben';
 
   @override
-  String get photosSectionHeading => 'Fotografije';
+  String get photosSectionHeading => 'Fotos';
 
   @override
-  String get noPhotosMessage => 'Nema priloženih fotografija.';
+  String get noPhotosMessage => 'Keine Fotos angehängt.';
 
   @override
   String meterReadingsTitle(String serialNumber) {
-    return 'Očitanja - $serialNumber';
+    return 'Zählerablesungen – $serialNumber';
   }
 
   @override
   String get noReadingsForMeterMessage =>
-      'Za ovaj vodomjer još nema evidentiranih očitanja.';
+      'Für diesen Wasserzähler wurden noch keine Ablesungen erfasst.';
 
   @override
-  String get readingDateColumnLabel => 'Datum očitanja';
+  String get readingDateColumnLabel => 'Ablesedatum';
 
   @override
-  String get previousReadingColumnLabel => 'Prethodno (m³)';
+  String get previousReadingColumnLabel => 'Vorherig (m³)';
 
   @override
-  String get newReadingColumnLabel => 'Novo (m³)';
+  String get newReadingColumnLabel => 'Neu (m³)';
 
   @override
-  String get consumptionColumnLabel => 'Potrošnja (m³)';
+  String get consumptionColumnLabel => 'Verbrauch (m³)';
 
   @override
-  String get syncColumnLabel => 'Sinhronizacija';
+  String get syncColumnLabel => 'Sync';
 
   @override
-  String get syncStatusSynced => 'Sinhronizovano';
+  String get syncStatusSynced => 'Synchronisiert';
 
   @override
-  String get syncStatusFailed => 'Neuspješno';
+  String get syncStatusFailed => 'Fehlgeschlagen';
 
   @override
-  String get tariffCreatedSuccess => 'Tarifa je dodana.';
+  String get tariffCreatedSuccess => 'Tarif hinzugefügt.';
 
   @override
-  String get tariffSavedSuccess => 'Tarifa je sačuvana.';
+  String get tariffSavedSuccess => 'Tarif gespeichert.';
 
   @override
-  String get tariffDeletedSuccess => 'Tarifa je obrisana.';
+  String get tariffDeletedSuccess => 'Tarif gelöscht.';
 
   @override
-  String get deleteTariffDialogTitle => 'Obriši tarifu';
+  String get deleteTariffDialogTitle => 'Tarif löschen';
 
   @override
   String deleteTariffDialogContent(String name) {
-    return 'Da li želite obrisati tarifu \"$name\"? Brisanje neće biti moguće ako je tarifa referencirana stavkama računa.';
+    return 'Möchten Sie den Tarif „$name“ wirklich löschen? Das Löschen ist nicht möglich, wenn der Tarif in Rechnungspositionen verwendet wird.';
   }
 
   @override
   String get tariffsScreenSubtitle =>
-      'Pregled, dodavanje, uređivanje i brisanje tarifa.';
+      'Tarife anzeigen, hinzufügen, bearbeiten und löschen.';
 
   @override
-  String get newTariffButtonLabel => 'Nova tarifa';
+  String get newTariffButtonLabel => 'Neuer Tarif';
 
   @override
-  String get allOptionFeminine => 'Sve';
+  String get allOptionFeminine => 'Alle';
 
   @override
-  String get activeFilterOption => 'Aktivne';
+  String get activeFilterOption => 'Aktiv';
 
   @override
-  String get inactiveFilterOption => 'Neaktivne';
+  String get inactiveFilterOption => 'Inaktiv';
 
   @override
-  String get noTariffsMessage => 'Nema tarifa.';
+  String get noTariffsMessage => 'Keine Tarife.';
 
   @override
-  String get tariffsEmptyFilteredMessage => 'Nema tarifa za zadane filtere.';
+  String get tariffsEmptyFilteredMessage =>
+      'Keine Tarife entsprechen den gewählten Filtern.';
 
   @override
-  String get pricePerM3Label => 'Cijena po m³';
+  String get pricePerM3Label => 'Preis pro m³';
 
   @override
-  String get tariffStatusInactive => 'Neaktivna';
+  String get tariffStatusInactive => 'Inaktiv';
 
   @override
-  String get tariffStatusActive => 'Aktivna';
+  String get tariffStatusActive => 'Aktiv';
 
   @override
-  String get editTariffDialogTitle => 'Uredi tarifu';
+  String get editTariffDialogTitle => 'Tarif bearbeiten';
 
   @override
-  String get invalidNumberError => 'Unesite ispravan broj.';
+  String get invalidNumberError => 'Geben Sie eine gültige Zahl ein.';
 
   @override
-  String get negativeValueError => 'Vrijednost ne smije biti negativna.';
+  String get negativeValueError => 'Der Wert darf nicht negativ sein.';
 
   @override
-  String get invoiceStatusIssued => 'Izdat';
+  String get invoiceStatusIssued => 'Ausgestellt';
 
   @override
-  String get invoiceStatusPaid => 'Plaćen';
+  String get invoiceStatusPaid => 'Bezahlt';
 
   @override
-  String get invoiceStatusCancelled => 'Storniran';
+  String get invoiceStatusCancelled => 'Storniert';
 
   @override
-  String get markAsPaidLabel => 'Označi kao plaćeno';
+  String get markAsPaidLabel => 'Als bezahlt markieren';
 
   @override
   String markAsPaidDialogContent(String invoiceNumber, String amount) {
-    return 'Da li želite označiti račun \"$invoiceNumber\" kao plaćen ($amount)?';
+    return 'Möchten Sie die Rechnung „$invoiceNumber“ wirklich als bezahlt ($amount) markieren?';
   }
 
   @override
-  String get invoiceMarkedPaidSuccess => 'Račun je označen kao plaćen.';
+  String get invoiceMarkedPaidSuccess => 'Rechnung als bezahlt markiert.';
 
   @override
-  String get cancelInvoiceDialogTitle => 'Storniraj račun';
+  String get cancelInvoiceDialogTitle => 'Rechnung stornieren';
 
   @override
   String cancelInvoiceDialogContent(String invoiceNumber) {
-    return 'Da li želite stornirati račun \"$invoiceNumber\"?';
+    return 'Möchten Sie die Rechnung „$invoiceNumber“ wirklich stornieren?';
   }
 
   @override
-  String get cancelInvoiceButtonLabel => 'Storniraj';
+  String get cancelInvoiceButtonLabel => 'Rechnung stornieren';
 
   @override
-  String get invoiceCancelledSuccess => 'Račun je storniran.';
+  String get invoiceCancelledSuccess => 'Rechnung storniert.';
 
   @override
   String get invoicesScreenSubtitle =>
-      'Pregled računa i upravljanje njihovim statusom.';
+      'Rechnungen anzeigen und ihren Status verwalten.';
 
   @override
-  String get invoiceNumberFieldLabel => 'Broj računa';
+  String get invoiceNumberFieldLabel => 'Rechnungsnummer';
 
   @override
-  String get monthFilterLabel => 'Mjesec';
+  String get monthFilterLabel => 'Monat';
 
   @override
-  String get noInvoicesMessage => 'Nema računa.';
+  String get noInvoicesMessage => 'Keine Rechnungen.';
 
   @override
-  String get invoicesEmptyFilteredMessage => 'Nema računa za zadane filtere.';
+  String get invoicesEmptyFilteredMessage =>
+      'Keine Rechnungen entsprechen den gewählten Filtern.';
 
   @override
-  String get waterMeterColumnLabel => 'Vodomjer';
+  String get waterMeterColumnLabel => 'Wasserzähler';
 
   @override
-  String get periodColumnLabel => 'Period';
+  String get periodColumnLabel => 'Zeitraum';
 
   @override
-  String get consumptionM3ColumnLabel => 'Potrošnja m³';
+  String get consumptionM3ColumnLabel => 'Verbrauch m³';
 
   @override
-  String get amountColumnLabel => 'Iznos';
+  String get amountColumnLabel => 'Betrag';
 
   @override
-  String get paymentStatusCompleted => 'Završena';
+  String get paymentStatusCompleted => 'Abgeschlossen';
 
   @override
   String get paymentsScreenSubtitle =>
-      'Pregled evidentiranih uplata. Uplate se evidentiraju isključivo putem akcije \"Evidentiraj uplatu\" na ekranu Računi.';
+      'Erfasste Zahlungen anzeigen. Zahlungen werden ausschließlich über die Aktion „Zahlung erfassen“ im Bildschirm „Rechnungen“ erfasst.';
 
   @override
-  String get invoiceIdFieldLabel => 'ID računa';
+  String get invoiceIdFieldLabel => 'Rechnungs-ID';
 
   @override
-  String get noPaymentsMessage => 'Nema uplata.';
+  String get noPaymentsMessage => 'Keine Zahlungen.';
 
   @override
-  String get paymentsEmptyFilteredMessage => 'Nema uplata za zadane filtere.';
+  String get paymentsEmptyFilteredMessage =>
+      'Keine Zahlungen entsprechen den gewählten Filtern.';
 
   @override
-  String get paymentDateColumnLabel => 'Datum uplate';
+  String get paymentDateColumnLabel => 'Zahlungsdatum';
 
   @override
-  String get invoiceColumnLabel => 'Račun';
+  String get invoiceColumnLabel => 'Rechnung';
 
   @override
-  String get methodColumnLabel => 'Način';
+  String get methodColumnLabel => 'Methode';
 
   @override
-  String get manualPaymentMethodLabel => 'Ručno';
+  String get manualPaymentMethodLabel => 'Manuell';
 
   @override
-  String get cashPaymentMethodLabel => 'Gotovina';
+  String get cashPaymentMethodLabel => 'Bar';
 
   @override
   String get cannotDetermineAdminUserError =>
-      'Nije moguće odrediti admin korisnika.';
+      'Der Administrator konnte nicht ermittelt werden.';
 
   @override
-  String get notificationCreatedSuccess => 'Obavijest je dodana.';
+  String get notificationCreatedSuccess => 'Benachrichtigung hinzugefügt.';
 
   @override
   String get cannotDetermineNotificationAuthorError =>
-      'Nije moguće odrediti autora obavijesti.';
+      'Der Verfasser der Benachrichtigung konnte nicht ermittelt werden.';
 
   @override
-  String get notificationSavedSuccess => 'Obavijest je sačuvana.';
+  String get notificationSavedSuccess => 'Benachrichtigung gespeichert.';
 
   @override
-  String get deleteNotificationDialogTitle => 'Obriši obavijest';
+  String get deleteNotificationDialogTitle => 'Benachrichtigung löschen';
 
   @override
   String deleteNotificationDialogContent(String title) {
-    return 'Da li želite obrisati obavijest \"$title\"? Povezani zapisi korisničkih obavijesti će također biti uklonjeni.';
+    return 'Möchten Sie die Benachrichtigung „$title“ wirklich löschen? Die zugehörigen Benachrichtigungseinträge der Benutzer werden ebenfalls entfernt.';
   }
 
   @override
-  String get notificationDeletedSuccess => 'Obavijest je obrisana.';
+  String get notificationDeletedSuccess => 'Benachrichtigung gelöscht.';
 
   @override
   String get notificationsScreenSubtitle =>
-      'Pregled, dodavanje, uređivanje i brisanje sistemskih obavijesti.';
+      'Systembenachrichtigungen anzeigen, hinzufügen, bearbeiten und löschen.';
 
   @override
-  String get newNotificationButtonLabel => 'Nova obavijest';
+  String get newNotificationButtonLabel => 'Neue Benachrichtigung';
 
   @override
-  String get notificationSearchHint => 'Naslov, sadržaj, tip ili publika';
+  String get notificationSearchHint => 'Titel, Inhalt, Typ oder Zielgruppe';
 
   @override
-  String get typeFieldLabel => 'Tip';
+  String get typeFieldLabel => 'Typ';
 
   @override
-  String get notificationsAllTypesOption => 'Svi tipovi';
+  String get notificationsAllTypesOption => 'Alle Typen';
 
   @override
-  String get audienceFieldLabel => 'Publika';
+  String get audienceFieldLabel => 'Zielgruppe';
 
   @override
-  String get allAudiencesOption => 'Sve publike';
+  String get allAudiencesOption => 'Alle Zielgruppen';
 
   @override
-  String get notificationsEmptyMessage => 'Nema obavijesti.';
+  String get notificationsEmptyMessage => 'Keine Benachrichtigungen.';
 
   @override
   String get notificationsFilteredEmptyMessage =>
-      'Nema obavijesti za zadane filtere.';
+      'Keine Benachrichtigungen entsprechen den gewählten Filtern.';
 
   @override
-  String get notificationColumnLabel => 'Obavijest';
+  String get notificationColumnLabel => 'Benachrichtigung';
 
   @override
-  String get createdAtColumnLabel => 'Kreirano';
+  String get createdAtColumnLabel => 'Erstellt';
 
   @override
   String notificationFallbackTitle(int id) {
-    return 'Obavijest #$id';
+    return 'Benachrichtigung #$id';
   }
 
   @override
-  String get editNotificationDialogTitle => 'Uredi obavijest';
+  String get editNotificationDialogTitle => 'Benachrichtigung bearbeiten';
 
   @override
-  String get contentFieldLabel => 'Sadržaj';
+  String get contentFieldLabel => 'Inhalt';
 
   @override
   String imagesCountLabel(int count, int max) {
-    return 'Slike ($count/$max)';
+    return 'Bilder ($count/$max)';
   }
 
   @override
-  String get addImageButtonLabel => 'Dodaj sliku';
+  String get addImageButtonLabel => 'Bild hinzufügen';
 
   @override
   String uploadingImageLabel(int current, int total) {
-    return 'Slanje slike $current/$total...';
+    return 'Bild $current/$total wird hochgeladen...';
   }
 
   @override
   String get notificationTypeInfoLabel => 'Info';
 
   @override
-  String get notificationTypePlannedWorksLabel => 'Planirani radovi';
+  String get notificationTypePlannedWorksLabel => 'Geplante Arbeiten';
 
   @override
-  String get notificationTypeWarningLabel => 'Upozorenje';
+  String get notificationTypeWarningLabel => 'Warnung';
 
   @override
-  String get notificationTypeGenericLabel => 'Obavijest';
+  String get notificationTypeGenericLabel => 'Benachrichtigung';
 
   @override
-  String get allUsersAudienceLabel => 'Svi korisnici';
+  String get allUsersAudienceLabel => 'Alle Benutzer';
 
   @override
-  String get customersAudienceLabel => 'Korisnici';
+  String get customersAudienceLabel => 'Kunden';
 
   @override
-  String get settlementAudienceLabel => 'Naselje';
+  String get settlementAudienceLabel => 'Siedlung';
 
   @override
-  String get supportTicketFilterOpen => 'Otvoreni';
+  String get supportTicketFilterOpen => 'Offen';
 
   @override
-  String get supportTicketFilterClosed => 'Zatvoreni';
+  String get supportTicketFilterClosed => 'Geschlossen';
 
   @override
-  String get ticketSubjectSearchHint => 'Predmet tiketa';
+  String get ticketSubjectSearchHint => 'Betreff des Tickets';
 
   @override
   String get supportTicketsScreenSubtitle =>
-      'Svi korisnički tiketi podrške. Tiketi označeni narandžastom čekaju odgovor - zadnja poruka u niti nije od podrške.';
+      'Alle Support-Tickets der Kunden. Orange markierte Tickets warten auf eine Antwort – die neueste Nachricht im Verlauf stammt nicht vom Support.';
 
   @override
-  String get subjectColumnLabel => 'Predmet';
+  String get subjectColumnLabel => 'Betreff';
 
   @override
-  String get messagesColumnLabel => 'Poruke';
+  String get messagesColumnLabel => 'Nachrichten';
 
   @override
-  String get lastMessageColumnLabel => 'Zadnja poruka';
+  String get lastMessageColumnLabel => 'Letzte Nachricht';
 
   @override
   String ticketFallbackTitle(int id) {
-    return 'Tiket #$id';
+    return 'Ticket #$id';
   }
 
   @override
-  String get noTicketsFilteredMessage => 'Nema tiketa za zadane filtere.';
+  String get noTicketsFilteredMessage =>
+      'Keine Tickets entsprechen den gewählten Filtern.';
 
   @override
-  String get noTicketsMessage => 'Nema tiketa.';
+  String get noTicketsMessage => 'Keine Tickets.';
 
   @override
-  String get enterMessageTextError => 'Unesite tekst poruke.';
+  String get enterMessageTextError => 'Geben Sie den Nachrichtentext ein.';
 
   @override
-  String get ticketClosedSuccess => 'Tiket je zatvoren.';
+  String get ticketClosedSuccess => 'Ticket geschlossen.';
 
   @override
-  String get ticketReopenedSuccess => 'Tiket je ponovo otvoren.';
+  String get ticketReopenedSuccess => 'Ticket wieder geöffnet.';
 
   @override
-  String get ticketFallbackLabel => 'Tiket';
+  String get ticketFallbackLabel => 'Ticket';
 
   @override
-  String get reopenTicketButtonLabel => 'Ponovo otvori';
+  String get reopenTicketButtonLabel => 'Wieder öffnen';
 
   @override
-  String get noMessagesMessage => 'Nema poruka.';
+  String get noMessagesMessage => 'Keine Nachrichten.';
 
   @override
-  String get sendButtonLabel => 'Pošalji';
+  String get sendButtonLabel => 'Senden';
 
   @override
-  String get writeReplyHint => 'Napišite odgovor...';
+  String get writeReplyHint => 'Antwort schreiben...';
 
   @override
   String openedAtLabel(String date) {
-    return 'Otvoren: $date';
+    return 'Geöffnet: $date';
   }
 
   @override
-  String get genericCustomerLabel => 'Korisnik';
+  String get genericCustomerLabel => 'Kunde';
 
   @override
   String get ticketClosedBannerMessage =>
-      'Tiket je zatvoren. Ponovo ga otvorite da odgovorite.';
+      'Dieses Ticket ist geschlossen. Öffnen Sie es erneut, um zu antworten.';
 
   @override
-  String get supportTicketStatusOpen => 'Otvoren';
+  String get supportTicketStatusOpen => 'Offen';
 
   @override
-  String get supportTicketStatusClosed => 'Zatvoren';
+  String get supportTicketStatusClosed => 'Geschlossen';
 
   @override
-  String get messageColumnLabel => 'Poruka';
+  String get messageColumnLabel => 'Nachricht';
 
   @override
-  String get consumptionAlertsNavLabel => 'Upozorenja o potrošnji';
+  String get consumptionAlertsNavLabel => 'Verbrauchswarnungen';
 
   @override
   String get consumptionAlertsScreenSubtitle =>
-      'Pregled upozorenja o neuobičajenoj potrošnji vode i njihovo rješavanje.';
+      'Warnungen zu Auffälligkeiten beim Wasserverbrauch prüfen und erledigen.';
 
   @override
-  String get checkAnomaliesButtonLabel => 'Provjeri anomalije';
+  String get checkAnomaliesButtonLabel => 'Auffälligkeiten prüfen';
 
   @override
   String get consumptionAlertsRecomputedSuccess =>
-      'Anomalije potrošnje su provjerene.';
+      'Verbrauchsauffälligkeiten geprüft.';
 
   @override
-  String get consumptionAlertsEmptyMessage => 'Nema upozorenja o potrošnji.';
+  String get consumptionAlertsEmptyMessage => 'Keine Verbrauchswarnungen.';
 
   @override
-  String get markAsResolvedTooltip => 'Označi kao riješeno';
+  String get markAsResolvedTooltip => 'Als erledigt markieren';
 
   @override
-  String get alertMarkedResolvedSuccess =>
-      'Upozorenje je označeno kao riješeno.';
+  String get alertMarkedResolvedSuccess => 'Warnung als erledigt markiert.';
 
   @override
-  String get measuredValueColumnLabel => 'Izmjerena vrijednost';
+  String get measuredValueColumnLabel => 'Gemessener Wert';
 
   @override
-  String get thresholdValueColumnLabel => 'Granična vrijednost';
+  String get thresholdValueColumnLabel => 'Schwellenwert';
 
   @override
-  String get resolvedStatusLabel => 'Riješeno';
+  String get resolvedStatusLabel => 'Erledigt';
 
   @override
-  String get unresolvedStatusLabel => 'Neriješeno';
+  String get unresolvedStatusLabel => 'Nicht erledigt';
 
   @override
-  String get sessionExpiredMessage => 'Sesija je istekla. Prijavite se ponovo.';
+  String get sessionExpiredMessage =>
+      'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.';
 
   @override
   String get passwordChangedSignInAgain =>
-      'Lozinka je promijenjena. Prijavite se ponovo.';
+      'Ihr Passwort wurde geändert. Bitte melden Sie sich erneut an.';
 
   @override
-  String get notificationDetailCreatedAtLabel => 'Datum kreiranja';
+  String get notificationDetailCreatedAtLabel => 'Erstellungsdatum';
 
   @override
-  String get notificationDetailDescriptionHeading => 'Opis';
+  String get notificationDetailDescriptionHeading => 'Beschreibung';
 
   @override
-  String get notificationDetailDetailsHeading => 'Detalji';
+  String get notificationDetailDetailsHeading => 'Details';
 
   @override
-  String get notificationDetailEmptyBody => 'Nema dodatnog sadržaja.';
+  String get notificationDetailEmptyBody => 'Kein weiterer Inhalt.';
 
   @override
   String notificationDetailImagesHeading(int count) {
-    return 'Slike ($count)';
+    return 'Bilder ($count)';
   }
 
   @override
-  String get notificationDetailTitle => 'Detalji obavijesti';
+  String get notificationDetailTitle => 'Benachrichtigungsdetails';
 
   @override
-  String get notificationStatusRead => 'Pročitano';
+  String get notificationStatusRead => 'Gelesen';
 
   @override
-  String get notificationStatusUnread => 'Novo';
+  String get notificationStatusUnread => 'Neu';
 
   @override
-  String get notificationTypeFieldLabel => 'Tip obavijesti';
+  String get notificationTypeFieldLabel => 'Benachrichtigungstyp';
 
   @override
-  String get notificationsMarkAllReadTooltip => 'Označi sve kao pročitano';
+  String get notificationsMarkAllReadTooltip => 'Alle als gelesen markieren';
 
   @override
   String get notificationsEmptyFilteredMessage =>
-      'Nema obavijesti za odabrani tip.';
+      'Keine Benachrichtigungen für den gewählten Typ.';
 
   @override
-  String get notificationsNewBanner => 'Imate novih obavijesti';
+  String get notificationsNewBanner => 'Sie haben neue Benachrichtigungen';
 
   @override
-  String get notificationOpenAction => 'Otvori';
+  String get notificationOpenAction => 'Öffnen';
 
   @override
   String get notificationOpenRelatedFailed =>
-      'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.';
+      'Das zugehörige Element konnte nicht geöffnet werden. Möglicherweise ist es nicht mehr verfügbar.';
 
   @override
-  String get notificationsInboxNavLabel => 'Moje obavijesti';
+  String get notificationsInboxNavLabel => 'Meine Benachrichtigungen';
 
   @override
-  String get notificationsManageNavLabel => 'Upravljanje obavijestima';
+  String get notificationsManageNavLabel => 'Benachrichtigungen verwalten';
 
   @override
-  String get reportsNavLabel => 'Izvještaji';
+  String get reportsNavLabel => 'Berichte';
 
   @override
-  String get reportsScreenTitle => 'Izvještaji';
+  String get reportsScreenTitle => 'Berichte';
 
   @override
   String get reportsScreenSubtitle =>
-      'Preuzmite ili ispišite PDF izvještaje za odabrani period.';
+      'PDF-Berichte für den gewählten Zeitraum herunterladen oder drucken.';
 
   @override
-  String get reportsConsumptionTitle => 'Potrošnja vode po naseljima';
+  String get reportsConsumptionTitle => 'Wasserverbrauch nach Siedlung';
 
   @override
   String get reportsConsumptionDescription =>
-      'Ukupna potrošnja vode po naseljima za odabrani period i grad.';
+      'Gesamter Wasserverbrauch pro Siedlung für den gewählten Zeitraum und die gewählte Stadt.';
 
   @override
-  String get reportsBillingTitle => 'Računi i naplata';
+  String get reportsBillingTitle => 'Rechnungen und Einzug';
 
   @override
   String get reportsBillingDescription =>
-      'Izdati, plaćeni i neplaćeni računi sa iznosima naplate za odabrani period.';
+      'Ausgestellte, bezahlte und unbezahlte Rechnungen mit eingezogenen Beträgen für den gewählten Zeitraum.';
 
   @override
-  String get reportsDownloadPdf => 'Preuzmi PDF';
+  String get reportsDownloadPdf => 'PDF herunterladen';
 
   @override
-  String get reportsPrint => 'Ispiši';
+  String get reportsPrint => 'Drucken';
 
   @override
   String get reportsInvalidRange =>
-      'Početni datum mora biti prije ili jednak krajnjem datumu.';
+      'Das Startdatum darf nicht nach dem Enddatum liegen.';
 
   @override
   String reportsSavedTo(String path) {
-    return 'Sačuvano: $path';
+    return 'Gespeichert: $path';
   }
 }
