@@ -346,6 +346,7 @@ builder.Services.AddHttpClient<IInvoicePdfService, InvoicePdfService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(5);
 });
+builder.Services.AddScoped<IReportPdfService, ReportPdfService>();
 // WaterMeterRequest mirrors the Invoice registration above: the state machine service is
 // registered by hand, the generic IBaseCRUDService alias resolves to the same instance, and each
 // request state is a keyed scoped BaseWaterMeterRequestState (status string as key) that
