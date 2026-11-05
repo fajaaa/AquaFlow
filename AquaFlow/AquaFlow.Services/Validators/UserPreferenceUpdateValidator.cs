@@ -1,3 +1,4 @@
+using AquaFlow.Model;
 using AquaFlow.Model.Requests;
 using FluentValidation;
 
@@ -14,8 +15,7 @@ public class UserPreferenceUpdateValidator : AbstractValidator<UserPreferenceUpd
             .WithMessage("Theme must be 'light' or 'dark'.");
         RuleFor(x => x.Language)
             .NotEmpty()
-            .Must(language => language.Equals("bs", StringComparison.OrdinalIgnoreCase)
-                || language.Equals("en", StringComparison.OrdinalIgnoreCase))
-            .WithMessage("Language must be 'bs' or 'en'.");
+            .Must(SupportedLanguages.IsSupported)
+            .WithMessage(SupportedLanguages.Message);
     }
 }

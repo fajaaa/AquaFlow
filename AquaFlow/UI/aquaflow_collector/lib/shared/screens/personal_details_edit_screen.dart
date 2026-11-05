@@ -176,7 +176,7 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
     }
   }
 
-  /// Applies [code] ('bs'/'en') to the shared [LocaleProvider] immediately,
+  /// Applies [code] ('bs'/'de'/'en') to the shared [LocaleProvider] immediately,
   /// then persists it via `PUT /Account/preferences` in the background. On
   /// save failure the app language stays changed (better than reverting under
   /// the user), but a snackbar reports that the choice wasn't saved.
@@ -387,6 +387,7 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
                     child: SegmentedButton<String>(
                       segments: const [
                         ButtonSegment(value: 'bs', label: Text('Bosanski')),
+                        ButtonSegment(value: 'de', label: Text('Deutsch')),
                         ButtonSegment(value: 'en', label: Text('English')),
                       ],
                       selected: {_preferences?.language ?? 'bs'},

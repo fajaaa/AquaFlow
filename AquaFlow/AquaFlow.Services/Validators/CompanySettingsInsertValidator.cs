@@ -1,3 +1,4 @@
+using AquaFlow.Model;
 using AquaFlow.Model.Requests;
 using FluentValidation;
 
@@ -10,6 +11,7 @@ public class CompanySettingsInsertValidator : AbstractValidator<CompanySettingsI
         RuleFor(x => x.CompanyName).NotEmpty().MaximumLength(150);
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(150);
         RuleFor(x => x.DefaultCurrency).NotEmpty().MaximumLength(10);
-        RuleFor(x => x.DefaultLanguage).NotEmpty().MaximumLength(10);
+        RuleFor(x => x.DefaultLanguage).NotEmpty().MaximumLength(10)
+            .Must(SupportedLanguages.IsSupported).WithMessage(SupportedLanguages.Message);
     }
 }

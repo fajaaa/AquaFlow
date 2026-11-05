@@ -84,6 +84,13 @@ class AquaFlowApp extends StatelessWidget {
             locale: locale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
+            localeResolutionCallback: (locale, supported) {
+              if (locale != null &&
+                  supported.any((l) => l.languageCode == locale.languageCode)) {
+                return locale;
+              }
+              return const Locale('bs');
+            },
             home: const _AuthGate(),
           );
         },

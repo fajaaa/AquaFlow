@@ -25,6 +25,8 @@ public class UserPreferenceUpdateValidatorTests
 
     [Theory]
     [InlineData("bs")]
+    [InlineData("de")]
+    [InlineData("DE")]
     [InlineData("en")]
     [InlineData("BS")]
     [InlineData("EN")]
