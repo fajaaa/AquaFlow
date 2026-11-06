@@ -1,4 +1,4 @@
-using AquaFlow.Common.Services.PushNotificationService;
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.InvoiceStateMachine;
@@ -394,7 +394,7 @@ public class InvoiceCheckoutTests
     internal static InvoiceService CreateService(
         AquaFlowDbContext context,
         IPaymentProvider paymentProvider,
-        IPushNotificationSender? pushSender = null,
+        IMessagePublisher? publisher = null,
         IPaymentCardService? cardService = null)
     {
         var mapperConfig = new TypeAdapterConfig();
@@ -404,7 +404,7 @@ public class InvoiceCheckoutTests
             .Map(destination => destination.WaterMeterSerialNumber, source => source.WaterMeter == null ? string.Empty : source.WaterMeter.SerialNumber);
         IMapper mapper = new Mapper(mapperConfig);
 
-        var systemNotifications = TestSystemNotifications.Create(context, pushSender);
+        var systemNotifications = TestSystemNotifications.Create(context, publisher);
         var stateResolver = new InvoiceStateResolver(BuildServiceProvider(context, mapper, systemNotifications));
 
         return new InvoiceService(

@@ -285,14 +285,13 @@ The API listens on `http://localhost:5161` (bound to all interfaces so a phone o
 same network can reach it for testing). The `https` profile additionally listens on
 `https://localhost:7286`.
 
-The notification worker (`AquaFlow.Subscriber`) is a separate process; run it in its own
-terminal if you want to see the RabbitMQ messages the API publishes actually get consumed:
-
-```powershell
-dotnet run --project .\AquaFlow\AquaFlow.Subscriber\AquaFlow.Subscriber.csproj
-```
-
-It only needs RabbitMQ (from step 1) to be running, not the API.
+Push notifications: after a notification and its inbox rows are committed, the API only publishes
+`NotificationPushRequested` to RabbitMQ (it never calls FCM). `AquaFlow.Subscriber` is the single
+owner of delivery: it loads the recipients' device tokens, sends via FCM, deactivates invalid
+tokens and sets `PushDispatchedAt`. It retries 3x with backoff; failed messages go to the EasyNetQ
+error queue. Firebase credentials are configured only for the subscriber (not the API); without
+RabbitMQ the API logs a warning and push delivery is disabled. Run it with
+`dotnet run --project .\AquaFlow\AquaFlow.Subscriber\AquaFlow.Subscriber.csproj`.
 
 ### 5. Verify
 
@@ -377,8 +376,7 @@ Configuration is resolved by the standard ASP.NET Core provider chain. Later sou
 | `Firebase__ServiceAccountJson` / `Firebase__ServiceAccountJsonPath` | No | Service account credential, inline or by path. |
 | `Firebase__ProjectId` | No | Firebase project id. |
 
-Push notifications are optional: with no Firebase credential configured, the API registers a
-no-op sender and every other feature keeps working.
+Push delivery is owned by `AquaFlow.Subscriber`; the API does not read the `Firebase__*` keys.
 
 Never commit real values for any of the keys above — in particular the JWT signing key, the
 database password, Stripe keys, and the Firebase service account JSON. `.env` files are

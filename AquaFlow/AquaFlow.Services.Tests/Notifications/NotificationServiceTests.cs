@@ -1,5 +1,4 @@
 using AquaFlow.Common.Services.MessageBus;
-using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Messages;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.SearchObjects;
@@ -216,99 +215,43 @@ public class NotificationServiceTests
         Assert.Equal("Billing", item.Notification?.Type);
     }
 
-    [Fact]
-    public async Task InsertAsync_AllAudience_SendsPushToAllActiveDeviceTokensOfActiveUsers()
+    [Theory]
+    [InlineData("All", new[] { AdminUserId, CollectorUserId, CustomerUserId, OtherCollectorUserId, OtherCustomerUserId })]
+    [InlineData("Customers", new[] { CustomerUserId, OtherCustomerUserId })]
+    [InlineData("Collectors", new[] { CollectorUserId, OtherCollectorUserId })]
+    public async Task InsertAsync_PublishesOnePushRequestedWithNotificationIdAndRecipients(string audience, int[] expectedRecipients)
     {
         var options = BuildOptions();
         await using var context = new AquaFlowDbContext(options);
         SeedUsersAndLocations(context);
         SeedDeviceTokens(context);
 
-        var pushSender = new FakePushNotificationSender();
-        var service = CreateNotificationService(context, pushSender);
+        var publisher = new FakeMessagePublisher();
+        var service = CreateNotificationService(context, publisher);
 
         var response = await service.InsertAsync(new NotificationInsertRequest
         {
             Title = "Nova obavijest",
-            Body = "Sadrzaj obavijesti",
-            Type = "Info",
-            Audience = "All",
-            CreatedById = AdminUserId
-        });
-
-        var call = Assert.Single(pushSender.Calls);
-        Assert.Equal("Nova obavijest", call.Title);
-        Assert.Equal("Sadrzaj obavijesti", call.Body);
-        Assert.Equal(response.Id.ToString(), call.Data["notificationId"]);
-        Assert.Equal("Info", call.Data["type"]);
-        Assert.Equal(
-            new[] { "token-admin", "token-collector", "token-customer", "token-other-collector", "token-other-customer" }
-                .OrderBy(token => token),
-            call.Tokens.OrderBy(token => token));
-        Assert.DoesNotContain("token-customer-inactive", call.Tokens);
-    }
-
-    [Theory]
-    [InlineData("Customers", new[] { "token-customer", "token-other-customer" })]
-    [InlineData("Collectors", new[] { "token-collector", "token-other-collector" })]
-    public async Task InsertAsync_RoleAudience_SendsPushOnlyToThatRolesActiveTokens(string audience, string[] expectedTokens)
-    {
-        var options = BuildOptions();
-        await using var context = new AquaFlowDbContext(options);
-        SeedUsersAndLocations(context);
-        SeedDeviceTokens(context);
-
-        var pushSender = new FakePushNotificationSender();
-        var service = CreateNotificationService(context, pushSender);
-
-        await service.InsertAsync(new NotificationInsertRequest
-        {
-            Title = "Obavijest po ulozi",
             Body = "Sadrzaj obavijesti",
             Type = "Info",
             Audience = audience,
             CreatedById = AdminUserId
         });
 
-        var call = Assert.Single(pushSender.Calls);
-        Assert.Equal(expectedTokens.OrderBy(token => token), call.Tokens.OrderBy(token => token));
+        var call = Assert.Single(publisher.Calls);
+        Assert.Equal(typeof(NotificationPushRequested), call.MessageType);
+        var message = Assert.IsType<NotificationPushRequested>(call.Message);
+        Assert.Equal(response.Id, message.NotificationId);
+        Assert.Equal(expectedRecipients.OrderBy(id => id), message.RecipientUserIds.OrderBy(id => id));
     }
 
     [Fact]
-    public async Task InsertAsync_PushSenderThrows_StillReturnsNotificationResponse()
+    public async Task InsertAsync_NoRecipients_PublishesNothing()
     {
         var options = BuildOptions();
         await using var context = new AquaFlowDbContext(options);
-        SeedUsersAndLocations(context);
-        SeedDeviceTokens(context);
-
-        var pushSender = new FakePushNotificationSender { ExceptionToThrow = new InvalidOperationException("FCM unavailable") };
-        var service = CreateNotificationService(context, pushSender);
-
-        var response = await service.InsertAsync(new NotificationInsertRequest
-        {
-            Title = "Nova obavijest",
-            Body = "Sadrzaj obavijesti",
-            Type = "Info",
-            Audience = "All",
-            CreatedById = AdminUserId
-        });
-
-        Assert.True(response.Id > 0);
-        Assert.True(await context.UserNotifications.AnyAsync(userNotification => userNotification.NotificationId == response.Id));
-    }
-
-    [Fact]
-    public async Task InsertAsync_PushSenderReportsInvalidToken_DeactivatesThatDeviceToken()
-    {
-        var options = BuildOptions();
-        await using var context = new AquaFlowDbContext(options);
-        SeedUsersAndLocations(context);
-        SeedDeviceTokens(context);
-
-        var pushSender = new FakePushNotificationSender();
-        pushSender.TokensToReportInvalid.Add("token-customer");
-        var service = CreateNotificationService(context, pushSender);
+        var publisher = new FakeMessagePublisher();
+        var service = CreateNotificationService(context, publisher);
 
         await service.InsertAsync(new NotificationInsertRequest
         {
@@ -319,47 +262,18 @@ public class NotificationServiceTests
             CreatedById = AdminUserId
         });
 
-        var deactivatedToken = await context.DeviceTokens.SingleAsync(deviceToken => deviceToken.Token == "token-customer");
-        Assert.False(deactivatedToken.IsActive);
-
-        var untouchedToken = await context.DeviceTokens.SingleAsync(deviceToken => deviceToken.Token == "token-admin");
-        Assert.True(untouchedToken.IsActive);
+        Assert.Empty(publisher.Calls);
     }
 
     [Fact]
-    public async Task InsertAsync_PublishesNotificationCreatedMessageExactlyOnce()
+    public async Task InsertAsync_PublisherThrows_StillReturnsNotificationResponse()
     {
         var options = BuildOptions();
         await using var context = new AquaFlowDbContext(options);
         SeedUsersAndLocations(context);
 
-        var messagePublisher = new FakeMessagePublisher();
-        var service = CreateNotificationService(context, messagePublisher: messagePublisher);
-
-        var response = await service.InsertAsync(new NotificationInsertRequest
-        {
-            Title = "Nova obavijest",
-            Body = "Sadrzaj obavijesti",
-            Type = "Info",
-            Audience = "All",
-            CreatedById = AdminUserId
-        });
-
-        var call = Assert.Single(messagePublisher.Calls);
-        Assert.Equal(typeof(NotificationCreated), call.MessageType);
-        var message = Assert.IsType<NotificationCreated>(call.Message);
-        Assert.Equal(response.Id, message.Id);
-    }
-
-    [Fact]
-    public async Task InsertAsync_MessagePublisherThrows_StillReturnsNotificationResponse()
-    {
-        var options = BuildOptions();
-        await using var context = new AquaFlowDbContext(options);
-        SeedUsersAndLocations(context);
-
-        var messagePublisher = new FakeMessagePublisher { ExceptionToThrow = new InvalidOperationException("RabbitMQ unavailable") };
-        var service = CreateNotificationService(context, messagePublisher: messagePublisher);
+        var publisher = new FakeMessagePublisher { ExceptionToThrow = new InvalidOperationException("RabbitMQ unavailable") };
+        var service = CreateNotificationService(context, publisher);
 
         var response = await service.InsertAsync(new NotificationInsertRequest
         {
@@ -375,15 +289,14 @@ public class NotificationServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_DoesNotSendPush()
+    public async Task UpdateAsync_DoesNotPublishPushRequest()
     {
         var options = BuildOptions();
         await using var context = new AquaFlowDbContext(options);
         SeedUsersAndLocations(context);
-        SeedDeviceTokens(context);
 
-        var pushSender = new FakePushNotificationSender();
-        var service = CreateNotificationService(context, pushSender);
+        var publisher = new FakeMessagePublisher();
+        var service = CreateNotificationService(context, publisher);
 
         var response = await service.InsertAsync(new NotificationInsertRequest
         {
@@ -393,7 +306,7 @@ public class NotificationServiceTests
             Audience = "All",
             CreatedById = AdminUserId
         });
-        pushSender.Calls.Clear();
+        publisher.Calls.Clear();
 
         await service.UpdateAsync(response.Id, new NotificationUpdateRequest
         {
@@ -404,19 +317,18 @@ public class NotificationServiceTests
             CreatedById = AdminUserId
         });
 
-        Assert.Empty(pushSender.Calls);
+        Assert.Empty(publisher.Calls);
     }
 
     [Fact]
-    public async Task PatchAsync_DoesNotSendPush()
+    public async Task PatchAsync_DoesNotPublishPushRequest()
     {
         var options = BuildOptions();
         await using var context = new AquaFlowDbContext(options);
         SeedUsersAndLocations(context);
-        SeedDeviceTokens(context);
 
-        var pushSender = new FakePushNotificationSender();
-        var service = CreateNotificationService(context, pushSender);
+        var publisher = new FakeMessagePublisher();
+        var service = CreateNotificationService(context, publisher);
 
         var response = await service.InsertAsync(new NotificationInsertRequest
         {
@@ -426,15 +338,16 @@ public class NotificationServiceTests
             Audience = "All",
             CreatedById = AdminUserId
         });
-        pushSender.Calls.Clear();
+        publisher.Calls.Clear();
 
         await service.PatchAsync(response.Id, new NotificationPatchRequest
         {
             Title = "Azurirani naslov"
         });
 
-        Assert.Empty(pushSender.Calls);
+        Assert.Empty(publisher.Calls);
     }
+
 
     [Fact]
     public async Task GetAllAsync_ForUser_FiltersByIsRead()
@@ -500,7 +413,6 @@ public class NotificationServiceTests
 
     internal static NotificationService CreateNotificationService(
         AquaFlowDbContext context,
-        IPushNotificationSender? pushNotificationSender = null,
         IMessagePublisher? messagePublisher = null)
     {
         // Mirrors Program.cs's AddPatchMapping, which only runs for the real app - a plain
@@ -518,9 +430,7 @@ public class NotificationServiceTests
             new IValidator<NotificationUpdateRequest>[] { new NotificationUpdateValidator() },
             new IValidator<NotificationPatchRequest>[] { new NotificationPatchValidator() },
             recipientService,
-            TestSystemNotifications.CreateDispatcher(context, pushNotificationSender),
-            messagePublisher ?? new FakeMessagePublisher(),
-            NullLogger<NotificationService>.Instance);
+            TestSystemNotifications.CreatePublisher(messagePublisher));
     }
 
     internal static UserNotificationService CreateUserNotificationService(AquaFlowDbContext context)

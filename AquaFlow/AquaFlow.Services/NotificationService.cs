@@ -1,6 +1,4 @@
-using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Model.Exceptions;
-using AquaFlow.Model.Messages;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -8,7 +6,6 @@ using AquaFlow.Services.Database;
 using FluentValidation;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace AquaFlow.Services;
 
@@ -16,9 +13,7 @@ public class NotificationService
     : EfCrudService<Notification, NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>
 {
     private readonly NotificationRecipientService _recipientService;
-    private readonly NotificationPushDispatcher _pushDispatcher;
-    private readonly IMessagePublisher _messagePublisher;
-    private readonly ILogger<NotificationService> _logger;
+    private readonly INotificationPushPublisher _pushPublisher;
 
     public NotificationService(
         AquaFlowDbContext dbContext,
@@ -27,15 +22,11 @@ public class NotificationService
         IEnumerable<IValidator<NotificationUpdateRequest>> updateValidators,
         IEnumerable<IValidator<NotificationPatchRequest>> patchValidators,
         NotificationRecipientService recipientService,
-        NotificationPushDispatcher pushDispatcher,
-        IMessagePublisher messagePublisher,
-        ILogger<NotificationService> logger)
+        INotificationPushPublisher pushPublisher)
         : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _recipientService = recipientService;
-        _pushDispatcher = pushDispatcher;
-        _messagePublisher = messagePublisher;
-        _logger = logger;
+        _pushPublisher = pushPublisher;
     }
 
     // /Notifications is the admin CRUD table for news/announcements. System notifications
@@ -101,10 +92,9 @@ public class NotificationService
 
         await transaction.CommitAsync();
 
-        // After CommitAsync: a push failure/outage must never block or roll back the notification
-        // and its inbox rows (NotificationPushDispatcher logs and swallows every error).
-        await _pushDispatcher.SendAsync(entity, recipientUserIds);
-        await PublishNotificationCreatedAsync(entity);
+        // After CommitAsync: the publisher logs and swallows broker errors, so an outage can never
+        // block or roll back the notification and its inbox rows. AquaFlow.Subscriber delivers the push.
+        await _pushPublisher.PublishAsync(entity.Id, recipientUserIds);
 
         await LoadReferencesAsync(entity);
 
@@ -180,27 +170,6 @@ public class NotificationService
         await DbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();
-    }
-
-    // Deliberately outside the InsertAsync transaction (called after CommitAsync): a RabbitMQ
-    // outage must never block or roll back notification creation, so any failure here is caught,
-    // logged, and swallowed instead of propagating.
-    private async Task PublishNotificationCreatedAsync(Notification notification)
-    {
-        try
-        {
-            var response = Mapper.Map<NotificationResponse>(notification);
-
-            await _messagePublisher.PublishAsync(new NotificationCreated
-            {
-                Id = notification.Id,
-                Data = response
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to publish NotificationCreated message for notification {NotificationId}.", notification.Id);
-        }
     }
 
     private async Task AddMissingUserNotificationsAsync(Notification notification, List<int> recipientUserIds)

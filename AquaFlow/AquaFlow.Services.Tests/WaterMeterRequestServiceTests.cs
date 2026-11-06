@@ -1,4 +1,4 @@
-using AquaFlow.Common.Services.PushNotificationService;
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Services.Database;
@@ -320,7 +320,7 @@ public class WaterMeterRequestServiceTests
     // as Program.cs, so RegisterAsync/AssignAsync exercise the actual state machine instead of a
     // stub - needed for the RegisterAsync tests above to observe what AssignedWaterMeterRequestState
     // actually writes onto the new WaterMeter.
-    internal static WaterMeterRequestService CreateService(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
+    internal static WaterMeterRequestService CreateService(AquaFlowDbContext context, IMessagePublisher? publisher = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         // Mirror the flatten config from Program.cs so the response's SettlementName and customer
@@ -336,7 +336,7 @@ public class WaterMeterRequestServiceTests
             .IgnoreNullValues(true);
         IMapper mapper = new Mapper(mapperConfig);
 
-        var systemNotifications = TestSystemNotifications.Create(context, pushSender);
+        var systemNotifications = TestSystemNotifications.Create(context, publisher);
 
         var stateServices = new ServiceCollection();
         stateServices.AddKeyedSingleton<BaseWaterMeterRequestState>(WaterMeterRequestStatus.Pending, (_, _) => new PendingWaterMeterRequestState(context, mapper, systemNotifications));

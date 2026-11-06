@@ -1,4 +1,4 @@
-using AquaFlow.Common.Services.PushNotificationService;
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.SearchObjects;
@@ -695,7 +695,7 @@ public class FaultReportServiceTests
     // populate from the loaded navigations, and builds a real IServiceProvider with the same keyed
     // BaseFaultReportState registrations as Program.cs so the transition tests exercise the actual
     // state machine instead of a stub - same template as WaterMeterRequestServiceTests.CreateService.
-    internal static FaultReportService CreateService(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
+    internal static FaultReportService CreateService(AquaFlowDbContext context, IMessagePublisher? publisher = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<FaultReport, Model.Responses.FaultReportResponse>()
@@ -711,7 +711,7 @@ public class FaultReportServiceTests
             .IgnoreNullValues(true);
         IMapper mapper = new Mapper(mapperConfig);
 
-        var systemNotifications = TestSystemNotifications.Create(context, pushSender);
+        var systemNotifications = TestSystemNotifications.Create(context, publisher);
 
         var stateServices = new ServiceCollection();
         stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.New, (_, _) => new NewFaultReportState(context, mapper, systemNotifications));

@@ -1,4 +1,4 @@
-using AquaFlow.Common.Services.PushNotificationService;
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Services.Database;
@@ -509,8 +509,8 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             .Where(i => i.WaterMeterId == 1 && i.Status != InvoiceStatus.Cancelled)
             .SumAsync(i => i.ConsumptionM3);
 
-    internal static MeterReadingService CreateService(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
-        => MeterReadingServiceTests.CreateService(context, pushSender);
+    internal static MeterReadingService CreateService(AquaFlowDbContext context, IMessagePublisher? publisher = null)
+        => MeterReadingServiceTests.CreateService(context, publisher);
 
     private static IMapper CreateInvoiceMapper()
     {

@@ -1,4 +1,4 @@
-using AquaFlow.Common.Services.PushNotificationService;
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Services.Database;
@@ -581,14 +581,14 @@ public class MeterReadingServiceTests
     // throws); otherwise the real states are used.
     internal static MeterReadingService CreateService(
         AquaFlowDbContext context,
-        IPushNotificationSender? pushSender = null,
+        IMessagePublisher? publisher = null,
         Func<AquaFlowDbContext, IMapper, ISystemNotificationService, BaseInvoiceState>? issuedStateOverride = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<MeterReading, Model.Responses.MeterReadingResponse>();
         mapperConfig.NewConfig<Invoice, Model.Responses.InvoiceResponse>();
         IMapper mapper = new Mapper(mapperConfig);
-        var systemNotifications = TestSystemNotifications.Create(context, pushSender);
+        var systemNotifications = TestSystemNotifications.Create(context, publisher);
 
         return new MeterReadingService(
             context,

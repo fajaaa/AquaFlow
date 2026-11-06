@@ -1,18 +1,19 @@
-using AquaFlow.Common.Services.PushNotificationService;
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Services.Database;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AquaFlow.Services.Tests.Notifications;
 
-// Builds the real SystemNotificationService over the test's DbContext, with FCM replaced by a fake.
+// Builds the real SystemNotificationService over the test's DbContext, with RabbitMQ replaced by a fake
+// publisher (the API only publishes NotificationPushRequested; it never talks to FCM).
 // In the app it is scoped, so the state machine that stages a notification and the service that
-// dispatches its push share ONE instance - a test must pass the same instance to both too, or the
-// push for a notification staged by a state would never be dispatched.
+// dispatches its push request share ONE instance - a test must pass the same instance to both too, or the
+// request for a notification staged by a state would never be published.
 public static class TestSystemNotifications
 {
-    public static SystemNotificationService Create(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
-        => new(context, CreateDispatcher(context, pushSender));
+    public static SystemNotificationService Create(AquaFlowDbContext context, IMessagePublisher? publisher = null)
+        => new(context, CreatePublisher(publisher));
 
-    public static NotificationPushDispatcher CreateDispatcher(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
-        => new(context, pushSender ?? new FakePushNotificationSender(), NullLogger<NotificationPushDispatcher>.Instance);
+    public static NotificationPushPublisher CreatePublisher(IMessagePublisher? publisher = null)
+        => new(publisher ?? new FakeMessagePublisher(), NullLogger<NotificationPushPublisher>.Instance);
 }

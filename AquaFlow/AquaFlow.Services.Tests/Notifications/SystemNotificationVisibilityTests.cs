@@ -1,4 +1,5 @@
 using AquaFlow.Model;
+using AquaFlow.Model.Messages;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.SearchObjects;
@@ -12,7 +13,7 @@ namespace AquaFlow.Services.Tests.Notifications;
 // Who can see a system notification (only its explicit recipients - never via the audience-based
 // inbox backfill, not even an admin), how the admin /Notifications CRUD treats it (invisible,
 // read-only, Direct audience rejected), and the push rules shared with admin announcements
-// (failures swallowed, ReceivePushNotifications respected, deep-link payload, nothing pushed for a
+// (publish failures swallowed, nothing published for a
 // notification that was never saved). Users/tokens come from NotificationServiceTests' seed:
 // Admin 1, Collector 2, Customer 3, OtherCustomer 4, OtherCollector 5, inactive Customer 6.
 public class SystemNotificationVisibilityTests
@@ -154,15 +155,16 @@ public class SystemNotificationVisibilityTests
 
     // ---- Push ----
 
+    // ---- Push request (the API only publishes; AquaFlow.Subscriber filters tokens/preferences and sends) ----
+
     [Fact]
-    public async Task PushSenderThrows_TransitionAndNotificationAreStillSaved()
+    public async Task PublisherThrows_TransitionAndNotificationAreStillSaved()
     {
         await using var context = FaultReportServiceTests.CreateContext();
         NotificationServiceTests.SeedUsersAndLocations(context);
-        NotificationServiceTests.SeedDeviceTokens(context);
         SeedFaultReport(context);
-        var pushSender = new FakePushNotificationSender { ExceptionToThrow = new InvalidOperationException("FCM unavailable") };
-        var service = FaultReportServiceTests.CreateService(context, pushSender);
+        var publisher = new FakeMessagePublisher { ExceptionToThrow = new InvalidOperationException("RabbitMQ unavailable") };
+        var service = FaultReportServiceTests.CreateService(context, publisher);
 
         var response = await service.AssignAsync(1, collectorId: 1, note: null, changedById: AdminUserId);
 
@@ -174,80 +176,34 @@ public class SystemNotificationVisibilityTests
     }
 
     [Fact]
-    public async Task ReceivePushNotificationsOff_InboxRowExistsButNoPushIsSent()
+    public async Task SystemNotification_PublishesPushRequestedWithSavedIdAndRecipients()
     {
         await using var context = FaultReportServiceTests.CreateContext();
         NotificationServiceTests.SeedUsersAndLocations(context);
-        NotificationServiceTests.SeedDeviceTokens(context);
         SeedFaultReport(context);
-        // The reporter opted out; the collector has no preference row at all (= default, push on).
-        context.UserPreferences.Add(new UserPreference { Id = 1, UserId = CustomerUserId, ReceivePushNotifications = false });
-        context.SaveChanges();
-        var pushSender = new FakePushNotificationSender();
-        var service = FaultReportServiceTests.CreateService(context, pushSender);
+        var publisher = new FakeMessagePublisher();
+        var service = FaultReportServiceTests.CreateService(context, publisher);
 
         await service.AssignAsync(1, collectorId: 1, note: null, changedById: AdminUserId);
 
-        await SystemNotificationEventTests.AssertSystemNotificationAsync(context, CustomerUserId, RelatedEntityTypes.FaultReport, 1);
-        var pushedTokens = pushSender.Calls.SelectMany(call => call.Tokens).ToList();
-        Assert.DoesNotContain("token-customer", pushedTokens);
-        Assert.Contains("token-collector", pushedTokens);
-    }
-
-    [Fact]
-    public async Task SystemPush_CarriesTheDeepLinkTarget()
-    {
-        await using var context = FaultReportServiceTests.CreateContext();
-        NotificationServiceTests.SeedUsersAndLocations(context);
-        NotificationServiceTests.SeedDeviceTokens(context);
-        SeedFaultReport(context);
-        var pushSender = new FakePushNotificationSender();
-        var service = FaultReportServiceTests.CreateService(context, pushSender);
-
-        await service.AssignAsync(1, collectorId: 1, note: null, changedById: AdminUserId);
-
-        var customerCall = Assert.Single(pushSender.Calls, call => call.Tokens.Contains("token-customer"));
-        Assert.Equal(RelatedEntityTypes.FaultReport, customerCall.Data["relatedEntityType"]);
-        Assert.Equal("1", customerCall.Data["relatedEntityId"]);
-        Assert.Equal(NotificationType.Info, customerCall.Data["type"]);
-        Assert.True(int.TryParse(customerCall.Data["notificationId"], out _));
-    }
-
-    [Fact]
-    public async Task AdminAnnouncement_RespectsReceivePushNotificationsToo()
-    {
-        await using var context = new AquaFlowDbContext(NotificationServiceTests.BuildOptions());
-        NotificationServiceTests.SeedUsersAndLocations(context);
-        NotificationServiceTests.SeedDeviceTokens(context);
-        context.UserPreferences.Add(new UserPreference { Id = 1, UserId = CustomerUserId, ReceivePushNotifications = false });
-        context.SaveChanges();
-        var pushSender = new FakePushNotificationSender();
-        var service = NotificationServiceTests.CreateNotificationService(context, pushSender);
-
-        var response = await service.InsertAsync(new NotificationInsertRequest
+        var messages = publisher.Calls.Select(call => Assert.IsType<NotificationPushRequested>(call.Message)).ToList();
+        Assert.Equal(2, messages.Count);
+        foreach (var message in messages)
         {
-            Title = "Planirani radovi",
-            Body = "Sutra nema vode.",
-            Type = NotificationType.PlannedWorks,
-            Audience = NotificationAudience.Customers,
-            CreatedById = AdminUserId
-        });
-
-        // Inbox rows for both customers, push only to the one who didn't opt out.
-        Assert.True(await context.UserNotifications.AnyAsync(row => row.UserId == CustomerUserId && row.NotificationId == response.Id));
-        var call = Assert.Single(pushSender.Calls);
-        Assert.Equal(new[] { "token-other-customer" }, call.Tokens);
-        Assert.False(call.Data.ContainsKey("relatedEntityType"));
+            Assert.True(await context.Notifications.AnyAsync(notification => notification.Id == message.NotificationId && notification.IsSystem));
+            Assert.DoesNotContain(AdminUserId, message.RecipientUserIds);
+        }
+        Assert.Contains(messages, message => message.RecipientUserIds.Contains(CustomerUserId));
+        Assert.Contains(messages, message => message.RecipientUserIds.Contains(CollectorUserId));
     }
 
     [Fact]
-    public async Task DispatchPendingPush_NeverPushesANotificationThatWasNotSaved()
+    public async Task DispatchPendingPush_NeverPublishesANotificationThatWasNotSaved()
     {
         await using var context = new AquaFlowDbContext(NotificationServiceTests.BuildOptions());
         NotificationServiceTests.SeedUsersAndLocations(context);
-        NotificationServiceTests.SeedDeviceTokens(context);
-        var pushSender = new FakePushNotificationSender();
-        var systemNotifications = TestSystemNotifications.Create(context, pushSender);
+        var publisher = new FakeMessagePublisher();
+        var systemNotifications = TestSystemNotifications.Create(context, publisher);
 
         // Staged, but the business SaveChanges never happened (e.g. it failed and the caller moved on).
         systemNotifications.Stage(Message(), new[] { CustomerUserId }, AdminUserId);
@@ -255,7 +211,7 @@ public class SystemNotificationVisibilityTests
         // A later, unrelated save in the same scope must not persist it after the fact either.
         await context.SaveChangesAsync();
 
-        Assert.Empty(pushSender.Calls);
+        Assert.Empty(publisher.Calls);
         Assert.False(await context.Notifications.AnyAsync());
         Assert.False(await context.UserNotifications.AnyAsync());
     }

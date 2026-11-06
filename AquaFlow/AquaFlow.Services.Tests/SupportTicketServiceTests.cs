@@ -1,4 +1,4 @@
-using AquaFlow.Common.Services.PushNotificationService;
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Model;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Responses;
@@ -322,7 +322,7 @@ public class SupportTicketServiceTests
     // Mirrors the SupportTicket flatten config from Program.cs so the response's CustomerName,
     // MessageCount and SenderName populate from the loaded navigations, same approach as
     // WaterMeterRequestServiceTests building a local TypeAdapterConfig.
-    internal static SupportTicketService CreateService(AquaFlowDbContext context, IPushNotificationSender? pushSender = null)
+    internal static SupportTicketService CreateService(AquaFlowDbContext context, IMessagePublisher? publisher = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<SupportTicket, SupportTicketResponse>()
@@ -332,6 +332,6 @@ public class SupportTicketServiceTests
             .Map(destination => destination.SenderName, source => source.Sender == null || source.Sender.CustomerProfile == null ? null : (source.Sender.CustomerProfile.FirstName + " " + source.Sender.CustomerProfile.LastName).Trim());
         IMapper mapper = new Mapper(mapperConfig);
 
-        return new SupportTicketService(context, mapper, TestSystemNotifications.Create(context, pushSender));
+        return new SupportTicketService(context, mapper, TestSystemNotifications.Create(context, publisher));
     }
 }
