@@ -22,8 +22,8 @@ public class IssuedInvoiceState : BaseInvoiceState
         => ConfirmPendingPaymentAsync(invoice, payment, changedById);
 
     // Cancelling an invoice must not silently swallow the consumption it billed. Rules, in order:
-    // 1. Money already collected cannot be un-invoiced by a status flip: a Completed payment must be refunded
-    //    through a proper refund path instead, so cancellation is rejected outright once one exists.
+    // 1. Money already collected cannot be un-invoiced by a status flip: a Completed payment means the invoice
+    //    cannot be cancelled in the application, so cancellation is rejected outright once one exists.
     // 2. Only the meter's NEWEST counting reading may be un-billed. A newer reading that still counts
     //    (MeterReadingService.CountingReadings - a zero-consumption reading with no invoice included) took
     //    this invoice's reading as its baseline, so voiding this one would leave its range uncovered by any
@@ -44,7 +44,7 @@ public class IssuedInvoiceState : BaseInvoiceState
             .AnyAsync(payment => payment.InvoiceId == invoice.Id && payment.Status == CompletedPaymentStatus);
         if (hasCompletedPayment)
         {
-            throw new ClientException("This invoice has a completed payment and cannot be cancelled; refund the payment instead.");
+            throw new ClientException("This invoice has a completed payment and cannot be cancelled. A paid invoice has to be resolved through an administrative procedure outside the application.");
         }
 
         var reading = await DbContext.MeterReadings.FirstOrDefaultAsync(reading => reading.InvoiceId == invoice.Id);

@@ -69,7 +69,7 @@ collector registers the physical meter on site. The request moves through
 **Tariffs and invoicing**
 Administrators maintain price-per-m³ tariffs (several may be active at once, e.g. household
 versus commercial). Invoices carry a year-scoped sequential number and move through
-`Issued → Paid | Cancelled`; a partial payment keeps the invoice `Issued`. Cancelling an
+`Issued → Paid | Cancelled`; partial payments are not supported - an invoice is paid in full (Stripe, cash at reading entry, or a manual admin record) and then becomes `Paid`. Cancelling an
 invoice voids the reading it billed, so the consumption is re-billed by the next reading
 instead of being silently lost. Only the meter's newest reading can be un-billed: an invoice
 is rejected for cancellation while a newer reading still counts for the same meter, so a
@@ -100,8 +100,8 @@ conversations between a customer and staff, with photo attachments per message a
 `Open`/`Closed` lifecycle.
 
 **Notifications**
-Administrators publish notifications to an audience (everyone, all customers, all collectors,
-or one settlement), optionally with images. Recipients get an in-app inbox with per-item read
+Administrators publish notifications to an audience (everyone, all customers, all collectors),
+optionally with images. Recipients get an in-app inbox with per-item read
 state and an unread badge, plus a push notification on mobile via Firebase Cloud Messaging.
 
 **Audit trail**
@@ -311,6 +311,7 @@ bearer token.
 cd .\AquaFlow\UI\aquaflow_desktop      # or aquaflow_customer / aquaflow_collector
 flutter pub get
 flutter run
+# physical phone: flutter run --dart-define=API_BASE_URL=http://<PC-LAN-IP>:5161
 ```
 
 Sign in with an account whose role matches the client; a role mismatch is rejected with an
@@ -501,10 +502,12 @@ The Flutter clients do this automatically and keep tokens in the platform secure
 | Users & roles | `/Users`, `/UserRoles`, `/Permissions`, `/UserRolePermissions`, `/CustomerProfiles`, `/CollectorProfiles` |
 | Locations | `/Cities`, `/Municipalities`, `/Settlements` |
 | Meters & readings | `/WaterMeters`, `/WaterMeterRequests`, `/MeterReadings`, `/Tariffs` |
-| Billing | `/Invoices`, `/InvoiceItems`, `/Payments`, `/Payments/stripe-config`, `/Payments/webhook/stripe` |
+| Billing | `/Invoices`, `/InvoiceItems`, `/Payments`, `/Payments/stripe-config`, `/Payments/webhook/stripe`, `/PaymentCards`, `/PaymentCards/setup` |
 | Support | `/FaultReports`, `/SupportTickets` |
 | Messaging | `/Notifications`, `/UserNotifications`, `/DeviceTokens` |
-| Operations | `/ActivityLogs`, `/CompanySettings` |
+| Operations | `/ActivityLogs`, `/CompanySettings`, `/WaterConsumptionAlerts/recompute`, `/Dashboard/*` |
+| Reports | `/Reports/consumption/pdf`, `/Reports/billing/pdf` |
+| Codebooks | `/InvoiceStatuses`, `/PaymentStatuses`, `/PaymentMethods`, `/FaultReportStatuses`, `/WaterMeterRequestStatuses`, `/WaterMeterStatuses`, `/SupportTicketStatuses`, `/NotificationTypes`, `/ConsumptionAlertTypes` |
 
 Payment configuration (provider and Stripe keys) comes only from environment/configuration (`Payments__Provider`, `Payments__Stripe__*`); there is no database copy.
 

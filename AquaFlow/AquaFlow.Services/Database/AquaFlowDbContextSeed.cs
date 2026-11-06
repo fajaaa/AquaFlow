@@ -1140,8 +1140,7 @@ public partial class AquaFlowDbContext
         SeedLookup<PaymentStatusLookup>(modelBuilder,
             (PaymentStatus.Pending, "Na čekanju", "Pending", "Ausstehend", true),
             (PaymentStatus.Completed, "Završena", "Completed", "Abgeschlossen", true),
-            (PaymentStatus.Failed, "Neuspješna", "Failed", "Fehlgeschlagen", true),
-            (PaymentStatus.Refunded, "Refundirana", "Refunded", "Erstattet", true));
+            (PaymentStatus.Failed, "Neuspješna", "Failed", "Fehlgeschlagen", true));
 
         // BankTransfer and Card are not code constants - only the demo payment seed uses them
         // (see SeedPaymentMethodCodes) - so they are ordinary, admin-manageable rows.

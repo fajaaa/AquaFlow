@@ -11,7 +11,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 /// Platform mapping:
 ///   * Android emulator -> 10.0.2.2 (the emulator's alias for the host machine)
 ///   * iOS simulator / desktop / web -> localhost
-///   * Physical phone -> set [lanHostOverride] to the PC's LAN IP (see below)
+///   * Physical phone -> run with
+///     `--dart-define=API_BASE_URL=http://<PC-LAN-IP>:5161`; no IP is ever
+///     committed to the repository
 ///
 /// The backend runs over plain HTTP (see AGENTS.md, http profile on port 5161),
 /// so mobile platforms block cleartext traffic by default. DEV-ONLY exceptions
@@ -21,19 +23,15 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 class ApiConfig {
   static const int port = 5161;
 
-  /// Physical phone/tablet: set this to the PC's LAN IP so the device can reach
-  /// the backend over Wi-Fi. Leave `null` for emulator / simulator / desktop /
-  /// web (auto-detected below).
-  ///
-  /// NOTE: this is a machine-specific local dev value (Kenan's PC on Wi-Fi).
-  /// Set it back to `null` when running on the Android emulator or update it if
-  /// the PC gets a different LAN IP.
-  // Type stays String? because this is a toggle: set back to null for emulator.
-  // ignore: unnecessary_nullable_for_final_variable_declarations
-  static const String? lanHostOverride = '192.168.18.5';
+  /// Optional compile-time override, set with `--dart-define=API_BASE_URL=...`.
+  static const String _baseUrlOverride = String.fromEnvironment('API_BASE_URL');
 
   static String get baseUrl {
-    if (lanHostOverride != null) return "http://$lanHostOverride:$port";
+    if (_baseUrlOverride.isNotEmpty) {
+      return _baseUrlOverride.endsWith('/')
+          ? _baseUrlOverride.substring(0, _baseUrlOverride.length - 1)
+          : _baseUrlOverride;
+    }
     if (kIsWeb) return "http://localhost:$port";
     if (Platform.isAndroid) return "http://10.0.2.2:$port"; // Android emulator
     return "http://localhost:$port"; // iOS simulator, Windows, macOS, Linux

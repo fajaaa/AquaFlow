@@ -3649,18 +3649,6 @@ namespace AquaFlow.Services.Migrations
                             NameDe = "Fehlgeschlagen",
                             NameEn = "Failed",
                             SortOrder = 30
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Code = "Refunded",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            IsSystem = true,
-                            Name = "Refundirana",
-                            NameDe = "Erstattet",
-                            NameEn = "Refunded",
-                            SortOrder = 40
                         });
                 });
 
