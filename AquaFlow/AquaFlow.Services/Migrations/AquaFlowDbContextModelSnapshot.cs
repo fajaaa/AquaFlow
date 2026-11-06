@@ -2902,6 +2902,9 @@ namespace AquaFlow.Services.Migrations
                     b.Property<bool>("IsSystem")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("PushDispatchedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int?>("RelatedEntityId")
                         .HasColumnType("int");
 

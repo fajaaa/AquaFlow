@@ -16,4 +16,7 @@ public class NotificationResponse : AuditableResponse
     // the clients for the deep link. Both null for admin notifications.
     public string? RelatedEntityType { get; set; }
     public int? RelatedEntityId { get; set; }
+
+    // When the Subscriber delivered the FCM push; null until then.
+    public DateTime? PushDispatchedAt { get; set; }
 }

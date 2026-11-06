@@ -68,9 +68,16 @@ services:
       context: .
       dockerfile: AquaFlow.Subscriber/Dockerfile
     container_name: aquaflow-subscriber
+    # Firebase:* credentials come from the developer-local .env (gitignored), optional.
+    env_file:
+      - path: ./AquaFlow.WebAPI/.env
+        required: false
     environment:
-      - RABBITMQ_CONNECTIONSTRING=host=aquaflow-rabbitmq;username=admin;password=admin
+      - ConnectionStrings__DefaultConnection=Server=aquaflow-db;Database=210126;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False
+      - RabbitMQ__ConnectionString=host=aquaflow-rabbitmq;username=admin;password=admin
     depends_on:
+      aquaflow-db:
+        condition: service_healthy
       aquaflow-rabbitmq:
         condition: service_healthy
     networks:

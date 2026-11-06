@@ -26,6 +26,9 @@ public class Notification : EntityBase
     public string? RelatedEntityType { get; set; }
     public int? RelatedEntityId { get; set; }
 
+    // Set by AquaFlow.Subscriber once FCM delivery succeeded; makes redelivered messages idempotent.
+    public DateTime? PushDispatchedAt { get; set; }
+
     public ICollection<UserNotification> UserNotifications { get; set; } = new List<UserNotification>();
     public ICollection<NotificationImage> Images { get; set; } = new List<NotificationImage>();
 }
