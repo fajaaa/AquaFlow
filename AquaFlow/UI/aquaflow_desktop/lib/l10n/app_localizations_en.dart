@@ -1167,7 +1167,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get invoiceNumberFieldLabel => 'Invoice number';
 
   @override
-  String get monthFilterLabel => 'Month';
+  String get monthFilterLabel => 'Billing month';
 
   @override
   String get noInvoicesMessage => 'No invoices.';

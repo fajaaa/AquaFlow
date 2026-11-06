@@ -36,6 +36,25 @@ public class InvoiceServiceTests
         Assert.Equal("WM-2", second.WaterMeterSerialNumber);
     }
 
+    // BillingMonth matches on the period end (reading date), not the period start.
+    [Fact]
+    public async Task GetAllAsync_BillingMonth_ReturnsOnlyInvoicesWhosePeriodEndsInThatMonth()
+    {
+        await using var context = CreateContext();
+        SeedTwoInvoicesInDifferentBillingCycles(context);
+        var first = context.Invoices.First(i => i.Id == 1);
+        first.BillingPeriodFrom = new DateTime(2026, 6, 20);
+        first.BillingPeriodTo = new DateTime(2026, 7, 15);
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var july = await service.GetAllAsync(new InvoiceSearchObject { BillingMonth = new DateTime(2026, 7, 9) });
+        var june = await service.GetAllAsync(new InvoiceSearchObject { BillingMonth = new DateTime(2026, 6, 1) });
+
+        Assert.Equal("INV-2026-0001", Assert.Single(july.Items).InvoiceNumber);
+        Assert.Equal("INV-2026-0002", Assert.Single(june.Items).InvoiceNumber);
+    }
+
     [Fact]
     public async Task GetByIdAsync_NoPayments_PaidAmountIsZeroAndRemainingEqualsTotal()
     {

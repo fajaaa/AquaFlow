@@ -2227,7 +2227,7 @@ abstract class AppLocalizations {
   /// Label for the billing-month filter chip on the invoices screen when no month is selected.
   ///
   /// In bs, this message translates to:
-  /// **'Mjesec'**
+  /// **'Mjesec obračuna'**
   String get monthFilterLabel;
 
   /// Empty-state message on the invoices screen when there are no rows.

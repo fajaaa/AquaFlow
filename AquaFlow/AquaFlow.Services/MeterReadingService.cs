@@ -1,3 +1,4 @@
+using System.Globalization;
 using AquaFlow.Model;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
@@ -151,8 +152,14 @@ public class MeterReadingService
         }
 
         var readingDate = DateTime.UtcNow;
-        var periodFrom = new DateTime(readingDate.Year, readingDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var periodTo = periodFrom.AddMonths(1).AddDays(-1);
+        // Billing is reading-to-reading: the period runs from the previous counting reading to this one.
+        // Consecutive invoices of one meter are contiguous and never overlap (next From == previous To);
+        // a cancelled invoice's reading stops counting, so the next reading's period starts at the last
+        // counting reading again.
+        var periodFrom = lastCountingReading?.ReadingDate ?? waterMeter.InstalledAt;
+        var periodTo = readingDate;
+        var periodText = string.Create(
+            CultureInfo.InvariantCulture, $"{periodFrom:dd.MM.yyyy.} - {periodTo:dd.MM.yyyy.}");
 
         var entity = new MeterReading
         {
@@ -199,7 +206,7 @@ public class MeterReadingService
             invoice.InvoiceItems.Add(new InvoiceItem
             {
                 TariffId = tariff.Id,
-                Description = $"Potrošnja vode - {periodFrom:MM/yyyy}",
+                Description = $"Potrošnja vode {periodText}",
                 Quantity = entity.ConsumptionM3,
                 UnitPrice = tariff.PricePerM3,
                 Amount = subtotal
@@ -222,7 +229,7 @@ public class MeterReadingService
                     _systemNotifications.Stage(
                         new SystemNotificationMessage(
                             $"Novi račun {invoice.InvoiceNumber}",
-                            $"Izdan je račun {invoice.InvoiceNumber} za period {periodFrom:MM/yyyy} u iznosu od {invoice.TotalAmount:0.00} KM.",
+                            $"Izdan je račun {invoice.InvoiceNumber} za period {periodText} u iznosu od {invoice.TotalAmount:0.00} KM.",
                             NotificationType.Billing,
                             RelatedEntityTypes.Invoice,
                             invoice.Id),

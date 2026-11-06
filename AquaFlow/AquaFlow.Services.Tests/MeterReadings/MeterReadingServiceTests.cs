@@ -39,34 +39,99 @@ public class MeterReadingServiceTests
         Assert.Equal(InvoiceStatus.Issued, invoice.Status);
     }
 
-    // BillingPeriodFrom is 1st day of reading month, BillingPeriodTo is last day
+    // Reading-to-reading billing: the first reading on a meter bills InstalledAt .. reading date.
     [Fact]
-    public async Task CreateForCollectorAsync_SetsBillingPeriodFromFirstToLastDayOfMonth()
+    public async Task CreateForCollectorAsync_FirstReading_PeriodRunsFromInstalledAtToReadingDate()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var installedAt = DateTime.UtcNow.AddDays(-90);
+        context.WaterMeters.First(m => m.Id == 1).InstalledAt = installedAt;
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(100));
+
+        var invoice = await context.Invoices.FirstAsync(i => i.Id == response.InvoiceId);
+        var reading = await context.MeterReadings.FirstAsync(r => r.Id == response.Id);
+        Assert.Equal(installedAt, invoice.BillingPeriodFrom);
+        Assert.Equal(reading.ReadingDate, invoice.BillingPeriodTo);
+    }
+
+    // The next period starts exactly where the previous invoice ended (contiguous, no overlap).
+    [Fact]
+    public async Task CreateForCollectorAsync_PreviousCountingReading_PeriodIsContiguousWithPreviousInvoice()
     {
         await using var context = CreateContext();
         SeedTestData(context);
         var service = CreateService(context);
+        var first = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(50));
+        var firstInvoice = await context.Invoices.FirstAsync(i => i.Id == first.InvoiceId);
+        var firstReading = await context.MeterReadings.FirstAsync(r => r.Id == first.Id);
+        var sixteenDaysAgo = DateTime.UtcNow.AddDays(-16);
+        firstReading.ReadingDate = sixteenDaysAgo;
+        firstInvoice.BillingPeriodTo = sixteenDaysAgo;
+        context.SaveChanges();
 
-        var request = new MeterReadingCollectorEntryRequest
-        {
-            WaterMeterId = 1,
-            ReadingValue = 100,
-            TariffId = 1,
-            Note = null
-        };
+        var second = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(80));
 
-        var response = await service.CreateForCollectorAsync(callerUserId: 3, request);
-
-        var invoice = await context.Invoices.FirstOrDefaultAsync(i => i.Id == response.InvoiceId);
-        Assert.NotNull(invoice);
-
-        var now = DateTime.UtcNow;
-        var expectedFrom = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var expectedTo = expectedFrom.AddMonths(1).AddDays(-1);
-
-        Assert.Equal(expectedFrom, invoice.BillingPeriodFrom);
-        Assert.Equal(expectedTo, invoice.BillingPeriodTo);
+        var secondInvoice = await context.Invoices.FirstAsync(i => i.Id == second.InvoiceId);
+        var secondReading = await context.MeterReadings.FirstAsync(r => r.Id == second.Id);
+        Assert.Equal(sixteenDaysAgo, secondInvoice.BillingPeriodFrom);
+        Assert.Equal(firstInvoice.BillingPeriodTo, secondInvoice.BillingPeriodFrom);
+        Assert.Equal(secondReading.ReadingDate, secondInvoice.BillingPeriodTo);
     }
+
+    // A cancelled invoice's reading stops counting, so the next period starts at the older counting reading.
+    [Fact]
+    public async Task CreateForCollectorAsync_NewestInvoiceCancelled_PeriodStartsAtOlderCountingReading()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var service = CreateService(context);
+        var first = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(50));
+        var firstReading = await context.MeterReadings.FirstAsync(r => r.Id == first.Id);
+        var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+        firstReading.ReadingDate = thirtyDaysAgo;
+        context.SaveChanges();
+
+        var second = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(80));
+        var secondInvoice = await context.Invoices.FirstAsync(i => i.Id == second.InvoiceId);
+        var invoiceState = new IssuedInvoiceState(context, new Mapper(new TypeAdapterConfig()), TestSystemNotifications.Create(context));
+        await invoiceState.CancelAsync(secondInvoice, changedById: 2);
+
+        var third = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(90));
+
+        var thirdInvoice = await context.Invoices.FirstAsync(i => i.Id == third.InvoiceId);
+        Assert.Equal(thirtyDaysAgo, thirdInvoice.BillingPeriodFrom);
+    }
+
+    // Item description and the "invoice issued" notification both carry the dd.MM.yyyy. period.
+    [Fact]
+    public async Task CreateForCollectorAsync_DescriptionAndNotificationContainBothPeriodDates()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        context.WaterMeters.First(m => m.Id == 1).InstalledAt = DateTime.UtcNow.AddDays(-40);
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(100));
+
+        var invoice = await context.Invoices.Include(i => i.InvoiceItems).FirstAsync(i => i.Id == response.InvoiceId);
+        var expected = $"{invoice.BillingPeriodFrom:dd.MM.yyyy.} - {invoice.BillingPeriodTo:dd.MM.yyyy.}";
+        Assert.Equal($"Potrošnja vode {expected}", Assert.Single(invoice.InvoiceItems).Description);
+        var notification = await context.Notifications.SingleAsync(n => n.IsSystem);
+        Assert.Contains(expected, notification.Body);
+    }
+
+    private static MeterReadingCollectorEntryRequest NewRequest(decimal value) => new()
+    {
+        WaterMeterId = 1,
+        ReadingValue = value,
+        TariffId = 1,
+        Note = null
+    };
 
     // Last reading exactly 15 days ago: reading is accepted
     [Fact]

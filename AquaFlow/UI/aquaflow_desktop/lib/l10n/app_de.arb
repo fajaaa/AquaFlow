@@ -354,7 +354,7 @@
   "invoiceCancelledSuccess": "Rechnung storniert.",
   "invoicesScreenSubtitle": "Rechnungen anzeigen und ihren Status verwalten.",
   "invoiceNumberFieldLabel": "Rechnungsnummer",
-  "monthFilterLabel": "Monat",
+  "monthFilterLabel": "Abrechnungsmonat",
   "noInvoicesMessage": "Keine Rechnungen.",
   "invoicesEmptyFilteredMessage": "Keine Rechnungen entsprechen den gewählten Filtern.",
   "waterMeterColumnLabel": "Wasserzähler",

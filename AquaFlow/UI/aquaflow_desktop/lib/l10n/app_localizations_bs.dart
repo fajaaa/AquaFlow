@@ -1166,7 +1166,7 @@ class AppLocalizationsBs extends AppLocalizations {
   String get invoiceNumberFieldLabel => 'Broj računa';
 
   @override
-  String get monthFilterLabel => 'Mjesec';
+  String get monthFilterLabel => 'Mjesec obračuna';
 
   @override
   String get noInvoicesMessage => 'Nema računa.';

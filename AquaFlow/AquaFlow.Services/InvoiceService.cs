@@ -51,6 +51,21 @@ public class InvoiceService
         _systemNotifications = systemNotifications;
     }
 
+    // BillingMonth has no same-name Invoice property, so the base class skips it; the month filter is
+    // applied here against the period end (the reading date).
+    protected override IQueryable<Invoice> ApplyFilters(IQueryable<Invoice> query, InvoiceSearchObject? search)
+    {
+        query = base.ApplyFilters(query, search);
+        if (search?.BillingMonth is { } month)
+        {
+            var monthStart = new DateTime(month.Year, month.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var nextMonthStart = monthStart.AddMonths(1);
+            query = query.Where(i => i.BillingPeriodTo >= monthStart && i.BillingPeriodTo < nextMonthStart);
+        }
+
+        return query;
+    }
+
     protected override IQueryable<Invoice> IncludeForRead(IQueryable<Invoice> query) =>
         query.Include(i => i.Customer).Include(i => i.WaterMeter);
 

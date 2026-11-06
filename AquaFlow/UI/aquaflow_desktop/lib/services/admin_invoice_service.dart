@@ -25,7 +25,7 @@ class AdminInvoiceService {
     required int pageSize,
     String? invoiceNumber,
     String? status,
-    DateTime? billingPeriodFrom,
+    DateTime? billingMonth,
   }) async {
     final query = <String, String>{
       'Page': '$page',
@@ -42,8 +42,9 @@ class AdminInvoiceService {
     if (status != null && status.isNotEmpty) {
       query['Status'] = status;
     }
-    if (billingPeriodFrom != null) {
-      query['BillingPeriodFrom'] = billingPeriodFrom.toIso8601String();
+    if (billingMonth != null) {
+      query['BillingMonth'] = '${billingMonth.year.toString().padLeft(4, '0')}-'
+          '${billingMonth.month.toString().padLeft(2, '0')}-01';
     }
 
     final uri = Uri.parse(

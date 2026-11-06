@@ -1179,7 +1179,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get invoiceNumberFieldLabel => 'Rechnungsnummer';
 
   @override
-  String get monthFilterLabel => 'Monat';
+  String get monthFilterLabel => 'Abrechnungsmonat';
 
   @override
   String get noInvoicesMessage => 'Keine Rechnungen.';

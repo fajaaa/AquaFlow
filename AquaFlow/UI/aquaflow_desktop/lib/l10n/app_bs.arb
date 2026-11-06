@@ -1506,7 +1506,7 @@
   "@invoiceNumberFieldLabel": {
     "description": "Label for the invoice number search field and table column on the invoices screen."
   },
-  "monthFilterLabel": "Mjesec",
+  "monthFilterLabel": "Mjesec obračuna",
   "@monthFilterLabel": {
     "description": "Label for the billing-month filter chip on the invoices screen when no month is selected."
   },

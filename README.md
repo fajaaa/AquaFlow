@@ -74,6 +74,7 @@ invoice voids the reading it billed, so the consumption is re-billed by the next
 instead of being silently lost. Only the meter's newest reading can be un-billed: an invoice
 is rejected for cancellation while a newer reading still counts for the same meter, so a
 meter's invoices are cancelled newest-to-oldest and no consumption range is ever left uncovered.
+Invoices are billed reading-to-reading: the billing period runs from the previous counting reading (the meter's installation date for the first one) to the current reading, so consecutive invoices of a meter are contiguous and never overlap; the admin month filter (`BillingMonth`) matches on the period end.
 
 **Payments**
 A pluggable payment provider abstraction ships with a manual provider (payments recorded by

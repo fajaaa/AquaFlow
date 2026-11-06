@@ -381,7 +381,7 @@
   "invoiceCancelledSuccess": "Invoice cancelled.",
   "invoicesScreenSubtitle": "View invoices and manage their status.",
   "invoiceNumberFieldLabel": "Invoice number",
-  "monthFilterLabel": "Month",
+  "monthFilterLabel": "Billing month",
   "noInvoicesMessage": "No invoices.",
   "invoicesEmptyFilteredMessage": "No invoices match the selected filters.",
   "waterMeterColumnLabel": "Water meter",

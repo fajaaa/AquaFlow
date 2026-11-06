@@ -511,7 +511,7 @@ class _ConsumptionBar extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            _formatMonthYear(invoice.billingPeriodFrom),
+            _formatMonthYear(invoice.billingPeriodTo),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelSmall?.copyWith(

@@ -32,7 +32,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
   final AdminInvoiceService _service = AdminInvoiceService();
 
   String? _statusFilter;
-  DateTime? _billingPeriodFilter;
+  DateTime? _billingMonthFilter;
 
   @override
   void initState() {
@@ -47,7 +47,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
       pageSize: pageSize,
       invoiceNumber: searchController.text,
       status: _statusFilter,
-      billingPeriodFrom: _billingPeriodFilter,
+      billingMonth: _billingMonthFilter,
     );
     return (items: pageData.items, totalCount: pageData.totalCount);
   }
@@ -69,14 +69,14 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
   Future<void> _selectBillingMonth(BuildContext context) async {
     final selected = await showDatePicker(
       context: context,
-      initialDate: _billingPeriodFilter ?? DateTime.now(),
+      initialDate: _billingMonthFilter ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       initialDatePickerMode: DatePickerMode.year,
     );
     if (!mounted || selected == null) return;
     setState(
-      () => _billingPeriodFilter = DateTime(selected.year, selected.month, 1),
+      () => _billingMonthFilter = DateTime(selected.year, selected.month, 1),
     );
     load(resetPage: true);
   }
@@ -238,17 +238,17 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
           children: [
             InputChip(
               label: Text(
-                _billingPeriodFilter != null
-                    ? '${_billingPeriodFilter!.month}/${_billingPeriodFilter!.year}'
+                _billingMonthFilter != null
+                    ? '${_billingMonthFilter!.month}/${_billingMonthFilter!.year}'
                     : loc.monthFilterLabel,
               ),
               avatar: const Icon(Icons.calendar_month_outlined, size: 18),
               onPressed: loading || mutating
                   ? null
                   : () => _selectBillingMonth(context),
-              onDeleted: _billingPeriodFilter != null && !loading && !mutating
+              onDeleted: _billingMonthFilter != null && !loading && !mutating
                   ? () {
-                      setState(() => _billingPeriodFilter = null);
+                      setState(() => _billingMonthFilter = null);
                       load(resetPage: true);
                     }
                   : null,
@@ -358,7 +358,7 @@ class _AdminInvoicesScreenState extends State<AdminInvoicesScreen>
   bool get _hasFilters =>
       searchController.text.trim().isNotEmpty ||
       _statusFilter != null ||
-      _billingPeriodFilter != null;
+      _billingMonthFilter != null;
 }
 
 class _RowActions extends StatelessWidget {
