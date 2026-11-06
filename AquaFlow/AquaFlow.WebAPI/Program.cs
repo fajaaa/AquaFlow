@@ -305,6 +305,8 @@ builder.Services.AddScoped<ILookupService<WaterMeterStatusLookup>, WaterMeterSta
 builder.Services.AddScoped<ILookupService<SupportTicketStatusLookup>, SupportTicketStatusLookupService>();
 builder.Services.AddScoped<ILookupService<NotificationTypeLookup>, NotificationTypeLookupService>();
 builder.Services.AddScoped<ILookupService<ConsumptionAlertTypeLookup>, ConsumptionAlertTypeLookupService>();
+// Payment provider and Stripe keys come only from configuration/env (Payments__Provider,
+// Payments__Stripe__*); there is intentionally no database copy of payment settings.
 // Payments:Provider selects which IPaymentProvider is registered ("Manual" by default, or "Stripe");
 // Payments:Currency has no column to persist against and is only surfaced in
 // CheckoutSessionResponse. Adding another provider means adding one case here plus a new
@@ -414,7 +416,6 @@ builder.Services.AddScoped<IUserNotificationService, UserNotificationService>();
 builder.Services.AddScoped<IBaseCRUDService<UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IUserNotificationService>());
 AddCrud<CompanySettings, CompanySettingsResponse, CompanySettingsSearchObject, CompanySettingsInsertRequest, CompanySettingsUpdateRequest, CompanySettingsPatchRequest>();
-AddCrud<PaymentSettings, PaymentSettingsResponse, PaymentSettingsSearchObject, PaymentSettingsInsertRequest, PaymentSettingsUpdateRequest, PaymentSettingsPatchRequest>();
 
 builder.Services.AddScoped<IValidator<UserRegisterRequest>, UserRegisterValidator>();
 builder.Services.AddScoped<IValidator<AccountUpdateRequest>, AccountUpdateValidator>();
@@ -475,9 +476,6 @@ builder.Services.AddScoped<IValidator<UserNotificationPatchRequest>, UserNotific
 builder.Services.AddScoped<IValidator<CompanySettingsInsertRequest>, CompanySettingsInsertValidator>();
 builder.Services.AddScoped<IValidator<CompanySettingsUpdateRequest>, CompanySettingsUpdateValidator>();
 builder.Services.AddScoped<IValidator<CompanySettingsPatchRequest>, CompanySettingsPatchValidator>();
-builder.Services.AddScoped<IValidator<PaymentSettingsInsertRequest>, PaymentSettingsInsertValidator>();
-builder.Services.AddScoped<IValidator<PaymentSettingsUpdateRequest>, PaymentSettingsUpdateValidator>();
-builder.Services.AddScoped<IValidator<PaymentSettingsPatchRequest>, PaymentSettingsPatchValidator>();
 builder.Services.AddScoped<IValidator<SupportTicketCreateRequest>, SupportTicketCreateValidator>();
 builder.Services.AddScoped<IValidator<SupportTicketMessageCreateRequest>, SupportTicketMessageCreateValidator>();
 

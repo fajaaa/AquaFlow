@@ -29,7 +29,6 @@ public class FaultReport : EntityBase
     public int? AssignedCollectorId { get; set; }
     public CollectorProfile? AssignedCollector { get; set; }
     public DateTime? ResolvedAt { get; set; }
-    public ICollection<WorkOrder> WorkOrders { get; set; } = new List<WorkOrder>();
     public ICollection<FaultStatusHistory> StatusHistory { get; set; } = new List<FaultStatusHistory>();
     public ICollection<FaultReportPhoto> Photos { get; set; } = new List<FaultReportPhoto>();
 }

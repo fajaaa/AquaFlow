@@ -505,7 +505,9 @@ The Flutter clients do this automatically and keep tokens in the platform secure
 | Billing | `/Invoices`, `/InvoiceItems`, `/Payments`, `/Payments/stripe-config`, `/Payments/webhook/stripe` |
 | Support | `/FaultReports`, `/SupportTickets` |
 | Messaging | `/Notifications`, `/UserNotifications`, `/DeviceTokens` |
-| Operations | `/ActivityLogs`, `/CompanySettings`, `/PaymentSettings` |
+| Operations | `/ActivityLogs`, `/CompanySettings` |
+
+Payment configuration (provider and Stripe keys) comes only from environment/configuration (`Payments__Provider`, `Payments__Stripe__*`); there is no database copy.
 
 Unless stated otherwise, a resource supports `GET` (list), `GET /{id}`, `POST`, `PUT /{id}`,
 `PATCH /{id}` and `DELETE /{id}`. The exceptions are the records whose history matters:

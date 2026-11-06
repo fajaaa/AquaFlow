@@ -10,13 +10,11 @@ public partial class AquaFlowDbContext : DbContext
     }
 
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
-    public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<City> Cities => Set<City>();
     public DbSet<CollectorProfile> CollectorProfiles => Set<CollectorProfile>();
     public DbSet<CompanySettings> CompanySettings => Set<CompanySettings>();
     public DbSet<CustomerProfile> CustomerProfiles => Set<CustomerProfile>();
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
-    public DbSet<Document> Documents => Set<Document>();
     public DbSet<FaultReport> FaultReports => Set<FaultReport>();
     public DbSet<FaultReportPhoto> FaultReportPhotos => Set<FaultReportPhoto>();
     public DbSet<FaultStatusHistory> FaultStatusHistories => Set<FaultStatusHistory>();
@@ -27,16 +25,13 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<Municipality> Municipalities => Set<Municipality>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationImage> NotificationImages => Set<NotificationImage>();
-    public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
     public DbSet<Payment> Payments => Set<Payment>();
-    public DbSet<PaymentSettings> PaymentSettings => Set<PaymentSettings>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Settlement> Settlements => Set<Settlement>();
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
     public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
     public DbSet<SupportTicketMessagePhoto> SupportTicketMessagePhotos => Set<SupportTicketMessagePhoto>();
-    public DbSet<SyncOperation> SyncOperations => Set<SyncOperation>();
     public DbSet<Tariff> Tariffs => Set<Tariff>();
     public DbSet<User> Users => Set<User>();
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
@@ -47,7 +42,6 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<WaterMeter> WaterMeters => Set<WaterMeter>();
     public DbSet<WaterMeterRequest> WaterMeterRequests => Set<WaterMeterRequest>();
     public DbSet<WaterMeterRequestStatusHistory> WaterMeterRequestStatusHistories => Set<WaterMeterRequestStatusHistory>();
-    public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
 
     // Codebooks (lookup tables) - see LookupEntityBase and ConfigureLookups.
     public DbSet<InvoiceStatusLookup> InvoiceStatuses => Set<InvoiceStatusLookup>();
@@ -168,7 +162,7 @@ public partial class AquaFlowDbContext : DbContext
             .HasFilter("[ClientUuid] IS NOT NULL");
 
         // Photos have no independent lifecycle outside their report (unlike
-        // WorkOrder/FaultStatusHistory rows, which stay Restrict so a report can't be
+        // FaultStatusHistory rows, which stay Restrict so a report can't be
         // deleted while still referenced elsewhere) - deleting a FaultReport deletes its photos too.
         modelBuilder.Entity<FaultReportPhoto>()
             .HasOne(photo => photo.FaultReport)

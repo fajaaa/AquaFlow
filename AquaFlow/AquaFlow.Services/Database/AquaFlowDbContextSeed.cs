@@ -28,7 +28,6 @@ public partial class AquaFlowDbContext
         SeedFaultReports(modelBuilder);
         SeedNotifications(modelBuilder);
         SeedUserNotifications(modelBuilder);
-        SeedPaymentSettings(modelBuilder);
         SeedLookups(modelBuilder);
     }
 
@@ -221,18 +220,6 @@ public partial class AquaFlowDbContext
                 Name = "Manage company settings",
                 Module = "CompanySettings",
                 Description = "Allows viewing and editing company-wide settings.",
-                IsActive = true,
-                IsSystem = true,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
-            new
-            {
-                Id = 15,
-                Code = "PaymentSettings.Manage",
-                Name = "Manage payment settings",
-                Module = "PaymentSettings",
-                Description = "Allows viewing and editing payment gateway settings.",
                 IsActive = true,
                 IsSystem = true,
                 CreatedAt = SeedCreatedAt,
@@ -482,14 +469,6 @@ public partial class AquaFlowDbContext
                 Id = 18,
                 UserRoleId = 1,
                 PermissionId = 14,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
-            new
-            {
-                Id = 19,
-                UserRoleId = 1,
-                PermissionId = 15,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -1145,24 +1124,6 @@ public partial class AquaFlowDbContext
                 ReadAt = (DateTime?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
-            });
-    }
-
-    private static void SeedPaymentSettings(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<PaymentSettings>().HasData(
-            new
-            {
-                Id = 1,
-                AllowCardPayments = true,
-                AllowPayPalPayments = false,
-                CardProvider = "DemoPay",
-                PayPalClientId = (string?)null,
-                PayPalMerchantEmail = (string?)null,
-                IsTestMode = true,
-                UpdatedById = 1,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)new DateTime(2026, 1, 10, 0, 0, 0, DateTimeKind.Utc)
             });
     }
 
