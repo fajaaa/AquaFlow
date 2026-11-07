@@ -32,23 +32,34 @@ public class ConsumptionForecastingService : IConsumptionForecastingService
             .Select(reading => (float)reading.ConsumptionM3)
             .ToArrayAsync();
 
+        return Analyze(history);
+    }
+
+    public ConsumptionInsight Analyze(float[] history)
+    {
+        // Everything that explains the LATEST reading is computed from the readings BEFORE it, so an
+        // anomalous latest value can never pull its own "expected"/"usual" reference towards itself.
+        var previous = history.Length > 0 ? history[..^1] : Array.Empty<float>();
+        float? previousAverage = previous.Length > 0 ? previous[^Math.Min(3, previous.Length)..].Average() : null;
+
         if (history.Length < MinimumReadingsForForecast)
         {
             return new ConsumptionInsight
             {
                 HasEnoughData = false,
-                History = history
+                History = history,
+                PreviousAverageM3 = previousAverage
             };
         }
 
         var mlContext = new MLContext(seed: 0);
-        var dataPoints = history.Select(value => new ConsumptionDataPoint { ConsumptionM3 = value }).ToList();
-        var dataView = mlContext.Data.LoadFromEnumerable(dataPoints);
+        var dataView = ToDataView(mlContext, history);
 
+        // PredictedNext*: forecast of the NEXT period on the full series (incl. the latest reading).
         var (predicted, lowerBound, upperBound) = Forecast(mlContext, dataView, history.Length);
         var (isAnomaly, anomalyScore) = DetectAnomaly(mlContext, dataView, history.Length);
 
-        return new ConsumptionInsight
+        var insight = new ConsumptionInsight
         {
             HasEnoughData = true,
             History = history,
@@ -56,9 +67,29 @@ public class ConsumptionForecastingService : IConsumptionForecastingService
             LowerBoundM3 = lowerBound,
             UpperBoundM3 = upperBound,
             IsAnomaly = isAnomaly,
-            AnomalyScore = anomalyScore
+            AnomalyScore = anomalyScore,
+            PreviousAverageM3 = previousAverage
         };
+
+        // ExpectedLatest*: what the model would have forecast for the latest reading, trained only on
+        // the readings before it (one step ahead, 95% interval).
+        if (previous.Length >= MinimumReadingsForForecast)
+        {
+            var (expected, expectedLower, expectedUpper) = Forecast(mlContext, ToDataView(mlContext, previous), previous.Length);
+            if (float.IsFinite(expected) && float.IsFinite(expectedLower) && float.IsFinite(expectedUpper))
+            {
+                // Consumption can't be negative, so neither can the expectation shown to the user.
+                insight.ExpectedLatestM3 = Math.Max(0, expected);
+                insight.ExpectedLatestLowerM3 = Math.Max(0, expectedLower);
+                insight.ExpectedLatestUpperM3 = Math.Max(0, expectedUpper);
+            }
+        }
+
+        return insight;
     }
+
+    private static IDataView ToDataView(MLContext mlContext, IEnumerable<float> series) =>
+        mlContext.Data.LoadFromEnumerable(series.Select(value => new ConsumptionDataPoint { ConsumptionM3 = value }).ToList());
 
     private static (float Predicted, float LowerBound, float UpperBound) Forecast(MLContext mlContext, IDataView dataView, int seriesLength)
     {

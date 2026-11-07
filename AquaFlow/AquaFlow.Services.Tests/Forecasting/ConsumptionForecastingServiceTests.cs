@@ -54,6 +54,56 @@ public class ConsumptionForecastingServiceTests
         Assert.True(insight.IsAnomaly);
     }
 
+    // The explanation values for the latest reading are computed from the readings BEFORE it only.
+    [Fact]
+    public void Analyze_StableSeriesThenBigSpike_ExpectationAndBaselineExcludeTheSpike()
+    {
+        var history = new float[] { 20, 21, 20, 22, 21, 20, 21, 22, 20, 21, 90 };
+        var service = new ConsumptionForecastingService(null!);
+
+        var insight = service.Analyze(history);
+
+        Assert.True(insight.HasEnoughData);
+        Assert.True(insight.IsAnomaly);
+        Assert.NotNull(insight.PreviousAverageM3);
+        Assert.Equal((22f + 20f + 21f) / 3f, insight.PreviousAverageM3!.Value, 3);
+        Assert.NotNull(insight.ExpectedLatestM3);
+        Assert.InRange(insight.ExpectedLatestM3!.Value, 21f * 0.5f, 21f * 1.5f);
+        Assert.True(insight.ExpectedLatestUpperM3 < 90f / 2);
+        Assert.True(insight.ExpectedLatestLowerM3 <= insight.ExpectedLatestM3);
+        Assert.True(insight.ExpectedLatestUpperM3 >= insight.ExpectedLatestM3);
+    }
+
+    // Only 4 readings precede the latest one - too few to forecast it, but the baseline is still set.
+    [Fact]
+    public void Analyze_SeriesOfFive_NoExpectationButPreviousAverageSet()
+    {
+        var service = new ConsumptionForecastingService(null!);
+
+        var insight = service.Analyze(new float[] { 20, 21, 20, 22, 90 });
+
+        Assert.True(insight.HasEnoughData);
+        Assert.Null(insight.ExpectedLatestM3);
+        Assert.Null(insight.ExpectedLatestLowerM3);
+        Assert.Null(insight.ExpectedLatestUpperM3);
+        Assert.Equal(21f, insight.PreviousAverageM3!.Value, 3);
+    }
+
+    // Analyze is deterministic (MLContext seed 0): the same series always gives the same result.
+    [Fact]
+    public void Analyze_SameSeriesTwice_SameResult()
+    {
+        var service = new ConsumptionForecastingService(null!);
+        var history = new float[] { 20, 21, 20, 22, 21, 20, 21, 22, 20, 21, 90 };
+
+        var first = service.Analyze(history);
+        var second = service.Analyze(history);
+
+        Assert.Equal(first.ExpectedLatestM3, second.ExpectedLatestM3);
+        Assert.Equal(first.PredictedNextConsumptionM3, second.PredictedNextConsumptionM3);
+        Assert.Equal(first.AnomalyScore, second.AnomalyScore);
+    }
+
     private static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()

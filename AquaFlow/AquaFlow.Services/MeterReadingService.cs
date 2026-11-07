@@ -9,6 +9,7 @@ using AquaFlow.Services.InvoiceStateMachine;
 using FluentValidation;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace AquaFlow.Services;
 
@@ -29,19 +30,27 @@ public class MeterReadingService
     // invoice state machine (Issued -> Paid) instead of setting Status directly. The states depend
     // only on DbContext/mapper/notifications, so there is no DI cycle back to this service.
     private readonly IInvoiceStateResolver _invoiceStateResolver;
+    // Runs spike detection after each new reading. WaterConsumptionAlertService only uses the static
+    // CountingReadings from here (not IMeterReadingService), so there is no DI cycle.
+    private readonly IWaterConsumptionAlertService _consumptionAlerts;
+    private readonly ILogger<MeterReadingService> _logger;
 
     public MeterReadingService(
         AquaFlowDbContext dbContext,
         IMapper mapper,
         IEnumerable<IValidator<MeterReadingCollectorEntryRequest>> collectorEntryValidators,
         ISystemNotificationService systemNotifications,
-        IInvoiceStateResolver invoiceStateResolver)
+        IInvoiceStateResolver invoiceStateResolver,
+        IWaterConsumptionAlertService consumptionAlerts,
+        ILogger<MeterReadingService> logger)
         : base(dbContext, mapper)
     {
         _dbContext = dbContext;
         _collectorEntryValidator = collectorEntryValidators.FirstOrDefault();
         _systemNotifications = systemNotifications;
         _invoiceStateResolver = invoiceStateResolver;
+        _consumptionAlerts = consumptionAlerts;
+        _logger = logger;
     }
 
     public async Task<MeterReadingCollectorEntryResponse> CreateForCollectorAsync(int callerUserId, MeterReadingCollectorEntryRequest request)
@@ -272,6 +281,25 @@ public class MeterReadingService
             response.InvoiceId = null;
             response.InvoiceNumber = null;
             response.InvoiceTotalAmount = null;
+        }
+
+        // Spike detection for this meter right after the new reading is committed (and its invoice
+        // push requested). Best-effort only: the reading is already saved, so an analysis/alert failure
+        // is logged and must never fail the collector's entry. A ClientUuid replay returned earlier and
+        // never gets here, so a retry doesn't re-run it.
+        try
+        {
+            await _consumptionAlerts.RecomputeAsync(request.WaterMeterId, callerUserId);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Consumption alert recompute failed after reading {MeterReadingId} for water meter {WaterMeterId}.", entity.Id, request.WaterMeterId);
+            // The reading/invoice are already saved (Unchanged); only the failed alert/notification
+            // rows can still be pending - drop them so nothing half-done lingers in this context.
+            foreach (var pending in _dbContext.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).ToList())
+            {
+                pending.State = EntityState.Detached;
+            }
         }
 
         return response;

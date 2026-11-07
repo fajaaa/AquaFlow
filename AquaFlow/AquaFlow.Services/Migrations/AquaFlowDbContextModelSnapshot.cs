@@ -4985,6 +4985,15 @@ namespace AquaFlow.Services.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("ExpectedLowerBound")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal?>("ExpectedUpperBound")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal?>("ExpectedValue")
+                        .HasColumnType("decimal(18,3)");
+
                     b.Property<bool>("IsResolved")
                         .HasColumnType("bit");
 

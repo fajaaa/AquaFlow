@@ -9,4 +9,5 @@ public static class RelatedEntityTypes
     public const string FaultReport = "FaultReport";
     public const string Invoice = "Invoice";
     public const string SupportTicket = "SupportTicket";
+    public const string WaterMeter = "WaterMeter";
 }

@@ -10,6 +10,7 @@ using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace AquaFlow.Services.Tests.MeterReadings;
@@ -37,6 +38,53 @@ public class MeterReadingServiceTests
         var invoice = await context.Invoices.FirstOrDefaultAsync(i => i.Id == response.InvoiceId);
         Assert.NotNull(invoice);
         Assert.Equal(InvoiceStatus.Issued, invoice.Status);
+    }
+
+    // Spike detection runs automatically for the read meter once the reading is committed.
+    [Fact]
+    public async Task CreateForCollectorAsync_Success_TriggersConsumptionAlertRecomputeForThatMeter()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var alerts = new RecordingConsumptionAlertService();
+        var service = CreateService(context, consumptionAlerts: alerts);
+
+        await service.CreateForCollectorAsync(callerUserId: 3, new MeterReadingCollectorEntryRequest { WaterMeterId = 1, ReadingValue = 100, TariffId = 1 });
+
+        Assert.Equal((1, 3), Assert.Single(alerts.RecomputeCalls));
+    }
+
+    // A failing recompute is logged only: the reading and its invoice stay saved and the entry succeeds.
+    [Fact]
+    public async Task CreateForCollectorAsync_RecomputeThrows_EntryStillSucceeds()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var alerts = new RecordingConsumptionAlertService(new InvalidOperationException("ML failure"));
+        var service = CreateService(context, consumptionAlerts: alerts);
+
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, new MeterReadingCollectorEntryRequest { WaterMeterId = 1, ReadingValue = 100, TariffId = 1 });
+
+        Assert.Single(alerts.RecomputeCalls);
+        Assert.NotNull(response.InvoiceId);
+        Assert.Single(await context.MeterReadings.Where(reading => reading.WaterMeterId == 1 && reading.ReadingValue == 100).ToListAsync());
+        Assert.NotNull(await context.Invoices.FirstOrDefaultAsync(invoice => invoice.Id == response.InvoiceId));
+    }
+
+    // A ClientUuid replay returns the original response without re-running the analysis.
+    [Fact]
+    public async Task CreateForCollectorAsync_IdempotentReplay_DoesNotTriggerRecomputeAgain()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var alerts = new RecordingConsumptionAlertService();
+        var service = CreateService(context, consumptionAlerts: alerts);
+        var request = new MeterReadingCollectorEntryRequest { WaterMeterId = 1, ReadingValue = 100, TariffId = 1, ClientUuid = Guid.NewGuid().ToString() };
+
+        await service.CreateForCollectorAsync(callerUserId: 3, request);
+        await service.CreateForCollectorAsync(callerUserId: 3, request);
+
+        Assert.Single(alerts.RecomputeCalls);
     }
 
     // Reading-to-reading billing: the first reading on a meter bills InstalledAt .. reading date.
@@ -647,7 +695,8 @@ public class MeterReadingServiceTests
     internal static MeterReadingService CreateService(
         AquaFlowDbContext context,
         IMessagePublisher? publisher = null,
-        Func<AquaFlowDbContext, IMapper, ISystemNotificationService, BaseInvoiceState>? issuedStateOverride = null)
+        Func<AquaFlowDbContext, IMapper, ISystemNotificationService, BaseInvoiceState>? issuedStateOverride = null,
+        IWaterConsumptionAlertService? consumptionAlerts = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<MeterReading, Model.Responses.MeterReadingResponse>();
@@ -660,6 +709,8 @@ public class MeterReadingServiceTests
             mapper,
             new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() },
             systemNotifications,
-            new TestInvoiceStateResolver(context, mapper, systemNotifications, issuedStateOverride?.Invoke(context, mapper, systemNotifications)));
+            new TestInvoiceStateResolver(context, mapper, systemNotifications, issuedStateOverride?.Invoke(context, mapper, systemNotifications)),
+            consumptionAlerts ?? new RecordingConsumptionAlertService(),
+            NullLogger<MeterReadingService>.Instance);
     }
 }

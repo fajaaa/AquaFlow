@@ -1,6 +1,7 @@
 using AquaFlow.Services.Database;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace AquaFlow.Services.Tests.Sqlite;
 
@@ -25,10 +26,12 @@ public sealed class SqliteTestDatabase : IDisposable
 
     // Each call is a separate context over the same database - use a fresh one to verify what is
     // actually committed, rather than what another context still tracks.
-    public AquaFlowDbContext CreateContext()
+    // Optional interceptors, e.g. a DbCommandInterceptor that counts the SQL commands a call issues.
+    public AquaFlowDbContext CreateContext(params IInterceptor[] interceptors)
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseSqlite(_connection)
+            .AddInterceptors(interceptors)
             .Options;
 
         return new SqliteAquaFlowDbContext(options);

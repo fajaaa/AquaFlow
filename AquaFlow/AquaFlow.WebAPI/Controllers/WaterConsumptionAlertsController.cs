@@ -3,6 +3,7 @@ using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
 using AquaFlow.WebAPI.Filters;
+using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Mvc;
 
 using WaterConsumptionAlertCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.WaterConsumptionAlertResponse, AquaFlow.Model.SearchObjects.WaterConsumptionAlertSearchObject, AquaFlow.Model.Requests.WaterConsumptionAlertInsertRequest, AquaFlow.Model.Requests.WaterConsumptionAlertUpdateRequest, AquaFlow.Model.Requests.WaterConsumptionAlertPatchRequest>;
@@ -26,7 +27,7 @@ public class WaterConsumptionAlertsController : BaseCRUDController<WaterConsumpt
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<WaterConsumptionAlertResponse>>> Recompute()
     {
-        var result = await _waterConsumptionAlertService.RecomputeAsync();
+        var result = await _waterConsumptionAlertService.RecomputeAsync(actorUserId: CurrentUserIdOrNull());
         return Ok(result);
     }
 
@@ -34,7 +35,16 @@ public class WaterConsumptionAlertsController : BaseCRUDController<WaterConsumpt
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<WaterConsumptionAlertResponse>>> Recompute(int waterMeterId)
     {
-        var result = await _waterConsumptionAlertService.RecomputeAsync(waterMeterId);
+        var result = await _waterConsumptionAlertService.RecomputeAsync(waterMeterId, CurrentUserIdOrNull());
         return Ok(result);
+    }
+
+    // The admin who triggered the recompute - the actor of the customer notifications it stages.
+    private int? CurrentUserIdOrNull() => TryGetCurrentUserId(out var userId) ? userId : null;
+
+    private bool TryGetCurrentUserId(out int userId)
+    {
+        var claimValue = User.FindFirst(ClaimNames.Id)?.Value;
+        return int.TryParse(claimValue, out userId);
     }
 }
