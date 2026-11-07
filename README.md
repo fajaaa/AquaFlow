@@ -104,6 +104,13 @@ Administrators publish notifications to an audience (everyone, all customers, al
 optionally with images. Recipients get an in-app inbox with per-item read
 state and an unread badge, plus a push notification on mobile via Firebase Cloud Messaging.
 
+**Consumption forecast and recommendations**
+Each meter's reading history feeds an ML.NET SSA forecast of the next period (with a 95%
+interval). A reading far from what the model expected raises an alert (re-checked after every
+reading) and notifies the customer. Customers also get personalised, explainable water-saving
+recommendations for their own meter via `GET /ConsumptionInsights/water-meters/{id}`: rules over
+the forecast, the open alert and the settlement average, each carrying the numbers behind it.
+
 **Audit trail**
 Security-relevant events (sign-in success and failure, token refresh, registration, password
 and account changes, and administrative changes to another user's account) are written to an
@@ -505,7 +512,7 @@ The Flutter clients do this automatically and keep tokens in the platform secure
 | Billing | `/Invoices`, `/InvoiceItems`, `/Payments`, `/Payments/stripe-config`, `/Payments/webhook/stripe`, `/PaymentCards`, `/PaymentCards/setup` |
 | Support | `/FaultReports`, `/SupportTickets` |
 | Messaging | `/Notifications`, `/UserNotifications`, `/DeviceTokens` |
-| Operations | `/ActivityLogs`, `/CompanySettings`, `/WaterConsumptionAlerts/recompute`, `/Dashboard/*` |
+| Operations | `/ActivityLogs`, `/CompanySettings`, `/WaterConsumptionAlerts/recompute`, `/ConsumptionInsights/water-meters/{id}`, `/Dashboard/*` |
 | Reports | `/Reports/consumption/pdf`, `/Reports/billing/pdf` |
 | Codebooks | `/InvoiceStatuses`, `/PaymentStatuses`, `/PaymentMethods`, `/FaultReportStatuses`, `/WaterMeterRequestStatuses`, `/WaterMeterStatuses`, `/SupportTicketStatuses`, `/NotificationTypes`, `/ConsumptionAlertTypes` |
 

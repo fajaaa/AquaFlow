@@ -407,3 +407,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Local-only documentation (not published to the repo)
+recommender-dokumentacija.md

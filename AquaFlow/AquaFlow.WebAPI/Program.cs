@@ -244,6 +244,7 @@ builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearch
 // IMeterReadingService directly.
 builder.Services.AddScoped<IMeterReadingService, MeterReadingService>();
 builder.Services.AddScoped<IConsumptionForecastingService, ConsumptionForecastingService>();
+builder.Services.AddScoped<IConsumptionInsightService, ConsumptionInsightService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 // WaterConsumptionAlert is registered by hand (not AddCrud<>) because RecomputeAsync is an extra
 // action beyond the generic EfCrudService; the generic IBaseCRUDService alias still resolves to
