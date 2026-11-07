@@ -2707,7 +2707,7 @@ abstract class AppLocalizations {
   /// Table column header for a consumption alert's threshold value.
   ///
   /// In bs, this message translates to:
-  /// **'Granična vrijednost'**
+  /// **'Prosjek prethodnih'**
   String get thresholdValueColumnLabel;
 
   /// Status pill label for a resolved consumption alert.
@@ -3063,6 +3063,18 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Nema rezultata za odabrane filtere.'**
   String get rolesPermissionsEmptyFilteredMessage;
+
+  /// Consumption alerts table column header for the forecast model's expected value with its 95 % interval.
+  ///
+  /// In bs, this message translates to:
+  /// **'Očekivano (95 %)'**
+  String get expectedColumnLabel;
+
+  /// Expected consumption with its 95 % interval, e.g. 12.50 m³ (10.00-15.00).
+  ///
+  /// In bs, this message translates to:
+  /// **'{value} m³ ({lower}-{upper})'**
+  String expectedRangeValue(String value, String lower, String upper);
 }
 
 class _AppLocalizationsDelegate

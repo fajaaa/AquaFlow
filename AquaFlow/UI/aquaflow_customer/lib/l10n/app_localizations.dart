@@ -1699,6 +1699,196 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Kartica je dodana.'**
   String get savedCardsAdded;
+
+  /// Customer water meter detail, forecast card: insightHeading.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prognoza i preporuke'**
+  String get insightHeading;
+
+  /// Customer water meter detail, forecast card: insightExpectedConsumption.
+  ///
+  /// In bs, this message translates to:
+  /// **'Očekivana potrošnja u narednom periodu: {value} m³ ({lower}-{upper} m³)'**
+  String insightExpectedConsumption(String value, String lower, String upper);
+
+  /// Customer water meter detail, forecast card: insightEstimatedAmount.
+  ///
+  /// In bs, this message translates to:
+  /// **'Procijenjeni iznos: {amount} {currency}'**
+  String insightEstimatedAmount(String amount, String currency);
+
+  /// Customer water meter detail, forecast card: insightAlertTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Aktivno upozorenje o potrošnji'**
+  String get insightAlertTitle;
+
+  /// Customer water meter detail, forecast card: insightAlertBody.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izmjereno: {measured} m³. Model je očekivao {expected} m³ (95 % interval {lower}-{upper} m³). Prosjek prethodnih očitanja: {baseline} m³.'**
+  String insightAlertBody(
+    String measured,
+    String expected,
+    String lower,
+    String upper,
+    String baseline,
+  );
+
+  /// Customer water meter detail, forecast card: insightAlertBodyNoModel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izmjereno: {measured} m³. Prosjek prethodnih očitanja: {baseline} m³.'**
+  String insightAlertBodyNoModel(String measured, String baseline);
+
+  /// Customer water meter detail, forecast card: insightWhyLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zašto?'**
+  String get insightWhyLabel;
+
+  /// Customer water meter detail, forecast card: insightWhyExpected.
+  ///
+  /// In bs, this message translates to:
+  /// **'Model je očekivao {expected} m³ (95 % interval {lower}-{upper} m³).'**
+  String insightWhyExpected(String expected, String lower, String upper);
+
+  /// Customer water meter detail, forecast card: insightFootnote.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prognoza je izračunata ML.NET SSA modelom iz vaših očitanja.'**
+  String get insightFootnote;
+
+  /// Customer water meter detail, forecast card: insightTipLeak.
+  ///
+  /// In bs, this message translates to:
+  /// **'Provjerite vodokotlić i slavine. Zatvorite sve slavine i pratite vrti li se vodomjer i dalje.'**
+  String get insightTipLeak;
+
+  /// Customer water meter detail, forecast card: insightTipSaving.
+  ///
+  /// In bs, this message translates to:
+  /// **'Savjeti: kraće tuširanje, perite veš i suđe samo s punim punjenjem, baštu zalijevajte uveče.'**
+  String get insightTipSaving;
+
+  /// Customer water meter detail, forecast card: insightLeakTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Moguće curenje vode'**
+  String get insightLeakTitle;
+
+  /// Customer water meter detail, forecast card: insightLeakBody.
+  ///
+  /// In bs, this message translates to:
+  /// **'Zadnja potrošnja ({measured} m³) znatno premašuje uobičajeni nivo.'**
+  String insightLeakBody(String measured);
+
+  /// Customer water meter detail, forecast card: insightLeakWhy.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izmjereno je {measured} m³, a vaš prosjek prethodnih očitanja je {baseline} m³.'**
+  String insightLeakWhy(String measured, String baseline);
+
+  /// Customer water meter detail, forecast card: insightMeterCheckTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Provjera vodomjera'**
+  String get insightMeterCheckTitle;
+
+  /// Customer water meter detail, forecast card: insightMeterCheckBody.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potrošnja je neuobičajena, a nema jasnog znaka curenja - vodomjer je možda neispravan.'**
+  String get insightMeterCheckBody;
+
+  /// Customer water meter detail, forecast card: insightReportFaultButton.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijavi kvar'**
+  String get insightReportFaultButton;
+
+  /// Customer water meter detail, forecast card: insightForecastTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Očekuje se veća potrošnja'**
+  String get insightForecastTitle;
+
+  /// Customer water meter detail, forecast card: insightForecastBody.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prognoza za naredni period je {percent} % iznad vašeg prosjeka.'**
+  String insightForecastBody(String percent);
+
+  /// Customer water meter detail, forecast card: insightForecastWhy.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prognoza {predicted} m³ ({lower}-{upper} m³) je {percent} % iznad vašeg prosjeka od {average} m³ (zadnja očitanja).'**
+  String insightForecastWhy(
+    String predicted,
+    String percent,
+    String average,
+    String lower,
+    String upper,
+  );
+
+  /// Customer water meter detail, forecast card: insightSettlementTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Iznad prosjeka vašeg naselja'**
+  String get insightSettlementTitle;
+
+  /// Customer water meter detail, forecast card: insightSettlementBody.
+  ///
+  /// In bs, this message translates to:
+  /// **'Vaša potrošnja je {percent} % iznad prosjeka u vašem naselju. Uporedite se sa susjedima.'**
+  String insightSettlementBody(String percent);
+
+  /// Customer water meter detail, forecast card: insightSettlementWhy.
+  ///
+  /// In bs, this message translates to:
+  /// **'Vaš prosjek od {average} m³ je {percent} % iznad prosjeka naselja od {settlementAverage} m³.'**
+  String insightSettlementWhy(
+    String average,
+    String percent,
+    String settlementAverage,
+  );
+
+  /// Customer water meter detail, forecast card: insightOnTrackTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potrošnja je u uobičajenim granicama'**
+  String get insightOnTrackTitle;
+
+  /// Customer water meter detail, forecast card: insightOnTrackBody.
+  ///
+  /// In bs, this message translates to:
+  /// **'Odlično! Prognoza je u skladu s vašom dosadašnjom potrošnjom.'**
+  String get insightOnTrackBody;
+
+  /// Customer water meter detail, forecast card: insightOnTrackWhy.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prognoza {predicted} m³ je blizu vašeg prosjeka od {average} m³.'**
+  String insightOnTrackWhy(String predicted, String average);
+
+  /// Customer water meter detail, forecast card: insightNotEnoughTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nedovoljno podataka'**
+  String get insightNotEnoughTitle;
+
+  /// Customer water meter detail, forecast card: insightNotEnoughBody.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potrebno je još {missing} očitanja za prognozu.'**
+  String insightNotEnoughBody(String missing);
+
+  /// Customer water meter detail, forecast card: insightNotEnoughWhy.
+  ///
+  /// In bs, this message translates to:
+  /// **'Imate {count} od {required} potrebnih očitanja.'**
+  String insightNotEnoughWhy(String count, String required);
 }
 
 class _AppLocalizationsDelegate

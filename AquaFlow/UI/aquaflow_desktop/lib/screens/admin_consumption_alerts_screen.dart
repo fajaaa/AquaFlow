@@ -216,6 +216,7 @@ class _AdminConsumptionAlertsScreenState
                     columns: [
                       DataColumn(label: Text(loc.typeFieldLabel)),
                       DataColumn(label: Text(loc.measuredValueColumnLabel)),
+                      DataColumn(label: Text(loc.expectedColumnLabel)),
                       DataColumn(label: Text(loc.thresholdValueColumnLabel)),
                       DataColumn(label: Text(loc.messageColumnLabel)),
                       DataColumn(label: Text(loc.customerColumnLabel)),
@@ -230,6 +231,7 @@ class _AdminConsumptionAlertsScreenState
                           cells: [
                             DataCell(Text(_textOrDash(item.alertType))),
                             DataCell(Text(_formatDecimal(item.measuredValue))),
+                            DataCell(Text(_formatExpected(item, loc))),
                             DataCell(Text(_formatDecimal(item.thresholdValue))),
                             DataCell(_WrappedText(item.message)),
                             DataCell(
@@ -328,6 +330,19 @@ class _ResolvedStatusPill extends StatelessWidget {
 String _textOrDash(String value) {
   final text = value.trim();
   return text.isEmpty ? '-' : text;
+}
+
+/// "X m³ (Y-Z)" from the model's expectation and 95 % interval, or "-".
+String _formatExpected(AdminConsumptionAlert item, AppLocalizations loc) {
+  final expected = item.expectedValue;
+  final lower = item.expectedLowerBound;
+  final upper = item.expectedUpperBound;
+  if (expected == null || lower == null || upper == null) return '-';
+  return loc.expectedRangeValue(
+    _formatDecimal(expected),
+    _formatDecimal(lower),
+    _formatDecimal(upper),
+  );
 }
 
 String _formatDecimal(double value) {

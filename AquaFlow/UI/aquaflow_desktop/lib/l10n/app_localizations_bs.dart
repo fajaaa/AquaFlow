@@ -1428,7 +1428,7 @@ class AppLocalizationsBs extends AppLocalizations {
   String get measuredValueColumnLabel => 'Izmjerena vrijednost';
 
   @override
-  String get thresholdValueColumnLabel => 'Granična vrijednost';
+  String get thresholdValueColumnLabel => 'Prosjek prethodnih';
 
   @override
   String get resolvedStatusLabel => 'Riješeno';
@@ -1623,4 +1623,12 @@ class AppLocalizationsBs extends AppLocalizations {
   @override
   String get rolesPermissionsEmptyFilteredMessage =>
       'Nema rezultata za odabrane filtere.';
+
+  @override
+  String get expectedColumnLabel => 'Očekivano (95 %)';
+
+  @override
+  String expectedRangeValue(String value, String lower, String upper) {
+    return '$value m³ ($lower-$upper)';
+  }
 }

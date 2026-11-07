@@ -1868,7 +1868,7 @@
   "@measuredValueColumnLabel": {
     "description": "Table column header for a consumption alert's measured value."
   },
-  "thresholdValueColumnLabel": "Granična vrijednost",
+  "thresholdValueColumnLabel": "Prosjek prethodnih",
   "@thresholdValueColumnLabel": {
     "description": "Table column header for a consumption alert's threshold value."
   },
@@ -2002,5 +2002,18 @@
   "deletePermissionDialogContent": "Da li ste sigurni da želite obrisati ovu dozvolu? Brisanje nije moguće ako je dodijeljena nekoj roli.",
   "noRolesMessage": "Nema rola.",
   "noPermissionsMessage": "Nema dozvola.",
-  "rolesPermissionsEmptyFilteredMessage": "Nema rezultata za odabrane filtere."
+  "rolesPermissionsEmptyFilteredMessage": "Nema rezultata za odabrane filtere.",
+  "expectedColumnLabel": "Očekivano (95 %)",
+  "@expectedColumnLabel": {
+    "description": "Consumption alerts table column header for the forecast model's expected value with its 95 % interval."
+  },
+  "expectedRangeValue": "{value} m³ ({lower}-{upper})",
+  "@expectedRangeValue": {
+    "description": "Expected consumption with its 95 % interval, e.g. 12.50 m³ (10.00-15.00).",
+    "placeholders": {
+      "value": { "type": "String" },
+      "lower": { "type": "String" },
+      "upper": { "type": "String" }
+    }
+  }
 }

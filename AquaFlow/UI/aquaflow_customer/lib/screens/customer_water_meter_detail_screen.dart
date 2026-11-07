@@ -1,17 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:aquaflow_customer/l10n/app_localizations.dart';
+import 'package:aquaflow_customer/models/consumption_insight.dart';
 import 'package:aquaflow_customer/models/customer_invoice.dart';
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
 import 'package:aquaflow_customer/models/customer_water_meter_stats.dart';
 import 'package:aquaflow_customer/screens/customer_invoices_screen.dart';
 import 'package:aquaflow_customer/services/customer_invoice_exception.dart';
 import 'package:aquaflow_customer/services/customer_invoice_service.dart';
+import 'package:aquaflow_customer/services/customer_water_meter_exception.dart';
+import 'package:aquaflow_customer/services/customer_water_meter_service.dart';
 import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_customer/shared/theme/app_theme.dart';
 import 'package:aquaflow_customer/shared/utils/money_format.dart';
 import 'package:aquaflow_customer/shared/widgets/async_state_view.dart';
 import 'package:aquaflow_customer/shared/widgets/list_skeleton.dart';
+import 'package:aquaflow_customer/widgets/consumption_recommendations_card.dart';
+import 'package:aquaflow_customer/widgets/new_fault_report_dialog.dart';
 import 'package:aquaflow_customer/widgets/water_meter_status_pill.dart';
 
 /// Detail view of a single water meter belonging to the signed-in customer,
@@ -21,9 +28,17 @@ import 'package:aquaflow_customer/widgets/water_meter_status_pill.dart';
 /// the caller) and derives every consumption/billing figure from them via
 /// `CustomerWaterMeterStats.from` - there is no separate stats endpoint.
 class CustomerWaterMeterDetailScreen extends StatefulWidget {
-  const CustomerWaterMeterDetailScreen({super.key, required this.meter});
+  const CustomerWaterMeterDetailScreen({
+    super.key,
+    required this.meter,
+    this.scrollToRecommendations = false,
+  });
 
   final CustomerWaterMeter meter;
+
+  /// Scrolls to the "Prognoza i preporuke" card once it is loaded - set when
+  /// the screen is opened from a consumption alert notification.
+  final bool scrollToRecommendations;
 
   @override
   State<CustomerWaterMeterDetailScreen> createState() =>
@@ -33,20 +48,30 @@ class CustomerWaterMeterDetailScreen extends StatefulWidget {
 class _CustomerWaterMeterDetailScreenState
     extends State<CustomerWaterMeterDetailScreen> {
   final CustomerInvoiceService _service = CustomerInvoiceService();
+  final CustomerWaterMeterService _meterService = CustomerWaterMeterService();
+  final GlobalKey _recommendationsKey = GlobalKey();
 
   bool _loading = true;
   String? _error;
   List<CustomerInvoice> _invoices = const [];
 
+  // The forecast has its own state so a failure there never breaks the screen.
+  bool _insightLoading = true;
+  String? _insightError;
+  ConsumptionInsight? _insight;
+  bool _pendingScroll = false;
+
   @override
   void initState() {
     super.initState();
+    _pendingScroll = widget.scrollToRecommendations;
     _load();
   }
 
   @override
   void dispose() {
     _service.dispose();
+    _meterService.dispose();
     super.dispose();
   }
 
@@ -56,6 +81,7 @@ class _CustomerWaterMeterDetailScreenState
       _error = null;
     });
 
+    final insightFuture = _loadInsight();
     try {
       final invoices = await _service.fetchAllForMeter(widget.meter.id);
       if (!mounted) return;
@@ -63,12 +89,67 @@ class _CustomerWaterMeterDetailScreenState
         _invoices = invoices;
         _loading = false;
       });
+      _maybeScrollToRecommendations();
     } on CustomerInvoiceException catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e.message;
         _loading = false;
       });
+    }
+    // Pull-to-refresh waits for the forecast too, so the spinner covers both.
+    await insightFuture;
+  }
+
+  Future<void> _loadInsight() async {
+    setState(() {
+      _insightLoading = true;
+      _insightError = null;
+    });
+    try {
+      final insight = await _meterService.fetchInsight(widget.meter.id);
+      if (!mounted) return;
+      setState(() {
+        _insight = insight;
+        _insightLoading = false;
+      });
+    } on CustomerWaterMeterException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _insightError = e.message;
+        _insightLoading = false;
+      });
+    }
+    _maybeScrollToRecommendations();
+  }
+
+  void _maybeScrollToRecommendations() {
+    if (!_pendingScroll || _loading || _insightLoading || !mounted) return;
+    _pendingScroll = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _recommendationsKey.currentContext;
+      if (target == null) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          target,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+        ),
+      );
+    });
+  }
+
+  Future<void> _reportFault() async {
+    final created = await showNewFaultReportDialog(
+      context,
+      waterMeterId: widget.meter.id,
+    );
+    if (created == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).faultReportSubmitSuccess),
+        ),
+      );
     }
   }
 
@@ -179,6 +260,18 @@ class _CustomerWaterMeterDetailScreenState
                           _MeterInfoCard(meter: meter, accent: accent),
                           const SizedBox(height: 16),
                           _StatsCard(stats: stats, accent: accent),
+                          const SizedBox(height: 16),
+                          KeyedSubtree(
+                            key: _recommendationsKey,
+                            child: ConsumptionRecommendationsCard(
+                              loading: _insightLoading,
+                              error: _insightError,
+                              insight: _insight,
+                              onRetry: _loadInsight,
+                              onReportFault: _reportFault,
+                              accent: accent,
+                            ),
+                          ),
                           const SizedBox(height: 16),
                           _ConsumptionChartCard(stats: stats, accent: accent),
                           const SizedBox(height: 16),

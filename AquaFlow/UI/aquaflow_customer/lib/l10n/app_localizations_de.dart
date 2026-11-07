@@ -876,4 +876,140 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get savedCardsAdded => 'Karte hinzugefügt.';
+
+  @override
+  String get insightHeading => 'Prognose und Empfehlungen';
+
+  @override
+  String insightExpectedConsumption(String value, String lower, String upper) {
+    return 'Erwarteter Verbrauch im nächsten Zeitraum: $value m³ ($lower-$upper m³)';
+  }
+
+  @override
+  String insightEstimatedAmount(String amount, String currency) {
+    return 'Geschätzter Betrag: $amount $currency';
+  }
+
+  @override
+  String get insightAlertTitle => 'Aktive Verbrauchswarnung';
+
+  @override
+  String insightAlertBody(
+    String measured,
+    String expected,
+    String lower,
+    String upper,
+    String baseline,
+  ) {
+    return 'Gemessen: $measured m³. Das Modell erwartete $expected m³ (95-%-Intervall $lower-$upper m³). Durchschnitt der vorherigen Ablesungen: $baseline m³.';
+  }
+
+  @override
+  String insightAlertBodyNoModel(String measured, String baseline) {
+    return 'Gemessen: $measured m³. Durchschnitt der vorherigen Ablesungen: $baseline m³.';
+  }
+
+  @override
+  String get insightWhyLabel => 'Warum?';
+
+  @override
+  String insightWhyExpected(String expected, String lower, String upper) {
+    return 'Das Modell erwartete $expected m³ (95-%-Intervall $lower-$upper m³).';
+  }
+
+  @override
+  String get insightFootnote =>
+      'Die Prognose wird mit einem ML.NET-SSA-Modell aus Ihren Ablesungen berechnet.';
+
+  @override
+  String get insightTipLeak =>
+      'Prüfen Sie Spülkasten und Wasserhähne. Schließen Sie alle Hähne und beobachten Sie, ob sich der Zähler weiterdreht.';
+
+  @override
+  String get insightTipSaving =>
+      'Tipps: kürzer duschen, Wasch- und Spülmaschine nur voll beladen, den Garten abends gießen.';
+
+  @override
+  String get insightLeakTitle => 'Möglicher Wasserverlust';
+
+  @override
+  String insightLeakBody(String measured) {
+    return 'Der letzte Verbrauch ($measured m³) liegt deutlich über dem üblichen Niveau.';
+  }
+
+  @override
+  String insightLeakWhy(String measured, String baseline) {
+    return 'Gemessen wurden $measured m³, Ihr Durchschnitt der vorherigen Ablesungen beträgt $baseline m³.';
+  }
+
+  @override
+  String get insightMeterCheckTitle => 'Zählerprüfung empfohlen';
+
+  @override
+  String get insightMeterCheckBody =>
+      'Der Verbrauch ist ungewöhnlich, ohne klares Anzeichen für ein Leck - der Zähler ist möglicherweise defekt.';
+
+  @override
+  String get insightReportFaultButton => 'Störung melden';
+
+  @override
+  String get insightForecastTitle => 'Höherer Verbrauch erwartet';
+
+  @override
+  String insightForecastBody(String percent) {
+    return 'Die Prognose für den nächsten Zeitraum liegt $percent % über Ihrem Durchschnitt.';
+  }
+
+  @override
+  String insightForecastWhy(
+    String predicted,
+    String percent,
+    String average,
+    String lower,
+    String upper,
+  ) {
+    return 'Die Prognose von $predicted m³ ($lower-$upper m³) liegt $percent % über Ihrem Durchschnitt von $average m³ (letzte Ablesungen).';
+  }
+
+  @override
+  String get insightSettlementTitle => 'Über dem Durchschnitt Ihrer Siedlung';
+
+  @override
+  String insightSettlementBody(String percent) {
+    return 'Ihr Verbrauch liegt $percent % über dem Durchschnitt Ihrer Nachbarschaft. Vergleichen Sie sich mit Ihren Nachbarn.';
+  }
+
+  @override
+  String insightSettlementWhy(
+    String average,
+    String percent,
+    String settlementAverage,
+  ) {
+    return 'Ihr Durchschnitt von $average m³ liegt $percent % über dem Siedlungsdurchschnitt von $settlementAverage m³.';
+  }
+
+  @override
+  String get insightOnTrackTitle => 'Verbrauch im üblichen Rahmen';
+
+  @override
+  String get insightOnTrackBody =>
+      'Sehr gut! Die Prognose entspricht Ihrem bisherigen Verbrauch.';
+
+  @override
+  String insightOnTrackWhy(String predicted, String average) {
+    return 'Die Prognose von $predicted m³ liegt nahe an Ihrem Durchschnitt von $average m³.';
+  }
+
+  @override
+  String get insightNotEnoughTitle => 'Nicht genügend Daten';
+
+  @override
+  String insightNotEnoughBody(String missing) {
+    return 'Für eine Prognose sind noch $missing Ablesungen nötig.';
+  }
+
+  @override
+  String insightNotEnoughWhy(String count, String required) {
+    return 'Sie haben $count von $required benötigten Ablesungen.';
+  }
 }

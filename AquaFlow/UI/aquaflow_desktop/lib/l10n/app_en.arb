@@ -467,7 +467,7 @@
   "markAsResolvedTooltip": "Mark as resolved",
   "alertMarkedResolvedSuccess": "Alert marked as resolved.",
   "measuredValueColumnLabel": "Measured value",
-  "thresholdValueColumnLabel": "Threshold value",
+  "thresholdValueColumnLabel": "Previous average",
   "resolvedStatusLabel": "Resolved",
   "unresolvedStatusLabel": "Unresolved",
   "sessionExpiredMessage": "Your session has expired. Please sign in again.",
@@ -533,5 +533,7 @@
   "deletePermissionDialogContent": "Are you sure you want to delete this permission? Deletion is not possible while it is assigned to a role.",
   "noRolesMessage": "No roles.",
   "noPermissionsMessage": "No permissions.",
-  "rolesPermissionsEmptyFilteredMessage": "No results match the selected filters."
+  "rolesPermissionsEmptyFilteredMessage": "No results match the selected filters.",
+  "expectedColumnLabel": "Expected (95 %)",
+  "expectedRangeValue": "{value} m³ ({lower}-{upper})"
 }

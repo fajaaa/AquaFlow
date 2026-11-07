@@ -1443,7 +1443,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get measuredValueColumnLabel => 'Gemessener Wert';
 
   @override
-  String get thresholdValueColumnLabel => 'Schwellenwert';
+  String get thresholdValueColumnLabel => 'Vorheriger Durchschnitt';
 
   @override
   String get resolvedStatusLabel => 'Erledigt';
@@ -1639,4 +1639,12 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get rolesPermissionsEmptyFilteredMessage =>
       'Keine Ergebnisse für die gewählten Filter.';
+
+  @override
+  String get expectedColumnLabel => 'Erwartet (95 %)';
+
+  @override
+  String expectedRangeValue(String value, String lower, String upper) {
+    return '$value m³ ($lower-$upper)';
+  }
 }

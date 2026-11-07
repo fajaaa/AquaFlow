@@ -5,10 +5,12 @@ import 'package:flutter/widgets.dart';
 import 'package:aquaflow_customer/screens/customer_fault_report_detail_screen.dart';
 import 'package:aquaflow_customer/screens/customer_invoice_detail_screen.dart';
 import 'package:aquaflow_customer/screens/customer_requests_screen.dart';
+import 'package:aquaflow_customer/screens/customer_water_meter_detail_screen.dart';
 import 'package:aquaflow_customer/screens/customer_support_ticket_detail_screen.dart';
 import 'package:aquaflow_customer/services/customer_fault_report_service.dart';
 import 'package:aquaflow_customer/services/customer_invoice_service.dart';
 import 'package:aquaflow_customer/services/customer_support_ticket_service.dart';
+import 'package:aquaflow_customer/services/customer_water_meter_service.dart';
 import 'package:aquaflow_customer/shared/navigation/app_navigation.dart';
 import 'package:aquaflow_customer/shared/navigation/notification_deep_links.dart';
 
@@ -23,6 +25,7 @@ final Map<String, NotificationDeepLinkHandler> customerNotificationDeepLinks = {
   'FaultReport': _openFaultReport,
   'WaterMeterRequest': _openWaterMeterRequests,
   'SupportTicket': _openSupportTicket,
+  'WaterMeter': _openWaterMeter,
 };
 
 Future<void> _openInvoice(BuildContext context, int id) async {
@@ -67,6 +70,26 @@ Future<void> _openSupportTicket(BuildContext context, int id) async {
     if (!context.mounted) return;
     unawaited(
       context.pushScreen(CustomerSupportTicketDetailScreen(ticketId: id)),
+    );
+  } finally {
+    service.dispose();
+  }
+}
+
+/// Consumption alert notifications: opens the meter's detail screen scrolled
+/// to the "Prognoza i preporuke" card.
+Future<void> _openWaterMeter(BuildContext context, int id) async {
+  final service = CustomerWaterMeterService();
+  try {
+    final meter = await service.fetchById(id);
+    if (!context.mounted) return;
+    unawaited(
+      context.pushScreen(
+        CustomerWaterMeterDetailScreen(
+          meter: meter,
+          scrollToRecommendations: true,
+        ),
+      ),
     );
   } finally {
     service.dispose();

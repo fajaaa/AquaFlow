@@ -866,4 +866,140 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get savedCardsAdded => 'Kartica je dodana.';
+
+  @override
+  String get insightHeading => 'Prognoza i preporuke';
+
+  @override
+  String insightExpectedConsumption(String value, String lower, String upper) {
+    return 'Očekivana potrošnja u narednom periodu: $value m³ ($lower-$upper m³)';
+  }
+
+  @override
+  String insightEstimatedAmount(String amount, String currency) {
+    return 'Procijenjeni iznos: $amount $currency';
+  }
+
+  @override
+  String get insightAlertTitle => 'Aktivno upozorenje o potrošnji';
+
+  @override
+  String insightAlertBody(
+    String measured,
+    String expected,
+    String lower,
+    String upper,
+    String baseline,
+  ) {
+    return 'Izmjereno: $measured m³. Model je očekivao $expected m³ (95 % interval $lower-$upper m³). Prosjek prethodnih očitanja: $baseline m³.';
+  }
+
+  @override
+  String insightAlertBodyNoModel(String measured, String baseline) {
+    return 'Izmjereno: $measured m³. Prosjek prethodnih očitanja: $baseline m³.';
+  }
+
+  @override
+  String get insightWhyLabel => 'Zašto?';
+
+  @override
+  String insightWhyExpected(String expected, String lower, String upper) {
+    return 'Model je očekivao $expected m³ (95 % interval $lower-$upper m³).';
+  }
+
+  @override
+  String get insightFootnote =>
+      'Prognoza je izračunata ML.NET SSA modelom iz vaših očitanja.';
+
+  @override
+  String get insightTipLeak =>
+      'Provjerite vodokotlić i slavine. Zatvorite sve slavine i pratite vrti li se vodomjer i dalje.';
+
+  @override
+  String get insightTipSaving =>
+      'Savjeti: kraće tuširanje, perite veš i suđe samo s punim punjenjem, baštu zalijevajte uveče.';
+
+  @override
+  String get insightLeakTitle => 'Moguće curenje vode';
+
+  @override
+  String insightLeakBody(String measured) {
+    return 'Zadnja potrošnja ($measured m³) znatno premašuje uobičajeni nivo.';
+  }
+
+  @override
+  String insightLeakWhy(String measured, String baseline) {
+    return 'Izmjereno je $measured m³, a vaš prosjek prethodnih očitanja je $baseline m³.';
+  }
+
+  @override
+  String get insightMeterCheckTitle => 'Provjera vodomjera';
+
+  @override
+  String get insightMeterCheckBody =>
+      'Potrošnja je neuobičajena, a nema jasnog znaka curenja - vodomjer je možda neispravan.';
+
+  @override
+  String get insightReportFaultButton => 'Prijavi kvar';
+
+  @override
+  String get insightForecastTitle => 'Očekuje se veća potrošnja';
+
+  @override
+  String insightForecastBody(String percent) {
+    return 'Prognoza za naredni period je $percent % iznad vašeg prosjeka.';
+  }
+
+  @override
+  String insightForecastWhy(
+    String predicted,
+    String percent,
+    String average,
+    String lower,
+    String upper,
+  ) {
+    return 'Prognoza $predicted m³ ($lower-$upper m³) je $percent % iznad vašeg prosjeka od $average m³ (zadnja očitanja).';
+  }
+
+  @override
+  String get insightSettlementTitle => 'Iznad prosjeka vašeg naselja';
+
+  @override
+  String insightSettlementBody(String percent) {
+    return 'Vaša potrošnja je $percent % iznad prosjeka u vašem naselju. Uporedite se sa susjedima.';
+  }
+
+  @override
+  String insightSettlementWhy(
+    String average,
+    String percent,
+    String settlementAverage,
+  ) {
+    return 'Vaš prosjek od $average m³ je $percent % iznad prosjeka naselja od $settlementAverage m³.';
+  }
+
+  @override
+  String get insightOnTrackTitle => 'Potrošnja je u uobičajenim granicama';
+
+  @override
+  String get insightOnTrackBody =>
+      'Odlično! Prognoza je u skladu s vašom dosadašnjom potrošnjom.';
+
+  @override
+  String insightOnTrackWhy(String predicted, String average) {
+    return 'Prognoza $predicted m³ je blizu vašeg prosjeka od $average m³.';
+  }
+
+  @override
+  String get insightNotEnoughTitle => 'Nedovoljno podataka';
+
+  @override
+  String insightNotEnoughBody(String missing) {
+    return 'Potrebno je još $missing očitanja za prognozu.';
+  }
+
+  @override
+  String insightNotEnoughWhy(String count, String required) {
+    return 'Imate $count od $required potrebnih očitanja.';
+  }
 }

@@ -4,6 +4,7 @@ import 'dart:io' show SocketException;
 
 import 'package:http/http.dart' as http;
 
+import 'package:aquaflow_customer/models/consumption_insight.dart';
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
 import 'package:aquaflow_customer/models/customer_water_meter_page.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_exception.dart';
@@ -107,6 +108,50 @@ class CustomerWaterMeterService {
         .whereType<Map<String, dynamic>>()
         .map(CustomerWaterMeter.fromJson)
         .toList();
+  }
+
+  /// One of the caller's meters by id (the backend answers 404 for a meter
+  /// that is not theirs) - used to open a meter from a notification.
+  Future<CustomerWaterMeter> fetchById(int id) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeters/$id');
+    final response = await _send(() => _client.get(uri));
+
+    if (response.statusCode != 200) {
+      throw CustomerWaterMeterException(
+        _messageFor(response, 'Vodomjer nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const CustomerWaterMeterException(
+        'Vodomjer je u neispravnom formatu.',
+      );
+    }
+    return CustomerWaterMeter.fromJson(decoded);
+  }
+
+  /// Forecast and personalised recommendations for the caller's meter
+  /// [waterMeterId].
+  Future<ConsumptionInsight> fetchInsight(int waterMeterId) async {
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/ConsumptionInsights/water-meters/$waterMeterId',
+    );
+    final response = await _send(() => _client.get(uri));
+
+    if (response.statusCode != 200) {
+      throw CustomerWaterMeterException(
+        _messageFor(response, 'Prognozu nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const CustomerWaterMeterException(
+        'Prognoza je u neispravnom formatu.',
+      );
+    }
+    return ConsumptionInsight.fromJson(decoded);
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

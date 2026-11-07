@@ -25,11 +25,17 @@ const int _maxPhotos = 3;
 
 /// Opens the "Nova prijava kvara" dialog and resolves to `true` when a report
 /// was successfully created. Reached from `CustomerFaultReportsScreen`.
-Future<bool?> showNewFaultReportDialog(BuildContext context) {
+///
+/// [waterMeterId] preselects one of the caller's meters (and prefills the
+/// location from it), e.g. when opened from a consumption recommendation.
+Future<bool?> showNewFaultReportDialog(
+  BuildContext context, {
+  int? waterMeterId,
+}) {
   return showDialog<bool>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const NewFaultReportDialog(),
+    builder: (_) => NewFaultReportDialog(initialWaterMeterId: waterMeterId),
   );
 }
 
@@ -51,7 +57,9 @@ Future<bool?> showNewFaultReportDialog(BuildContext context) {
 /// (never re-created on retry) and the dialog stays open so the remaining
 /// photos can be resent.
 class NewFaultReportDialog extends StatefulWidget {
-  const NewFaultReportDialog({super.key});
+  const NewFaultReportDialog({super.key, this.initialWaterMeterId});
+
+  final int? initialWaterMeterId;
 
   @override
   State<NewFaultReportDialog> createState() => _NewFaultReportDialogState();
@@ -138,6 +146,12 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
         _waterMeters = results[0] as List<CustomerWaterMeter>;
         _loading = false;
       });
+      final initialId = widget.initialWaterMeterId;
+      if (initialId != null && _selectedWaterMeterId == null) {
+        if (_waterMeters.any((m) => m.id == initialId)) {
+          _onWaterMeterChanged(initialId);
+        }
+      }
     } on CustomerWaterMeterException catch (e) {
       _failLoad(e.message);
     } on ProfileException catch (e) {
