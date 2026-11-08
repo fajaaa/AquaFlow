@@ -13,4 +13,8 @@ public interface IWaterConsumptionAlertService
     // number of DB round-trips regardless of meter count. Each new alert also notifies the meter's
     // customer; actorUserId is the user who triggered the run (null = no human actor).
     Task<IReadOnlyList<WaterConsumptionAlertResponse>> RecomputeAsync(int? waterMeterId = null, int? actorUserId = null);
+
+    // The only write an admin has on an alert: marks it resolved (IsResolved = true, ResolvedAt = now).
+    // Unknown id -> KeyNotFoundException (404); already resolved -> ClientException (400).
+    Task<WaterConsumptionAlertResponse> ResolveAsync(int id);
 }

@@ -515,7 +515,7 @@ The Flutter clients do this automatically and keep tokens in the platform secure
 | Billing | `/Invoices`, `/InvoiceItems`, `/Payments`, `/Payments/stripe-config`, `/Payments/webhook/stripe`, `/PaymentCards`, `/PaymentCards/setup` |
 | Support | `/FaultReports`, `/SupportTickets` |
 | Messaging | `/Notifications`, `/UserNotifications`, `/DeviceTokens` |
-| Operations | `/ActivityLogs`, `/CompanySettings`, `/WaterConsumptionAlerts/recompute`, `/ConsumptionInsights/water-meters/{id}`, `/Dashboard/*` |
+| Operations | `/ActivityLogs`, `/CompanySettings`, `/WaterConsumptionAlerts` (GET only) + `/WaterConsumptionAlerts/recompute` + `POST /WaterConsumptionAlerts/{id}/resolve` (alerts are model-generated; no manual create/edit/delete), `/ConsumptionInsights/water-meters/{id}`, `/Dashboard/*` |
 | Reports | `/Reports/consumption/pdf`, `/Reports/billing/pdf` |
 | Codebooks | `/InvoiceStatuses`, `/PaymentStatuses`, `/PaymentMethods`, `/FaultReportStatuses`, `/WaterMeterRequestStatuses`, `/WaterMeterStatuses`, `/SupportTicketStatuses`, `/NotificationTypes`, `/NotificationAudiences`, `/ConsumptionAlertTypes` |
 

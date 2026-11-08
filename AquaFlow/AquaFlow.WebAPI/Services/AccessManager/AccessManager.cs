@@ -41,6 +41,8 @@ public class AccessManager : IAccessManager
         _httpContextAccessor = httpContextAccessor;
     }
 
+    public const string RoleDeactivatedMessage = "Vaša korisnička rola je deaktivirana.";
+
     private string? GetClientIpAddress() =>
         _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
 
@@ -64,6 +66,12 @@ public class AccessManager : IAccessManager
         {
             await _activityLogService.LogAsync(user.Id, ActivityEventTypes.LoginFailed, "Neuspješna prijava", ipAddress);
             throw new ClientException("User account is not active.");
+        }
+
+        if (!user.UserRoleIsActive)
+        {
+            await _activityLogService.LogAsync(user.Id, ActivityEventTypes.LoginFailed, "Neuspješna prijava", ipAddress);
+            throw new ClientException(RoleDeactivatedMessage);
         }
 
         await _userService.UpdateLastLoginAtAsync(user.Id);
@@ -108,6 +116,11 @@ public class AccessManager : IAccessManager
         if (!user.IsActive)
         {
             throw new ClientException("User account is not active.");
+        }
+
+        if (!user.UserRoleIsActive)
+        {
+            throw new ClientException(RoleDeactivatedMessage);
         }
 
         // Build both tokens first (the JWT needs a permission lookup that could fail), then swap the

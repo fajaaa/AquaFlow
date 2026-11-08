@@ -143,6 +143,78 @@ public class WaterConsumptionAlertServiceTests
         Assert.Empty(await context.Notifications.ToListAsync());
     }
 
+    [Fact]
+    public async Task ResolveAsync_SetsIsResolvedAndResolvedAt()
+    {
+        await using var context = CreateContext();
+        SeedWaterMeter(context, waterMeterId: 1);
+        SeedReadings(context, waterMeterId: 1, consumption: new decimal[] { 20, 21, 20, 22, 21, 90 });
+        var service = CreateService(context);
+        var alertId = Assert.Single(await service.RecomputeAsync()).Id;
+
+        var resolved = await service.ResolveAsync(alertId);
+
+        Assert.True(resolved.IsResolved);
+        Assert.NotNull(resolved.ResolvedAt);
+        var stored = await context.WaterConsumptionAlerts.AsNoTracking().SingleAsync();
+        Assert.True(stored.IsResolved);
+        Assert.NotNull(stored.ResolvedAt);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_AlreadyResolved_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedWaterMeter(context, waterMeterId: 1);
+        SeedReadings(context, waterMeterId: 1, consumption: new decimal[] { 20, 21, 20, 22, 21, 90 });
+        var service = CreateService(context);
+        var alertId = Assert.Single(await service.RecomputeAsync()).Id;
+        await service.ResolveAsync(alertId);
+
+        var ex = await Assert.ThrowsAsync<AquaFlow.Model.Exceptions.ClientException>(() => service.ResolveAsync(alertId));
+
+        Assert.Equal("Alarm je već riješen.", ex.Message);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_UnknownId_ThrowsKeyNotFound()
+    {
+        await using var context = CreateContext();
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => CreateService(context).ResolveAsync(999));
+    }
+
+    [Fact]
+    public async Task ManualWrites_AreRejected()
+    {
+        await using var context = CreateContext();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<AquaFlow.Model.Exceptions.ClientException>(() => service.InsertAsync(new WaterConsumptionAlertInsertRequest()));
+        await Assert.ThrowsAsync<AquaFlow.Model.Exceptions.ClientException>(() => service.UpdateAsync(1, new WaterConsumptionAlertUpdateRequest()));
+        await Assert.ThrowsAsync<AquaFlow.Model.Exceptions.ClientException>(() => service.PatchAsync(1, new WaterConsumptionAlertPatchRequest()));
+        await Assert.ThrowsAsync<AquaFlow.Model.Exceptions.ClientException>(() => service.DeleteAsync(1));
+    }
+
+    // The idempotency check only looks at UNRESOLVED alerts: once an admin resolves the alert, the next
+    // recompute may raise a fresh one for the same meter.
+    [Fact]
+    public async Task RecomputeAsync_AfterResolve_CreatesNewAlertForSameMeter()
+    {
+        await using var context = CreateContext();
+        SeedWaterMeter(context, waterMeterId: 1);
+        SeedReadings(context, waterMeterId: 1, consumption: new decimal[] { 20, 21, 20, 22, 21, 90 });
+        var service = CreateService(context);
+        var first = Assert.Single(await service.RecomputeAsync());
+        Assert.Empty(await service.RecomputeAsync());
+
+        await service.ResolveAsync(first.Id);
+        var second = Assert.Single(await service.RecomputeAsync());
+
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.Equal(2, await context.WaterConsumptionAlerts.CountAsync());
+    }
+
     // N+1 guard: the number of SQL commands RecomputeAsync issues must not grow with the meter count.
     [Theory]
     [InlineData(false)]

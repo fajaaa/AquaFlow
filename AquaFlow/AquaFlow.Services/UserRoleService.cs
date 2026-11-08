@@ -15,9 +15,11 @@ namespace AquaFlow.Services;
 public class UserRoleService : EfCrudService<UserRole, UserRoleResponse, UserRoleSearchObject, UserRoleInsertRequest, UserRoleUpdateRequest, UserRolePatchRequest>
 {
     private readonly AquaFlowDbContext _dbContext;
+    private readonly ISecurityStampService _securityStampService;
 
     public UserRoleService(
         AquaFlowDbContext dbContext,
+        ISecurityStampService securityStampService,
         IMapper mapper,
         IEnumerable<IValidator<UserRoleInsertRequest>> insertValidators,
         IEnumerable<IValidator<UserRoleUpdateRequest>> updateValidators,
@@ -25,6 +27,7 @@ public class UserRoleService : EfCrudService<UserRole, UserRoleResponse, UserRol
         : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
     {
         _dbContext = dbContext;
+        _securityStampService = securityStampService;
     }
 
     protected override Task BeforeInsertAsync(UserRoleInsertRequest request)
@@ -36,6 +39,7 @@ public class UserRoleService : EfCrudService<UserRole, UserRoleResponse, UserRol
     {
         EnsureSystemRoleRules(entity, request.Name, request.IsActive);
         await EnsureUniqueNameAsync(request.Name, id);
+        await RotateIfTokenRelevantChangeAsync(entity, request.Name, request.IsActive);
     }
 
     protected override async Task BeforePatchAsync(int id, UserRolePatchRequest request, UserRole entity)
@@ -45,6 +49,23 @@ public class UserRoleService : EfCrudService<UserRole, UserRoleResponse, UserRol
         {
             await EnsureUniqueNameAsync(request.Name, id);
         }
+
+        await RotateIfTokenRelevantChangeAsync(entity, request.Name ?? entity.Name, request.IsActive ?? entity.IsActive);
+    }
+
+    // The role's Name is a claim in the JWT and IsActive decides whether it carries any permission
+    // claims (PermissionLookupService), so a change to either rotates the SecurityStamp of every
+    // active user of the role (tracked here, saved with the role change itself). Refresh tokens
+    // stay; the refresh itself is refused while the role is inactive (AccessManager). Description
+    // is not in the token and rotates nothing.
+    private async Task RotateIfTokenRelevantChangeAsync(UserRole entity, string newName, bool newIsActive)
+    {
+        if (string.Equals(entity.Name, newName, StringComparison.Ordinal) && entity.IsActive == newIsActive)
+        {
+            return;
+        }
+
+        await _securityStampService.RotateForRoleAsync(entity.Id);
     }
 
     public override async Task DeleteAsync(int id)

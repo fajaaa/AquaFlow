@@ -1,4 +1,5 @@
 using AquaFlow.Model;
+using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -142,6 +143,42 @@ public class WaterConsumptionAlertService
 
         return created.Select(alert => Mapper.Map<WaterConsumptionAlertResponse>(alert)).ToList();
     }
+
+    public async Task<WaterConsumptionAlertResponse> ResolveAsync(int id)
+    {
+        var alert = await DbContext.WaterConsumptionAlerts.FirstOrDefaultAsync(item => item.Id == id)
+            ?? throw new KeyNotFoundException($"{nameof(WaterConsumptionAlert)} with id {id} was not found.");
+
+        if (alert.IsResolved)
+        {
+            throw new ClientException("Alarm je već riješen.");
+        }
+
+        alert.IsResolved = true;
+        alert.ResolvedAt = DateTime.UtcNow;
+        alert.UpdatedAt = DateTime.UtcNow;
+        await DbContext.SaveChangesAsync();
+        await LoadReferencesAsync(alert);
+
+        return Mapper.Map<WaterConsumptionAlertResponse>(alert);
+    }
+
+    // Alerts are produced only by RecomputeAsync (which adds entities directly, not through these);
+    // manual values would fake the model's explanation. Defence in depth behind the controller's
+    // [NonAction] overrides.
+    public override Task<WaterConsumptionAlertResponse> InsertAsync(WaterConsumptionAlertInsertRequest request) =>
+        throw new ClientException(ManualWriteMessage);
+
+    public override Task<WaterConsumptionAlertResponse> UpdateAsync(int id, WaterConsumptionAlertUpdateRequest request) =>
+        throw new ClientException(ManualWriteMessage);
+
+    public override Task<WaterConsumptionAlertResponse> PatchAsync(int id, WaterConsumptionAlertPatchRequest request) =>
+        throw new ClientException(ManualWriteMessage);
+
+    public override Task DeleteAsync(int id) =>
+        throw new ClientException(ManualWriteMessage);
+
+    private const string ManualWriteMessage = "Alarmi se generišu automatski i ne mogu se ručno mijenjati.";
 
     private static decimal? RoundExpected(decimal? value) =>
         value.HasValue ? Math.Round(value.Value, 3, MidpointRounding.AwayFromZero) : null;

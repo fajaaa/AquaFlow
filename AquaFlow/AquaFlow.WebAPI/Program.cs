@@ -133,7 +133,8 @@ mapperConfig.NewConfig<User, UserResponse>()
     .Map(destination => destination.FirstName, source => source.CustomerProfile == null ? source.FirstName : source.CustomerProfile.FirstName)
     .Map(destination => destination.LastName, source => source.CustomerProfile == null ? source.LastName : source.CustomerProfile.LastName);
 mapperConfig.NewConfig<User, UserSensitiveResponse>()
-    .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name);
+    .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
+    .Map(destination => destination.UserRoleIsActive, source => source.UserRole == null || source.UserRole.IsActive);
 mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
     .Map(destination => destination.PermissionCode, source => source.Permission == null ? string.Empty : source.Permission.Code)

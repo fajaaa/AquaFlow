@@ -23,6 +23,36 @@ public class WaterConsumptionAlertsController : BaseCRUDController<WaterConsumpt
         _waterConsumptionAlertService = waterConsumptionAlertService;
     }
 
+    // Alerts are produced by RecomputeAsync from the forecasting model; a hand-written alert (or a
+    // hand-edited value) would fake the model's explanation, and resolving is an explicit action
+    // (POST {id}/resolve), not a generic field edit. [NonAction] takes the inherited CRUD writes out
+    // of MVC action discovery so the routes are not registered; the overrides exist only because a
+    // C# override cannot remove a virtual member. The service throws too, as defence in depth.
+    [NonAction]
+    public override Task<ActionResult<WaterConsumptionAlertResponse>> Create(WaterConsumptionAlertInsertRequest request)
+        => throw new NotSupportedException("Consumption alerts are generated, not created.");
+
+    [NonAction]
+    public override Task<ActionResult<WaterConsumptionAlertResponse>> Update(int id, WaterConsumptionAlertUpdateRequest request)
+        => throw new NotSupportedException("Consumption alerts cannot be edited.");
+
+    [NonAction]
+    public override Task<ActionResult<WaterConsumptionAlertResponse>> Patch(int id, WaterConsumptionAlertPatchRequest request)
+        => throw new NotSupportedException("Consumption alerts cannot be edited.");
+
+    [NonAction]
+    public override Task<IActionResult> Delete(int id)
+        => throw new NotSupportedException("Consumption alerts cannot be deleted.");
+
+    [HttpPost("{id:int}/resolve")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<WaterConsumptionAlertResponse>> Resolve(int id)
+    {
+        return Ok(await _waterConsumptionAlertService.ResolveAsync(id));
+    }
+
     [HttpPost("recompute")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<WaterConsumptionAlertResponse>>> Recompute()

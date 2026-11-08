@@ -29,6 +29,7 @@ public class RecordingConsumptionAlertService : IWaterConsumptionAlertService
         return Task.FromResult<IReadOnlyList<WaterConsumptionAlertResponse>>(Array.Empty<WaterConsumptionAlertResponse>());
     }
 
+    public Task<WaterConsumptionAlertResponse> ResolveAsync(int id) => throw new NotSupportedException();
     public Task<PageResult<WaterConsumptionAlertResponse>> GetAllAsync(WaterConsumptionAlertSearchObject? search = null) => throw new NotSupportedException();
     public Task<WaterConsumptionAlertResponse> GetByIdAsync(int id) => throw new NotSupportedException();
     public Task<WaterConsumptionAlertResponse> InsertAsync(WaterConsumptionAlertInsertRequest request) => throw new NotSupportedException();

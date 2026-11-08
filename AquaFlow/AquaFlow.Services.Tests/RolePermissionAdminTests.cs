@@ -44,8 +44,8 @@ public class RolePermissionAdminTests
         return new Mapper(config);
     }
 
-    private static UserRoleService RoleService(AquaFlowDbContext context) => new(
-        context, CreateMapper(),
+    private static UserRoleService RoleService(AquaFlowDbContext context, ISecurityStampService? stamps = null) => new(
+        context, stamps ?? TestSecurityStamps.Create(context), CreateMapper(),
         new IValidator<UserRoleInsertRequest>[] { new UserRoleInsertValidator() },
         new IValidator<UserRoleUpdateRequest>[] { new UserRoleUpdateValidator() },
         new IValidator<UserRolePatchRequest>[] { new UserRolePatchValidator() });
@@ -286,6 +286,73 @@ public class RolePermissionAdminTests
         await service.DeleteAsync(created.Id);
         var stampAfterDelete = (await context.Users.AsNoTracking().SingleAsync()).SecurityStamp;
         Assert.NotEqual(stampAfterInsert, stampAfterDelete);
+    }
+
+    // ---- Role deactivation / rename rotate stamps; inactive role grants nothing ----
+
+    [Fact]
+    public async Task Role_Deactivate_RotatesStampsSoOldTokensAreRejected()
+    {
+        await using var context = await CreateContextAsync();
+        context.Users.Add(NewUser(2));
+        await context.SaveChangesAsync();
+        var stamps = TestSecurityStamps.Create(context);
+        Assert.True(await stamps.IsValidAsync(1, "old"));
+
+        await RoleService(context, stamps).PatchAsync(2, new UserRolePatchRequest { IsActive = false });
+
+        Assert.False(await stamps.IsValidAsync(1, "old"));
+        Assert.NotEqual("old", (await context.Users.AsNoTracking().SingleAsync()).SecurityStamp);
+    }
+
+    [Fact]
+    public async Task Role_Update_Deactivate_RotatesStamps()
+    {
+        await using var context = await CreateContextAsync();
+        context.Users.Add(NewUser(2));
+        await context.SaveChangesAsync();
+        var stamps = TestSecurityStamps.Create(context);
+
+        await RoleService(context, stamps).UpdateAsync(2, new UserRoleUpdateRequest { Name = "Custom", IsActive = false });
+
+        Assert.False(await stamps.IsValidAsync(1, "old"));
+    }
+
+    [Fact]
+    public async Task Role_Rename_RotatesStamps()
+    {
+        await using var context = await CreateContextAsync();
+        context.Users.Add(NewUser(2));
+        await context.SaveChangesAsync();
+
+        await RoleService(context).PatchAsync(2, new UserRolePatchRequest { Name = "Renamed" });
+
+        Assert.NotEqual("old", (await context.Users.AsNoTracking().SingleAsync()).SecurityStamp);
+    }
+
+    [Fact]
+    public async Task Role_DescriptionOnlyChange_DoesNotRotateStamps()
+    {
+        await using var context = await CreateContextAsync();
+        context.Users.Add(NewUser(2));
+        await context.SaveChangesAsync();
+
+        await RoleService(context).PatchAsync(2, new UserRolePatchRequest { Description = "New description" });
+
+        Assert.Equal("old", (await context.Users.AsNoTracking().SingleAsync()).SecurityStamp);
+    }
+
+    [Fact]
+    public async Task PermissionLookup_InactiveRole_YieldsNoPermissionCodes()
+    {
+        await using var context = await CreateContextAsync();
+        var lookup = new PermissionLookupService(context);
+        Assert.Equal(new[] { "Custom.Perm" }, await lookup.GetPermissionCodesForRoleAsync(2));
+
+        (await context.UserRoles.SingleAsync(r => r.Id == 2)).IsActive = false;
+        await context.SaveChangesAsync();
+
+        Assert.Empty(await lookup.GetPermissionCodesForRoleAsync(2));
     }
 
     [Fact]

@@ -90,17 +90,12 @@ class AdminConsumptionAlertService {
   }
 
   Future<void> markAsResolved(int id) async {
-    final uri = Uri.parse('${ApiConfig.baseUrl}/WaterConsumptionAlerts/$id');
-
-    final response = await _send(
-      () => _client.patch(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'isResolved': true}),
-      ),
+    // Alerts are model-generated and read-only; resolving is its own endpoint (no generic PATCH).
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/WaterConsumptionAlerts/$id/resolve',
     );
+
+    final response = await _send(() => _client.post(uri));
 
     if (response.statusCode != 200) {
       throw AdminConsumptionAlertException(
