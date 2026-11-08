@@ -13,8 +13,7 @@ public class WaterMeterInsertValidator : AbstractValidator<WaterMeterInsertReque
         // Optional (the WaterMeter columns are nullable); only length-bounded when supplied.
         RuleFor(x => x.Street).MaximumLength(200);
         RuleFor(x => x.HouseNumber).MaximumLength(30);
-        RuleFor(x => x.Status).NotEmpty().MaximumLength(30);
         RuleFor(x => x.InitialReading).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.LastReading).GreaterThanOrEqualTo(x => x.InitialReading);
+        // Status and LastReading are server-owned and overwritten on create, so they are not validated.
     }
 }

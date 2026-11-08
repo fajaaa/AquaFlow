@@ -98,13 +98,11 @@ public class CustomerProfilesController : BaseCRUDController<CustomerProfileResp
     {
         if (!HasManagePermission())
         {
-            var (userId, error) = await AuthorizeOwnProfileAsync(id);
+            var error = await AuthorizeOwnProfileAsync(id);
             if (error is not null)
             {
                 return error;
             }
-
-            request.UserId = userId!.Value;
         }
 
         return await base.Update(id, request);
@@ -114,38 +112,34 @@ public class CustomerProfilesController : BaseCRUDController<CustomerProfileResp
     {
         if (!HasManagePermission())
         {
-            var (userId, error) = await AuthorizeOwnProfileAsync(id);
+            var error = await AuthorizeOwnProfileAsync(id);
             if (error is not null)
             {
                 return error;
             }
-
-            request.UserId = userId;
         }
 
         return await base.Patch(id, request);
     }
 
-    // Deleting a profile is admin-only: a customer editing their own name must not be able
-    // to drop the row their meters/invoices hang off.
-    [RequirePermission(ManagePermission)]
+    // No DELETE /CustomerProfiles/{id}: a customer is deactivated through the user account (already a
+    // soft delete), and the profile's meters/invoices are history. [NonAction] takes the inherited
+    // BaseCRUDController.Delete out of MVC action discovery, so the route is not registered at all.
+    // CustomerProfileService.DeleteAsync also throws, as defense in depth.
+    [NonAction]
     public override Task<IActionResult> Delete(int id)
-        => base.Delete(id);
+        => throw new NotSupportedException("Customer profiles cannot be deleted.");
 
     // Shared ownership gate for the self-service Update/Patch path: the caller must own the
     // target row, and a row owned by someone else surfaces the same 404 as a missing id (not
-    // Forbid) so the response never confirms the id exists. Returns the caller's own user id
-    // so both writes can force UserId back to it - both request types carry a settable
-    // UserId, so without that a caller could reassign their own profile to another account on
-    // the way through (the mass-assignment guard UserNotificationsController.Patch applies for
-    // the same reason). Forcing it is a no-op for the owner (CustomerProfileService excludes
-    // the row itself from the one-profile-per-user check) and invisible to the FE, whose PATCH
-    // body never sends userId at all.
-    private async Task<(int? UserId, ActionResult? Error)> AuthorizeOwnProfileAsync(int id)
+    // Forbid) so the response never confirms the id exists. The request DTOs carry no UserId or
+    // CustomerCode at all (both are fixed at creation), so a caller cannot reassign their profile
+    // to another account on the way through.
+    private async Task<ActionResult?> AuthorizeOwnProfileAsync(int id)
     {
         if (!TryGetCurrentUserId(out var userId))
         {
-            return (null, Unauthorized());
+            return Unauthorized();
         }
 
         try
@@ -153,15 +147,15 @@ public class CustomerProfilesController : BaseCRUDController<CustomerProfileResp
             var existing = await Service.GetByIdAsync(id);
             if (existing.UserId != userId)
             {
-                return (null, NotFound());
+                return NotFound();
             }
         }
         catch (KeyNotFoundException)
         {
-            return (null, NotFound());
+            return NotFound();
         }
 
-        return (userId, null);
+        return null;
     }
 
     private bool HasManagePermission()

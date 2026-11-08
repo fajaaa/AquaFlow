@@ -25,6 +25,32 @@ public class WaterMetersControllerTests
     private const string AdminRole = "Admin";
     private const string CollectorRole = "Collector";
 
+    // DELETE /WaterMeters/{id} must not exist: a meter is retired through POST {id}/mark-broken and its
+    // readings/invoices are history. The inherited BaseCRUDController.Delete is overridden with
+    // [NonAction], which is exactly what MVC's action discovery checks to skip a public method, so
+    // pinning the attribute pins that the route is not registered (404/405 at the HTTP level).
+    [Fact]
+    public void Delete_IsNotAnMvcAction()
+    {
+        var method = typeof(WaterMetersController)
+            .GetMethods()
+            .Single(m => m.Name == nameof(WaterMetersController.Delete));
+
+        Assert.Equal(typeof(WaterMetersController), method.DeclaringType);
+        Assert.True(method.IsDefined(typeof(NonActionAttribute), inherit: false));
+    }
+
+    // Status, LastReading and CustomerId are server-owned: they must not be settable through Update/Patch.
+    [Theory]
+    [InlineData(typeof(WaterMeterUpdateRequest))]
+    [InlineData(typeof(WaterMeterPatchRequest))]
+    public void UpdateAndPatchRequests_DoNotExposeServerOwnedFields(Type requestType)
+    {
+        Assert.Null(requestType.GetProperty("Status"));
+        Assert.Null(requestType.GetProperty("LastReading"));
+        Assert.Null(requestType.GetProperty("CustomerId"));
+    }
+
     // Enforcement runs in the MVC authorization filter pipeline, which a direct method
     // call bypasses (see AquaFlow.WebAPI.Tests remarks in AGENTS.md), so this pins the
     // declarative gate itself: if [RequirePermission] is ever dropped from one of these
@@ -34,7 +60,6 @@ public class WaterMetersControllerTests
     [InlineData(nameof(WaterMetersController.Create))]
     [InlineData(nameof(WaterMetersController.Update))]
     [InlineData(nameof(WaterMetersController.Patch))]
-    [InlineData(nameof(WaterMetersController.Delete))]
     public void WriteAction_RequiresWaterMetersManagePermission(string methodName)
     {
         var method = typeof(WaterMetersController)
@@ -235,7 +260,6 @@ public class WaterMetersControllerTests
     [InlineData(nameof(WaterMetersController.Create))]
     [InlineData(nameof(WaterMetersController.Update))]
     [InlineData(nameof(WaterMetersController.Patch))]
-    [InlineData(nameof(WaterMetersController.Delete))]
     public void WriteAction_WithoutManagePermission_IsForbidden(string methodName)
     {
         // An ordinary authenticated customer - exactly the caller the missing gate let through.
@@ -248,7 +272,6 @@ public class WaterMetersControllerTests
     [InlineData(nameof(WaterMetersController.Create))]
     [InlineData(nameof(WaterMetersController.Update))]
     [InlineData(nameof(WaterMetersController.Patch))]
-    [InlineData(nameof(WaterMetersController.Delete))]
     public void WriteAction_WithManagePermission_IsAllowed(string methodName)
     {
         var context = AuthorizeWriteAction(

@@ -529,6 +529,12 @@ Unless stated otherwise, a resource supports `GET` (list), `GET /{id}`, `POST`, 
 - `/FaultReports` and `/WaterMeterRequests` have no `DELETE /{id}`. They are closed through a status
   transition, never physically removed, and a closed record (a resolved report; a registered,
   rejected or cancelled request) can no longer be edited with `PUT`/`PATCH`.
+- `/WaterMeters` and `/CustomerProfiles` have no `DELETE /{id}`: meters and customer profiles are never
+  physically deleted (a customer is deactivated through the user account). A meter changes status
+  only through `POST /WaterMeters/{id}/mark-broken`; its billing fields (`status`, `lastReading`,
+  `customerId`) are server-owned, and `PUT`/`PATCH` only edit descriptive fields (`initialReading`
+  and `installedAt` only until the first reading exists). `userId` and `customerCode` of a profile
+  are fixed at creation.
 
 ### Workflow endpoints
 

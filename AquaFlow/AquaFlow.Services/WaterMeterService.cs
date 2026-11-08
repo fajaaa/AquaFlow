@@ -56,6 +56,82 @@ public class WaterMeterService
         return await GetByIdAsync(id);
     }
 
+    // Lifecycle/billing fields are server-owned: a meter is created Active with LastReading =
+    // InitialReading regardless of what the client sent (Status/LastReading on the insert DTO are
+    // ignored). Status then changes only via MarkBrokenAsync, LastReading only via readings/invoice
+    // cancellation, CustomerId never.
+    protected override async Task BeforeInsertAsync(WaterMeterInsertRequest request)
+    {
+        await EnsureSerialNumberIsUniqueAsync(request.SerialNumber, null);
+        request.Status = WaterMeterStatus.Active;
+        request.LastReading = request.InitialReading;
+    }
+
+    protected override async Task BeforeUpdateAsync(int id, WaterMeterUpdateRequest request, WaterMeter entity)
+    {
+        EnsureNotRemoved(entity);
+        await EnsureSerialNumberIsUniqueAsync(request.SerialNumber, id);
+        await ApplyReadingBaselineChangeAsync(entity, request.InstalledAt, request.InitialReading);
+    }
+
+    protected override async Task BeforePatchAsync(int id, WaterMeterPatchRequest request, WaterMeter entity)
+    {
+        EnsureNotRemoved(entity);
+        if (request.SerialNumber != null)
+        {
+            await EnsureSerialNumberIsUniqueAsync(request.SerialNumber, id);
+        }
+
+        await ApplyReadingBaselineChangeAsync(entity, request.InstalledAt, request.InitialReading);
+    }
+
+    // A meter is retired through MarkBrokenAsync; its readings and invoices are history, so it is never
+    // physically removed. Defence in depth behind the controller, which no longer routes DELETE.
+    public override Task DeleteAsync(int id)
+        => throw new ClientException("Water meters are not deleted; retire a meter through mark-broken instead.");
+
+    private static void EnsureNotRemoved(WaterMeter entity)
+    {
+        if (string.Equals(entity.Status, WaterMeterStatus.Removed, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ClientException("Uklonjeni vodomjer se ne može mijenjati.");
+        }
+    }
+
+    private async Task EnsureSerialNumberIsUniqueAsync(string serialNumber, int? excludedId)
+    {
+        var normalized = serialNumber.Trim().ToLower();
+        var exists = await DbContext.WaterMeters.AnyAsync(m =>
+            m.Id != excludedId && m.SerialNumber.ToLower() == normalized);
+        if (exists)
+        {
+            throw new ClientException($"Water meter with serial number '{serialNumber.Trim()}' already exists.");
+        }
+    }
+
+    // InitialReading and InstalledAt define the baseline the first reading is measured against, so they
+    // may only change while the meter has no readings at all. When InitialReading changes, LastReading
+    // follows it (no reading exists, so LastReading == InitialReading by construction).
+    private async Task ApplyReadingBaselineChangeAsync(WaterMeter entity, DateTime? installedAt, decimal? initialReading)
+    {
+        var installedAtChanged = installedAt.HasValue && installedAt.Value != entity.InstalledAt;
+        var initialReadingChanged = initialReading.HasValue && initialReading.Value != entity.InitialReading;
+        if (!installedAtChanged && !initialReadingChanged)
+        {
+            return;
+        }
+
+        if (await DbContext.MeterReadings.AnyAsync(r => r.WaterMeterId == entity.Id))
+        {
+            throw new ClientException("Početno stanje i datum ugradnje ne mogu se mijenjati nakon što vodomjer ima očitanja.");
+        }
+
+        if (initialReadingChanged)
+        {
+            entity.LastReading = initialReading!.Value;
+        }
+    }
+
     protected override IQueryable<WaterMeter> IncludeForRead(IQueryable<WaterMeter> query) =>
         query.Include(w => w.Settlement).Include(w => w.Customer);
 

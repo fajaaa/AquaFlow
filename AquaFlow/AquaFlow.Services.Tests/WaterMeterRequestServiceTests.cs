@@ -84,6 +84,38 @@ public class WaterMeterRequestServiceTests
     }
 
     [Fact]
+    public async Task RegisterAsync_IgnoresClientStatusAndLastReading()
+    {
+        await using var context = CreateContext();
+        SeedCustomer(context, settlementId: 1);
+        SeedCollector(context);
+        context.WaterMeterRequests.Add(new WaterMeterRequest
+        {
+            Id = 1,
+            CustomerId = 1,
+            Status = WaterMeterRequestStatus.Assigned,
+            AssignedCollectorId = 1,
+            SettlementId = 1
+        });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var response = await service.RegisterAsync(1, new WaterMeterInsertRequest
+        {
+            SerialNumber = "WM-2026-0003",
+            SettlementId = 1,
+            Status = "Removed",
+            InitialReading = 7,
+            LastReading = 999
+        }, changedById: 2);
+
+        var meter = await context.WaterMeters.SingleAsync(m => m.Id == response.ResultingWaterMeterId!.Value);
+        Assert.Equal(WaterMeterStatus.Active, meter.Status);
+        Assert.Equal(7, meter.InitialReading);
+        Assert.Equal(7, meter.LastReading);
+    }
+
+    [Fact]
     public async Task RegisterAsync_UsesCollectorSuppliedAddress_AndForcesCustomerFromRequest()
     {
         await using var context = CreateContext();

@@ -51,10 +51,10 @@ public class CustomerProfileService
         request.CustomerCode = await GenerateCustomerCodeAsync();
     }
 
+    // UserId and CustomerCode are not on the Update/Patch DTOs: the account link and the generated
+    // code are fixed at creation, so only the descriptive fields can change here.
     protected override async Task BeforeUpdateAsync(int id, CustomerProfileUpdateRequest request, CustomerProfile entity)
     {
-        await EnsureUserExistsAsync(request.UserId);
-        await EnsureUserDoesNotHaveCustomerProfileAsync(request.UserId, id);
         if (request.SettlementId.HasValue)
         {
             await EnsureSettlementExistsAsync(request.SettlementId.Value);
@@ -62,16 +62,10 @@ public class CustomerProfileService
 
         request.FirstName = Capitalize(request.FirstName);
         request.LastName = Capitalize(request.LastName);
-
-        // CustomerCode is immutable once assigned; ignore whatever the caller sent.
-        request.CustomerCode = entity.CustomerCode;
     }
 
     protected override async Task BeforePatchAsync(int id, CustomerProfilePatchRequest request, CustomerProfile entity)
     {
-        // CustomerCode is immutable once assigned; ignore whatever the caller sent.
-        request.CustomerCode = null;
-
         if (request.FirstName != null)
         {
             request.FirstName = Capitalize(request.FirstName);
@@ -86,16 +80,13 @@ public class CustomerProfileService
         {
             await EnsureSettlementExistsAsync(request.SettlementId.Value);
         }
-
-        if (!request.UserId.HasValue)
-        {
-            return;
-        }
-
-        await EnsureUserExistsAsync(request.UserId.Value);
-        await EnsureUserDoesNotHaveCustomerProfileAsync(request.UserId.Value, id);
     }
 
+    // A customer is deactivated through the user account (already a soft delete); the profile and the
+    // meters/invoices hanging off it are history. Defence in depth behind the controller, which no
+    // longer routes DELETE.
+    public override Task DeleteAsync(int id)
+        => throw new ClientException("Customer profiles are not deleted; deactivate the user account instead.");
     // Names are always stored capitalized, regardless of how the caller typed them
     // (mobile registration and the admin Users editor both funnel through here).
     private static string Capitalize(string value)

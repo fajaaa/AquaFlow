@@ -26,6 +26,9 @@ public class AssignedWaterMeterRequestState : BaseWaterMeterRequestState
     {
         var meter = Mapper.Map<WaterMeter>(meterData);
         meter.CustomerId = request.CustomerId;
+        // Lifecycle/billing fields are server-owned: whatever Status/LastReading the client sent is ignored.
+        meter.Status = WaterMeterStatus.Active;
+        meter.LastReading = meter.InitialReading;
         meter.CreatedAt = DateTime.UtcNow;
 
         // Setting the navigation lets EF assign ResultingWaterMeterId from the new meter's
