@@ -46,6 +46,18 @@ namespace AquaFlow.Services.Migrations
                     { 4, "Direct", new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), true, true, "Direktno - sistemske", "Direkt - System", "Direct - system", 40, null }
                 });
 
+            // The FK is by code: SQL Server requires the referencing column to have exactly the same
+            // length as NotificationAudiences.Code (nvarchar(50)), so widen Audience from 40 first.
+            migrationBuilder.AlterColumn<string>(
+                name: "Audience",
+                table: "Notifications",
+                type: "nvarchar(50)",
+                maxLength: 50,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "nvarchar(40)",
+                oldMaxLength: 40);
+
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_Audience",
                 table: "Notifications",
@@ -88,6 +100,16 @@ WHERE s.[Audience] IS NOT NULL
             migrationBuilder.DropIndex(
                 name: "IX_Notifications_Audience",
                 table: "Notifications");
+
+            migrationBuilder.AlterColumn<string>(
+                name: "Audience",
+                table: "Notifications",
+                type: "nvarchar(40)",
+                maxLength: 40,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "nvarchar(50)",
+                oldMaxLength: 50);
         }
     }
 }

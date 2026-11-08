@@ -2767,8 +2767,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Audience")
                         .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Body")
                         .IsRequired()

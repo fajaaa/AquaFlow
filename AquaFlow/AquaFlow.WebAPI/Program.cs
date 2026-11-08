@@ -534,6 +534,16 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+// Docker quick start: when Database:MigrateOnStartup is true (set only in docker-compose.yml) the API
+// applies every pending EF Core migration - schema plus the HasData seed (roles, permissions,
+// codebooks, tariffs, demo accounts) - before it starts serving, so `docker compose up` alone yields
+// a ready 210126 database. Off by default: local development and the test host keep the explicit
+// `dotnet ef database update` step and never touch a database implicitly.
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    await MigrateDatabaseAsync(app);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -555,6 +565,44 @@ app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();
+
+// SQL Server can report healthy a moment before it accepts logins for a new database, so the
+// migration is retried a few times instead of crashing the container on the first transient error.
+// After the last attempt the exception propagates and the container exits (docker-compose restarts it).
+static async Task MigrateDatabaseAsync(WebApplication app)
+{
+    const int maxAttempts = 10;
+    var delay = TimeSpan.FromSeconds(5);
+    var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseMigration");
+
+    for (var attempt = 1; ; attempt++)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AquaFlowDbContext>();
+
+            var pending = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
+            if (pending.Count == 0)
+            {
+                logger.LogInformation("Database is up to date, no migrations to apply.");
+                return;
+            }
+
+            logger.LogInformation("Applying {Count} pending migration(s)...", pending.Count);
+            await dbContext.Database.MigrateAsync();
+            logger.LogInformation("Database migrations applied.");
+            return;
+        }
+        catch (Exception exception) when (attempt < maxAttempts)
+        {
+            logger.LogWarning(exception,
+                "Database migration attempt {Attempt}/{MaxAttempts} failed, retrying in {Delay}s.",
+                attempt, maxAttempts, delay.TotalSeconds);
+            await Task.Delay(delay);
+        }
+    }
+}
 
 void AddCrud<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>()
     where TEntity : EntityBase

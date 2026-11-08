@@ -212,16 +212,22 @@ container credentials are development placeholders defined in
 [docker-compose.yml](AquaFlow/docker-compose.yml); they are not intended for any shared or
 hosted environment.
 
-Migrations still have to be applied by hand (the API does not migrate on start-up):
-
-```powershell
-dotnet ef database update --project .\AquaFlow\AquaFlow.Services --startup-project .\AquaFlow\AquaFlow.WebAPI
-```
-
-That connects to the database over its host-mapped port (`localhost,1435`), so it works the
-same whether SQL Server is running in Docker or locally. Then open
+No manual migration step is needed here: in Docker the API runs with
+`Database__MigrateOnStartup=true`, so on start-up it creates the `210126` database and applies every
+pending migration (schema plus seed data: roles, permissions, codebooks, tariffs and the demo
+accounts) before it starts serving, retrying while SQL Server is still warming up. Follow it with
+`docker compose --file .\AquaFlow\docker-compose.yml logs -f aquaflow-api`. Then open
 `http://localhost:5161/scalar/v1` to confirm the API is up, and skip ahead to
 [Login credentials](#login-credentials) to sign in from a client.
+
+The API and worker containers also read the optional, gitignored `AquaFlow.WebAPI/.env` (it is
+never copied into an image): set `Payments__Provider=Stripe` with the `Payments__Stripe__*` keys to
+use Stripe in Docker, and `Firebase__ServiceAccountJson` (inline JSON - a host file path does not
+exist inside the container) for push delivery by the worker. Values defined in
+`docker-compose.yml` (database, broker, JWT) always take precedence over `.env`.
+
+Outside Docker (step-by-step setup below) migrations are applied explicitly with
+`dotnet ef database update`; the API never migrates a database implicitly there.
 
 To stop everything: `docker compose --file .\AquaFlow\docker-compose.yml down` (add `-v` to also
 drop the database volume and start clean next time).

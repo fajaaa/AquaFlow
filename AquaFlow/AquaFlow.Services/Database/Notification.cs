@@ -10,7 +10,8 @@ public class Notification : EntityBase
     public string Body { get; set; } = string.Empty;
     [MaxLength(50)]
     public string Type { get; set; } = "Info";
-    [MaxLength(40)]
+    // Same length as NotificationAudiences.Code (FK by code): SQL Server requires equal lengths.
+    [MaxLength(50)]
     public string Audience { get; set; } = "All";
     public int CreatedById { get; set; }
     public User? CreatedBy { get; set; }
