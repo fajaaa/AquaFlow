@@ -1633,4 +1633,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String expectedRangeValue(String value, String lower, String upper) {
     return '$value m³ ($lower-$upper)';
   }
+
+  @override
+  String cubicMetersValue(String value) {
+    return '$value m³';
+  }
+
+  @override
+  String get markAsResolvedButtonLabel => 'Mark as resolved';
+
+  @override
+  String get expectedInsufficientHistory => 'Not enough history';
+
+  @override
+  String get expectedInsufficientHistoryTooltip =>
+      'The model needs at least 5 previous readings for this water meter.';
+
+  @override
+  String get alertAboveExpectedLabel => 'Above expected';
+
+  @override
+  String get alertBelowExpectedLabel => 'Below expected';
 }

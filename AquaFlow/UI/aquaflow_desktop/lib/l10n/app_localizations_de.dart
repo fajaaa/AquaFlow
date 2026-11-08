@@ -1645,4 +1645,25 @@ class AppLocalizationsDe extends AppLocalizations {
   String expectedRangeValue(String value, String lower, String upper) {
     return '$value m³ ($lower-$upper)';
   }
+
+  @override
+  String cubicMetersValue(String value) {
+    return '$value m³';
+  }
+
+  @override
+  String get markAsResolvedButtonLabel => 'Als erledigt markieren';
+
+  @override
+  String get expectedInsufficientHistory => 'Zu wenig Verlauf';
+
+  @override
+  String get expectedInsufficientHistoryTooltip =>
+      'Das Modell benötigt mindestens 5 frühere Ablesungen für diesen Wasserzähler.';
+
+  @override
+  String get alertAboveExpectedLabel => 'Über dem Erwartungswert';
+
+  @override
+  String get alertBelowExpectedLabel => 'Unter dem Erwartungswert';
 }

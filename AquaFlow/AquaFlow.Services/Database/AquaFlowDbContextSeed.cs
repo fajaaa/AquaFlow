@@ -849,20 +849,27 @@ public partial class AquaFlowDbContext
     // so a different invoice amount) every hour, instead of a flat figure. Every value is a multiple
     // of 0.20 m3 so ConsumptionM3 * Tariff.PricePerM3 (1.35) lands on an exact 2-decimal amount for
     // every generated invoice line - no seeded rounding drift.
+    // Seven values per meter: six readings precede the latest one, enough for the SSA model's
+    // expectation for it (ExpectedLatest*), so a seeded consumption alert can show what the model
+    // expected. The first two values (06:00, 07:00) were prepended later with InitialReading lowered
+    // by their sum, so the 08:00-12:00 readings and LastReading kept their values. Meters 4 and 6 end
+    // on a clear drop and are flagged by the anomaly detector, the rest are not.
     private static readonly (int Id, string SerialNumber, int CustomerId, int SettlementId, string Street, string HouseNumber, decimal InitialReading, decimal[] HourlyConsumption, int CollectorId)[] WaterMeterPlan =
     {
-        (1, "WM-2026-0001", 1, 8, "Ozrenska", "15", 80.00m, new[] { 12.20m, 15.80m, 10.40m, 16.60m, 14.20m }, 1),
-        (2, "WM-2026-0002", 1, 9, "Behdzeta Mutevelica", "4", 60.00m, new[] { 8.20m, 11.40m, 9.80m, 7.60m, 10.60m }, 1),
-        (3, "WM-2026-0003", 1, 1, "Mali Behar", "9", 95.00m, new[] { 13.00m, 9.40m, 12.80m, 14.60m, 10.20m }, 1),
-        (4, "WM-2026-0004", 2, 6, "Dobrinjske bolnice", "7", 70.00m, new[] { 11.80m, 14.20m, 12.60m, 15.40m, 10.00m }, 2),
-        (5, "WM-2026-0005", 2, 7, "Trg Oslobodjenja", "3", 55.00m, new[] { 9.00m, 11.60m, 8.40m, 12.20m, 10.80m }, 2),
-        (6, "WM-2026-0006", 3, 11, "Saraci", "22", 40.00m, new[] { 10.60m, 13.40m, 11.20m, 14.80m, 9.60m }, 2),
+        (1, "WM-2026-0001", 1, 8, "Ozrenska", "15", 53.00m, new[] { 11.00m, 16.00m, 12.20m, 15.80m, 10.40m, 16.60m, 14.20m }, 1),
+        (2, "WM-2026-0002", 1, 9, "Behdzeta Mutevelica", "4", 39.40m, new[] { 8.60m, 12.00m, 8.20m, 11.40m, 9.80m, 7.60m, 10.60m }, 1),
+        (3, "WM-2026-0003", 1, 1, "Mali Behar", "9", 70.80m, new[] { 15.20m, 9.00m, 13.00m, 9.40m, 12.80m, 14.60m, 10.20m }, 1),
+        (4, "WM-2026-0004", 2, 6, "Dobrinjske bolnice", "7", 44.00m, new[] { 12.40m, 13.60m, 11.80m, 14.20m, 12.60m, 15.40m, 10.00m }, 2),
+        (5, "WM-2026-0005", 2, 7, "Trg Oslobodjenja", "3", 33.00m, new[] { 9.60m, 12.40m, 9.00m, 11.60m, 8.40m, 12.20m, 10.80m }, 2),
+        (6, "WM-2026-0006", 3, 11, "Saraci", "22", 14.80m, new[] { 11.60m, 13.60m, 10.60m, 13.40m, 11.20m, 14.80m, 9.60m }, 2),
     };
 
-    // Five hourly readings per meter, same day (2026-06-01, 08:00-12:00 UTC); billing period for a
+    // Seven hourly readings per meter, same day (2026-06-01, 06:00-12:00 UTC); billing period for a
     // reading is always the one-hour window ending at it, so both readings and invoices run hourly.
     private static readonly DateTime[] ReadingTimestamps =
     {
+        new(2026, 6, 1, 6, 0, 0, DateTimeKind.Utc),
+        new(2026, 6, 1, 7, 0, 0, DateTimeKind.Utc),
         new(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc),
         new(2026, 6, 1, 9, 0, 0, DateTimeKind.Utc),
         new(2026, 6, 1, 10, 0, 0, DateTimeKind.Utc),
@@ -871,11 +878,11 @@ public partial class AquaFlowDbContext
     };
 
     // (WaterMeterId, ReadingTimestamps index) pairs whose invoice is left unpaid. Sized to hit the
-    // requested counts exactly: Denis 12 paid/3 unpaid (meters 1-3, last hour each), Elmir 9 paid/1
-    // unpaid (meter 4, last hour), Adil 3 paid/2 unpaid (meter 6, last two hours).
+    // requested counts exactly: Denis 18 paid/3 unpaid (meters 1-3, last hour each), Elmir 13 paid/1
+    // unpaid (meter 4, last hour), Adil 5 paid/2 unpaid (meter 6, last two hours).
     private static readonly HashSet<(int MeterId, int HourIndex)> UnpaidInvoices = new()
     {
-        (1, 4), (2, 4), (3, 4), (4, 4), (6, 3), (6, 4)
+        (1, 6), (2, 6), (3, 6), (4, 6), (6, 5), (6, 6)
     };
 
     private static (DateTime From, DateTime To) GetBillingPeriod(DateTime readingDate) => (readingDate.AddHours(-1), readingDate);
@@ -1177,7 +1184,7 @@ public partial class AquaFlowDbContext
             (AquaFlow.Model.NotificationAudience.Direct, "Direktno - sistemske", "Direct - system", "Direkt - System", true));
 
         SeedLookup<ConsumptionAlertTypeLookup>(modelBuilder,
-            (WaterConsumptionAlertService.UnusualConsumptionSpikeType, "Neuobičajen skok potrošnje", "Unusual consumption spike", "Ungewöhnlicher Verbrauchsanstieg", true));
+            (WaterConsumptionAlertService.UnusualConsumptionSpikeType, "Neuobičajena potrošnja", "Unusual consumption", "Ungewöhnlicher Verbrauch", true));
     }
 
     private static void SeedLookup<TLookup>(

@@ -1,5 +1,6 @@
 using AquaFlow.Services.Database;
 using AquaFlow.Services.Forecasting;
+using AquaFlow.Services.Tests.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -102,6 +103,34 @@ public class ConsumptionForecastingServiceTests
         Assert.Equal(first.ExpectedLatestM3, second.ExpectedLatestM3);
         Assert.Equal(first.PredictedNextConsumptionM3, second.PredictedNextConsumptionM3);
         Assert.Equal(first.AnomalyScore, second.AnomalyScore);
+    }
+
+    // The HasData seed's seven readings per meter on real SQL (SQLite): every meter gets the model's
+    // expectation for its latest reading; a flagged meter's latest reading lies outside that 95%
+    // interval, a normal one inside it.
+    [Theory]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(3, false)]
+    [InlineData(4, true)]
+    [InlineData(5, false)]
+    [InlineData(6, true)]
+    public async Task AnalyzeAsync_HasDataSeedMeter_HasExpectationAndExpectedAnomalyFlag(int waterMeterId, bool isAnomaly)
+    {
+        using var database = new SqliteTestDatabase();
+        await using var context = database.CreateContext();
+
+        var insight = await new ConsumptionForecastingService(context).AnalyzeAsync(waterMeterId);
+
+        Assert.True(insight.HasEnoughData);
+        Assert.Equal(7, insight.History.Length);
+        Assert.Equal(isAnomaly, insight.IsAnomaly);
+        Assert.NotNull(insight.ExpectedLatestM3);
+        Assert.NotNull(insight.ExpectedLatestLowerM3);
+        Assert.NotNull(insight.ExpectedLatestUpperM3);
+        var latest = insight.History[^1];
+        var insideInterval = latest >= insight.ExpectedLatestLowerM3!.Value && latest <= insight.ExpectedLatestUpperM3!.Value;
+        Assert.Equal(!isAnomaly, insideInterval);
     }
 
     private static AquaFlowDbContext CreateContext()

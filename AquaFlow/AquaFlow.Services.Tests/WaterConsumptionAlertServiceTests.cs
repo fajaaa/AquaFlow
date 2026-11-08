@@ -83,6 +83,8 @@ public class WaterConsumptionAlertServiceTests
         Assert.Equal(21m, alert.ThresholdValue);
     }
 
+    // Without a model expectation the reading is compared with the previous-readings average, so the
+    // text must not claim an "expected" value that does not exist.
     [Fact]
     public void AlertExplanation_WithoutModelExpectation_KeepsOnlyBaselinePart()
     {
@@ -90,9 +92,63 @@ public class WaterConsumptionAlertServiceTests
 
         var message = explanation.BuildMessage();
 
-        Assert.Contains("znatno je ispod očekivane", message);
+        Assert.StartsWith($"Očitana potrošnja od {3m:0.##} m³ za mjerač WM-7 znatno je ispod uobičajene.", message);
+        Assert.DoesNotContain("očekiv", message);
         Assert.DoesNotContain("Model", message);
         Assert.Contains($"Prosjek prethodna 3 očitanja je {20m:0.##} m³.", message);
+    }
+
+    [Fact]
+    public void AlertExplanation_WithModelExpectation_SaysExpectedAndShowsInterval()
+    {
+        var explanation = new WaterConsumptionAlertService.AlertExplanation("WM-7", 30m, 20.5m, 18m, 23m, 21m, 3);
+
+        var message = explanation.BuildMessage();
+
+        Assert.StartsWith($"Očitana potrošnja od {30m:0.##} m³ za mjerač WM-7 znatno je iznad očekivane.", message);
+        Assert.DoesNotContain("uobičajene", message);
+        Assert.Contains($"Model je na osnovu prethodnih očitanja očekivao {20.5m:0.##} m³ (95% interval {18m:0.##}–{23m:0.##} m³);", message);
+        Assert.Contains($"prosjek prethodna 3 očitanja je {21m:0.##} m³.", message);
+    }
+
+    // The push/inbox text and the full alert text use the same reference word.
+    [Theory]
+    [InlineData(true, "očekivane")]
+    [InlineData(false, "uobičajene")]
+    public void AlertExplanation_ShortAndFullMessage_UseSameReferenceWord(bool withExpected, string reference)
+    {
+        var explanation = withExpected
+            ? new WaterConsumptionAlertService.AlertExplanation("WM-7", 30m, 20.5m, 18m, 23m, 21m, 3)
+            : new WaterConsumptionAlertService.AlertExplanation("WM-7", 30m, null, null, null, 21m, 3);
+
+        Assert.Contains($"znatno je iznad {reference}", explanation.BuildMessage());
+        Assert.Contains($"znatno je iznad {reference}", explanation.BuildShortMessage());
+    }
+
+    // The HasData seed (seven hourly readings per meter, see AquaFlowDbContextSeed) demos a
+    // model-explained alert: six readings precede the latest one, so the SSA expectation exists.
+    // Meters 4 (10.0 after 11.8-15.4) and 6 (9.6 after 10.6-14.8) end on a clear drop and are flagged;
+    // the other four end on an ordinary reading and are not.
+    [Fact]
+    public async Task RecomputeAsync_HasDataSeed_FlagsDroppingMetersWithModelExpectation()
+    {
+        using var database = new SqliteTestDatabase();
+        await using var context = database.CreateContext();
+        var service = CreateService(context);
+
+        var created = await service.RecomputeAsync();
+
+        Assert.Equal(new[] { 4, 6 }, created.Select(alert => alert.WaterMeterId).OrderBy(id => id));
+        Assert.All(created, alert =>
+        {
+            Assert.NotNull(alert.ExpectedValue);
+            Assert.NotNull(alert.ExpectedLowerBound);
+            Assert.NotNull(alert.ExpectedUpperBound);
+            Assert.True(alert.MeasuredValue < alert.ExpectedLowerBound,
+                $"Meter {alert.WaterMeterId}: {alert.MeasuredValue} not below {alert.ExpectedLowerBound}.");
+            Assert.Contains("znatno je ispod očekivane.", alert.Message);
+            Assert.Contains($"očekivao {alert.ExpectedValue:0.##} m³ (95% interval {alert.ExpectedLowerBound:0.##}–{alert.ExpectedUpperBound:0.##} m³)", alert.Message);
+        });
     }
 
     [Fact]

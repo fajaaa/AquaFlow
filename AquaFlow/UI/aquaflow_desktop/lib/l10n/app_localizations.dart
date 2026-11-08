@@ -3069,6 +3069,42 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'{value} m³ ({lower}-{upper})'**
   String expectedRangeValue(String value, String lower, String upper);
+
+  /// A water volume in cubic metres, e.g. 12.50 m³.
+  ///
+  /// In bs, this message translates to:
+  /// **'{value} m³'**
+  String cubicMetersValue(String value);
+
+  /// Label of the button on a consumption alert card that marks the alert as resolved.
+  ///
+  /// In bs, this message translates to:
+  /// **'Označi riješenim'**
+  String get markAsResolvedButtonLabel;
+
+  /// Shown on a consumption alert card instead of the expected range when the forecast model had too few previous readings.
+  ///
+  /// In bs, this message translates to:
+  /// **'Premalo historije'**
+  String get expectedInsufficientHistory;
+
+  /// Tooltip explaining why a consumption alert has no expected range.
+  ///
+  /// In bs, this message translates to:
+  /// **'Model treba najmanje 5 prethodnih očitanja za ovaj vodomjer.'**
+  String get expectedInsufficientHistoryTooltip;
+
+  /// Chip on a consumption alert card: the measured value is above the expected value.
+  ///
+  /// In bs, this message translates to:
+  /// **'Iznad očekivanog'**
+  String get alertAboveExpectedLabel;
+
+  /// Chip on a consumption alert card: the measured value is below the expected value.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ispod očekivanog'**
+  String get alertBelowExpectedLabel;
 }
 
 class _AppLocalizationsDelegate

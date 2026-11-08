@@ -534,5 +534,11 @@
   "noPermissionsMessage": "No permissions.",
   "rolesPermissionsEmptyFilteredMessage": "No results match the selected filters.",
   "expectedColumnLabel": "Expected (95 %)",
-  "expectedRangeValue": "{value} m³ ({lower}-{upper})"
+  "expectedRangeValue": "{value} m³ ({lower}-{upper})",
+  "cubicMetersValue": "{value} m³",
+  "markAsResolvedButtonLabel": "Mark as resolved",
+  "expectedInsufficientHistory": "Not enough history",
+  "expectedInsufficientHistoryTooltip": "The model needs at least 5 previous readings for this water meter.",
+  "alertAboveExpectedLabel": "Above expected",
+  "alertBelowExpectedLabel": "Below expected"
 }

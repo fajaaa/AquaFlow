@@ -215,9 +215,13 @@ public class WaterConsumptionAlertService
 
         private string Direction => IsAbove ? "je iznad" : "je ispod";
 
+        // "očekivane" only when the model produced an expectation; otherwise the comparison is with
+        // the previous-readings average, i.e. the usual consumption.
+        private string Reference => Expected.HasValue ? "očekivane" : "uobičajene";
+
         public string BuildMessage()
         {
-            var message = $"Očitana potrošnja od {Measured:0.##} m³ za mjerač {SerialNumber} znatno {Direction} očekivane.";
+            var message = $"Očitana potrošnja od {Measured:0.##} m³ za mjerač {SerialNumber} znatno {Direction} {Reference}.";
             if (Expected.HasValue)
             {
                 message += $" Model je na osnovu prethodnih očitanja očekivao {Expected.Value:0.##} m³ (95% interval {ExpectedLower:0.##}–{ExpectedUpper:0.##} m³);";
@@ -233,8 +237,8 @@ public class WaterConsumptionAlertService
 
         // Push/inbox-sized version: measured vs. the single most relevant reference value.
         public string BuildShortMessage() => Expected.HasValue
-            ? $"Očitana potrošnja od {Measured:0.##} m³ za mjerač {SerialNumber} znatno {Direction} očekivane (oko {Expected.Value:0.##} m³)."
-            : $"Očitana potrošnja od {Measured:0.##} m³ za mjerač {SerialNumber} znatno {Direction} uobičajene (prosjek {Baseline:0.##} m³).";
+            ? $"Očitana potrošnja od {Measured:0.##} m³ za mjerač {SerialNumber} znatno {Direction} {Reference} (oko {Expected.Value:0.##} m³)."
+            : $"Očitana potrošnja od {Measured:0.##} m³ za mjerač {SerialNumber} znatno {Direction} {Reference} (prosjek {Baseline:0.##} m³).";
     }
 
     protected override IQueryable<WaterConsumptionAlert> ApplyFilters(IQueryable<WaterConsumptionAlert> query, WaterConsumptionAlertSearchObject? search)

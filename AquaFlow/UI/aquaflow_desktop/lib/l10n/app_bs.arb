@@ -2008,5 +2008,32 @@
       "lower": { "type": "String" },
       "upper": { "type": "String" }
     }
+  },
+  "cubicMetersValue": "{value} m³",
+  "@cubicMetersValue": {
+    "description": "A water volume in cubic metres, e.g. 12.50 m³.",
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "markAsResolvedButtonLabel": "Označi riješenim",
+  "@markAsResolvedButtonLabel": {
+    "description": "Label of the button on a consumption alert card that marks the alert as resolved."
+  },
+  "expectedInsufficientHistory": "Premalo historije",
+  "@expectedInsufficientHistory": {
+    "description": "Shown on a consumption alert card instead of the expected range when the forecast model had too few previous readings."
+  },
+  "expectedInsufficientHistoryTooltip": "Model treba najmanje 5 prethodnih očitanja za ovaj vodomjer.",
+  "@expectedInsufficientHistoryTooltip": {
+    "description": "Tooltip explaining why a consumption alert has no expected range."
+  },
+  "alertAboveExpectedLabel": "Iznad očekivanog",
+  "@alertAboveExpectedLabel": {
+    "description": "Chip on a consumption alert card: the measured value is above the expected value."
+  },
+  "alertBelowExpectedLabel": "Ispod očekivanog",
+  "@alertBelowExpectedLabel": {
+    "description": "Chip on a consumption alert card: the measured value is below the expected value."
   }
 }

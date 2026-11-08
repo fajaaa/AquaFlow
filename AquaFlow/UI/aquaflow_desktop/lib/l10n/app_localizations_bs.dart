@@ -1628,4 +1628,25 @@ class AppLocalizationsBs extends AppLocalizations {
   String expectedRangeValue(String value, String lower, String upper) {
     return '$value m³ ($lower-$upper)';
   }
+
+  @override
+  String cubicMetersValue(String value) {
+    return '$value m³';
+  }
+
+  @override
+  String get markAsResolvedButtonLabel => 'Označi riješenim';
+
+  @override
+  String get expectedInsufficientHistory => 'Premalo historije';
+
+  @override
+  String get expectedInsufficientHistoryTooltip =>
+      'Model treba najmanje 5 prethodnih očitanja za ovaj vodomjer.';
+
+  @override
+  String get alertAboveExpectedLabel => 'Iznad očekivanog';
+
+  @override
+  String get alertBelowExpectedLabel => 'Ispod očekivanog';
 }

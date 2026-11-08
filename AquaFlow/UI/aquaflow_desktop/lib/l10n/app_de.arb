@@ -494,5 +494,11 @@
   "noPermissionsMessage": "Keine Berechtigungen.",
   "rolesPermissionsEmptyFilteredMessage": "Keine Ergebnisse für die gewählten Filter.",
   "expectedColumnLabel": "Erwartet (95 %)",
-  "expectedRangeValue": "{value} m³ ({lower}-{upper})"
+  "expectedRangeValue": "{value} m³ ({lower}-{upper})",
+  "cubicMetersValue": "{value} m³",
+  "markAsResolvedButtonLabel": "Als erledigt markieren",
+  "expectedInsufficientHistory": "Zu wenig Verlauf",
+  "expectedInsufficientHistoryTooltip": "Das Modell benötigt mindestens 5 frühere Ablesungen für diesen Wasserzähler.",
+  "alertAboveExpectedLabel": "Über dem Erwartungswert",
+  "alertBelowExpectedLabel": "Unter dem Erwartungswert"
 }
