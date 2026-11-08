@@ -110,6 +110,64 @@ class AdminNotificationService {
     return _decodeNotification(response.body);
   }
 
+  /// Creates a notification together with its [images] in one atomic call
+  /// (`POST /Notifications/with-images`, multipart: form fields + files named
+  /// `images`). The server validates every file first and stores notification,
+  /// images and inbox rows in one transaction, publishing the push only after
+  /// the commit - so a failure leaves nothing behind and the call can be retried.
+  /// `createdById` is not sent: the server takes it from the JWT.
+  Future<AppNotification> createWithImages(
+    AdminNotificationDraft draft,
+    List<File> images,
+  ) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Notifications/with-images');
+
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['Title'] = draft.title
+      ..fields['Body'] = draft.body
+      ..fields['Type'] = draft.type
+      ..fields['Audience'] = draft.audience;
+
+    for (final imageFile in images) {
+      request.files.add(await _imagePart('images', imageFile));
+    }
+
+    final http.Response response;
+    try {
+      final streamed = await _client.send(request).timeout(_timeout);
+      response = await http.Response.fromStream(streamed);
+    } on SocketException {
+      throw NotificationException('Server nije dostupan na ${ApiConfig.baseUrl}.');
+    } on TimeoutException {
+      throw const NotificationException('Server nije odgovorio na vrijeme.');
+    } on http.ClientException catch (e) {
+      throw NotificationException('Greška mreže: ${e.message}');
+    }
+
+    if (response.statusCode != 201) {
+      throw NotificationException(
+        _messageFor(response, 'Obavijest nije moguće dodati'),
+      );
+    }
+
+    return _decodeNotification(response.body);
+  }
+
+  // Same magic-byte sniffing as CustomerFaultReportService.uploadPhoto - a file path with
+  // no/an unrecognized extension (e.g. a cache file from the Android Photo Picker) would
+  // otherwise fall back to application/octet-stream, which the backend's whitelist rejects.
+  Future<http.MultipartFile> _imagePart(String field, File imageFile) async {
+    final headerBytes = await imageFile.openRead(0, 12).first;
+    final mimeType =
+        lookupMimeType(imageFile.path, headerBytes: headerBytes) ??
+        'image/jpeg';
+    return http.MultipartFile.fromPath(
+      field,
+      imageFile.path,
+      contentType: MediaType.parse(mimeType),
+    );
+  }
+
   Future<AppNotification> update(int id, AdminNotificationDraft draft) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/Notifications/$id');
 
@@ -185,21 +243,8 @@ class AdminNotificationService {
       '${ApiConfig.baseUrl}/Notifications/$notificationId/images',
     );
 
-    // Same magic-byte sniffing as CustomerFaultReportService.uploadPhoto - a file path with
-    // no/an unrecognized extension (e.g. a cache file from the Android Photo Picker) would
-    // otherwise fall back to application/octet-stream, which the backend's whitelist rejects.
-    final headerBytes = await imageFile.openRead(0, 12).first;
-    final mimeType =
-        lookupMimeType(imageFile.path, headerBytes: headerBytes) ??
-        'image/jpeg';
     final request = http.MultipartRequest('POST', uri)
-      ..files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          imageFile.path,
-          contentType: MediaType.parse(mimeType),
-        ),
-      );
+      ..files.add(await _imagePart('file', imageFile));
 
     final http.Response response;
     try {

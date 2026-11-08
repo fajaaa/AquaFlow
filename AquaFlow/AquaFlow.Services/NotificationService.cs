@@ -10,8 +10,11 @@ using Microsoft.EntityFrameworkCore;
 namespace AquaFlow.Services;
 
 public class NotificationService
-    : EfCrudService<Notification, NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>
+    : EfCrudService<Notification, NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>,
+        INotificationService
 {
+    private const int MaxImagesPerNotification = 5;
+
     private readonly NotificationRecipientService _recipientService;
     private readonly INotificationPushPublisher _pushPublisher;
 
@@ -72,8 +75,35 @@ public class NotificationService
         }
     }
 
-    public override async Task<NotificationResponse> InsertAsync(NotificationInsertRequest request)
+    public override Task<NotificationResponse> InsertAsync(NotificationInsertRequest request)
+        => CreateCoreAsync(request, Array.Empty<(byte[] Data, string ContentType, string FileName)>());
+
+    public Task<NotificationResponse> CreateWithImagesAsync(
+        NotificationInsertRequest request,
+        IReadOnlyList<(byte[] Data, string ContentType, string FileName)> images,
+        int createdById)
     {
+        request.CreatedById = createdById;
+        return CreateCoreAsync(request, images);
+    }
+
+    // Shared by InsertAsync (no images) and CreateWithImagesAsync: every check runs before the first
+    // write, then notification + inbox rows + images are written in one transaction and the push is
+    // published only after the commit.
+    private async Task<NotificationResponse> CreateCoreAsync(
+        NotificationInsertRequest request,
+        IReadOnlyList<(byte[] Data, string ContentType, string FileName)> images)
+    {
+        if (images.Count > MaxImagesPerNotification)
+        {
+            throw new ClientException($"A notification can have at most {MaxImagesPerNotification} images.");
+        }
+
+        if (images.Any(image => image.Data is null || image.Data.Length == 0))
+        {
+            throw new ClientException("An image must not be empty.");
+        }
+
         await ValidateInsertAsync(request);
         await BeforeInsertAsync(request);
 
@@ -90,10 +120,25 @@ public class NotificationService
         await AddMissingUserNotificationsAsync(entity, recipientUserIds);
         await DbContext.SaveChangesAsync();
 
+        if (images.Count > 0)
+        {
+            DbContext.NotificationImages.AddRange(images.Select(image => new NotificationImage
+            {
+                NotificationId = entity.Id,
+                Data = image.Data,
+                ContentType = image.ContentType,
+                FileName = image.FileName,
+                SizeBytes = image.Data.LongLength,
+                CreatedAt = now
+            }));
+            await DbContext.SaveChangesAsync();
+        }
+
         await transaction.CommitAsync();
 
         // After CommitAsync: the publisher logs and swallows broker errors, so an outage can never
-        // block or roll back the notification and its inbox rows. AquaFlow.Subscriber delivers the push.
+        // block or roll back the notification, its images and its inbox rows. AquaFlow.Subscriber
+        // delivers the push.
         await _pushPublisher.PublishAsync(entity.Id, recipientUserIds);
 
         await LoadReferencesAsync(entity);

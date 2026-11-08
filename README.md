@@ -103,6 +103,8 @@ conversations between a customer and staff, with photo attachments per message a
 Administrators publish notifications to an audience (everyone, all customers, all collectors),
 optionally with images. Recipients get an in-app inbox with per-item read
 state and an unread badge, plus a push notification on mobile via Firebase Cloud Messaging.
+A notification and its images are created atomically (`POST /Notifications/with-images`); the push
+is published only after the commit.
 
 **Consumption forecast and recommendations**
 Each meter's reading history feeds an ML.NET SSA forecast of the next period (with a 95%

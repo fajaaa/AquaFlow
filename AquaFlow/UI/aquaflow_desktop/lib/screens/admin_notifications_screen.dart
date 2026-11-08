@@ -630,9 +630,19 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
 
     try {
       var saved = _savedNotification;
-      saved = saved == null
-          ? await _service.create(draft)
-          : await _service.update(saved.id, draft);
+      if (saved == null) {
+        // New notification: one atomic call (notification + all selected images; the push goes
+        // out only after everything is committed). On failure nothing was saved, so the dialog
+        // stays open with its fields and selected images and "Sačuvaj" can simply be retried.
+        await _service.createWithImages(draft, List<File>.of(_selectedImages));
+        if (!mounted) return;
+        Navigator.of(context).pop(true);
+        return;
+      }
+
+      // Editing: update the text, then add any newly picked images one by one (a notification
+      // that already exists never re-publishes a push).
+      saved = await _service.update(saved.id, draft);
       if (!mounted) return;
       setState(() => _savedNotification = saved);
 

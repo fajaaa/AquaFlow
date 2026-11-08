@@ -370,7 +370,9 @@ builder.Services.AddKeyedScoped<BaseFaultReportState, ResolvedFaultReportState>(
 builder.Services.AddScoped<IFaultReportStateResolver, FaultReportStateResolver>();
 builder.Services.AddScoped<IFaultReportPhotoService, FaultReportPhotoService>();
 AddPatchMapping<NotificationPatchRequest, Notification>();
-builder.Services.AddScoped<IBaseCRUDService<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>, NotificationService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IBaseCRUDService<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<INotificationService>());
 builder.Services.AddScoped<INotificationImageService, NotificationImageService>();
 AddPatchMapping<UserNotificationPatchRequest, UserNotification>();
 builder.Services.AddScoped<IUserNotificationService, UserNotificationService>();
