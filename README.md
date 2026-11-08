@@ -121,8 +121,9 @@ listing requires a dedicated permission.
 
 **Company and payment settings, user preferences**
 A single administrator-managed record holds company details and payment gateway
-configuration. Each user has a persisted theme, language and notification preferences that the
-clients apply on start-up.
+configuration. Each user has a persisted theme, language and push-notification preference that the
+clients apply on start-up. Theme and language live only in user preferences (there is no copy on the
+customer profile); `CompanySettings.DefaultLanguage` is the default language for new registrations.
 
 ---
 

@@ -179,7 +179,6 @@ class AdminCollectorService {
     final profile = AdminCustomerProfileDraft(
       firstName: firstName,
       lastName: lastName,
-      theme: 'light',
     );
     if (existingProfileId != null) {
       await _patchCustomerProfile(existingProfileId, userId, profile);
@@ -274,7 +273,6 @@ class AdminCollectorService {
     String? firstName,
     String? lastName,
     bool isActive = true,
-    String theme = 'light',
   }) async {
     final first = firstName?.trim() ?? '';
     final last = lastName?.trim() ?? '';
@@ -300,7 +298,6 @@ class AdminCollectorService {
         AdminCustomerProfileDraft(
           firstName: first,
           lastName: last,
-          theme: theme,
         ),
       );
     }

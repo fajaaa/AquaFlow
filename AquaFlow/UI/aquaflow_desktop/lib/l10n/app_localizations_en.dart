@@ -244,6 +244,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get defaultLanguageLabel => 'Language';
 
   @override
+  String get defaultLanguageHelper =>
+      'Language new users start with when they register';
+
+  @override
   String get defaultCurrencyLabel => 'Currency';
 
   @override
@@ -1062,15 +1066,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get consumptionColumnLabel => 'Consumption (m³)';
-
-  @override
-  String get syncColumnLabel => 'Sync';
-
-  @override
-  String get syncStatusSynced => 'Synced';
-
-  @override
-  String get syncStatusFailed => 'Failed';
 
   @override
   String get tariffCreatedSuccess => 'Tariff added.';

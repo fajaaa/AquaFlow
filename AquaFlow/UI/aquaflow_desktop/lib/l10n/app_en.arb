@@ -83,6 +83,7 @@
   "bankAccountLabel": "Bank account",
   "logoUrlOptionalLabel": "Logo URL (optional)",
   "defaultLanguageLabel": "Language",
+  "defaultLanguageHelper": "Language new users start with when they register",
   "defaultCurrencyLabel": "Currency",
   "companySettingsSaveSuccess": "Company settings saved.",
 
@@ -347,9 +348,6 @@
   "previousReadingColumnLabel": "Previous (m³)",
   "newReadingColumnLabel": "New (m³)",
   "consumptionColumnLabel": "Consumption (m³)",
-  "syncColumnLabel": "Sync",
-  "syncStatusSynced": "Synced",
-  "syncStatusFailed": "Failed",
 
   "tariffCreatedSuccess": "Tariff added.",
   "tariffSavedSuccess": "Tariff saved.",

@@ -206,6 +206,10 @@
   "@defaultLanguageLabel": {
     "description": "Label for the default language field on the company settings form."
   },
+  "defaultLanguageHelper": "Jezik novih korisnika pri registraciji",
+  "@defaultLanguageHelper": {
+    "description": "Helper text under the default language dropdown on the company settings form."
+  },
   "defaultCurrencyLabel": "Valuta",
   "@defaultCurrencyLabel": {
     "description": "Label for the default currency field on the company settings form."

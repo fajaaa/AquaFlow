@@ -6,7 +6,6 @@ class UserPreferences {
   const UserPreferences({
     required this.theme,
     required this.language,
-    required this.receiveEmailNotifications,
     required this.receivePushNotifications,
   });
 
@@ -14,7 +13,6 @@ class UserPreferences {
   /// anything else).
   final String theme;
   final String language;
-  final bool receiveEmailNotifications;
   final bool receivePushNotifications;
 
   bool get isDarkTheme => theme.toLowerCase() == 'dark';
@@ -23,7 +21,6 @@ class UserPreferences {
     return UserPreferences(
       theme: (json['theme'] ?? 'light') as String,
       language: (json['language'] ?? 'bs') as String,
-      receiveEmailNotifications: json['receiveEmailNotifications'] != false,
       receivePushNotifications: json['receivePushNotifications'] != false,
     );
   }
@@ -34,14 +31,12 @@ class UserPreferences {
   Map<String, dynamic> toJson() => {
         'theme': theme,
         'language': language,
-        'receiveEmailNotifications': receiveEmailNotifications,
         'receivePushNotifications': receivePushNotifications,
       };
 
   UserPreferences copyWith({String? theme, String? language}) => UserPreferences(
         theme: theme ?? this.theme,
         language: language ?? this.language,
-        receiveEmailNotifications: receiveEmailNotifications,
         receivePushNotifications: receivePushNotifications,
       );
 }

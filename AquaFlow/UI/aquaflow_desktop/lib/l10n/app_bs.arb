@@ -330,6 +330,10 @@
   "@defaultLanguageLabel": {
     "description": "Label for the default language field on the company settings form."
   },
+  "defaultLanguageHelper": "Jezik novih korisnika pri registraciji",
+  "@defaultLanguageHelper": {
+    "description": "Helper text under the default language dropdown on the company settings form."
+  },
   "defaultCurrencyLabel": "Valuta",
   "@defaultCurrencyLabel": {
     "description": "Label for the default currency field on the company settings form."
@@ -1354,18 +1358,6 @@
   "consumptionColumnLabel": "Potrošnja (m³)",
   "@consumptionColumnLabel": {
     "description": "Table column header for a meter reading's consumption, on the meter readings screen."
-  },
-  "syncColumnLabel": "Sinhronizacija",
-  "@syncColumnLabel": {
-    "description": "Table column header for a meter reading's sync status."
-  },
-  "syncStatusSynced": "Sinhronizovano",
-  "@syncStatusSynced": {
-    "description": "Display label for the 'Synced' meter reading sync status."
-  },
-  "syncStatusFailed": "Neuspješno",
-  "@syncStatusFailed": {
-    "description": "Display label for the 'Failed' meter reading sync status."
   },
 
   "tariffCreatedSuccess": "Tarifa je dodana.",

@@ -200,7 +200,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = fifteenDaysAgo,
-            Source = "Collector",
             CreatedAt = fifteenDaysAgo
         });
         context.WaterMeters.First(m => m.Id == 1).LastReading = 50;
@@ -248,7 +247,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = fourteenDaysAgo,
-            Source = "Collector",
             CreatedAt = fourteenDaysAgo
         });
         var waterMeter = context.WaterMeters.First(m => m.Id == 1);
@@ -515,7 +513,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = DateTime.UtcNow.AddDays(-30),
-            Source = "Collector"
         });
         context.MeterReadings.Add(new MeterReading
         {
@@ -527,7 +524,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 50,
             ConsumptionM3 = 30,
             ReadingDate = DateTime.UtcNow.AddDays(-2),
-            Source = "Collector"
         });
         context.SaveChanges();
 
@@ -558,7 +554,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = DateTime.UtcNow.AddDays(-30),
-            Source = "Collector"
         });
         context.MeterReadings.Add(new MeterReading
         {
@@ -570,7 +565,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 50,
             ConsumptionM3 = 30,
             ReadingDate = DateTime.UtcNow.AddDays(-2),
-            Source = "Collector",
             VoidedAt = DateTime.UtcNow.AddDays(-1)
         });
         context.SaveChanges();
@@ -615,7 +609,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = DateTime.UtcNow.AddDays(-2),
-            Source = "Collector",
             InvoiceId = 1
         });
         context.SaveChanges();

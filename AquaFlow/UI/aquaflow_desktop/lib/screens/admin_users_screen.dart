@@ -58,10 +58,10 @@ enum AdminUsersScreenMode {
   /// Customers have water meters; admins do not, so the action is hidden.
   final bool showWaterMeters;
 
-  /// Whether this role stores its name/address/language/theme in a
+  /// Whether this role stores its name/address in a
   /// CustomerProfile (Customer) - if false (Admin), the role has no
   /// CustomerProfile at all and the editor writes name straight to
-  /// `User.FirstName/LastName` instead, hiding the Adresa/Jezik/Tema fields
+  /// `User.FirstName/LastName` instead, hiding the Adresa fields
   /// that only make sense for a CustomerProfile.
   final bool usesCustomerProfile;
 }
@@ -752,7 +752,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
   final _houseNumberCtrl = TextEditingController();
 
   late bool _isActive;
-  late String _theme;
   int? _selectedCityId;
   int? _selectedMunicipalityId;
   int? _selectedSettlementId;
@@ -796,7 +795,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
       _firstNameCtrl.text = user?.firstName ?? '';
       _lastNameCtrl.text = user?.lastName ?? '';
     }
-    _theme = profile?.theme ?? 'light';
     _streetCtrl.text = profile?.street ?? '';
     _houseNumberCtrl.text = profile?.houseNumber ?? '';
 
@@ -882,7 +880,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
             ? AdminCustomerProfileDraft(
                 firstName: _firstNameCtrl.text.trim(),
                 lastName: _lastNameCtrl.text.trim(),
-                theme: _theme,
                 settlementId: _selectedSettlementId,
                 street: street.isEmpty ? null : street,
                 houseNumber: houseNumber.isEmpty ? null : houseNumber,
@@ -960,29 +957,6 @@ class _UserEditorDialogState extends State<_UserEditorDialog> {
                       labelText: loc.customerCodeFieldLabel,
                       prefixIcon: const Icon(Icons.lock_outline),
                     ),
-                  ),
-                ],
-                if (widget.mode.usesCustomerProfile) ...[
-                  const SizedBox(height: 14),
-                  DropdownButtonFormField<String>(
-                    initialValue: _theme,
-                    decoration: InputDecoration(
-                      labelText: loc.registerThemeLabel,
-                    ),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'light',
-                        child: Text(loc.themeLightOption),
-                      ),
-                      DropdownMenuItem(
-                        value: 'dark',
-                        child: Text(loc.themeDarkOption),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => _theme = value);
-                    },
                   ),
                 ],
                 const SizedBox(height: 22),

@@ -150,7 +150,6 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
         const UserPreferences(
           theme: 'light',
           language: 'bs',
-          receiveEmailNotifications: true,
           receivePushNotifications: true,
         );
     final updated = current.copyWith(theme: isDark ? 'dark' : 'light');
@@ -186,7 +185,6 @@ class _PersonalDetailsEditScreenState extends State<PersonalDetailsEditScreen> {
         const UserPreferences(
           theme: 'light',
           language: 'bs',
-          receiveEmailNotifications: true,
           receivePushNotifications: true,
         );
     final updated = current.copyWith(language: code);

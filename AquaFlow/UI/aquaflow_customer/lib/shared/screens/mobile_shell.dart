@@ -113,7 +113,6 @@ class MobileShellState extends State<MobileShell> {
         const UserPreferences(
           theme: 'light',
           language: 'bs',
-          receiveEmailNotifications: true,
           receivePushNotifications: true,
         );
     final updated = current.copyWith(theme: mode == ThemeMode.dark ? 'dark' : 'light');

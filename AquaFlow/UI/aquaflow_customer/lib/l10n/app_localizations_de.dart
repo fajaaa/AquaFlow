@@ -154,6 +154,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get defaultLanguageLabel => 'Sprache';
 
   @override
+  String get defaultLanguageHelper =>
+      'Sprache neuer Benutzer bei der Registrierung';
+
+  @override
   String get defaultCurrencyLabel => 'Währung';
 
   @override

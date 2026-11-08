@@ -305,11 +305,6 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("DefaultLanguage")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(80)
@@ -334,11 +329,6 @@ namespace AquaFlow.Services.Migrations
                     b.Property<string>("StripeCustomerId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Theme")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -368,13 +358,11 @@ namespace AquaFlow.Services.Migrations
                             Id = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerCode = "CUS-0001",
-                            DefaultLanguage = "bs",
                             FirstName = "Denis",
                             HouseNumber = "15",
                             LastName = "Music",
                             SettlementId = 8,
                             Street = "Ozrenska",
-                            Theme = "light",
                             UserId = 4
                         },
                         new
@@ -382,13 +370,11 @@ namespace AquaFlow.Services.Migrations
                             Id = 2,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerCode = "CUS-0002",
-                            DefaultLanguage = "bs",
                             FirstName = "Elmir",
                             HouseNumber = "7",
                             LastName = "Babovic",
                             SettlementId = 6,
                             Street = "Dobrinjske bolnice",
-                            Theme = "light",
                             UserId = 5
                         },
                         new
@@ -396,13 +382,11 @@ namespace AquaFlow.Services.Migrations
                             Id = 3,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerCode = "CUS-0003",
-                            DefaultLanguage = "bs",
                             FirstName = "Adil",
                             HouseNumber = "22",
                             LastName = "Joldic",
                             SettlementId = 11,
                             Street = "Saraci",
-                            Theme = "light",
                             UserId = 6
                         });
                 });
@@ -2182,19 +2166,6 @@ namespace AquaFlow.Services.Migrations
                     b.Property<decimal>("ReadingValue")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("SyncStatus")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<DateTime?>("SyncedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<int?>("TariffId")
                         .HasColumnType("int");
 
@@ -2234,9 +2205,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 80.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 92.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 1
                         },
@@ -2252,9 +2220,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 92.20m,
                             ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 108.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 1
                         },
@@ -2270,9 +2235,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 108.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 118.40m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 1
                         },
@@ -2288,9 +2250,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 118.40m,
                             ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 135.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 1
                         },
@@ -2306,9 +2265,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 135.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 149.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 1
                         },
@@ -2324,9 +2280,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 60.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 68.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 2
                         },
@@ -2342,9 +2295,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 68.20m,
                             ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 79.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 2
                         },
@@ -2360,9 +2310,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 79.60m,
                             ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 89.40m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 2
                         },
@@ -2378,9 +2325,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 89.40m,
                             ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 97.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 2
                         },
@@ -2396,9 +2340,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 97.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 107.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 2
                         },
@@ -2414,9 +2355,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 95.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 108.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 3
                         },
@@ -2432,9 +2370,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 108.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 117.40m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 3
                         },
@@ -2450,9 +2385,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 117.40m,
                             ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 130.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 3
                         },
@@ -2468,9 +2400,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 130.20m,
                             ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 144.80m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 3
                         },
@@ -2486,9 +2415,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 144.80m,
                             ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 155.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 3
                         },
@@ -2504,9 +2430,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 70.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 81.80m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 4
                         },
@@ -2522,9 +2445,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 81.80m,
                             ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 96.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 4
                         },
@@ -2540,9 +2460,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 96.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 108.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 4
                         },
@@ -2558,9 +2475,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 108.60m,
                             ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 124.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 4
                         },
@@ -2576,9 +2490,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 124.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 134.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 4
                         },
@@ -2594,9 +2505,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 55.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 64.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 5
                         },
@@ -2612,9 +2520,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 64.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 75.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 5
                         },
@@ -2630,9 +2535,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 75.60m,
                             ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 84.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 5
                         },
@@ -2648,9 +2550,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 84.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 96.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 5
                         },
@@ -2666,9 +2565,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 96.20m,
                             ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 107.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 5
                         },
@@ -2684,9 +2580,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 40.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 50.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 6
                         },
@@ -2702,9 +2595,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 50.60m,
                             ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 64.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 6
                         },
@@ -2720,9 +2610,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 64.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 75.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 6
                         },
@@ -2738,9 +2625,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 75.20m,
                             ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 90.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 6
                         },
@@ -2756,9 +2640,6 @@ namespace AquaFlow.Services.Migrations
                             PreviousReadingValue = 90.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 99.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 6
                         });
@@ -4768,9 +4649,6 @@ namespace AquaFlow.Services.Migrations
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
-
-                    b.Property<bool>("ReceiveEmailNotifications")
-                        .HasColumnType("bit");
 
                     b.Property<bool>("ReceivePushNotifications")
                         .HasColumnType("bit");

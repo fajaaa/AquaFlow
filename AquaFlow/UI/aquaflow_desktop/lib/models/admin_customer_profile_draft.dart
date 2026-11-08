@@ -6,7 +6,6 @@ class AdminCustomerProfileDraft {
   const AdminCustomerProfileDraft({
     required this.firstName,
     required this.lastName,
-    required this.theme,
     this.settlementId,
     this.street,
     this.houseNumber,
@@ -14,7 +13,6 @@ class AdminCustomerProfileDraft {
 
   final String firstName;
   final String lastName;
-  final String theme;
   final int? settlementId;
   final String? street;
   final String? houseNumber;
@@ -24,7 +22,6 @@ class AdminCustomerProfileDraft {
       'userId': userId,
       'firstName': firstName,
       'lastName': lastName,
-      'theme': theme,
       'settlementId': settlementId,
       'street': street,
       'houseNumber': houseNumber,

@@ -7,7 +7,6 @@ class AdminMeterReading {
     required this.previousReadingValue,
     required this.consumptionM3,
     required this.readingDate,
-    required this.syncStatus,
     required this.note,
   });
 
@@ -18,7 +17,6 @@ class AdminMeterReading {
   final double previousReadingValue;
   final double consumptionM3;
   final DateTime? readingDate;
-  final String syncStatus;
   final String? note;
 
   factory AdminMeterReading.fromJson(Map<String, dynamic> json) {
@@ -31,7 +29,6 @@ class AdminMeterReading {
           (json['previousReadingValue'] as num?)?.toDouble() ?? 0,
       consumptionM3: (json['consumptionM3'] as num?)?.toDouble() ?? 0,
       readingDate: _date(json['readingDate']),
-      syncStatus: (json['syncStatus'] ?? '') as String,
       note: json['note'] as String?,
     );
   }

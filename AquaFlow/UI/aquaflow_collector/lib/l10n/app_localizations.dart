@@ -352,6 +352,12 @@ abstract class AppLocalizations {
   /// **'Jezik'**
   String get defaultLanguageLabel;
 
+  /// Helper text under the default language dropdown on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Jezik novih korisnika pri registraciji'**
+  String get defaultLanguageHelper;
+
   /// Label for the default currency field on the company settings form.
   ///
   /// In bs, this message translates to:

@@ -242,6 +242,9 @@ class AppLocalizationsBs extends AppLocalizations {
   String get defaultLanguageLabel => 'Jezik';
 
   @override
+  String get defaultLanguageHelper => 'Jezik novih korisnika pri registraciji';
+
+  @override
   String get defaultCurrencyLabel => 'Valuta';
 
   @override
@@ -1060,15 +1063,6 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get consumptionColumnLabel => 'Potrošnja (m³)';
-
-  @override
-  String get syncColumnLabel => 'Sinhronizacija';
-
-  @override
-  String get syncStatusSynced => 'Sinhronizovano';
-
-  @override
-  String get syncStatusFailed => 'Neuspješno';
 
   @override
   String get tariffCreatedSuccess => 'Tarifa je dodana.';

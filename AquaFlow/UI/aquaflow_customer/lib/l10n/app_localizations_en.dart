@@ -154,6 +154,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get defaultLanguageLabel => 'Language';
 
   @override
+  String get defaultLanguageHelper =>
+      'Language new users start with when they register';
+
+  @override
   String get defaultCurrencyLabel => 'Currency';
 
   @override

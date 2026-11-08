@@ -538,6 +538,12 @@ abstract class AppLocalizations {
   /// **'Jezik'**
   String get defaultLanguageLabel;
 
+  /// Helper text under the default language dropdown on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Jezik novih korisnika pri registraciji'**
+  String get defaultLanguageHelper;
+
   /// Label for the default currency field on the company settings form.
   ///
   /// In bs, this message translates to:
@@ -2031,24 +2037,6 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Potrošnja (m³)'**
   String get consumptionColumnLabel;
-
-  /// Table column header for a meter reading's sync status.
-  ///
-  /// In bs, this message translates to:
-  /// **'Sinhronizacija'**
-  String get syncColumnLabel;
-
-  /// Display label for the 'Synced' meter reading sync status.
-  ///
-  /// In bs, this message translates to:
-  /// **'Sinhronizovano'**
-  String get syncStatusSynced;
-
-  /// Display label for the 'Failed' meter reading sync status.
-  ///
-  /// In bs, this message translates to:
-  /// **'Neuspješno'**
-  String get syncStatusFailed;
 
   /// Snackbar message shown after a tariff is created.
   ///

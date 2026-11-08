@@ -5,7 +5,7 @@ namespace AquaFlow.Services;
 
 public interface IUserPreferenceService
 {
-    // Returns the caller's preference row, or defaults (Theme "light", Language "bs",
+    // Returns the caller's preference row, or defaults (Theme "light", Language from CompanySettings.DefaultLanguage ("bs" fallback),
     // both notification flags true) when no row exists yet - a row is only created on
     // the first update, not lazily on read.
     Task<UserPreferenceResponse> GetByUserIdAsync(int userId);

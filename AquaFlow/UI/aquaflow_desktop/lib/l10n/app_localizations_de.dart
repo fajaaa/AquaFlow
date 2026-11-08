@@ -246,6 +246,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get defaultLanguageLabel => 'Sprache';
 
   @override
+  String get defaultLanguageHelper =>
+      'Sprache neuer Benutzer bei der Registrierung';
+
+  @override
   String get defaultCurrencyLabel => 'Währung';
 
   @override
@@ -1072,15 +1076,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get consumptionColumnLabel => 'Verbrauch (m³)';
-
-  @override
-  String get syncColumnLabel => 'Sync';
-
-  @override
-  String get syncStatusSynced => 'Synchronisiert';
-
-  @override
-  String get syncStatusFailed => 'Fehlgeschlagen';
 
   @override
   String get tariffCreatedSuccess => 'Tarif hinzugefügt.';

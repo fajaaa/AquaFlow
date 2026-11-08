@@ -36,7 +36,6 @@ public class FakeMeterReadingCrudService : IMeterReadingService
             Note = request.Note,
             PhotoUrl = request.PhotoUrl,
             ClientUuid = request.ClientUuid,
-            Source = "Collector",
             InvoiceId = 1,
             InvoiceNumber = "INV-2026-0001",
             InvoiceTotalAmount = 0m

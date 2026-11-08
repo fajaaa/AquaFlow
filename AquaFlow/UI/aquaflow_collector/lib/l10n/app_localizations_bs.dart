@@ -142,6 +142,9 @@ class AppLocalizationsBs extends AppLocalizations {
   String get defaultLanguageLabel => 'Jezik';
 
   @override
+  String get defaultLanguageHelper => 'Jezik novih korisnika pri registraciji';
+
+  @override
   String get defaultCurrencyLabel => 'Valuta';
 
   @override

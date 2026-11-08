@@ -48,6 +48,30 @@ public sealed class RegistrationServiceTests : IDisposable
         Assert.Equal("bs", preference.Language);
     }
 
+    [Theory]
+    [InlineData("de", "de")]
+    [InlineData("en", "en")]
+    [InlineData("fr", "bs")]
+    [InlineData("", "bs")]
+    public async Task RegisterCustomerAsync_UsesCompanySettingsDefaultLanguage_OrFallsBackToBs(
+        string configuredLanguage, string expectedLanguage)
+    {
+        await using (var setup = CreateContext())
+        {
+            var settings = await setup.CompanySettings.SingleAsync();
+            settings.DefaultLanguage = configuredLanguage;
+            await setup.SaveChangesAsync();
+        }
+
+        await using var context = CreateContext();
+        await CreateService(context).RegisterCustomerAsync(ValidRequest("nova.korisnica@aquaflow.ba"));
+
+        await using var verify = CreateContext();
+        var user = await verify.Users.SingleAsync(u => u.Email == "nova.korisnica@aquaflow.ba");
+        var preference = await verify.UserPreferences.SingleAsync(p => p.UserId == user.Id);
+        Assert.Equal(expectedLanguage, preference.Language);
+    }
+
     [Fact]
     public async Task RegisterCustomerAsync_DuplicateEmail_ThrowsClientException_AndWritesNothing()
     {

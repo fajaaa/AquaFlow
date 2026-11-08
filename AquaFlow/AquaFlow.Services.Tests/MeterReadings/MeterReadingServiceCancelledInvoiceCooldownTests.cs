@@ -50,7 +50,6 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = fourteenDaysAgo,
-            Source = "Collector",
             CreatedAt = fourteenDaysAgo,
             InvoiceId = 1
         });
@@ -167,7 +166,6 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             PreviousReadingValue = 50,
             ConsumptionM3 = 30,
             ReadingDate = DateTime.UtcNow,
-            Source = "Collector"
         });
         context.WaterMeters.First(m => m.Id == 1).LastReading = 80;
         context.SaveChanges();
@@ -329,8 +327,6 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = DateTime.UtcNow.AddDays(-5),
-            Source = "Collector",
-            SyncStatus = "Synced"
         });
         await context.SaveChangesAsync();
 
@@ -367,7 +363,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         {
             Id = id, WaterMeterId = meterId, CollectorId = 1, TariffId = 1,
             ReadingValue = id * 10, PreviousReadingValue = 0, ConsumptionM3 = id * 10,
-            ReadingDate = DateTime.UtcNow.AddDays(-daysAgo), Source = "Collector",
+            ReadingDate = DateTime.UtcNow.AddDays(-daysAgo),
             CreatedAt = DateTime.UtcNow.AddDays(-daysAgo), VoidedAt = voided
         };
         context.MeterReadings.AddRange(
@@ -482,7 +478,6 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             PreviousReadingValue = previousReading,
             ConsumptionM3 = readingValue - previousReading,
             ReadingDate = readingDate,
-            Source = "Collector",
             InvoiceId = invoiceId
         });
     }

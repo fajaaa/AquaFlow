@@ -13,10 +13,6 @@ public class CustomerProfile : EntityBase
     public string LastName { get; set; } = string.Empty;
     [MaxLength(50)]
     public string CustomerCode { get; set; } = string.Empty;
-    [MaxLength(10)]
-    public string DefaultLanguage { get; set; } = "bs";
-    [MaxLength(20)]
-    public string Theme { get; set; } = "light";
     // Nullable: a profile is also created for admins/collectors (who only need a name), not just
     // customers with a service address.
     public int? SettlementId { get; set; }

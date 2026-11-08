@@ -20,7 +20,6 @@ public class RegistrationService : IRegistrationService
     // must never let the caller pick their own role, so it is always a Customer.
     private const int DefaultCustomerRoleId = 3;
     private const string DefaultTheme = "light";
-    private const string DefaultLanguage = "bs";
 
     private readonly AquaFlowDbContext _dbContext;
     private readonly IUserService _userService;
@@ -64,8 +63,7 @@ public class RegistrationService : IRegistrationService
         var preferenceRequest = new UserPreferenceUpdateRequest
         {
             Theme = string.IsNullOrEmpty(request.Theme) ? DefaultTheme : request.Theme,
-            Language = DefaultLanguage,
-            ReceiveEmailNotifications = true,
+            Language = await DefaultLanguageProvider.GetAsync(_dbContext),
             ReceivePushNotifications = true
         };
 

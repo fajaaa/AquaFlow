@@ -51,6 +51,7 @@
   "bankAccountLabel": "Bank account",
   "logoUrlOptionalLabel": "Logo URL (optional)",
   "defaultLanguageLabel": "Language",
+  "defaultLanguageHelper": "Language new users start with when they register",
   "defaultCurrencyLabel": "Currency",
   "companySettingsSaveSuccess": "Company settings saved.",
   "fieldPhoneLabel": "Phone",

@@ -156,7 +156,6 @@ public class ConsumptionForecastingServiceTests
                 PreviousReadingValue = previousReading,
                 ConsumptionM3 = consumption[i],
                 ReadingDate = readingDate.AddDays(i),
-                Source = "Collector"
             });
             previousReading = readingValue;
         }

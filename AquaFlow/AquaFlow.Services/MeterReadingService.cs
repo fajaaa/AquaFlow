@@ -179,7 +179,6 @@ public class MeterReadingService
             PreviousReadingValue = previousReading,
             ConsumptionM3 = consumption,
             ReadingDate = readingDate,
-            Source = "Collector",
             PhotoUrl = request.PhotoUrl,
             Note = request.Note,
             ClientUuid = request.ClientUuid,
