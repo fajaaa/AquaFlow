@@ -724,11 +724,6 @@ class AppLocalizationsBs extends AppLocalizations {
   String get addImageButtonLabel => 'Dodaj sliku';
 
   @override
-  String sendingPhotoLabel(int current, int total) {
-    return 'Slanje fotografije $current/$total...';
-  }
-
-  @override
   String get newFaultReportSubmitButton => 'Pošalji prijavu';
 
   @override

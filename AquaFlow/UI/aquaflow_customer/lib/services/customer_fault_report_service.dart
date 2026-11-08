@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show File, SocketException;
+import 'dart:io' show SocketException;
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:http_parser/http_parser.dart' show MediaType;
 import 'package:mime/mime.dart' show lookupMimeType;
 
@@ -109,40 +110,56 @@ class CustomerFaultReportService {
     return CustomerFaultReport.fromJson(decoded);
   }
 
-  /// `FaultReportInsertRequest` carries the report's own location: a required
-  /// `SettlementId` plus optional `Street`/`HouseNumber` - the report is not
-  /// tied to the caller's profile address. The backend forces
-  /// `CustomerId`/`ReportedById`/`Status`/`ResolvedAt` from the JWT for a
-  /// self-service caller, so none of those are sent here.
-  Future<CustomerFaultReport> create({
+  /// `POST /FaultReports/with-photos` (multipart): files a NEW report with
+  /// 0..5 photos atomically - the backend validates everything first and stores
+  /// report + photos in one transaction, so a failure leaves nothing behind.
+  /// The report carries its own location (required `SettlementId`, optional
+  /// `Street`/`HouseNumber`); the backend forces
+  /// `CustomerId`/`ReportedById`/`Status` from the JWT and checks meter
+  /// ownership, so none of those are sent. Sent through [AuthenticatedClient]
+  /// (`send`), which keeps the 401 -> refresh -> retry behaviour for multipart
+  /// bodies.
+  Future<CustomerFaultReport> createWithPhotos({
     required String title,
     required String description,
     required int settlementId,
     String? street,
     String? houseNumber,
     int? waterMeterId,
+    List<XFile> photos = const [],
   }) async {
-    final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports');
+    final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/with-photos');
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['Title'] = title.trim()
+      ..fields['Description'] = description.trim()
+      ..fields['SettlementId'] = '$settlementId';
 
-    final trimmedStreet = street?.trim();
-    final trimmedHouseNumber = houseNumber?.trim();
+    final streetText = street?.trim() ?? '';
+    if (streetText.isNotEmpty) request.fields['Street'] = streetText;
+    final houseText = houseNumber?.trim() ?? '';
+    if (houseText.isNotEmpty) request.fields['HouseNumber'] = houseText;
+    if (waterMeterId != null) {
+      request.fields['WaterMeterId'] = '$waterMeterId';
+    }
+
+    for (final photo in photos) {
+      // Sniffed from magic bytes (then extension, then jpeg): a picker cache
+      // file may lack an extension and would otherwise go out as
+      // octet-stream, which the backend's content-type whitelist rejects.
+      final headerBytes = await photo.openRead(0, 12).first;
+      final mimeType =
+          lookupMimeType(photo.path, headerBytes: headerBytes) ?? 'image/jpeg';
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'photos',
+          photo.path,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+    }
+
     final response = await _send(
-      () => _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'title': title.trim(),
-          'description': description.trim(),
-          'settlementId': settlementId,
-          if (trimmedStreet != null && trimmedStreet.isNotEmpty)
-            'street': trimmedStreet,
-          if (trimmedHouseNumber != null && trimmedHouseNumber.isNotEmpty)
-            'houseNumber': trimmedHouseNumber,
-          'waterMeterId': ?waterMeterId,
-        }),
-      ),
+      () async => http.Response.fromStream(await _client.send(request)),
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
@@ -189,68 +206,6 @@ class CustomerFaultReportService {
         .whereType<Map<String, dynamic>>()
         .map(CustomerFaultReportPhoto.fromJson)
         .toList();
-  }
-
-  /// Uploads [imageFile] as a photo on [faultReportId]
-  /// (`POST /FaultReports/{id}/photos`, multipart form field `file` - matches
-  /// the `IFormFile file` parameter name on `FaultReportsController.UploadPhoto`).
-  Future<CustomerFaultReportPhoto> uploadPhoto(
-    int faultReportId,
-    File imageFile,
-  ) async {
-    final uri = Uri.parse(
-      '${ApiConfig.baseUrl}/FaultReports/$faultReportId/photos',
-    );
-
-    // `MultipartFile.fromPath` without an explicit contentType falls back to
-    // application/octet-stream when the path has no/an unrecognized extension
-    // (e.g. a cache file handed back by the Android Photo Picker) - the
-    // backend's content-type whitelist then rejects it, so the type is
-    // sniffed from the file's magic bytes (falling back to its extension,
-    // then to image/jpeg - what the camera source always produces).
-    final headerBytes = await imageFile.openRead(0, 12).first;
-    final mimeType =
-        lookupMimeType(imageFile.path, headerBytes: headerBytes) ??
-        'image/jpeg';
-    final request = http.MultipartRequest('POST', uri)
-      ..files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          imageFile.path,
-          contentType: MediaType.parse(mimeType),
-        ),
-      );
-
-    final http.Response response;
-    try {
-      final streamed = await _client.send(request).timeout(_timeout);
-      response = await http.Response.fromStream(streamed);
-    } on SocketException {
-      throw CustomerFaultReportException(
-        'Server nije dostupan na ${ApiConfig.baseUrl}.',
-      );
-    } on TimeoutException {
-      throw const CustomerFaultReportException(
-        'Server nije odgovorio na vrijeme.',
-      );
-    } on http.ClientException catch (e) {
-      throw CustomerFaultReportException('Greška mreže: ${e.message}');
-    }
-
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      throw CustomerFaultReportException(
-        _messageFor(response, 'Fotografiju nije moguće poslati'),
-      );
-    }
-
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw const CustomerFaultReportException(
-        'Odgovor servera je u neispravnom formatu.',
-      );
-    }
-
-    return CustomerFaultReportPhoto.fromJson(decoded);
   }
 
   /// Raw bytes of one photo (`GET /FaultReports/{id}/photos/{photoId}`), for

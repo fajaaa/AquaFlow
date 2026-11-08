@@ -732,11 +732,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get addImageButtonLabel => 'Bild hinzufügen';
 
   @override
-  String sendingPhotoLabel(int current, int total) {
-    return 'Foto $current/$total wird gesendet...';
-  }
-
-  @override
   String get newFaultReportSubmitButton => 'Meldung senden';
 
   @override

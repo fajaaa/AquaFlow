@@ -1018,18 +1018,6 @@
   "@addImageButtonLabel": {
     "description": "Button label to add a photo, on the new fault report and new support ticket dialogs."
   },
-  "sendingPhotoLabel": "Slanje fotografije {current}/{total}...",
-  "@sendingPhotoLabel": {
-    "description": "Progress message shown while uploading photos on the new fault report dialog.",
-    "placeholders": {
-      "current": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "newFaultReportSubmitButton": "Pošalji prijavu",
   "@newFaultReportSubmitButton": {
     "description": "Submit button label on the new fault report dialog."

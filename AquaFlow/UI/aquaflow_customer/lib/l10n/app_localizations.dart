@@ -1436,12 +1436,6 @@ abstract class AppLocalizations {
   /// **'Dodaj sliku'**
   String get addImageButtonLabel;
 
-  /// Progress message shown while uploading photos on the new fault report dialog.
-  ///
-  /// In bs, this message translates to:
-  /// **'Slanje fotografije {current}/{total}...'**
-  String sendingPhotoLabel(int current, int total);
-
   /// Submit button label on the new fault report dialog.
   ///
   /// In bs, this message translates to:

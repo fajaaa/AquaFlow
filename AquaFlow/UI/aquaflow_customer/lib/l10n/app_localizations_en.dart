@@ -727,11 +727,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addImageButtonLabel => 'Add image';
 
   @override
-  String sendingPhotoLabel(int current, int total) {
-    return 'Sending photo $current/$total...';
-  }
-
-  @override
   String get newFaultReportSubmitButton => 'Submit report';
 
   @override

@@ -222,7 +222,6 @@
   "houseNumberOptionalLabel": "Hausnummer (optional)",
   "photoCountLabel": "Fotos ({current}/{max})",
   "addImageButtonLabel": "Bild hinzufügen",
-  "sendingPhotoLabel": "Foto {current}/{total} wird gesendet...",
   "newFaultReportSubmitButton": "Meldung senden",
   "faultReportsEmptyMessage": "Sie haben keine gesendeten Störungsmeldungen.",
   "faultReportStatusNew": "Neu",

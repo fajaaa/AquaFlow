@@ -254,7 +254,6 @@
   "houseNumberOptionalLabel": "House number (optional)",
   "photoCountLabel": "Photos ({current}/{max})",
   "addImageButtonLabel": "Add image",
-  "sendingPhotoLabel": "Sending photo {current}/{total}...",
   "newFaultReportSubmitButton": "Submit report",
   "faultReportsEmptyMessage": "You have no submitted fault reports.",
   "faultReportStatusNew": "New",
