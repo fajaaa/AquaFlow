@@ -13,6 +13,8 @@ public class NotificationPatchValidator : AbstractValidator<NotificationPatchReq
         RuleFor(x => x.Audience).NotEmpty().MaximumLength(40)
             .Must(audience => !NotificationInsertValidator.IsDirectAudience(audience))
             .WithMessage(NotificationInsertValidator.DirectAudienceMessage)
+            .Must(NotificationInsertValidator.IsBroadcastAudience)
+            .WithMessage(NotificationInsertValidator.UnsupportedAudienceMessage)
             .When(x => x.Audience != null);
         RuleFor(x => x.CreatedById).GreaterThan(0).When(x => x.CreatedById.HasValue);
     }

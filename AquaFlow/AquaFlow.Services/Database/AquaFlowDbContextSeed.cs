@@ -1179,6 +1179,12 @@ public partial class AquaFlowDbContext
             (AquaFlow.Model.NotificationType.Warning, "Upozorenje", "Warning", "Warnung", true),
             (AquaFlow.Model.NotificationType.PlannedWorks, "Planirani radovi", "Planned works", "Geplante Arbeiten", true));
 
+        SeedLookup<NotificationAudienceLookup>(modelBuilder,
+            (AquaFlow.Model.NotificationAudience.All, "Svi korisnici", "All users", "Alle Benutzer", true),
+            (AquaFlow.Model.NotificationAudience.Customers, "Kupci", "Customers", "Kunden", true),
+            (AquaFlow.Model.NotificationAudience.Collectors, "Inkasanti", "Collectors", "Ableser", true),
+            (AquaFlow.Model.NotificationAudience.Direct, "Direktno - sistemske", "Direct - system", "Direkt - System", true));
+
         SeedLookup<ConsumptionAlertTypeLookup>(modelBuilder,
             (WaterConsumptionAlertService.UnusualConsumptionSpikeType, "Neuobičajen skok potrošnje", "Unusual consumption spike", "Ungewöhnlicher Verbrauchsanstieg", true));
     }

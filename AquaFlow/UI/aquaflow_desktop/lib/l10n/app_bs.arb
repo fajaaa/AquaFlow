@@ -423,6 +423,7 @@
   "lookupWaterMeterStatuses": "Statusi vodomjera",
   "lookupSupportTicketStatuses": "Statusi tiketa podrške",
   "lookupNotificationTypes": "Tipovi obavještenja",
+  "lookupNotificationAudiences": "Publika notifikacije",
   "lookupConsumptionAlertTypes": "Tipovi upozorenja o potrošnji",
   "lookupNameEnColumn": "EN",
   "lookupNameDeColumn": "DE",

@@ -344,6 +344,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get lookupNotificationTypes => 'Benachrichtigungstypen';
 
   @override
+  String get lookupNotificationAudiences => 'Benachrichtigungszielgruppen';
+
+  @override
   String get lookupConsumptionAlertTypes => 'Verbrauchswarnungstypen';
 
   @override

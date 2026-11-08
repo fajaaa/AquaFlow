@@ -53,6 +53,7 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<SupportTicketStatusLookup> SupportTicketStatuses => Set<SupportTicketStatusLookup>();
     public DbSet<NotificationTypeLookup> NotificationTypes => Set<NotificationTypeLookup>();
     public DbSet<ConsumptionAlertTypeLookup> ConsumptionAlertTypes => Set<ConsumptionAlertTypeLookup>();
+    public DbSet<NotificationAudienceLookup> NotificationAudiences => Set<NotificationAudienceLookup>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -244,6 +245,7 @@ public partial class AquaFlowDbContext : DbContext
         modelBuilder.Entity<SupportTicketStatusLookup>().ToTable("SupportTicketStatuses");
         modelBuilder.Entity<NotificationTypeLookup>().ToTable("NotificationTypes");
         modelBuilder.Entity<ConsumptionAlertTypeLookup>().ToTable("ConsumptionAlertTypes");
+        modelBuilder.Entity<NotificationAudienceLookup>().ToTable("NotificationAudiences");
         // Code needs no separate unique index: HasPrincipalKey(Code) below makes it an alternate
         // key, i.e. a unique constraint.
 
@@ -279,6 +281,8 @@ public partial class AquaFlowDbContext : DbContext
             .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Notification>().HasOne<NotificationTypeLookup>().WithMany()
             .HasForeignKey(x => x.Type).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Notification>().HasOne<NotificationAudienceLookup>().WithMany()
+            .HasForeignKey(x => x.Audience).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<WaterConsumptionAlert>().HasOne<ConsumptionAlertTypeLookup>().WithMany()
             .HasForeignKey(x => x.AlertType).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
     }

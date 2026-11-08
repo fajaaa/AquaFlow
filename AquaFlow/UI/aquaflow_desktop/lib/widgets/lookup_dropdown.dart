@@ -16,6 +16,7 @@ class LookupDropdown extends StatefulWidget {
     this.label,
     this.icon,
     this.isExpanded = true,
+    this.excludeCodes = const <String>{},
   });
 
   final String route;
@@ -27,6 +28,9 @@ class LookupDropdown extends StatefulWidget {
   final String? label;
   final IconData? icon;
   final bool isExpanded;
+
+  /// Codes hidden from the list (e.g. system-only values the user must not pick).
+  final Set<String> excludeCodes;
 
   @override
   State<LookupDropdown> createState() => _LookupDropdownState();
@@ -62,7 +66,9 @@ class _LookupDropdownState extends State<LookupDropdown> {
     return FutureBuilder<List<LookupItem>>(
       future: _future,
       builder: (context, snapshot) {
-        final items = snapshot.data ?? const <LookupItem>[];
+        final items = (snapshot.data ?? const <LookupItem>[])
+            .where((i) => !widget.excludeCodes.contains(i.code))
+            .toList();
         final current = widget.value ?? (widget.includeAllOption ? '' : null);
         final known = items.any((i) => i.code == current);
         final selected = current == '' && widget.includeAllOption

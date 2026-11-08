@@ -65,6 +65,11 @@ final List<_Codebook> _codebooks = [
     (l) => l.lookupNotificationTypes,
   ),
   _Codebook(
+    'NotificationAudiences',
+    Icons.groups_outlined,
+    (l) => l.lookupNotificationAudiences,
+  ),
+  _Codebook(
     'ConsumptionAlertTypes',
     Icons.warning_amber_outlined,
     (l) => l.lookupConsumptionAlertTypes,

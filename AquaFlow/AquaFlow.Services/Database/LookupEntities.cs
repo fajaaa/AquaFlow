@@ -11,3 +11,4 @@ public class WaterMeterStatusLookup : LookupEntityBase { }
 public class SupportTicketStatusLookup : LookupEntityBase { }
 public class NotificationTypeLookup : LookupEntityBase { }
 public class ConsumptionAlertTypeLookup : LookupEntityBase { }
+public class NotificationAudienceLookup : LookupEntityBase { }

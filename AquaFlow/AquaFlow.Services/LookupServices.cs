@@ -65,6 +65,13 @@ public class NotificationTypeLookupService(AquaFlowDbContext dbContext, IMapper 
         DbContext.Notifications.AnyAsync(x => x.Type == code);
 }
 
+public class NotificationAudienceLookupService(AquaFlowDbContext dbContext, IMapper mapper)
+    : LookupService<NotificationAudienceLookup>(dbContext, mapper)
+{
+    protected override Task<bool> IsInUseAsync(string code) =>
+        DbContext.Notifications.AnyAsync(x => x.Audience == code);
+}
+
 public class ConsumptionAlertTypeLookupService(AquaFlowDbContext dbContext, IMapper mapper)
     : LookupService<ConsumptionAlertTypeLookup>(dbContext, mapper)
 {

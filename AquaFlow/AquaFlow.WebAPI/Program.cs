@@ -265,6 +265,7 @@ builder.Services.AddScoped<ILookupService<WaterMeterRequestStatusLookup>, WaterM
 builder.Services.AddScoped<ILookupService<WaterMeterStatusLookup>, WaterMeterStatusLookupService>();
 builder.Services.AddScoped<ILookupService<SupportTicketStatusLookup>, SupportTicketStatusLookupService>();
 builder.Services.AddScoped<ILookupService<NotificationTypeLookup>, NotificationTypeLookupService>();
+builder.Services.AddScoped<ILookupService<NotificationAudienceLookup>, NotificationAudienceLookupService>();
 builder.Services.AddScoped<ILookupService<ConsumptionAlertTypeLookup>, ConsumptionAlertTypeLookupService>();
 // Payment provider and Stripe keys come only from configuration/env (Payments__Provider,
 // Payments__Stripe__*); there is intentionally no database copy of payment settings.

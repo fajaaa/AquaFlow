@@ -44,7 +44,7 @@ profiles, water meters, connection requests and fault reports.
 
 **Status and type codebooks**
 Invoice/payment/fault report/meter request/meter/support ticket statuses, payment methods,
-notification types and consumption alert types are lookup tables (`/InvoiceStatuses`,
+notification types, notification audiences and consumption alert types are lookup tables (`/InvoiceStatuses`,
 `/PaymentMethods`, ...; read by any signed-in user, edited with `Codebooks.Manage`). Business
 columns keep their string values but are real FKs to each codebook's unique `Code`, so the
 state machines are unchanged and the database rejects unknown values. Seeded system rows cannot
@@ -516,7 +516,7 @@ The Flutter clients do this automatically and keep tokens in the platform secure
 | Messaging | `/Notifications`, `/UserNotifications`, `/DeviceTokens` |
 | Operations | `/ActivityLogs`, `/CompanySettings`, `/WaterConsumptionAlerts/recompute`, `/ConsumptionInsights/water-meters/{id}`, `/Dashboard/*` |
 | Reports | `/Reports/consumption/pdf`, `/Reports/billing/pdf` |
-| Codebooks | `/InvoiceStatuses`, `/PaymentStatuses`, `/PaymentMethods`, `/FaultReportStatuses`, `/WaterMeterRequestStatuses`, `/WaterMeterStatuses`, `/SupportTicketStatuses`, `/NotificationTypes`, `/ConsumptionAlertTypes` |
+| Codebooks | `/InvoiceStatuses`, `/PaymentStatuses`, `/PaymentMethods`, `/FaultReportStatuses`, `/WaterMeterRequestStatuses`, `/WaterMeterStatuses`, `/SupportTicketStatuses`, `/NotificationTypes`, `/NotificationAudiences`, `/ConsumptionAlertTypes` |
 
 Payment configuration (provider and Stripe keys) comes only from environment/configuration (`Payments__Provider`, `Payments__Stripe__*`); there is no database copy.
 

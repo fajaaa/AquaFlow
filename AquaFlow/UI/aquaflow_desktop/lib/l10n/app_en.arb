@@ -116,6 +116,7 @@
   "lookupWaterMeterStatuses": "Water meter statuses",
   "lookupSupportTicketStatuses": "Support ticket statuses",
   "lookupNotificationTypes": "Notification types",
+  "lookupNotificationAudiences": "Notification audiences",
   "lookupConsumptionAlertTypes": "Consumption alert types",
   "lookupNameEnColumn": "EN",
   "lookupNameDeColumn": "DE",

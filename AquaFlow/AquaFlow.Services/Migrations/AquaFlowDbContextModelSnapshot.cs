@@ -2927,6 +2927,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Audience");
+
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("Type");
@@ -2944,6 +2946,102 @@ namespace AquaFlow.Services.Migrations
                             IsSystem = false,
                             Title = "Planirani radovi",
                             Type = "Info"
+                        });
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.NotificationAudienceLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("NotificationAudiences", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "All",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Svi korisnici",
+                            NameDe = "Alle Benutzer",
+                            NameEn = "All users",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Customers",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Kupci",
+                            NameDe = "Kunden",
+                            NameEn = "Customers",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Collectors",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Inkasanti",
+                            NameDe = "Ableser",
+                            NameEn = "Collectors",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "Direct",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Direktno - sistemske",
+                            NameDe = "Direkt - System",
+                            NameEn = "Direct - system",
+                            SortOrder = 40
                         });
                 });
 
@@ -5746,6 +5844,13 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.Notification", b =>
                 {
+                    b.HasOne("AquaFlow.Services.Database.NotificationAudienceLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Audience")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AquaFlow.Services.Database.User", "CreatedBy")
                         .WithMany()
                         .HasForeignKey("CreatedById")

@@ -340,6 +340,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lookupNotificationTypes => 'Notification types';
 
   @override
+  String get lookupNotificationAudiences => 'Notification audiences';
+
+  @override
   String get lookupConsumptionAlertTypes => 'Consumption alert types';
 
   @override

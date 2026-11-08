@@ -338,6 +338,9 @@ class AppLocalizationsBs extends AppLocalizations {
   String get lookupNotificationTypes => 'Tipovi obavještenja';
 
   @override
+  String get lookupNotificationAudiences => 'Publika notifikacije';
+
+  @override
   String get lookupConsumptionAlertTypes => 'Tipovi upozorenja o potrošnji';
 
   @override

@@ -59,5 +59,8 @@ public class SupportTicketStatusesController(ILookupService<SupportTicketStatusL
 public class NotificationTypesController(ILookupService<NotificationTypeLookup> service)
     : LookupController<NotificationTypeLookup>(service);
 
+public class NotificationAudiencesController(ILookupService<NotificationAudienceLookup> service)
+    : LookupController<NotificationAudienceLookup>(service);
+
 public class ConsumptionAlertTypesController(ILookupService<ConsumptionAlertTypeLookup> service)
     : LookupController<ConsumptionAlertTypeLookup>(service);

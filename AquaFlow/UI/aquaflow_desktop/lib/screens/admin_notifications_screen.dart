@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_desktop/widgets/lookup_dropdown.dart';
+import 'package:aquaflow_desktop/services/admin_lookup_service.dart';
 import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_notification_draft.dart';
 import 'package:aquaflow_desktop/models/admin_notification_image.dart';
@@ -40,11 +41,37 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
   String? _typeFilter;
   String? _audienceFilter;
 
+  // Audience code -> localized codebook name for the table; until it loads (or for an unknown
+  // code) the built-in labels in _audienceLabel are used.
+  Map<String, String> _audienceNames = const {};
+
   @override
   void initState() {
     super.initState();
     load();
+    _loadAudienceNames();
   }
+
+  Future<void> _loadAudienceNames() async {
+    try {
+      final items = await AdminLookupService().fetchActive(
+        'NotificationAudiences',
+      );
+      if (!mounted) return;
+      final language = Localizations.localeOf(context).languageCode;
+      setState(() {
+        _audienceNames = {
+          for (final item in items)
+            item.code.toLowerCase(): item.localizedName(language),
+        };
+      });
+    } catch (_) {
+      // Keep the fallback labels.
+    }
+  }
+
+  String _audienceName(String audience, AppLocalizations loc) =>
+      _audienceNames[audience.toLowerCase()] ?? _audienceLabel(audience, loc);
 
   @override
   Future<({List<AppNotification> items, int totalCount})> fetchPage() async {
@@ -264,20 +291,13 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         ),
         SizedBox(
           width: 220,
-          child: DropdownButtonFormField<String>(
-            initialValue: _audienceFilter ?? '',
-            decoration: InputDecoration(
-              labelText: loc.audienceFieldLabel,
-              prefixIcon: const Icon(Icons.group_outlined),
-            ),
-            items: [
-              DropdownMenuItem(value: '', child: Text(loc.allAudiencesOption)),
-              for (final option in _audienceOptions(loc))
-                DropdownMenuItem(
-                  value: option.value,
-                  child: Text(option.label),
-                ),
-            ],
+          child: LookupDropdown(
+            route: 'NotificationAudiences',
+            value: _audienceFilter ?? '',
+            includeAllOption: true,
+            excludeCodes: const {'Direct'},
+            label: loc.audienceFieldLabel,
+            icon: Icons.group_outlined,
             onChanged: loading || mutating
                 ? null
                 : (value) => _setAudienceFilter(value ?? ''),
@@ -362,9 +382,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                               ),
                             ),
                             if (!isSmallScreen)
-                              DataCell(
-                                Text(_audienceLabel(item.audience, loc)),
-                              ),
+                              DataCell(Text(_audienceName(item.audience, loc))),
                             if (!isSmallScreen)
                               DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
@@ -666,10 +684,6 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    final audienceOptions = _optionsWithCurrent(
-      _audienceOptions(loc),
-      _audience,
-    );
     final theme = Theme.of(context);
     final enabled = !_submitting;
     final atImageLimit = _totalImageCount >= _maxNotificationImages;
@@ -733,22 +747,15 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _audience,
-                        decoration: InputDecoration(
-                          labelText: loc.audienceFieldLabel,
-                          prefixIcon: const Icon(Icons.group_outlined),
-                        ),
-                        items: [
-                          for (final option in audienceOptions)
-                            DropdownMenuItem(
-                              value: option.value,
-                              child: Text(option.label),
-                            ),
-                        ],
+                      child: LookupDropdown(
+                        route: 'NotificationAudiences',
+                        value: _audience,
+                        excludeCodes: const {'Direct'},
+                        label: loc.audienceFieldLabel,
+                        icon: Icons.group_outlined,
                         onChanged: enabled
                             ? (value) {
-                                if (value == null) return;
+                                if (value == null || value.isEmpty) return;
                                 setState(() => _audience = value);
                               }
                             : null,
@@ -984,33 +991,6 @@ class _NewImageThumbnail extends StatelessWidget {
       ],
     );
   }
-}
-
-class _SelectOption {
-  const _SelectOption({required this.value, required this.label});
-
-  final String value;
-  final String label;
-}
-
-List<_SelectOption> _audienceOptions(AppLocalizations loc) => [
-  _SelectOption(value: 'All', label: loc.allUsersAudienceLabel),
-  _SelectOption(value: 'Customers', label: loc.customersAudienceLabel),
-  _SelectOption(value: 'Collectors', label: loc.collectorsNavLabel),
-];
-
-List<_SelectOption> _optionsWithCurrent(
-  List<_SelectOption> options,
-  String current,
-) {
-  final value = current.trim();
-  if (value.isEmpty ||
-      options.any(
-        (option) => option.value.toLowerCase() == value.toLowerCase(),
-      )) {
-    return options;
-  }
-  return [...options, _SelectOption(value: value, label: value)];
 }
 
 IconData _typeIcon(String type) {

@@ -104,6 +104,7 @@
   "lookupWaterMeterStatuses": "Wasserzählerstatus",
   "lookupSupportTicketStatuses": "Support-Ticket-Status",
   "lookupNotificationTypes": "Benachrichtigungstypen",
+  "lookupNotificationAudiences": "Benachrichtigungszielgruppen",
   "lookupConsumptionAlertTypes": "Verbrauchswarnungstypen",
   "lookupNameEnColumn": "EN",
   "lookupNameDeColumn": "DE",

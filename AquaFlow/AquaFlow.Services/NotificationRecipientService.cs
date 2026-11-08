@@ -31,8 +31,8 @@ public class NotificationRecipientService
         return audience switch
         {
             "all" => await activeUsers.Select(user => user.Id).ToListAsync(),
-            "customer" or "customers" => await GetActiveUserIdsByRoleAsync("Customer"),
-            "collector" or "collectors" => await GetActiveUserIdsByRoleAsync("Collector"),
+            "customers" => await GetActiveUserIdsByRoleAsync("Customer"),
+            "collectors" => await GetActiveUserIdsByRoleAsync("Collector"),
             _ => throw new ClientException($"Unsupported notification audience '{notification.Audience}'.")
         };
     }
@@ -78,12 +78,8 @@ public class NotificationRecipientService
         return await broadcastNotifications
             .Where(notification =>
                 notification.Audience.ToLower() == "all" ||
-                ((notification.Audience.ToLower() == "customer" ||
-                    notification.Audience.ToLower() == "customers") &&
-                    normalizedRole == "customer") ||
-                ((notification.Audience.ToLower() == "collector" ||
-                    notification.Audience.ToLower() == "collectors") &&
-                    normalizedRole == "collector"))
+                (notification.Audience.ToLower() == "customers" && normalizedRole == "customer") ||
+                (notification.Audience.ToLower() == "collectors" && normalizedRole == "collector"))
             .Select(notification => notification.Id)
             .ToListAsync();
     }

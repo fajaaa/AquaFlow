@@ -724,6 +724,12 @@ abstract class AppLocalizations {
   /// **'Tipovi obavještenja'**
   String get lookupNotificationTypes;
 
+  /// No description provided for @lookupNotificationAudiences.
+  ///
+  /// In bs, this message translates to:
+  /// **'Publika notifikacije'**
+  String get lookupNotificationAudiences;
+
   /// No description provided for @lookupConsumptionAlertTypes.
   ///
   /// In bs, this message translates to:
