@@ -8,7 +8,7 @@ using AquaFlow.WebAPI.Services;
 using AquaFlow.WebAPI.Services.AccessManager;
 using Microsoft.AspNetCore.Mvc;
 
-using NotificationCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.NotificationResponse, AquaFlow.Model.SearchObjects.NotificationSearchObject, AquaFlow.Model.Requests.NotificationInsertRequest, AquaFlow.Model.Requests.NotificationUpdateRequest, AquaFlow.Model.Requests.NotificationPatchRequest>;
+using NotificationCrudService = AquaFlow.Services.INotificationService;
 using UserNotificationCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.UserNotificationResponse, AquaFlow.Model.SearchObjects.UserNotificationSearchObject, AquaFlow.Model.Requests.UserNotificationInsertRequest, AquaFlow.Model.Requests.UserNotificationUpdateRequest, AquaFlow.Model.Requests.UserNotificationPatchRequest>;
 
 namespace AquaFlow.WebAPI.Controllers;
@@ -52,6 +52,57 @@ public class NotificationsController : BaseCRUDController<NotificationResponse, 
         return base.Create(request);
     }
 
+    // Create with 0..5 images in one atomic call (multipart form; image files named "images").
+    // Every file's size/type/magic bytes is checked BEFORE the single service call, which stores the
+    // notification, its images and the inbox rows in one transaction and publishes the push only
+    // after the commit - so a 400 leaves nothing in the DB and no push goes out. CreatedById comes
+    // from the JWT, same as Create. Pass-through to the existing JSON Create is unchanged.
+    [HttpPost("with-images")]
+    [RequirePermission(ManagePermission)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<NotificationResponse>> CreateWithImages(
+        [FromForm] NotificationWithImagesRequest form,
+        IFormFileCollection? images)
+    {
+        var userId = GetCurrentUserId();
+
+        var request = new NotificationInsertRequest
+        {
+            Title = form.Title,
+            Body = form.Body,
+            Type = form.Type,
+            Audience = form.Audience,
+            CreatedById = userId
+        };
+
+        var uploads = await ReadValidatedImagesAsync(images);
+        var result = await Service.CreateWithImagesAsync(request, uploads, userId);
+        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+    }
+
+    private static async Task<List<(byte[] Data, string ContentType, string FileName)>> ReadValidatedImagesAsync(IFormFileCollection? files)
+    {
+        var uploads = new List<(byte[] Data, string ContentType, string FileName)>();
+        if (files is null)
+        {
+            return uploads;
+        }
+
+        if (files.Count > MaxImagesPerNotification)
+        {
+            throw new ClientException($"A notification can have at most {MaxImagesPerNotification} images.");
+        }
+
+        foreach (var file in files)
+        {
+            var (data, contentType) = await ImageUploadHelper.ReadValidatedImageAsync(file);
+            uploads.Add((data, contentType, file.FileName));
+        }
+
+        return uploads;
+    }
+
     // CreatedById is immutable after creation: an edit must not be able to reassign
     // authorship, so whatever the request supplies is discarded in favor of the
     // existing entity's value.
@@ -93,7 +144,10 @@ public class NotificationsController : BaseCRUDController<NotificationResponse, 
 
     // Only a Notifications.Manage holder authors/curates notification content - images are
     // part of that content, so upload/delete stay admin-only like every other write action
-    // on this controller. Capped at MaxImagesPerNotification regardless of caller.
+    // on this controller. Capped at MaxImagesPerNotification regardless of caller. These per-image
+    // endpoints exist for EDITING an existing notification: adding or removing an image there never
+    // publishes a push (only NotificationService's create path does, and it already ran), so a new
+    // notification should use POST /Notifications/with-images instead of Create + UploadImage.
     [HttpPost("{id:int}/images")]
     [RequirePermission(ManagePermission)]
     [ProducesResponseType(StatusCodes.Status201Created)]

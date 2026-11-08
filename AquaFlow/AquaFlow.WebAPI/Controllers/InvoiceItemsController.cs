@@ -1,19 +1,19 @@
-using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
+using AquaFlow.Services;
 using AquaFlow.WebAPI.Filters;
 using Microsoft.AspNetCore.Mvc;
 
-using InvoiceItemCrudService = AquaFlow.Services.IBaseCRUDService<AquaFlow.Model.Responses.InvoiceItemResponse, AquaFlow.Model.SearchObjects.InvoiceItemSearchObject, AquaFlow.Model.Requests.InvoiceItemInsertRequest, AquaFlow.Model.Requests.InvoiceItemUpdateRequest, AquaFlow.Model.Requests.InvoiceItemPatchRequest>;
-
 namespace AquaFlow.WebAPI.Controllers;
 
-// /InvoiceItems is the raw admin table, same precedent as NotificationsController: every
-// action - including GetAll/GetById - requires Invoices.Manage. There is no self-service
-// equivalent, since invoice items are always read through the owning Invoice.
-public class InvoiceItemsController : BaseCRUDController<InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest, InvoiceItemCrudService>
+// /InvoiceItems is the raw admin table, same precedent as NotificationsController: both reads
+// require Invoices.Manage. There is no self-service equivalent, since invoice items are always read
+// through the owning Invoice. Read-only by construction (BaseReadController, no write routes):
+// items are created only together with their invoice in MeterReadingService.CreateForCollectorAsync,
+// so editing Quantity/UnitPrice/Amount here would desynchronise them from the invoice header totals.
+public class InvoiceItemsController : BaseReadController<InvoiceItemResponse, InvoiceItemSearchObject, IBaseReadService<InvoiceItemResponse, InvoiceItemSearchObject>>
 {
-    public InvoiceItemsController(InvoiceItemCrudService service) : base(service)
+    public InvoiceItemsController(IBaseReadService<InvoiceItemResponse, InvoiceItemSearchObject> service) : base(service)
     {
     }
 
@@ -24,20 +24,4 @@ public class InvoiceItemsController : BaseCRUDController<InvoiceItemResponse, In
     [RequirePermission("Invoices.Manage")]
     public override Task<ActionResult<InvoiceItemResponse>> GetById(int id)
         => base.GetById(id);
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<ActionResult<InvoiceItemResponse>> Create([FromBody] InvoiceItemInsertRequest request)
-        => base.Create(request);
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<ActionResult<InvoiceItemResponse>> Update(int id, [FromBody] InvoiceItemUpdateRequest request)
-        => base.Update(id, request);
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<ActionResult<InvoiceItemResponse>> Patch(int id, [FromBody] InvoiceItemPatchRequest request)
-        => base.Patch(id, request);
-
-    [RequirePermission("Invoices.Manage")]
-    public override Task<IActionResult> Delete(int id)
-        => base.Delete(id);
 }

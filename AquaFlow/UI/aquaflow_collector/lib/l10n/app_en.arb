@@ -51,6 +51,7 @@
   "bankAccountLabel": "Bank account",
   "logoUrlOptionalLabel": "Logo URL (optional)",
   "defaultLanguageLabel": "Language",
+  "defaultLanguageHelper": "Language new users start with when they register",
   "defaultCurrencyLabel": "Currency",
   "companySettingsSaveSuccess": "Company settings saved.",
   "fieldPhoneLabel": "Phone",
@@ -170,6 +171,14 @@
   "lastReadingStateLabel": "Last reading",
 
   "faultReportsTooltip": "Fault reports",
+  "readingHistoryTooltip": "Reading history",
+  "readingHistoryTitle": "Reading history",
+  "readingHistoryEmptyMessage": "No readings recorded for this meter yet.",
+  "readingHistoryVoidedPill": "Voided",
+  "readingHistoryConsumption": "Consumption: {value} m³",
+  "@readingHistoryConsumption": {"placeholders": {"value": {"type": "String"}}},
+  "readingHistoryPageIndicator": "Page {page} / {total}",
+  "@readingHistoryPageIndicator": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
   "collectorMeterSearchHint": "Owner name, settlement, serial number, or address",
   "collectorMetersEmptyMessage": "No water meters for \"{term}\".",
   "collectorLastReadingLabel": "Last reading: {value} m³",
@@ -202,6 +211,11 @@
   "photoUrlOptionalLabel": "Photo (URL, optional)",
   "submitReadingButton": "Save reading",
   "readingSubmittedWithInvoiceSuccess": "Reading saved. Consumption: {consumption} m³. Invoice {invoiceNumber}: {total} BAM.",
+  "readingSubmittedPaidInCashSuccess": "Reading saved. Invoice {invoiceNumber} ({total} BAM) was paid in cash.",
+  "paidInCashCheckboxLabel": "Customer pays in cash",
+  "paidInCashCheckboxSubtitle": "The invoice will be recorded as paid right away.",
+  "paidInCashConfirmTitle": "Confirm cash payment",
+  "paidInCashConfirmMessage": "Confirm that you received {total} BAM in cash from the customer? The invoice will be recorded as paid.",
   "readingSubmittedNoInvoiceSuccess": "Reading saved. Consumption: {consumption} m³. No invoice created (consumption is 0).",
   "meterMarkedBrokenSuccess": "Water meter marked as faulty.",
   "markBrokenDialogTitle": "Mark water meter {serialNumber} as faulty",
@@ -231,5 +245,82 @@
   "statusChangeDialogTitle": "Status change",
   "statusChangeDialogContent": "Set the report status to \"{status}\"?",
   "startActionButton": "Start",
-  "resolveActionButton": "Resolve"
+  "resolveActionButton": "Resolve",
+  "sessionExpiredMessage": "Your session has expired. Please sign in again.",
+  "passwordChangedSignInAgain": "Your password has been changed. Please sign in again.",
+  "notificationsNewBanner": "You have new notifications",
+  "notificationOpenAction": "Open",
+  "notificationOpenRelatedFailed": "The related item couldn't be opened. It may no longer be available.",
+  "newFaultReportTooltip": "New fault report",
+  "@newFaultReportTooltip": {
+    "description": "Tooltip/label for the entry point that opens the new fault report dialog."
+  },
+  "newFaultReportDialogTitle": "New fault report",
+  "@newFaultReportDialogTitle": {
+    "description": "Title of the new fault report dialog."
+  },
+  "newFaultReportSubmitButton": "Submit report",
+  "@newFaultReportSubmitButton": {
+    "description": "Submit button of the new fault report dialog."
+  },
+  "newFaultReportCreatedMessage": "Fault report submitted.",
+  "@newFaultReportCreatedMessage": {
+    "description": "SnackBar after a fault report was filed."
+  },
+  "faultReportTitleLabel": "Title",
+  "@faultReportTitleLabel": {
+    "description": "Title field label of the fault report form."
+  },
+  "faultReportDescriptionLabel": "Description",
+  "@faultReportDescriptionLabel": {
+    "description": "Description field label of the fault report form."
+  },
+  "faultReportTitleTooLongError": "Title can be at most 150 characters.",
+  "@faultReportTitleTooLongError": {
+    "description": "Validation error for an over-long fault report title."
+  },
+  "waterMeterOptionalLabel": "Water meter (optional)",
+  "@waterMeterOptionalLabel": {
+    "description": "Label of the optional water meter section."
+  },
+  "waterMeterSearchHint": "Search water meter (serial, owner, address)",
+  "@waterMeterSearchHint": {
+    "description": "Hint of the water meter search field in the fault report form."
+  },
+  "waterMeterNoResults": "No water meters found.",
+  "@waterMeterNoResults": {
+    "description": "Shown when the water meter search returned nothing."
+  },
+  "waterMeterClearTooltip": "Remove water meter",
+  "@waterMeterClearTooltip": {
+    "description": "Tooltip of the button that clears the selected water meter."
+  },
+  "streetOptionalLabel": "Street (optional)",
+  "@streetOptionalLabel": {
+    "description": "Optional street field label."
+  },
+  "houseNumberOptionalLabel": "House number (optional)",
+  "@houseNumberOptionalLabel": {
+    "description": "Optional house number field label."
+  },
+  "photoCountLabel": "Photos: {count}/{max}",
+  "@photoCountLabel": {
+    "description": "Number of attached photos out of the maximum.",
+    "placeholders": {
+      "count": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "addPhotoButtonLabel": "Add photo",
+  "@addPhotoButtonLabel": {
+    "description": "Button that opens the camera/gallery chooser."
+  },
+  "takePhotoOption": "Take photo",
+  "@takePhotoOption": {
+    "description": "Image source option: camera."
+  },
+  "chooseFromGalleryOption": "From gallery",
+  "@chooseFromGalleryOption": {
+    "description": "Image source option: gallery."
+  }
 }

@@ -10,34 +10,28 @@ public partial class AquaFlowDbContext : DbContext
     }
 
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
-    public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<City> Cities => Set<City>();
     public DbSet<CollectorProfile> CollectorProfiles => Set<CollectorProfile>();
     public DbSet<CompanySettings> CompanySettings => Set<CompanySettings>();
     public DbSet<CustomerProfile> CustomerProfiles => Set<CustomerProfile>();
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
-    public DbSet<Document> Documents => Set<Document>();
     public DbSet<FaultReport> FaultReports => Set<FaultReport>();
     public DbSet<FaultReportPhoto> FaultReportPhotos => Set<FaultReportPhoto>();
     public DbSet<FaultStatusHistory> FaultStatusHistories => Set<FaultStatusHistory>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
     public DbSet<InvoiceStatusHistory> InvoiceStatusHistories => Set<InvoiceStatusHistory>();
-    public DbSet<MeterAssignment> MeterAssignments => Set<MeterAssignment>();
     public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
     public DbSet<Municipality> Municipalities => Set<Municipality>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationImage> NotificationImages => Set<NotificationImage>();
-    public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
     public DbSet<Payment> Payments => Set<Payment>();
-    public DbSet<PaymentSettings> PaymentSettings => Set<PaymentSettings>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Settlement> Settlements => Set<Settlement>();
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
     public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
     public DbSet<SupportTicketMessagePhoto> SupportTicketMessagePhotos => Set<SupportTicketMessagePhoto>();
-    public DbSet<SyncOperation> SyncOperations => Set<SyncOperation>();
     public DbSet<Tariff> Tariffs => Set<Tariff>();
     public DbSet<User> Users => Set<User>();
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
@@ -48,7 +42,18 @@ public partial class AquaFlowDbContext : DbContext
     public DbSet<WaterMeter> WaterMeters => Set<WaterMeter>();
     public DbSet<WaterMeterRequest> WaterMeterRequests => Set<WaterMeterRequest>();
     public DbSet<WaterMeterRequestStatusHistory> WaterMeterRequestStatusHistories => Set<WaterMeterRequestStatusHistory>();
-    public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
+
+    // Codebooks (lookup tables) - see LookupEntityBase and ConfigureLookups.
+    public DbSet<InvoiceStatusLookup> InvoiceStatuses => Set<InvoiceStatusLookup>();
+    public DbSet<PaymentStatusLookup> PaymentStatuses => Set<PaymentStatusLookup>();
+    public DbSet<PaymentMethodLookup> PaymentMethods => Set<PaymentMethodLookup>();
+    public DbSet<FaultReportStatusLookup> FaultReportStatuses => Set<FaultReportStatusLookup>();
+    public DbSet<WaterMeterRequestStatusLookup> WaterMeterRequestStatuses => Set<WaterMeterRequestStatusLookup>();
+    public DbSet<WaterMeterStatusLookup> WaterMeterStatuses => Set<WaterMeterStatusLookup>();
+    public DbSet<SupportTicketStatusLookup> SupportTicketStatuses => Set<SupportTicketStatusLookup>();
+    public DbSet<NotificationTypeLookup> NotificationTypes => Set<NotificationTypeLookup>();
+    public DbSet<ConsumptionAlertTypeLookup> ConsumptionAlertTypes => Set<ConsumptionAlertTypeLookup>();
+    public DbSet<NotificationAudienceLookup> NotificationAudiences => Set<NotificationAudienceLookup>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -75,6 +80,12 @@ public partial class AquaFlowDbContext : DbContext
         modelBuilder.Entity<CustomerProfile>()
             .HasIndex(profile => profile.CustomerCode)
             .IsUnique();
+
+        // One Stripe Customer per profile; filtered so the many profiles without one (NULL) don't collide.
+        modelBuilder.Entity<CustomerProfile>()
+            .HasIndex(profile => profile.StripeCustomerId)
+            .IsUnique()
+            .HasFilter("[StripeCustomerId] IS NOT NULL");
 
         // EmployeeCode is generated server-side (CollectorProfileService.GenerateEmployeeCodeAsync);
         // the unique index is the hard backstop behind that generation.
@@ -152,7 +163,7 @@ public partial class AquaFlowDbContext : DbContext
             .HasFilter("[ClientUuid] IS NOT NULL");
 
         // Photos have no independent lifecycle outside their report (unlike
-        // WorkOrder/FaultStatusHistory rows, which stay Restrict so a report can't be
+        // FaultStatusHistory rows, which stay Restrict so a report can't be
         // deleted while still referenced elsewhere) - deleting a FaultReport deletes its photos too.
         modelBuilder.Entity<FaultReportPhoto>()
             .HasOne(photo => photo.FaultReport)
@@ -215,6 +226,64 @@ public partial class AquaFlowDbContext : DbContext
             .Property(log => log.IpAddress)
             .HasMaxLength(45);
 
+        ConfigureLookups(modelBuilder);
+
         CreateSeed(modelBuilder);
+    }
+
+    // Codebook FKs reference the lookup's unique Code (HasPrincipalKey), not its Id, so the
+    // existing string columns stay as they are and the state machines / constant classes keep
+    // writing the same literals - the database now rejects any value that is not in the codebook.
+    private static void ConfigureLookups(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<InvoiceStatusLookup>().ToTable("InvoiceStatuses");
+        modelBuilder.Entity<PaymentStatusLookup>().ToTable("PaymentStatuses");
+        modelBuilder.Entity<PaymentMethodLookup>().ToTable("PaymentMethods");
+        modelBuilder.Entity<FaultReportStatusLookup>().ToTable("FaultReportStatuses");
+        modelBuilder.Entity<WaterMeterRequestStatusLookup>().ToTable("WaterMeterRequestStatuses");
+        modelBuilder.Entity<WaterMeterStatusLookup>().ToTable("WaterMeterStatuses");
+        modelBuilder.Entity<SupportTicketStatusLookup>().ToTable("SupportTicketStatuses");
+        modelBuilder.Entity<NotificationTypeLookup>().ToTable("NotificationTypes");
+        modelBuilder.Entity<ConsumptionAlertTypeLookup>().ToTable("ConsumptionAlertTypes");
+        modelBuilder.Entity<NotificationAudienceLookup>().ToTable("NotificationAudiences");
+        // Code needs no separate unique index: HasPrincipalKey(Code) below makes it an alternate
+        // key, i.e. a unique constraint.
+
+        modelBuilder.Entity<Invoice>().HasOne<InvoiceStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<InvoiceStatusHistory>().HasOne<InvoiceStatusLookup>().WithMany()
+            .HasForeignKey(x => x.NewStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<InvoiceStatusHistory>().HasOne<InvoiceStatusLookup>().WithMany()
+            .HasForeignKey(x => x.OldStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Payment>().HasOne<PaymentStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Payment>().HasOne<PaymentMethodLookup>().WithMany()
+            .HasForeignKey(x => x.PaymentMethod).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<FaultReport>().HasOne<FaultReportStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<FaultStatusHistory>().HasOne<FaultReportStatusLookup>().WithMany()
+            .HasForeignKey(x => x.NewStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<FaultStatusHistory>().HasOne<FaultReportStatusLookup>().WithMany()
+            .HasForeignKey(x => x.OldStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<WaterMeterRequest>().HasOne<WaterMeterRequestStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<WaterMeterRequestStatusHistory>().HasOne<WaterMeterRequestStatusLookup>().WithMany()
+            .HasForeignKey(x => x.NewStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<WaterMeterRequestStatusHistory>().HasOne<WaterMeterRequestStatusLookup>().WithMany()
+            .HasForeignKey(x => x.OldStatus).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<WaterMeter>().HasOne<WaterMeterStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<SupportTicket>().HasOne<SupportTicketStatusLookup>().WithMany()
+            .HasForeignKey(x => x.Status).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Notification>().HasOne<NotificationTypeLookup>().WithMany()
+            .HasForeignKey(x => x.Type).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Notification>().HasOne<NotificationAudienceLookup>().WithMany()
+            .HasForeignKey(x => x.Audience).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<WaterConsumptionAlert>().HasOne<ConsumptionAlertTypeLookup>().WithMany()
+            .HasForeignKey(x => x.AlertType).HasPrincipalKey(l => l.Code).OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -8,7 +8,7 @@ import 'package:aquaflow_customer/models/customer_water_meter_request.dart';
 import 'package:aquaflow_customer/models/customer_water_meter_request_page.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_request_exception.dart';
 import 'package:aquaflow_customer/shared/config/api_config.dart';
-import 'package:aquaflow_customer/shared/services/token_storage.dart';
+import 'package:aquaflow_customer/shared/services/authenticated_client.dart';
 
 /// Water meter requests of the signed-in customer: list own, create a new one,
 /// and cancel a still-pending one. No CustomerId is ever sent - the backend
@@ -17,14 +17,11 @@ import 'package:aquaflow_customer/shared/services/token_storage.dart';
 class CustomerWaterMeterRequestService {
   CustomerWaterMeterRequestService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   /// One page of the caller's requests, newest first. The backend pins
@@ -34,7 +31,6 @@ class CustomerWaterMeterRequestService {
     required int page,
     int pageSize = 20,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeterRequests').replace(
       queryParameters: {
         'Page': '$page',
@@ -46,7 +42,7 @@ class CustomerWaterMeterRequestService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -90,14 +86,12 @@ class CustomerWaterMeterRequestService {
     required String houseNumber,
     String? note,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeterRequests');
 
     final response = await _send(
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -126,11 +120,10 @@ class CustomerWaterMeterRequestService {
   }
 
   Future<void> cancel(int id) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeterRequests/$id/cancel');
 
     final response = await _send(
-      () => _client.post(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.post(uri),
     );
 
     if (response.statusCode != 200) {
@@ -138,14 +131,6 @@ class CustomerWaterMeterRequestService {
         _messageFor(response, 'Zahtjev nije moguće otkazati'),
       );
     }
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CustomerWaterMeterRequestException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

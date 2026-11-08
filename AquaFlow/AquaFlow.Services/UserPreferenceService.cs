@@ -22,8 +22,7 @@ public class UserPreferenceService : IUserPreferenceService
             return new UserPreferenceResponse
             {
                 Theme = "light",
-                Language = "bs",
-                ReceiveEmailNotifications = true,
+                Language = await DefaultLanguageProvider.GetAsync(_dbContext),
                 ReceivePushNotifications = true
             };
         }
@@ -46,7 +45,6 @@ public class UserPreferenceService : IUserPreferenceService
 
         entity.Theme = request.Theme;
         entity.Language = request.Language;
-        entity.ReceiveEmailNotifications = request.ReceiveEmailNotifications;
         entity.ReceivePushNotifications = request.ReceivePushNotifications;
         entity.UpdatedAt = DateTime.UtcNow;
 
@@ -61,7 +59,6 @@ public class UserPreferenceService : IUserPreferenceService
         {
             Theme = entity.Theme,
             Language = entity.Language,
-            ReceiveEmailNotifications = entity.ReceiveEmailNotifications,
             ReceivePushNotifications = entity.ReceivePushNotifications
         };
     }

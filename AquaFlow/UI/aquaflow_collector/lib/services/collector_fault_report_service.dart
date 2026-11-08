@@ -1,16 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show SocketException;
+import 'dart:io' show File, SocketException;
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' show MediaType;
+import 'package:mime/mime.dart' show lookupMimeType;
 
 import 'package:aquaflow_collector/models/collector_fault_report.dart';
 import 'package:aquaflow_collector/models/collector_fault_report_page.dart';
 import 'package:aquaflow_collector/models/collector_fault_report_photo.dart';
 import 'package:aquaflow_collector/services/collector_fault_report_exception.dart';
 import 'package:aquaflow_collector/shared/config/api_config.dart';
-import 'package:aquaflow_collector/shared/services/token_storage.dart';
+import 'package:aquaflow_collector/shared/services/authenticated_client.dart';
 
 /// Mobile collector data layer over `/FaultReports`, following the
 /// `AdminFaultReportService` template. A collector no longer holds
@@ -19,16 +21,11 @@ import 'package:aquaflow_collector/shared/services/token_storage.dart';
 /// `WaterMeterRequest`), and start/resolve are likewise allowed only for the
 /// assigned collector - nothing extra is sent from here.
 class CollectorFaultReportService {
-  CollectorFaultReportService({
-    http.Client? client,
-    TokenStorage? tokenStorage,
-    Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
-       _timeout = timeout ?? const Duration(seconds: 15);
+  CollectorFaultReportService({http.Client? client, Duration? timeout})
+    : _client = client ?? AuthenticatedClient.instance,
+      _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<CollectorFaultReportPage> fetch({
@@ -37,7 +34,6 @@ class CollectorFaultReportService {
     String? term,
     String? status,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -58,9 +54,7 @@ class CollectorFaultReportService {
       '${ApiConfig.baseUrl}/FaultReports',
     ).replace(queryParameters: query);
 
-    final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
-    );
+    final response = await _send(() => _client.get(uri));
 
     if (response.statusCode != 200) {
       throw CollectorFaultReportException(
@@ -95,17 +89,12 @@ class CollectorFaultReportService {
 
   /// Metadata for every photo attached to [faultReportId] (never raw bytes -
   /// see [fetchPhotoBytes]).
-  Future<List<CollectorFaultReportPhoto>> fetchPhotos(
-    int faultReportId,
-  ) async {
-    final token = await _requireToken();
+  Future<List<CollectorFaultReportPhoto>> fetchPhotos(int faultReportId) async {
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/FaultReports/$faultReportId/photos',
     );
 
-    final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
-    );
+    final response = await _send(() => _client.get(uri));
 
     if (response.statusCode != 200) {
       throw CollectorFaultReportException(
@@ -129,14 +118,11 @@ class CollectorFaultReportService {
   /// Raw bytes of one photo (`GET /FaultReports/{id}/photos/{photoId}`), for
   /// `Image.memory` via the shared `AuthenticatedImage` widget.
   Future<Uint8List> fetchPhotoBytes(int faultReportId, int photoId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/FaultReports/$faultReportId/photos/$photoId',
     );
 
-    final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
-    );
+    final response = await _send(() => _client.get(uri));
 
     if (response.statusCode != 200) {
       throw CollectorFaultReportException(
@@ -147,6 +133,71 @@ class CollectorFaultReportService {
     return response.bodyBytes;
   }
 
+  /// `POST /FaultReports/with-photos` (multipart): files a NEW report with
+  /// 0..5 photos atomically - the backend validates everything first and stores
+  /// report + photos in one transaction, so a failure leaves nothing behind.
+  /// Sent through [AuthenticatedClient] (`send`), which keeps the
+  /// 401 -> refresh -> retry behaviour for multipart bodies. The report starts
+  /// as New and goes to the admin for assignment.
+  Future<CollectorFaultReport> createWithPhotos({
+    required String title,
+    required String description,
+    required int settlementId,
+    String? street,
+    String? houseNumber,
+    int? waterMeterId,
+    List<File> photos = const [],
+  }) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/with-photos');
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['Title'] = title.trim()
+      ..fields['Description'] = description.trim()
+      ..fields['SettlementId'] = '$settlementId';
+
+    final streetText = street?.trim() ?? '';
+    if (streetText.isNotEmpty) request.fields['Street'] = streetText;
+    final houseText = houseNumber?.trim() ?? '';
+    if (houseText.isNotEmpty) request.fields['HouseNumber'] = houseText;
+    if (waterMeterId != null) {
+      request.fields['WaterMeterId'] = '$waterMeterId';
+    }
+
+    for (final photo in photos) {
+      // Sniffed from magic bytes (then extension, then jpeg): a picker cache
+      // file may lack an extension and would otherwise go out as
+      // octet-stream, which the backend's content-type whitelist rejects.
+      final headerBytes = await photo.openRead(0, 12).first;
+      final mimeType =
+          lookupMimeType(photo.path, headerBytes: headerBytes) ?? 'image/jpeg';
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'photos',
+          photo.path,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+    }
+
+    final response = await _send(
+      () async => http.Response.fromStream(await _client.send(request)),
+    );
+
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw CollectorFaultReportException(
+        _messageFor(response, 'Prijavu kvara nije moguće poslati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const CollectorFaultReportException(
+        'Prijava kvara je u neispravnom formatu.',
+      );
+    }
+
+    return CollectorFaultReport.fromJson(decoded);
+  }
+
   /// `POST /FaultReports/{id}/start` (New -> InProgress). No body: the backend
   /// state machine owns the transition (clearing `resolvedAt`) and stamps the
   /// acting user from the JWT into `FaultStatusHistory`.
@@ -154,15 +205,38 @@ class CollectorFaultReportService {
 
   /// `POST /FaultReports/{id}/resolve` (New/InProgress -> Resolved). No body:
   /// the backend stamps `resolvedAt` itself - the FE no longer sends it.
-  Future<CollectorFaultReport> resolve(int id) => _postTransition(id, 'resolve');
+  Future<CollectorFaultReport> resolve(int id) =>
+      _postTransition(id, 'resolve');
+
+  /// One report assigned to the caller (`GET /FaultReports/{id}`) - used by
+  /// the notification deep link. A report not assigned to this collector (or
+  /// gone) is a 404 on the backend, surfacing as
+  /// [CollectorFaultReportException].
+  Future<CollectorFaultReport> fetchById(int id) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id');
+
+    final response = await _send(() => _client.get(uri));
+
+    if (response.statusCode != 200) {
+      throw CollectorFaultReportException(
+        _messageFor(response, 'Prijavu kvara nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const CollectorFaultReportException(
+        'Prijava kvara je u neispravnom formatu.',
+      );
+    }
+
+    return CollectorFaultReport.fromJson(decoded);
+  }
 
   Future<CollectorFaultReport> _postTransition(int id, String action) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/FaultReports/$id/$action');
 
-    final response = await _send(
-      () => _client.post(uri, headers: {'Authorization': 'Bearer $token'}),
-    );
+    final response = await _send(() => _client.post(uri));
 
     if (response.statusCode != 200) {
       throw CollectorFaultReportException(
@@ -178,14 +252,6 @@ class CollectorFaultReportService {
     }
 
     return CollectorFaultReport.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CollectorFaultReportException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

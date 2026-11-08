@@ -1,11 +1,14 @@
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Model;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.Tests.Notifications;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
 namespace AquaFlow.Services.Tests;
@@ -19,7 +22,7 @@ public class SupportTicketServiceTests
         var service = CreateService(context);
 
         var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.CreateForUserAsync(1, "Nema vode", "Voda ne dolazi vec dva dana."));
+            () => service.CreateForUserAsync(1, "Nema vode", "Voda ne dolazi vec dva dana.", []));
 
         Assert.Contains("no customer profile", exception.Message);
     }
@@ -32,7 +35,7 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        var response = await service.CreateForUserAsync(1, "Nema vode", "Voda ne dolazi vec dva dana.");
+        var response = await service.CreateForUserAsync(1, "Nema vode", "Voda ne dolazi vec dva dana.", []);
 
         Assert.Equal(5, response.CustomerId);
         Assert.Equal(SupportTicketStatus.Open, response.Status);
@@ -43,6 +46,86 @@ public class SupportTicketServiceTests
         Assert.False(message.IsFromStaff);
         Assert.Equal("Voda ne dolazi vec dva dana.", message.Body);
         Assert.Equal(1, message.SenderId);
+    }
+
+    [Fact]
+    public async Task CreateForUserAsync_WithTwoPhotos_StoresTicketMessageAndBothPhotos()
+    {
+        await using var context = CreateContext();
+        SeedCustomer(context, userId: 1, customerId: 5);
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var response = await service.CreateForUserAsync(1, "Nema vode", "Saljem slike.",
+        [
+            new SupportTicketPhotoUpload([0xFF, 0xD8, 0xFF, 0x01], "image/jpeg", "prva.jpg"),
+            new SupportTicketPhotoUpload([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], "image/png", "druga.png")
+        ]);
+
+        Assert.Equal(1, await context.SupportTickets.CountAsync());
+        var storedMessage = await context.SupportTicketMessages.SingleAsync();
+        var storedPhotos = await context.SupportTicketMessagePhotos.OrderBy(photo => photo.Id).ToListAsync();
+        Assert.Equal(2, storedPhotos.Count);
+        Assert.All(storedPhotos, photo => Assert.Equal(storedMessage.Id, photo.SupportTicketMessageId));
+        Assert.Equal(["prva.jpg", "druga.png"], storedPhotos.Select(photo => photo.FileName));
+        Assert.Equal([4L, 8L], storedPhotos.Select(photo => photo.SizeBytes));
+
+        var message = Assert.Single(response.Messages);
+        Assert.Equal(storedPhotos.Select(photo => photo.Id).Order(), message.Photos.Select(photo => photo.Id).Order());
+    }
+
+    [Fact]
+    public async Task AddMessageAsync_ClosedTicketWithPhotos_ThrowsClientException_AndStoresNothing()
+    {
+        await using var context = CreateContext();
+        context.SupportTickets.Add(new SupportTicket
+        {
+            Id = 1,
+            CustomerId = 5,
+            Subject = "Nema vode",
+            Status = SupportTicketStatus.Closed,
+            LastMessageAt = DateTime.UtcNow.AddDays(-1),
+            ClosedAt = DateTime.UtcNow.AddDays(-1)
+        });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(() => service.AddMessageAsync(1, senderId: 1, isFromStaff: false,
+            body: "Ima li novosti?",
+            photos: [new SupportTicketPhotoUpload([0xFF, 0xD8, 0xFF, 0x01], "image/jpeg", "slika.jpg")]));
+
+        Assert.Equal(0, await context.SupportTicketMessages.CountAsync());
+        Assert.Equal(0, await context.SupportTicketMessagePhotos.CountAsync());
+    }
+
+    [Fact]
+    public async Task AddMessageAsync_OpenTicketWithPhotos_ReturnsMetadataOfStoredPhotos()
+    {
+        await using var context = CreateContext();
+        context.SupportTickets.Add(new SupportTicket
+        {
+            Id = 1,
+            CustomerId = 5,
+            Subject = "Nema vode",
+            Status = SupportTicketStatus.Open,
+            LastMessageAt = DateTime.UtcNow.AddDays(-1)
+        });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var message = await service.AddMessageAsync(1, senderId: 1, isFromStaff: false, body: "Evo slika.",
+            photos:
+            [
+                new SupportTicketPhotoUpload([0xFF, 0xD8, 0xFF, 0x01], "image/jpeg", "prva.jpg"),
+                new SupportTicketPhotoUpload([0xFF, 0xD8, 0xFF, 0x02, 0x03], "image/jpeg", "druga.jpg")
+            ]);
+
+        var storedPhotos = await context.SupportTicketMessagePhotos.ToListAsync();
+        Assert.Equal(2, storedPhotos.Count);
+        Assert.All(storedPhotos, photo => Assert.Equal(message.Id, photo.SupportTicketMessageId));
+        Assert.Equal(storedPhotos.Select(photo => photo.Id).Order(), message.Photos.Select(photo => photo.Id).Order());
+        Assert.All(message.Photos, photo => Assert.Equal("image/jpeg", photo.ContentType));
+        Assert.Equal([4L, 5L], message.Photos.OrderBy(photo => photo.Id).Select(photo => photo.SizeBytes));
     }
 
     [Fact]
@@ -62,7 +145,7 @@ public class SupportTicketServiceTests
         var service = CreateService(context);
 
         var exception = await Assert.ThrowsAsync<ClientException>(
-            () => service.AddMessageAsync(1, senderId: 1, isFromStaff: false, body: "Ima li novosti?"));
+            () => service.AddMessageAsync(1, senderId: 1, isFromStaff: false, body: "Ima li novosti?", photos: []));
 
         Assert.Contains("open ticket", exception.Message);
     }
@@ -83,7 +166,7 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        var message = await service.AddMessageAsync(1, senderId: 1, isFromStaff: true, body: "Radimo na tome.");
+        var message = await service.AddMessageAsync(1, senderId: 1, isFromStaff: true, body: "Radimo na tome.", photos: []);
 
         var ticket = await context.SupportTickets.SingleAsync(t => t.Id == 1);
         Assert.NotNull(ticket.LastMessageAt);
@@ -109,7 +192,7 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        await service.AddMessageAsync(1, senderId: 1, isFromStaff: false, body: "Hvala, i dalje nema vode.");
+        await service.AddMessageAsync(1, senderId: 1, isFromStaff: false, body: "Hvala, i dalje nema vode.", photos: []);
 
         var ticket = await context.SupportTickets.SingleAsync(t => t.Id == 1);
         Assert.False(ticket.LastMessageFromStaff);
@@ -134,11 +217,11 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        var closed = await service.CloseAsync(1);
+        var closed = await service.CloseAsync(1, actorUserId: 99);
         Assert.Equal(SupportTicketStatus.Closed, closed.Status);
         Assert.NotNull(closed.ClosedAt);
 
-        var reopened = await service.ReopenAsync(1);
+        var reopened = await service.ReopenAsync(1, actorUserId: 99);
         Assert.Equal(SupportTicketStatus.Open, reopened.Status);
         Assert.Null(reopened.ClosedAt);
     }
@@ -158,7 +241,7 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        var exception = await Assert.ThrowsAsync<ClientException>(() => service.CloseAsync(1));
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.CloseAsync(1, actorUserId: 99));
 
         Assert.Contains("already closed", exception.Message);
     }
@@ -178,7 +261,7 @@ public class SupportTicketServiceTests
         await context.SaveChangesAsync();
         var service = CreateService(context);
 
-        var exception = await Assert.ThrowsAsync<ClientException>(() => service.ReopenAsync(1));
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.ReopenAsync(1, actorUserId: 99));
 
         Assert.Contains("already open", exception.Message);
     }
@@ -204,10 +287,11 @@ public class SupportTicketServiceTests
         Assert.Equal(2, item.Id);
     }
 
-    private static AquaFlowDbContext CreateContext()
+    internal static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new AquaFlowDbContext(options);
@@ -238,7 +322,7 @@ public class SupportTicketServiceTests
     // Mirrors the SupportTicket flatten config from Program.cs so the response's CustomerName,
     // MessageCount and SenderName populate from the loaded navigations, same approach as
     // WaterMeterRequestServiceTests building a local TypeAdapterConfig.
-    private static SupportTicketService CreateService(AquaFlowDbContext context)
+    internal static SupportTicketService CreateService(AquaFlowDbContext context, IMessagePublisher? publisher = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<SupportTicket, SupportTicketResponse>()
@@ -248,6 +332,6 @@ public class SupportTicketServiceTests
             .Map(destination => destination.SenderName, source => source.Sender == null || source.Sender.CustomerProfile == null ? null : (source.Sender.CustomerProfile.FirstName + " " + source.Sender.CustomerProfile.LastName).Trim());
         IMapper mapper = new Mapper(mapperConfig);
 
-        return new SupportTicketService(context, mapper);
+        return new SupportTicketService(context, mapper, TestSystemNotifications.Create(context, publisher));
     }
 }

@@ -317,6 +317,7 @@ class _LanguageToggle extends StatelessWidget {
         ),
         segments: const [
           ButtonSegment(value: 'bs', label: Text('BS')),
+          ButtonSegment(value: 'de', label: Text('DE')),
           ButtonSegment(value: 'en', label: Text('EN')),
         ],
         selected: {languageCode},

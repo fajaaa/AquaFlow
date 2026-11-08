@@ -16,5 +16,14 @@ public class CheckoutSessionResponse
     // Stripe publishable key, needed by the mobile app's PaymentSheet; null unless the active provider
     // is Stripe.
     public string? PublishableKey { get; set; }
+    // Stripe Customer id + short-lived ephemeral key, so the PaymentSheet can offer the customer's saved
+    // cards and a "save card" option; both null unless the active provider supports saved cards.
+    public string? StripeCustomerId { get; set; }
+    public string? EphemeralKeySecret { get; set; }
     public string Status { get; set; } = string.Empty;
+    // True when the provider reports the invoice's open attempt already succeeded (the customer paid,
+    // but our webhook confirmation may not have landed yet). The client must NOT open a PaymentSheet
+    // then (ClientSecret is null) - it only waits for the invoice to read Paid. False means "continue
+    // paying": open the PaymentSheet with ClientSecret (Stripe) or report the Pending session (Manual).
+    public bool AlreadySucceeded { get; set; }
 }

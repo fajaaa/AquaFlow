@@ -13,19 +13,16 @@ import 'package:aquaflow_desktop/shared/config/api_config.dart';
 import 'package:aquaflow_desktop/shared/models/app_notification.dart';
 import 'package:aquaflow_desktop/shared/models/app_notification_page.dart';
 import 'package:aquaflow_desktop/shared/services/notification_exception.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 class AdminNotificationService {
   AdminNotificationService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<AppNotificationPage> fetch({
@@ -35,7 +32,6 @@ class AdminNotificationService {
     String? type,
     String? audience,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -62,7 +58,7 @@ class AdminNotificationService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -93,14 +89,12 @@ class AdminNotificationService {
   }
 
   Future<AppNotification> create(AdminNotificationDraft draft) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Notifications');
 
     final response = await _send(
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(draft.toJson()),
@@ -116,15 +110,71 @@ class AdminNotificationService {
     return _decodeNotification(response.body);
   }
 
+  /// Creates a notification together with its [images] in one atomic call
+  /// (`POST /Notifications/with-images`, multipart: form fields + files named
+  /// `images`). The server validates every file first and stores notification,
+  /// images and inbox rows in one transaction, publishing the push only after
+  /// the commit - so a failure leaves nothing behind and the call can be retried.
+  /// `createdById` is not sent: the server takes it from the JWT.
+  Future<AppNotification> createWithImages(
+    AdminNotificationDraft draft,
+    List<File> images,
+  ) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Notifications/with-images');
+
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['Title'] = draft.title
+      ..fields['Body'] = draft.body
+      ..fields['Type'] = draft.type
+      ..fields['Audience'] = draft.audience;
+
+    for (final imageFile in images) {
+      request.files.add(await _imagePart('images', imageFile));
+    }
+
+    final http.Response response;
+    try {
+      final streamed = await _client.send(request).timeout(_timeout);
+      response = await http.Response.fromStream(streamed);
+    } on SocketException {
+      throw NotificationException('Server nije dostupan na ${ApiConfig.baseUrl}.');
+    } on TimeoutException {
+      throw const NotificationException('Server nije odgovorio na vrijeme.');
+    } on http.ClientException catch (e) {
+      throw NotificationException('Greška mreže: ${e.message}');
+    }
+
+    if (response.statusCode != 201) {
+      throw NotificationException(
+        _messageFor(response, 'Obavijest nije moguće dodati'),
+      );
+    }
+
+    return _decodeNotification(response.body);
+  }
+
+  // Same magic-byte sniffing as CustomerFaultReportService.uploadPhoto - a file path with
+  // no/an unrecognized extension (e.g. a cache file from the Android Photo Picker) would
+  // otherwise fall back to application/octet-stream, which the backend's whitelist rejects.
+  Future<http.MultipartFile> _imagePart(String field, File imageFile) async {
+    final headerBytes = await imageFile.openRead(0, 12).first;
+    final mimeType =
+        lookupMimeType(imageFile.path, headerBytes: headerBytes) ??
+        'image/jpeg';
+    return http.MultipartFile.fromPath(
+      field,
+      imageFile.path,
+      contentType: MediaType.parse(mimeType),
+    );
+  }
+
   Future<AppNotification> update(int id, AdminNotificationDraft draft) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Notifications/$id');
 
     final response = await _send(
       () => _client.put(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(draft.toJson()),
@@ -141,11 +191,10 @@ class AdminNotificationService {
   }
 
   Future<void> delete(int id) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Notifications/$id');
 
     final response = await _send(
-      () => _client.delete(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.delete(uri),
     );
 
     if (response.statusCode != 204) {
@@ -158,13 +207,12 @@ class AdminNotificationService {
   /// Metadata for every image attached to [notificationId] (never raw bytes -
   /// see `fetchImageBytes`).
   Future<List<AdminNotificationImage>> fetchImages(int notificationId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/Notifications/$notificationId/images',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -191,27 +239,12 @@ class AdminNotificationService {
     int notificationId,
     File imageFile,
   ) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/Notifications/$notificationId/images',
     );
 
-    // Same magic-byte sniffing as CustomerFaultReportService.uploadPhoto - a file path with
-    // no/an unrecognized extension (e.g. a cache file from the Android Photo Picker) would
-    // otherwise fall back to application/octet-stream, which the backend's whitelist rejects.
-    final headerBytes = await imageFile.openRead(0, 12).first;
-    final mimeType =
-        lookupMimeType(imageFile.path, headerBytes: headerBytes) ??
-        'image/jpeg';
     final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          imageFile.path,
-          contentType: MediaType.parse(mimeType),
-        ),
-      );
+      ..files.add(await _imagePart('file', imageFile));
 
     final http.Response response;
     try {
@@ -242,13 +275,12 @@ class AdminNotificationService {
   /// Raw bytes of one image (`GET /Notifications/{id}/images/{imageId}`), for
   /// `Image.memory` via the shared `AuthenticatedImage` widget.
   Future<Uint8List> fetchImageBytes(int notificationId, int imageId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/Notifications/$notificationId/images/$imageId',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -261,13 +293,12 @@ class AdminNotificationService {
   }
 
   Future<void> deleteImage(int notificationId, int imageId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/Notifications/$notificationId/images/$imageId',
     );
 
     final response = await _send(
-      () => _client.delete(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.delete(uri),
     );
 
     if (response.statusCode != 204) {
@@ -283,14 +314,6 @@ class AdminNotificationService {
       throw const NotificationException('Obavijest je u neispravnom formatu.');
     }
     return AppNotification.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const NotificationException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

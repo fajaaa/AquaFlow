@@ -142,6 +142,9 @@ class AppLocalizationsBs extends AppLocalizations {
   String get defaultLanguageLabel => 'Jezik';
 
   @override
+  String get defaultLanguageHelper => 'Jezik novih korisnika pri registraciji';
+
+  @override
   String get defaultCurrencyLabel => 'Valuta';
 
   @override
@@ -465,6 +468,29 @@ class AppLocalizationsBs extends AppLocalizations {
   String get faultReportsTooltip => 'Prijave kvarova';
 
   @override
+  String get readingHistoryTooltip => 'Historija očitanja';
+
+  @override
+  String get readingHistoryTitle => 'Historija očitanja';
+
+  @override
+  String get readingHistoryEmptyMessage =>
+      'Za ovaj vodomjer još nema evidentiranih očitanja.';
+
+  @override
+  String get readingHistoryVoidedPill => 'Stornirano';
+
+  @override
+  String readingHistoryConsumption(String value) {
+    return 'Potrošnja: $value m³';
+  }
+
+  @override
+  String readingHistoryPageIndicator(int page, int total) {
+    return 'Stranica $page / $total';
+  }
+
+  @override
   String get collectorMeterSearchHint =>
       'Ime vlasnika, naselje, serijski broj ili adresa';
 
@@ -574,6 +600,26 @@ class AppLocalizationsBs extends AppLocalizations {
   }
 
   @override
+  String readingSubmittedPaidInCashSuccess(String invoiceNumber, String total) {
+    return 'Očitanje je snimljeno. Račun $invoiceNumber ($total BAM) je plaćen gotovinom.';
+  }
+
+  @override
+  String get paidInCashCheckboxLabel => 'Kupac plaća gotovinom';
+
+  @override
+  String get paidInCashCheckboxSubtitle =>
+      'Račun će odmah biti evidentiran kao plaćen.';
+
+  @override
+  String get paidInCashConfirmTitle => 'Potvrda gotovinske uplate';
+
+  @override
+  String paidInCashConfirmMessage(String total) {
+    return 'Potvrđujete da ste od kupca primili $total BAM u gotovini? Račun će biti evidentiran kao plaćen.';
+  }
+
+  @override
   String readingSubmittedNoInvoiceSuccess(String consumption) {
     return 'Očitanje je snimljeno. Potrošnja: $consumption m³. Račun nije kreiran (potrošnja je 0).';
   }
@@ -664,4 +710,76 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get resolveActionButton => 'Riješi';
+
+  @override
+  String get sessionExpiredMessage => 'Sesija je istekla. Prijavite se ponovo.';
+
+  @override
+  String get passwordChangedSignInAgain =>
+      'Lozinka je promijenjena. Prijavite se ponovo.';
+
+  @override
+  String get notificationsNewBanner => 'Imate novih obavijesti';
+
+  @override
+  String get notificationOpenAction => 'Otvori';
+
+  @override
+  String get notificationOpenRelatedFailed =>
+      'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.';
+
+  @override
+  String get newFaultReportTooltip => 'Nova prijava kvara';
+
+  @override
+  String get newFaultReportDialogTitle => 'Nova prijava kvara';
+
+  @override
+  String get newFaultReportSubmitButton => 'Pošalji prijavu';
+
+  @override
+  String get newFaultReportCreatedMessage => 'Prijava kvara je poslana.';
+
+  @override
+  String get faultReportTitleLabel => 'Naslov';
+
+  @override
+  String get faultReportDescriptionLabel => 'Opis';
+
+  @override
+  String get faultReportTitleTooLongError =>
+      'Naslov može imati najviše 150 znakova.';
+
+  @override
+  String get waterMeterOptionalLabel => 'Vodomjer (opcionalno)';
+
+  @override
+  String get waterMeterSearchHint =>
+      'Pretraži vodomjer (serijski broj, vlasnik, adresa)';
+
+  @override
+  String get waterMeterNoResults => 'Nema pronađenih vodomjera.';
+
+  @override
+  String get waterMeterClearTooltip => 'Ukloni vodomjer';
+
+  @override
+  String get streetOptionalLabel => 'Ulica (opcionalno)';
+
+  @override
+  String get houseNumberOptionalLabel => 'Kućni broj (opcionalno)';
+
+  @override
+  String photoCountLabel(int count, int max) {
+    return 'Fotografije: $count/$max';
+  }
+
+  @override
+  String get addPhotoButtonLabel => 'Dodaj sliku';
+
+  @override
+  String get takePhotoOption => 'Slikaj';
+
+  @override
+  String get chooseFromGalleryOption => 'Iz galerije';
 }

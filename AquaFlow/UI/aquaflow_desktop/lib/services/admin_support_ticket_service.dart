@@ -12,7 +12,7 @@ import 'package:aquaflow_desktop/models/admin_support_ticket_message.dart';
 import 'package:aquaflow_desktop/models/admin_support_ticket_page.dart';
 import 'package:aquaflow_desktop/services/admin_support_ticket_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 /// Desktop admin data layer over `/SupportTickets`, following the
 /// `AdminFaultReportService` template for the read/transition routes and
@@ -25,14 +25,11 @@ import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 class AdminSupportTicketService {
   AdminSupportTicketService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   /// One page of every ticket (`GET /SupportTickets`, requires
@@ -45,7 +42,6 @@ class AdminSupportTicketService {
     String? term,
     String? status,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -67,7 +63,7 @@ class AdminSupportTicketService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -104,11 +100,10 @@ class AdminSupportTicketService {
   /// The full thread of one ticket (`GET /SupportTickets/{id}`): header
   /// fields plus every message and its photo metadata.
   Future<AdminSupportTicket> fetchById(int id) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/SupportTickets/$id');
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -137,13 +132,11 @@ class AdminSupportTicketService {
     required String body,
     List<File> images = const [],
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/SupportTickets/$ticketId/messages',
     );
 
     final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
       ..fields['body'] = body.trim();
     for (final image in images) {
       request.files.add(await _multipartImage(image));
@@ -172,13 +165,12 @@ class AdminSupportTicketService {
     int messageId,
     int photoId,
   ) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/SupportTickets/$ticketId/messages/$messageId/photos/$photoId',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -199,11 +191,10 @@ class AdminSupportTicketService {
   Future<AdminSupportTicket> reopen(int id) => _postTransition(id, 'reopen');
 
   Future<AdminSupportTicket> _postTransition(int id, String action) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/SupportTickets/$id/$action');
 
     final response = await _send(
-      () => _client.post(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.post(uri),
     );
 
     if (response.statusCode != 200) {
@@ -235,14 +226,6 @@ class AdminSupportTicketService {
       imageFile.path,
       contentType: MediaType.parse(mimeType),
     );
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminSupportTicketException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

@@ -11,6 +11,9 @@ public class WaterConsumptionAlertResponse : AuditableResponse
     public string AlertType { get; set; } = string.Empty;
     public decimal MeasuredValue { get; set; }
     public decimal ThresholdValue { get; set; }
+    public decimal? ExpectedValue { get; set; }
+    public decimal? ExpectedLowerBound { get; set; }
+    public decimal? ExpectedUpperBound { get; set; }
     public string Message { get; set; } = string.Empty;
     public bool IsResolved { get; set; }
     public DateTime? ResolvedAt { get; set; }

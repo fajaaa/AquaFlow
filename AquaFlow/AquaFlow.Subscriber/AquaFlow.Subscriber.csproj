@@ -8,12 +8,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="DotNetEnv" Version="3.2.0" />
     <PackageReference Include="EasyNetQ" Version="7.8.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AquaFlow.Model\AquaFlow.Model.csproj" />
+    <ProjectReference Include="..\AquaFlow.Services\AquaFlow.Services.csproj" />
+    <ProjectReference Include="..\AquaFlow.Common.Services\AquaFlow.Common.Services.csproj" />
   </ItemGroup>
 
 </Project>

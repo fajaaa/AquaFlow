@@ -28,7 +28,7 @@ public partial class AquaFlowDbContext
         SeedFaultReports(modelBuilder);
         SeedNotifications(modelBuilder);
         SeedUserNotifications(modelBuilder);
-        SeedPaymentSettings(modelBuilder);
+        SeedLookups(modelBuilder);
     }
 
     private static void SeedUserRoles(ModelBuilder modelBuilder)
@@ -40,6 +40,7 @@ public partial class AquaFlowDbContext
                 Name = "Admin",
                 Description = "System administrator with full access.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -49,6 +50,7 @@ public partial class AquaFlowDbContext
                 Name = "Collector",
                 Description = "Field collector responsible for meter readings.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -58,6 +60,7 @@ public partial class AquaFlowDbContext
                 Name = "Customer",
                 Description = "Customer portal user.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
@@ -74,6 +77,7 @@ public partial class AquaFlowDbContext
                 Module = "Users",
                 Description = "Allows reading user accounts.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -85,6 +89,7 @@ public partial class AquaFlowDbContext
                 Module = "Users",
                 Description = "Allows creating, updating, and deleting user accounts.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -96,6 +101,7 @@ public partial class AquaFlowDbContext
                 Module = "MeterReadings",
                 Description = "Allows collectors to create and update meter readings.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -107,6 +113,7 @@ public partial class AquaFlowDbContext
                 Module = "Invoices",
                 Description = "Allows reading invoices.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -118,6 +125,7 @@ public partial class AquaFlowDbContext
                 Module = "Payments",
                 Description = "Allows reading payment records.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -129,6 +137,7 @@ public partial class AquaFlowDbContext
                 Module = "FaultReports",
                 Description = "Allows managing fault reports and related work.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -140,6 +149,7 @@ public partial class AquaFlowDbContext
                 Module = "Notifications",
                 Description = "Allows publishing and updating notifications.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -151,6 +161,7 @@ public partial class AquaFlowDbContext
                 Module = "Roles",
                 Description = "Allows managing user roles, permissions, and their assignments.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -162,6 +173,7 @@ public partial class AquaFlowDbContext
                 Module = "WaterMeterRequests",
                 Description = "Allows assigning and rejecting water meter requests.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -173,6 +185,7 @@ public partial class AquaFlowDbContext
                 Module = "Locations",
                 Description = "Allows creating, updating, and deleting settlements and service locations.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -184,6 +197,7 @@ public partial class AquaFlowDbContext
                 Module = "Tariffs",
                 Description = "Allows creating, updating, and deleting tariffs.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -195,6 +209,7 @@ public partial class AquaFlowDbContext
                 Module = "Invoices",
                 Description = "Allows issuing, cancelling, and recording payments against invoices.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -206,17 +221,7 @@ public partial class AquaFlowDbContext
                 Module = "CompanySettings",
                 Description = "Allows viewing and editing company-wide settings.",
                 IsActive = true,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
-            new
-            {
-                Id = 15,
-                Code = "PaymentSettings.Manage",
-                Name = "Manage payment settings",
-                Module = "PaymentSettings",
-                Description = "Allows viewing and editing payment gateway settings.",
-                IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -228,6 +233,7 @@ public partial class AquaFlowDbContext
                 Module = "ActivityLogs",
                 Description = "Allows reading the security/activity audit trail for all users.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -239,6 +245,7 @@ public partial class AquaFlowDbContext
                 Module = "SupportTickets",
                 Description = "Allows reading and responding to customer support tickets.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -250,6 +257,7 @@ public partial class AquaFlowDbContext
                 Module = "Customers",
                 Description = "Allows creating, updating, and deleting customer profiles.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -261,6 +269,7 @@ public partial class AquaFlowDbContext
                 Module = "Collectors",
                 Description = "Allows creating, updating, and deleting collector profiles.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -272,6 +281,7 @@ public partial class AquaFlowDbContext
                 Module = "WaterMeters",
                 Description = "Allows creating, updating, and deleting water meters.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -283,6 +293,7 @@ public partial class AquaFlowDbContext
                 Module = "Invoices",
                 Description = "Allows a customer to check out and pay their own issued invoices.",
                 IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             },
@@ -294,6 +305,33 @@ public partial class AquaFlowDbContext
                 Module = "ConsumptionAlerts",
                 Description = "Allows viewing, resolving, and recomputing water consumption anomaly alerts.",
                 IsActive = true,
+                IsSystem = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            // Id 22 is deliberately skipped: it belonged to the removed Recommendations.Manage
+            // permission (migration RemoveRecommendations) and must not be reused.
+            new
+            {
+                Id = 24,
+                Code = "Dashboard.Read",
+                Name = "View dashboard",
+                Module = "Dashboard",
+                Description = "Allows viewing company-wide dashboard statistics (revenue, invoices, consumption, fault reports, user growth).",
+                IsActive = true,
+                IsSystem = true,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 25,
+                Code = "Codebooks.Manage",
+                Name = "Manage codebooks",
+                Module = "Codebooks",
+                Description = "Allows creating, updating, and deleting codebook values (statuses, payment methods, notification and alert types).",
+                IsActive = true,
+                IsSystem = true,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
@@ -436,14 +474,6 @@ public partial class AquaFlowDbContext
             },
             new
             {
-                Id = 19,
-                UserRoleId = 1,
-                PermissionId = 15,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)null
-            },
-            new
-            {
                 Id = 20,
                 UserRoleId = 1,
                 PermissionId = 16,
@@ -500,6 +530,23 @@ public partial class AquaFlowDbContext
                 PermissionId = 23,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
+            },
+            // Id 26 is deliberately skipped (removed Recommendations.Manage assignment).
+            new
+            {
+                Id = 28,
+                UserRoleId = 1,
+                PermissionId = 24,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
+            },
+            new
+            {
+                Id = 29,
+                UserRoleId = 1,
+                PermissionId = 25,
+                CreatedAt = SeedCreatedAt,
+                UpdatedAt = (DateTime?)null
             });
     }
 
@@ -507,6 +554,9 @@ public partial class AquaFlowDbContext
     // same PBKDF2 hash/salt pair for all six accounts since the demo intentionally shares one password.
     private const string SeedPasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=";
     private const string SeedPasswordSalt = "AquaFlowSalt2026==";
+
+    // Each seeded user carries a FIXED SecurityStamp: User.SecurityStamp otherwise defaults to a
+    // new Guid, which would make every future migration re-emit UpdateData for these rows.
 
     private static void SeedUsers(ModelBuilder modelBuilder)
     {
@@ -517,6 +567,7 @@ public partial class AquaFlowDbContext
                 Email = "kenan.fajic@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000001",
                 Phone = "+38762111000",
                 UserRoleId = 1,
                 FirstName = "Kenan",
@@ -534,6 +585,7 @@ public partial class AquaFlowDbContext
                 Email = "amel.fajic@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000002",
                 Phone = "+38761111001",
                 UserRoleId = 2,
                 FirstName = "Amel",
@@ -551,6 +603,7 @@ public partial class AquaFlowDbContext
                 Email = "kemal.fajic@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000003",
                 Phone = "+38761111002",
                 UserRoleId = 2,
                 FirstName = "Kemal",
@@ -568,6 +621,7 @@ public partial class AquaFlowDbContext
                 Email = "denis.music@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000004",
                 Phone = "+38762111004",
                 UserRoleId = 3,
                 FirstName = "",
@@ -585,6 +639,7 @@ public partial class AquaFlowDbContext
                 Email = "elmir.babovic@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000005",
                 Phone = "+38762111005",
                 UserRoleId = 3,
                 FirstName = "",
@@ -602,6 +657,7 @@ public partial class AquaFlowDbContext
                 Email = "adil.joldic@aquaflow.ba",
                 PasswordHash = SeedPasswordHash,
                 PasswordSalt = SeedPasswordSalt,
+                SecurityStamp = "seedsecuritystamp000000000000006",
                 Phone = "+38762111006",
                 UserRoleId = 3,
                 FirstName = "",
@@ -732,8 +788,6 @@ public partial class AquaFlowDbContext
                 FirstName = "Denis",
                 LastName = "Music",
                 CustomerCode = "CUS-0001",
-                DefaultLanguage = "bs",
-                Theme = "light",
                 SettlementId = (int?)8,
                 Street = (string?)"Ozrenska",
                 HouseNumber = (string?)"15",
@@ -747,8 +801,6 @@ public partial class AquaFlowDbContext
                 FirstName = "Elmir",
                 LastName = "Babovic",
                 CustomerCode = "CUS-0002",
-                DefaultLanguage = "bs",
-                Theme = "light",
                 SettlementId = (int?)6,
                 Street = (string?)"Dobrinjske bolnice",
                 HouseNumber = (string?)"7",
@@ -762,8 +814,6 @@ public partial class AquaFlowDbContext
                 FirstName = "Adil",
                 LastName = "Joldic",
                 CustomerCode = "CUS-0003",
-                DefaultLanguage = "bs",
-                Theme = "light",
                 SettlementId = (int?)11,
                 Street = (string?)"Saraci",
                 HouseNumber = (string?)"22",
@@ -799,20 +849,27 @@ public partial class AquaFlowDbContext
     // so a different invoice amount) every hour, instead of a flat figure. Every value is a multiple
     // of 0.20 m3 so ConsumptionM3 * Tariff.PricePerM3 (1.35) lands on an exact 2-decimal amount for
     // every generated invoice line - no seeded rounding drift.
+    // Seven values per meter: six readings precede the latest one, enough for the SSA model's
+    // expectation for it (ExpectedLatest*), so a seeded consumption alert can show what the model
+    // expected. The first two values (06:00, 07:00) were prepended later with InitialReading lowered
+    // by their sum, so the 08:00-12:00 readings and LastReading kept their values. Meters 4 and 6 end
+    // on a clear drop and are flagged by the anomaly detector, the rest are not.
     private static readonly (int Id, string SerialNumber, int CustomerId, int SettlementId, string Street, string HouseNumber, decimal InitialReading, decimal[] HourlyConsumption, int CollectorId)[] WaterMeterPlan =
     {
-        (1, "WM-2026-0001", 1, 8, "Ozrenska", "15", 80.00m, new[] { 12.20m, 15.80m, 10.40m, 16.60m, 14.20m }, 1),
-        (2, "WM-2026-0002", 1, 9, "Behdzeta Mutevelica", "4", 60.00m, new[] { 8.20m, 11.40m, 9.80m, 7.60m, 10.60m }, 1),
-        (3, "WM-2026-0003", 1, 1, "Mali Behar", "9", 95.00m, new[] { 13.00m, 9.40m, 12.80m, 14.60m, 10.20m }, 1),
-        (4, "WM-2026-0004", 2, 6, "Dobrinjske bolnice", "7", 70.00m, new[] { 11.80m, 14.20m, 12.60m, 15.40m, 10.00m }, 2),
-        (5, "WM-2026-0005", 2, 7, "Trg Oslobodjenja", "3", 55.00m, new[] { 9.00m, 11.60m, 8.40m, 12.20m, 10.80m }, 2),
-        (6, "WM-2026-0006", 3, 11, "Saraci", "22", 40.00m, new[] { 10.60m, 13.40m, 11.20m, 14.80m, 9.60m }, 2),
+        (1, "WM-2026-0001", 1, 8, "Ozrenska", "15", 53.00m, new[] { 11.00m, 16.00m, 12.20m, 15.80m, 10.40m, 16.60m, 14.20m }, 1),
+        (2, "WM-2026-0002", 1, 9, "Behdzeta Mutevelica", "4", 39.40m, new[] { 8.60m, 12.00m, 8.20m, 11.40m, 9.80m, 7.60m, 10.60m }, 1),
+        (3, "WM-2026-0003", 1, 1, "Mali Behar", "9", 70.80m, new[] { 15.20m, 9.00m, 13.00m, 9.40m, 12.80m, 14.60m, 10.20m }, 1),
+        (4, "WM-2026-0004", 2, 6, "Dobrinjske bolnice", "7", 44.00m, new[] { 12.40m, 13.60m, 11.80m, 14.20m, 12.60m, 15.40m, 10.00m }, 2),
+        (5, "WM-2026-0005", 2, 7, "Trg Oslobodjenja", "3", 33.00m, new[] { 9.60m, 12.40m, 9.00m, 11.60m, 8.40m, 12.20m, 10.80m }, 2),
+        (6, "WM-2026-0006", 3, 11, "Saraci", "22", 14.80m, new[] { 11.60m, 13.60m, 10.60m, 13.40m, 11.20m, 14.80m, 9.60m }, 2),
     };
 
-    // Five hourly readings per meter, same day (2026-06-01, 08:00-12:00 UTC); billing period for a
+    // Seven hourly readings per meter, same day (2026-06-01, 06:00-12:00 UTC); billing period for a
     // reading is always the one-hour window ending at it, so both readings and invoices run hourly.
     private static readonly DateTime[] ReadingTimestamps =
     {
+        new(2026, 6, 1, 6, 0, 0, DateTimeKind.Utc),
+        new(2026, 6, 1, 7, 0, 0, DateTimeKind.Utc),
         new(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc),
         new(2026, 6, 1, 9, 0, 0, DateTimeKind.Utc),
         new(2026, 6, 1, 10, 0, 0, DateTimeKind.Utc),
@@ -821,11 +878,11 @@ public partial class AquaFlowDbContext
     };
 
     // (WaterMeterId, ReadingTimestamps index) pairs whose invoice is left unpaid. Sized to hit the
-    // requested counts exactly: Denis 12 paid/3 unpaid (meters 1-3, last hour each), Elmir 9 paid/1
-    // unpaid (meter 4, last hour), Adil 3 paid/2 unpaid (meter 6, last two hours).
+    // requested counts exactly: Denis 18 paid/3 unpaid (meters 1-3, last hour each), Elmir 13 paid/1
+    // unpaid (meter 4, last hour), Adil 5 paid/2 unpaid (meter 6, last two hours).
     private static readonly HashSet<(int MeterId, int HourIndex)> UnpaidInvoices = new()
     {
-        (1, 4), (2, 4), (3, 4), (4, 4), (6, 3), (6, 4)
+        (1, 6), (2, 6), (3, 6), (4, 6), (6, 5), (6, 6)
     };
 
     private static (DateTime From, DateTime To) GetBillingPeriod(DateTime readingDate) => (readingDate.AddHours(-1), readingDate);
@@ -886,12 +943,9 @@ public partial class AquaFlowDbContext
                     PreviousReadingValue = reading.PreviousReading,
                     ConsumptionM3 = reading.Consumption,
                     ReadingDate = readingDate,
-                    Source = "Collector",
                     PhotoUrl = (string?)null,
                     Note = "Redovno satno ocitanje.",
                     ClientUuid = $"reading-wm{reading.MeterId:0000}-h{reading.HourIndex + 1:00}",
-                    SyncStatus = "Synced",
-                    SyncedAt = (DateTime?)readingDate.AddMinutes(10),
                     InvoiceId = (int?)reading.ReadingId,
                     VoidedAt = (DateTime?)null,
                     CreatedAt = SeedCreatedAt,
@@ -1000,7 +1054,7 @@ public partial class AquaFlowDbContext
                 InvoiceId = reading.ReadingId,
                 CustomerId = meter.CustomerId,
                 Amount = GetInvoiceAmount(reading.Consumption),
-                PaymentMethod = PaymentMethods[(paymentId - 1) % PaymentMethods.Length],
+                PaymentMethod = SeedPaymentMethodCodes[(paymentId - 1) % SeedPaymentMethodCodes.Length],
                 Status = PaymentStatus.Completed,
                 PaidAt = (DateTime?)billingTo.AddHours(2),
                 Provider = PaymentProvider.Manual,
@@ -1014,7 +1068,7 @@ public partial class AquaFlowDbContext
         modelBuilder.Entity<Payment>().HasData(payments);
     }
 
-    private static readonly string[] PaymentMethods = { "BankTransfer", "Card", "Cash" };
+    private static readonly string[] SeedPaymentMethodCodes = { "BankTransfer", "Card", "Cash" };
 
     private static void SeedFaultReports(ModelBuilder modelBuilder)
     {
@@ -1049,6 +1103,9 @@ public partial class AquaFlowDbContext
                 Type = "Info",
                 Audience = "All",
                 CreatedById = 1,
+                IsSystem = false,
+                RelatedEntityType = (string?)null,
+                RelatedEntityId = (int?)null,
                 CreatedAt = SeedCreatedAt,
                 UpdatedAt = (DateTime?)null
             });
@@ -1068,21 +1125,85 @@ public partial class AquaFlowDbContext
             });
     }
 
-    private static void SeedPaymentSettings(ModelBuilder modelBuilder)
+    // Codebook rows. Every value the code writes (constant classes, state machines, system
+    // notifications, the consumption alert job) is an IsSystem row, in lifecycle order; Ids are
+    // fixed per table so the seed stays stable across migrations.
+    private static void SeedLookups(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<PaymentSettings>().HasData(
-            new
-            {
-                Id = 1,
-                AllowCardPayments = true,
-                AllowPayPalPayments = false,
-                CardProvider = "DemoPay",
-                PayPalClientId = (string?)null,
-                PayPalMerchantEmail = (string?)null,
-                IsTestMode = true,
-                UpdatedById = 1,
-                CreatedAt = SeedCreatedAt,
-                UpdatedAt = (DateTime?)new DateTime(2026, 1, 10, 0, 0, 0, DateTimeKind.Utc)
-            });
+        SeedLookup<InvoiceStatusLookup>(modelBuilder,
+            (InvoiceStatus.Issued, "Izdana", "Issued", "Ausgestellt", true),
+            (InvoiceStatus.Paid, "Plaćena", "Paid", "Bezahlt", true),
+            (InvoiceStatus.Cancelled, "Stornirana", "Cancelled", "Storniert", true));
+
+        SeedLookup<PaymentStatusLookup>(modelBuilder,
+            (PaymentStatus.Pending, "Na čekanju", "Pending", "Ausstehend", true),
+            (PaymentStatus.Completed, "Završena", "Completed", "Abgeschlossen", true),
+            (PaymentStatus.Failed, "Neuspješna", "Failed", "Fehlgeschlagen", true));
+
+        // BankTransfer and Card are not code constants - only the demo payment seed uses them
+        // (see SeedPaymentMethodCodes) - so they are ordinary, admin-manageable rows.
+        SeedLookup<PaymentMethodLookup>(modelBuilder,
+            (PaymentMethod.Manual, "Ručno evidentirano", "Manual", "Manuell erfasst", true),
+            (PaymentMethod.Online, "Online", "Online", "Online", true),
+            (PaymentMethod.Cash, "Gotovina", "Cash", "Bargeld", true),
+            ("BankTransfer", "Bankovni transfer", "Bank transfer", "Banküberweisung", false),
+            ("Card", "Kartica", "Card", "Karte", false));
+
+        SeedLookup<FaultReportStatusLookup>(modelBuilder,
+            (FaultReportStatus.New, "Nova", "New", "Neu", true),
+            (FaultReportStatus.Assigned, "Dodijeljena", "Assigned", "Zugewiesen", true),
+            (FaultReportStatus.InProgress, "U toku", "In progress", "In Bearbeitung", true),
+            (FaultReportStatus.Resolved, "Riješena", "Resolved", "Gelöst", true));
+
+        SeedLookup<WaterMeterRequestStatusLookup>(modelBuilder,
+            (WaterMeterRequestStatus.Pending, "Na čekanju", "Pending", "Ausstehend", true),
+            (WaterMeterRequestStatus.Assigned, "Dodijeljen", "Assigned", "Zugewiesen", true),
+            (WaterMeterRequestStatus.Registered, "Registrovan", "Registered", "Registriert", true),
+            (WaterMeterRequestStatus.Rejected, "Odbijen", "Rejected", "Abgelehnt", true),
+            (WaterMeterRequestStatus.Cancelled, "Otkazan", "Cancelled", "Storniert", true));
+
+        SeedLookup<WaterMeterStatusLookup>(modelBuilder,
+            (WaterMeterStatus.Active, "Aktivan", "Active", "Aktiv", true),
+            (WaterMeterStatus.Inactive, "Neaktivan", "Inactive", "Inaktiv", true),
+            (WaterMeterStatus.Removed, "Uklonjen", "Removed", "Entfernt", true));
+
+        SeedLookup<SupportTicketStatusLookup>(modelBuilder,
+            (AquaFlow.Model.SupportTicketStatus.Open, "Otvoren", "Open", "Offen", true),
+            (AquaFlow.Model.SupportTicketStatus.Closed, "Zatvoren", "Closed", "Geschlossen", true));
+
+        SeedLookup<NotificationTypeLookup>(modelBuilder,
+            (AquaFlow.Model.NotificationType.Info, "Informacija", "Information", "Information", true),
+            (AquaFlow.Model.NotificationType.Billing, "Naplata", "Billing", "Abrechnung", true),
+            (AquaFlow.Model.NotificationType.Warning, "Upozorenje", "Warning", "Warnung", true),
+            (AquaFlow.Model.NotificationType.PlannedWorks, "Planirani radovi", "Planned works", "Geplante Arbeiten", true));
+
+        SeedLookup<NotificationAudienceLookup>(modelBuilder,
+            (AquaFlow.Model.NotificationAudience.All, "Svi korisnici", "All users", "Alle Benutzer", true),
+            (AquaFlow.Model.NotificationAudience.Customers, "Kupci", "Customers", "Kunden", true),
+            (AquaFlow.Model.NotificationAudience.Collectors, "Inkasanti", "Collectors", "Ableser", true),
+            (AquaFlow.Model.NotificationAudience.Direct, "Direktno - sistemske", "Direct - system", "Direkt - System", true));
+
+        SeedLookup<ConsumptionAlertTypeLookup>(modelBuilder,
+            (WaterConsumptionAlertService.UnusualConsumptionSpikeType, "Neuobičajena potrošnja", "Unusual consumption", "Ungewöhnlicher Verbrauch", true));
+    }
+
+    private static void SeedLookup<TLookup>(
+        ModelBuilder modelBuilder,
+        params (string Code, string Name, string NameEn, string NameDe, bool IsSystem)[] rows)
+        where TLookup : LookupEntityBase, new()
+    {
+        modelBuilder.Entity<TLookup>().HasData(rows.Select((row, index) => new TLookup
+        {
+            Id = index + 1,
+            Code = row.Code,
+            Name = row.Name,
+            NameEn = row.NameEn,
+            NameDe = row.NameDe,
+            SortOrder = (index + 1) * 10,
+            IsSystem = row.IsSystem,
+            IsActive = true,
+            CreatedAt = SeedCreatedAt,
+            UpdatedAt = null
+        }).ToArray());
     }
 }

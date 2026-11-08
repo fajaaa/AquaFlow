@@ -81,7 +81,6 @@ public class FakeCustomerProfileCrudService
             throw new KeyNotFoundException();
         }
 
-        row.UserId = request.UserId;
         row.FirstName = request.FirstName;
         row.LastName = request.LastName;
         return Task.FromResult(row);
@@ -95,11 +94,6 @@ public class FakeCustomerProfileCrudService
         if (row is null)
         {
             throw new KeyNotFoundException();
-        }
-
-        if (request.UserId.HasValue)
-        {
-            row.UserId = request.UserId.Value;
         }
 
         if (request.FirstName is not null)

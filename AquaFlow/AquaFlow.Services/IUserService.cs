@@ -7,6 +7,10 @@ namespace AquaFlow.Services;
 public interface IUserService : IBaseCRUDService<UserResponse, UserSearchObject, UserInsertRequest, UserUpdateRequest, UserPatchRequest>
 {
     Task<UserSensitiveResponse?> GetByEmailAsync(string email);
+
+    // Like GetByIdAsync but includes SecurityStamp (needed to issue a JWT); null for a missing or
+    // soft-deleted user. Used by AccessManager's refresh flow - never return it from a controller.
+    Task<UserSensitiveResponse?> GetSensitiveByIdAsync(int id);
     Task UpdateLastLoginAtAsync(int id);
 
     // Self-service update of the caller's own contact data (Email/Phone only).

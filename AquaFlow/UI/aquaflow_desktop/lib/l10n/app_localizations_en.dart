@@ -244,6 +244,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get defaultLanguageLabel => 'Language';
 
   @override
+  String get defaultLanguageHelper =>
+      'Language new users start with when they register';
+
+  @override
   String get defaultCurrencyLabel => 'Currency';
 
   @override
@@ -309,7 +313,92 @@ class AppLocalizationsEn extends AppLocalizations {
   String get codebookLabel => 'Codebook';
 
   @override
+  String get statusCodebooksNavLabel => 'Statuses and types';
+
+  @override
+  String get statusCodebooksScreenSubtitle =>
+      'Manage the statuses and types used in filters and forms.';
+
+  @override
+  String get lookupInvoiceStatuses => 'Invoice statuses';
+
+  @override
+  String get lookupPaymentStatuses => 'Payment statuses';
+
+  @override
+  String get lookupPaymentMethods => 'Payment methods';
+
+  @override
+  String get lookupFaultReportStatuses => 'Fault report statuses';
+
+  @override
+  String get lookupWaterMeterRequestStatuses => 'Water meter request statuses';
+
+  @override
+  String get lookupWaterMeterStatuses => 'Water meter statuses';
+
+  @override
+  String get lookupSupportTicketStatuses => 'Support ticket statuses';
+
+  @override
+  String get lookupNotificationTypes => 'Notification types';
+
+  @override
+  String get lookupNotificationAudiences => 'Notification audiences';
+
+  @override
+  String get lookupConsumptionAlertTypes => 'Consumption alert types';
+
+  @override
+  String get lookupNameEnColumn => 'EN';
+
+  @override
+  String get lookupNameDeColumn => 'DE';
+
+  @override
+  String get lookupSortOrderLabel => 'Sort order';
+
+  @override
+  String get lookupSystemColumn => 'System';
+
+  @override
+  String get lookupActiveColumn => 'Active';
+
+  @override
+  String get newLookupItemTitle => 'New item';
+
+  @override
+  String get editLookupItemTitle => 'Edit item';
+
+  @override
+  String get newLookupItemButton => 'Add item';
+
+  @override
+  String get lookupItemCreatedSuccess => 'Item added.';
+
+  @override
+  String get lookupItemSavedSuccess => 'Item saved.';
+
+  @override
+  String get lookupItemDeletedSuccess => 'Item deleted.';
+
+  @override
+  String deleteLookupItemDialogContent(Object name) {
+    return 'Are you sure you want to delete the item \"$name\"?';
+  }
+
+  @override
+  String get noLookupItemsMessage => 'No items.';
+
+  @override
+  String get lookupItemsEmptyFilteredMessage => 'No items match your search.';
+
+  @override
   String get dashboardOverviewSubtitle => 'Overview of key metrics';
+
+  @override
+  String get dashboardNoAccessMessage =>
+      'You don\'t have access to the dashboard. Log out and sign in again.';
 
   @override
   String get dashboardRevenueTrendChartTitle => 'Revenue';
@@ -504,6 +593,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get collectorsEmptyMessage => 'No collector profiles.';
+
+  @override
+  String get collectorsSearchHint => 'Name, email or employee code';
+
+  @override
+  String get collectorsEmptyFilteredMessage =>
+      'No collectors match the current filters.';
 
   @override
   String get collectorCodeColumnLabel => 'Collector code';
@@ -972,15 +1068,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consumptionColumnLabel => 'Consumption (m³)';
 
   @override
-  String get syncColumnLabel => 'Sync';
-
-  @override
-  String get syncStatusSynced => 'Synced';
-
-  @override
-  String get syncStatusFailed => 'Failed';
-
-  @override
   String get tariffCreatedSuccess => 'Tariff added.';
 
   @override
@@ -1078,7 +1165,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get invoiceNumberFieldLabel => 'Invoice number';
 
   @override
-  String get monthFilterLabel => 'Month';
+  String get monthFilterLabel => 'Billing month';
 
   @override
   String get noInvoicesMessage => 'No invoices.';
@@ -1127,6 +1214,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get manualPaymentMethodLabel => 'Manual';
+
+  @override
+  String get cashPaymentMethodLabel => 'Cash';
 
   @override
   String get cannotDetermineAdminUserError =>
@@ -1339,11 +1429,229 @@ class AppLocalizationsEn extends AppLocalizations {
   String get measuredValueColumnLabel => 'Measured value';
 
   @override
-  String get thresholdValueColumnLabel => 'Threshold value';
+  String get thresholdValueColumnLabel => 'Previous average';
 
   @override
   String get resolvedStatusLabel => 'Resolved';
 
   @override
   String get unresolvedStatusLabel => 'Unresolved';
+
+  @override
+  String get sessionExpiredMessage =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get passwordChangedSignInAgain =>
+      'Your password has been changed. Please sign in again.';
+
+  @override
+  String get notificationDetailCreatedAtLabel => 'Date created';
+
+  @override
+  String get notificationDetailDescriptionHeading => 'Description';
+
+  @override
+  String get notificationDetailDetailsHeading => 'Details';
+
+  @override
+  String get notificationDetailEmptyBody => 'No additional content.';
+
+  @override
+  String notificationDetailImagesHeading(int count) {
+    return 'Images ($count)';
+  }
+
+  @override
+  String get notificationDetailTitle => 'Notification details';
+
+  @override
+  String get notificationStatusRead => 'Read';
+
+  @override
+  String get notificationStatusUnread => 'New';
+
+  @override
+  String get notificationTypeFieldLabel => 'Notification type';
+
+  @override
+  String get notificationsMarkAllReadTooltip => 'Mark all as read';
+
+  @override
+  String get notificationsEmptyFilteredMessage =>
+      'No notifications for the selected type.';
+
+  @override
+  String get notificationsNewBanner => 'You have new notifications';
+
+  @override
+  String get notificationOpenAction => 'Open';
+
+  @override
+  String get notificationOpenRelatedFailed =>
+      'The related item couldn\'t be opened. It may no longer be available.';
+
+  @override
+  String get notificationsInboxNavLabel => 'My notifications';
+
+  @override
+  String get notificationsManageNavLabel => 'Manage notifications';
+
+  @override
+  String get reportsNavLabel => 'Reports';
+
+  @override
+  String get reportsScreenTitle => 'Reports';
+
+  @override
+  String get reportsScreenSubtitle =>
+      'Download or print PDF reports for the selected period.';
+
+  @override
+  String get reportsConsumptionTitle => 'Water consumption by settlement';
+
+  @override
+  String get reportsConsumptionDescription =>
+      'Total water consumption per settlement for the selected period and city.';
+
+  @override
+  String get reportsBillingTitle => 'Invoices and collection';
+
+  @override
+  String get reportsBillingDescription =>
+      'Issued, paid and unpaid invoices with collected amounts for the selected period.';
+
+  @override
+  String get reportsDownloadPdf => 'Download PDF';
+
+  @override
+  String get reportsPrint => 'Print';
+
+  @override
+  String get reportsInvalidRange =>
+      'The start date must not be after the end date.';
+
+  @override
+  String reportsSavedTo(String path) {
+    return 'Saved: $path';
+  }
+
+  @override
+  String get rolesPermissionsNavLabel => 'Roles and permissions';
+
+  @override
+  String get rolesPermissionsSubtitle =>
+      'Manage roles, permissions and their assignments.';
+
+  @override
+  String get rolesTabRoles => 'Roles';
+
+  @override
+  String get rolesTabPermissions => 'Permissions';
+
+  @override
+  String get moduleColumnLabel => 'Module';
+
+  @override
+  String get systemColumnLabel => 'System';
+
+  @override
+  String get systemBadgeLabel => 'System';
+
+  @override
+  String get newRoleButtonLabel => 'New role';
+
+  @override
+  String get editRoleDialogTitle => 'Edit role';
+
+  @override
+  String get newPermissionButtonLabel => 'New permission';
+
+  @override
+  String get editPermissionDialogTitle => 'Edit permission';
+
+  @override
+  String get systemItemLockedHint =>
+      'System item: this field cannot be changed.';
+
+  @override
+  String get rolePermissionsAction => 'Permissions';
+
+  @override
+  String get rolePermissionsDialogTitle => 'Role permissions';
+
+  @override
+  String get rolePermissionsDialogHint =>
+      'Changes apply immediately. Users with this role are refreshed silently.';
+
+  @override
+  String get roleCreatedSuccess => 'Role added.';
+
+  @override
+  String get roleSavedSuccess => 'Role saved.';
+
+  @override
+  String get roleDeletedSuccess => 'Role deleted.';
+
+  @override
+  String get permissionCreatedSuccess => 'Permission added.';
+
+  @override
+  String get permissionSavedSuccess => 'Permission saved.';
+
+  @override
+  String get permissionDeletedSuccess => 'Permission deleted.';
+
+  @override
+  String get deleteRoleDialogTitle => 'Delete role';
+
+  @override
+  String get deleteRoleDialogContent =>
+      'Are you sure you want to delete this role? Deletion is not possible while users have this role.';
+
+  @override
+  String get deletePermissionDialogTitle => 'Delete permission';
+
+  @override
+  String get deletePermissionDialogContent =>
+      'Are you sure you want to delete this permission? Deletion is not possible while it is assigned to a role.';
+
+  @override
+  String get noRolesMessage => 'No roles.';
+
+  @override
+  String get noPermissionsMessage => 'No permissions.';
+
+  @override
+  String get rolesPermissionsEmptyFilteredMessage =>
+      'No results match the selected filters.';
+
+  @override
+  String get expectedColumnLabel => 'Expected (95 %)';
+
+  @override
+  String expectedRangeValue(String value, String lower, String upper) {
+    return '$value m³ ($lower-$upper)';
+  }
+
+  @override
+  String cubicMetersValue(String value) {
+    return '$value m³';
+  }
+
+  @override
+  String get markAsResolvedButtonLabel => 'Mark as resolved';
+
+  @override
+  String get expectedInsufficientHistory => 'Not enough history';
+
+  @override
+  String get expectedInsufficientHistoryTooltip =>
+      'The model needs at least 5 previous readings for this water meter.';
+
+  @override
+  String get alertAboveExpectedLabel => 'Above expected';
+
+  @override
+  String get alertBelowExpectedLabel => 'Below expected';
 }

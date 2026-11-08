@@ -1,4 +1,5 @@
 using System.Data;
+using AquaFlow.Model;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Responses;
 using AquaFlow.Services.Database;
@@ -19,10 +20,16 @@ public abstract class BaseInvoiceState
     protected AquaFlowDbContext DbContext { get; }
     protected IMapper Mapper { get; }
 
-    public BaseInvoiceState(AquaFlowDbContext dbContext, IMapper mapper)
+    // Stages the business event's in-app notification into the same SaveChanges as the transition
+    // (see SystemNotificationService for why); the service that drove the transition dispatches
+    // the push after it returns.
+    protected ISystemNotificationService SystemNotifications { get; }
+
+    public BaseInvoiceState(AquaFlowDbContext dbContext, IMapper mapper, ISystemNotificationService systemNotifications)
     {
         DbContext = dbContext;
         Mapper = mapper;
+        SystemNotifications = systemNotifications;
     }
 
     // The InvoiceStatus this state represents (must be one of the InvoiceStatus constants, matching
@@ -34,7 +41,10 @@ public abstract class BaseInvoiceState
     // entity in, so a state never re-reads the invoice for a plain transition. The id of the user
     // performing the transition is passed through each action call so that TransitionToAsync can stamp
     // the InvoiceStatusHistory row with who made the change.
-    public virtual Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, int changedById) => throw NotAllowed("Record payment");
+    // paymentMethod is a PaymentMethod constant: Manual for an admin-recorded payment, Cash for one a
+    // collector took on the spot at reading entry.
+    public virtual Task<InvoiceResponse> RecordPaymentAsync(Invoice invoice, int changedById, string paymentMethod = PaymentMethod.Manual)
+        => throw NotAllowed("Record payment");
 
     public virtual Task<InvoiceResponse> CancelAsync(Invoice invoice, int changedById) => throw NotAllowed("Cancel");
 
@@ -68,14 +78,15 @@ public abstract class BaseInvoiceState
     // always for the invoice's full remaining balance - partial payments are no longer supported.
     // Shares its balance-computation/transition guarantees with ConfirmPendingPaymentAsync below via
     // CreditInvoiceAsync - see that method for the transaction/remaining-balance reasoning.
-    protected Task<InvoiceResponse> RecordPaymentInternalAsync(Invoice invoice, int changedById)
+    protected Task<InvoiceResponse> RecordPaymentInternalAsync(Invoice invoice, int changedById, string paymentMethod = PaymentMethod.Manual)
     {
-        return CreditInvoiceAsync(invoice, changedById, remaining => DbContext.Payments.Add(new Payment
+        // changedById is the admin who recorded the payment - the customer is told, the admin isn't.
+        return CreditInvoiceAsync(invoice, changedById, notifyActor: false, remaining => DbContext.Payments.Add(new Payment
         {
             InvoiceId = invoice.Id,
             CustomerId = invoice.CustomerId,
             Amount = remaining,
-            PaymentMethod = PaymentMethod.Manual,
+            PaymentMethod = paymentMethod,
             Provider = PaymentProvider.Manual,
             Status = CompletedPaymentStatus,
             PaidAt = DateTime.UtcNow,
@@ -90,10 +101,15 @@ public abstract class BaseInvoiceState
     // (e.g. another payment landed in the meantime) that fixed amount no longer pays the invoice off
     // in full, so the callback below rejects the confirmation instead of silently accepting a stale
     // amount. The caller (InvoiceService.ConfirmPaymentAsync) has already checked payment.Status is
-    // still Pending, so a retried confirmation never reaches here a second time.
+    // Pending (or a legacy Failed row whose provider attempt did succeed) - never Completed - so a
+    // retried confirmation never reaches here a second time.
+    //
+    // There is no human actor here (InvoiceService attributes the transition to the paying customer
+    // only for the history row), so the customer IS notified: the payment is confirmed asynchronously
+    // by the provider (webhook), after the customer already left the payment sheet.
     protected Task<InvoiceResponse> ConfirmPendingPaymentAsync(Invoice invoice, Payment payment, int changedById)
     {
-        return CreditInvoiceAsync(invoice, changedById, remaining =>
+        return CreditInvoiceAsync(invoice, changedById, notifyActor: true, remaining =>
         {
             if (payment.Amount != remaining)
             {
@@ -127,10 +143,25 @@ public abstract class BaseInvoiceState
     //
     // stagePayment is invoked only after the remaining-balance guard passes, so a rejected payment is
     // never marked Completed even in memory.
-    private async Task<InvoiceResponse> CreditInvoiceAsync(Invoice invoice, int changedById, Action<decimal> stagePayment)
+    //
+    // The customer's "invoice paid" notification is staged right after the payment, so it is written
+    // by the same SaveChanges inside the same Serializable transaction as the Payment row and the Paid
+    // transition: exactly one notification per actual crediting. A rejected/raced payment (guard throws,
+    // or the transaction rolls back) leaves none, and a retried webhook never gets here at all
+    // (InvoiceService.ConfirmPaymentAsync returns early for an already Completed payment).
+    private async Task<InvoiceResponse> CreditInvoiceAsync(Invoice invoice, int changedById, bool notifyActor, Action<decimal> stagePayment)
     {
-        await using var transaction = await DbContext.Database
-            .BeginTransactionAsync(IsolationLevel.Serializable);
+        // Resolved before the transaction opens - the profile->user link isn't part of the balance
+        // being locked.
+        var customerUserId = await SystemNotifications.GetCustomerUserIdAsync(invoice.CustomerId);
+
+        // A caller already inside a transaction (MeterReadingService.CreateForCollectorAsync recording a
+        // cash payment for the invoice it just created) needs the payment to commit or roll back with
+        // its own writes, so we join that transaction and leave the commit to its owner.
+        var ownsTransaction = DbContext.Database.CurrentTransaction == null;
+        await using var transaction = ownsTransaction
+            ? await DbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable)
+            : null;
 
         // Bring the invoice-row read inside the transaction so it is locked together with the payments.
         await DbContext.Entry(invoice).ReloadAsync();
@@ -147,9 +178,21 @@ public abstract class BaseInvoiceState
 
         stagePayment(remaining);
 
+        StageCustomerNotification(
+            invoice,
+            customerUserId,
+            $"Račun {invoice.InvoiceNumber} je plaćen",
+            $"Evidentirana je uplata od {remaining:0.00} KM. Račun {invoice.InvoiceNumber} je u potpunosti plaćen.",
+            changedById,
+            notifyActor);
+
         await TransitionToAsync(invoice, InvoiceStatus.Paid, changedById, $"Uplata {remaining:0.00}; račun plaćen.");
 
-        await transaction.CommitAsync();
+        if (transaction != null)
+        {
+            await transaction.CommitAsync();
+        }
+
         return await InvoicePaymentAmounts.ToResponseAsync(DbContext, Mapper, invoice);
     }
 
@@ -173,6 +216,23 @@ public abstract class BaseInvoiceState
         });
 
         await DbContext.SaveChangesAsync();
+    }
+
+    // Stages a Billing system notification about this invoice for its customer. Callers stage it after
+    // every guard has passed and right before the transition's SaveChanges, so it commits (or rolls
+    // back) together with the status change.
+    protected void StageCustomerNotification(Invoice invoice, int? customerUserId, string title, string body, int changedById, bool notifyActor = false)
+    {
+        if (customerUserId is null)
+        {
+            return;
+        }
+
+        SystemNotifications.Stage(
+            new SystemNotificationMessage(title, body, NotificationType.Billing, RelatedEntityTypes.Invoice, invoice.Id),
+            new[] { customerUserId.Value },
+            changedById,
+            notifyActor);
     }
 
     private ClientException NotAllowed(string action)

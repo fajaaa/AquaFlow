@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_collector/l10n/app_localizations.dart';
@@ -9,6 +10,7 @@ import 'package:aquaflow_collector/l10n/app_localizations.dart';
 import '../models/notification_image.dart';
 import '../models/user_notification_item.dart';
 import '../navigation/app_navigation.dart';
+import '../navigation/notification_deep_links.dart';
 import '../providers/notification_badge_provider.dart';
 import '../services/notification_exception.dart';
 import '../services/notification_service.dart';
@@ -37,6 +39,9 @@ class NotificationDetailScreen extends StatefulWidget {
     super.key,
     required this.item,
     this.onMarkedRead,
+    this.openRelatedOnStart = false,
+    this.service,
+    this.deepLinks,
   });
 
   final UserNotificationItem item;
@@ -46,17 +51,38 @@ class NotificationDetailScreen extends StatefulWidget {
   /// patch its own in-memory list without a full refetch.
   final ValueChanged<UserNotificationItem>? onMarkedRead;
 
+  /// Opens the related record (same as tapping "Otvori") as soon as a
+  /// handler for it is registered - used for a tapped push
+  /// (`PushMessageHandler`), so the notification is still marked read and
+  /// stays one "back" away.
+  final bool openRelatedOnStart;
+
+  /// Defaults to a fresh [NotificationService]; injectable for tests.
+  final NotificationService? service;
+
+  /// Defaults to [NotificationDeepLinks.instance]; injectable for tests.
+  final NotificationDeepLinks? deepLinks;
+
   @override
   State<NotificationDetailScreen> createState() =>
       _NotificationDetailScreenState();
 }
 
 class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
-  final NotificationService _service = NotificationService();
+  late final NotificationService _service =
+      widget.service ?? NotificationService();
+  late final NotificationDeepLinks _deepLinks =
+      widget.deepLinks ?? NotificationDeepLinks.instance;
   late UserNotificationItem _item;
 
   bool _imagesLoading = true;
   List<NotificationImage> _images = const [];
+
+  bool _openingRelated = false;
+
+  /// [NotificationDetailScreen.openRelatedOnStart] is still to be honoured
+  /// (no handler was registered yet when this screen opened).
+  bool _autoOpenPending = false;
 
   /// Tracks the in-flight [_markAsRead] call (if any) so [dispose] can wait
   /// for it before closing [_service] - `http.Client.close()` force-closes
@@ -73,6 +99,62 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       _markAsReadFuture = _markAsRead();
     }
     unawaited(_loadImages());
+    _deepLinks.addListener(_onDeepLinksChanged);
+    if (widget.openRelatedOnStart) {
+      _autoOpenPending = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoOpen());
+    }
+  }
+
+  bool get _canOpenRelated =>
+      _deepLinks.canOpen(_item.relatedEntityType, _item.relatedEntityId);
+
+  /// Shells (un)register their handlers from `initState`/`dispose`, i.e. in
+  /// the middle of a frame, where a `setState` here would throw - so react
+  /// once that frame is done.
+  void _onDeepLinksChanged() {
+    void apply() {
+      if (!mounted) return;
+      setState(() {});
+      _tryAutoOpen();
+    }
+
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase == SchedulerPhase.idle ||
+        phase == SchedulerPhase.postFrameCallbacks) {
+      apply();
+    } else {
+      SchedulerBinding.instance.addPostFrameCallback((_) => apply());
+    }
+  }
+
+  void _tryAutoOpen() {
+    if (!mounted || !_autoOpenPending || !_canOpenRelated) return;
+    _autoOpenPending = false;
+    unawaited(_openRelated());
+  }
+
+  Future<void> _openRelated() async {
+    final type = _item.relatedEntityType;
+    final id = _item.relatedEntityId;
+    if (_openingRelated || type == null || id == null) return;
+    final future = _deepLinks.open(context, type, id);
+    if (future == null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final failedMessage = AppLocalizations.of(
+      context,
+    ).notificationOpenRelatedFailed;
+    setState(() => _openingRelated = true);
+    try {
+      await future;
+    } on Exception {
+      // Typically a 404 (the record was deleted or is no longer visible to
+      // this user) - tell the user instead of opening a broken screen.
+      messenger.showSnackBar(SnackBar(content: Text(failedMessage)));
+    } finally {
+      if (mounted) setState(() => _openingRelated = false);
+    }
   }
 
   // Runs alongside (not blocking) the mark-as-read flow above - most notifications carry
@@ -115,6 +197,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
 
   @override
   void dispose() {
+    _deepLinks.removeListener(_onDeepLinksChanged);
     final pending = _markAsReadFuture;
     if (pending != null) {
       unawaited(pending.whenComplete(_service.dispose));
@@ -223,6 +306,26 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                         ],
                       ),
                     ),
+                    if (_canOpenRelated) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          key: const ValueKey('notification-open-related'),
+                          onPressed: _openingRelated ? null : _openRelated,
+                          icon: _openingRelated
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.open_in_new),
+                          label: Text(loc.notificationOpenAction),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     // Body card - the notification text.
                     _Card(

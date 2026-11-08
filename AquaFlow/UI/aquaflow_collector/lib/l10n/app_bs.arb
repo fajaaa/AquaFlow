@@ -190,6 +190,10 @@
   "@defaultLanguageLabel": {
     "description": "Label for the default language field on the company settings form."
   },
+  "defaultLanguageHelper": "Jezik novih korisnika pri registraciji",
+  "@defaultLanguageHelper": {
+    "description": "Helper text under the default language dropdown on the company settings form."
+  },
   "defaultCurrencyLabel": "Valuta",
   "@defaultCurrencyLabel": {
     "description": "Label for the default currency field on the company settings form."
@@ -640,6 +644,14 @@
   },
 
   "faultReportsTooltip": "Prijave kvarova",
+  "readingHistoryTooltip": "Historija očitanja",
+  "readingHistoryTitle": "Historija očitanja",
+  "readingHistoryEmptyMessage": "Za ovaj vodomjer još nema evidentiranih očitanja.",
+  "readingHistoryVoidedPill": "Stornirano",
+  "readingHistoryConsumption": "Potrošnja: {value} m³",
+  "@readingHistoryConsumption": {"placeholders": {"value": {"type": "String"}}},
+  "readingHistoryPageIndicator": "Stranica {page} / {total}",
+  "@readingHistoryPageIndicator": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
   "@faultReportsTooltip": {
     "description": "Tooltip for the icon button on the water meters screen that opens the fault reports screen."
   },
@@ -801,6 +813,39 @@
       }
     }
   },
+  "readingSubmittedPaidInCashSuccess": "Očitanje je snimljeno. Račun {invoiceNumber} ({total} BAM) je plaćen gotovinom.",
+  "@readingSubmittedPaidInCashSuccess": {
+    "description": "Snackbar message after a reading is submitted and the collector recorded that the customer paid the generated invoice in cash.",
+    "placeholders": {
+      "invoiceNumber": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "paidInCashCheckboxLabel": "Kupac plaća gotovinom",
+  "@paidInCashCheckboxLabel": {
+    "description": "Checkbox on the reading entry screen: the present customer pays the invoice in cash right away."
+  },
+  "paidInCashCheckboxSubtitle": "Račun će odmah biti evidentiran kao plaćen.",
+  "@paidInCashCheckboxSubtitle": {
+    "description": "Subtitle under the cash payment checkbox."
+  },
+  "paidInCashConfirmTitle": "Potvrda gotovinske uplate",
+  "@paidInCashConfirmTitle": {
+    "description": "Title of the confirm dialog before submitting a reading with a cash payment."
+  },
+  "paidInCashConfirmMessage": "Potvrđujete da ste od kupca primili {total} BAM u gotovini? Račun će biti evidentiran kao plaćen.",
+  "@paidInCashConfirmMessage": {
+    "description": "Body of the cash payment confirm dialog, with the already-formatted previewed invoice total.",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
   "readingSubmittedNoInvoiceSuccess": "Očitanje je snimljeno. Potrošnja: {consumption} m³. Račun nije kreiran (potrošnja je 0).",
   "@readingSubmittedNoInvoiceSuccess": {
     "description": "Snackbar message shown after a meter reading is submitted with zero consumption, so the server created no invoice.",
@@ -934,5 +979,97 @@
   "resolveActionButton": "Riješi",
   "@resolveActionButton": {
     "description": "Button label that advances a fault report from InProgress to Resolved."
+  },
+  "sessionExpiredMessage": "Sesija je istekla. Prijavite se ponovo.",
+  "@sessionExpiredMessage": {
+    "description": "SnackBar shown after an involuntary sign-out because the refresh token was rejected (expired or revoked session)."
+  },
+  "passwordChangedSignInAgain": "Lozinka je promijenjena. Prijavite se ponovo.",
+  "@passwordChangedSignInAgain": {
+    "description": "SnackBar shown after a successful own password change; the backend ends every session, so the user is signed out."
+  },
+  "notificationsNewBanner": "Imate novih obavijesti",
+  "@notificationsNewBanner": {
+    "description": "Banner shown above the notification list (page 2 or later) when a new notification has arrived; paired with the commonRefresh action that jumps back to page 1."
+  },
+  "notificationOpenAction": "Otvori",
+  "@notificationOpenAction": {
+    "description": "Button/SnackBar action that opens the record a notification is about (invoice, fault report, request, ticket) or the notification itself from a push."
+  },
+  "notificationOpenRelatedFailed": "Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.",
+  "@notificationOpenRelatedFailed": {
+    "description": "SnackBar shown when the record a notification links to cannot be loaded (e.g. deleted or no longer visible)."
+  },
+  "newFaultReportTooltip": "Nova prijava kvara",
+  "@newFaultReportTooltip": {
+    "description": "Tooltip/label for the entry point that opens the new fault report dialog."
+  },
+  "newFaultReportDialogTitle": "Nova prijava kvara",
+  "@newFaultReportDialogTitle": {
+    "description": "Title of the new fault report dialog."
+  },
+  "newFaultReportSubmitButton": "Pošalji prijavu",
+  "@newFaultReportSubmitButton": {
+    "description": "Submit button of the new fault report dialog."
+  },
+  "newFaultReportCreatedMessage": "Prijava kvara je poslana.",
+  "@newFaultReportCreatedMessage": {
+    "description": "SnackBar after a fault report was filed."
+  },
+  "faultReportTitleLabel": "Naslov",
+  "@faultReportTitleLabel": {
+    "description": "Title field label of the fault report form."
+  },
+  "faultReportDescriptionLabel": "Opis",
+  "@faultReportDescriptionLabel": {
+    "description": "Description field label of the fault report form."
+  },
+  "faultReportTitleTooLongError": "Naslov može imati najviše 150 znakova.",
+  "@faultReportTitleTooLongError": {
+    "description": "Validation error for an over-long fault report title."
+  },
+  "waterMeterOptionalLabel": "Vodomjer (opcionalno)",
+  "@waterMeterOptionalLabel": {
+    "description": "Label of the optional water meter section."
+  },
+  "waterMeterSearchHint": "Pretraži vodomjer (serijski broj, vlasnik, adresa)",
+  "@waterMeterSearchHint": {
+    "description": "Hint of the water meter search field in the fault report form."
+  },
+  "waterMeterNoResults": "Nema pronađenih vodomjera.",
+  "@waterMeterNoResults": {
+    "description": "Shown when the water meter search returned nothing."
+  },
+  "waterMeterClearTooltip": "Ukloni vodomjer",
+  "@waterMeterClearTooltip": {
+    "description": "Tooltip of the button that clears the selected water meter."
+  },
+  "streetOptionalLabel": "Ulica (opcionalno)",
+  "@streetOptionalLabel": {
+    "description": "Optional street field label."
+  },
+  "houseNumberOptionalLabel": "Kućni broj (opcionalno)",
+  "@houseNumberOptionalLabel": {
+    "description": "Optional house number field label."
+  },
+  "photoCountLabel": "Fotografije: {count}/{max}",
+  "@photoCountLabel": {
+    "description": "Number of attached photos out of the maximum.",
+    "placeholders": {
+      "count": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "addPhotoButtonLabel": "Dodaj sliku",
+  "@addPhotoButtonLabel": {
+    "description": "Button that opens the camera/gallery chooser."
+  },
+  "takePhotoOption": "Slikaj",
+  "@takePhotoOption": {
+    "description": "Image source option: camera."
+  },
+  "chooseFromGalleryOption": "Iz galerije",
+  "@chooseFromGalleryOption": {
+    "description": "Image source option: gallery."
   }
 }

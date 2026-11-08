@@ -111,7 +111,7 @@ public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUp
         }
     }
 
-    private static object CreateValidationErrorResponse(ValidationException exception)
+    protected static object CreateValidationErrorResponse(ValidationException exception)
     {
         var errors = exception.Errors
             .GroupBy(error => error.PropertyName ?? string.Empty)
@@ -129,7 +129,7 @@ public abstract class BaseCRUDController<TResponse, TSearch, TInsertRequest, TUp
         };
     }
 
-    private static object CreateClientErrorResponse(ClientException exception)
+    protected static object CreateClientErrorResponse(ClientException exception)
     {
         return new
         {

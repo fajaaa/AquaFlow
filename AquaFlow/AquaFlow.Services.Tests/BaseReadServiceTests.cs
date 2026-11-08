@@ -66,6 +66,7 @@ public class BaseReadServiceTests
         IMapper mapper = new Mapper();
         return new PermissionService(
             context,
+            TestSecurityStamps.Create(context),
             mapper,
             new IValidator<PermissionInsertRequest>[] { new PermissionInsertValidator() },
             new IValidator<PermissionUpdateRequest>[] { new PermissionUpdateValidator() },

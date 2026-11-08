@@ -28,13 +28,27 @@ public class MeterReadingsControllerTests
     [
         nameof(MeterReadingsController.GetAll),
         nameof(MeterReadingsController.GetById),
-        nameof(MeterReadingsController.Create),
-        nameof(MeterReadingsController.Update),
-        nameof(MeterReadingsController.Patch),
-        nameof(MeterReadingsController.Delete),
         nameof(MeterReadingsController.CreateForCollector),
         nameof(MeterReadingsController.GetLastCounting)
     ];
+
+    // The generic POST/PUT/PATCH/DELETE are gone, not just gated: the Collector role holds
+    // MeterReadings.Manage, so a permission gate alone would still have let a collector rewrite or
+    // delete an already-invoiced reading, and a generic insert could add an unbilled reading that
+    // becomes the next consumption baseline. collector-entry is the only write route.
+    [Theory]
+    [InlineData("Create")]
+    [InlineData("Update")]
+    [InlineData("Patch")]
+    [InlineData("Delete")]
+    public void Controller_HasNoGenericWriteAction(string methodName)
+    {
+        var methods = typeof(MeterReadingsController)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+            .Where(m => m.Name == methodName);
+
+        Assert.Empty(methods);
+    }
 
     // CollectorId must never come from the request body (the DTO does not even carry it) - it is
     // always resolved from the caller's JWT user id, same trust model as
@@ -142,10 +156,9 @@ public class MeterReadingsControllerTests
         Assert.Equal(7, response.Id);
     }
 
-    // The generic CRUD actions inherited from BaseCRUDController used to be ungated, so any
-    // authenticated caller - a customer included - could list every reading in the system
-    // (GET /MeterReadings leaks the whole consumption history) and edit or delete them. The gate
-    // now sits at class level; this pins that it is declared with the right code.
+    // The inherited reads used to be ungated, so any authenticated caller - a customer included -
+    // could list every reading in the system (GET /MeterReadings leaks the whole consumption
+    // history). The gate now sits at class level; this pins that it is declared with the right code.
     [Fact]
     public void Controller_RequiresMeterReadingsManagePermission()
     {
@@ -173,9 +186,8 @@ public class MeterReadingsControllerTests
         Assert.IsType<ForbidResult>(context.Result);
     }
 
-    // Collector holds MeterReadings.Manage (seed URP 8) for the duplicate-check lookup
-    // (GET /MeterReadings?WaterMeterId=..&BillingCycleId=..) and for collector-entry, so the
-    // class-level gate must not lock the collector flow out.
+    // Collector holds MeterReadings.Manage (seed URP 8) for the last-counting lookup and for
+    // collector-entry, so the class-level gate must not lock the collector flow out.
     [Theory]
     [MemberData(nameof(ActionNames))]
     public void Action_CollectorWithManagePermission_IsAllowed(string methodName)
@@ -188,7 +200,7 @@ public class MeterReadingsControllerTests
         Assert.Null(context.Result);
     }
 
-    // Admin holds the same code (seed URP 3) for the backfill path through the generic CRUD routes.
+    // Admin holds the same code (seed URP 3) for the read-only readings screen.
     [Theory]
     [MemberData(nameof(ActionNames))]
     public void Action_AdminWithManagePermission_IsAllowed(string methodName)
@@ -237,9 +249,9 @@ public class MeterReadingsControllerTests
         return context;
     }
 
-    // The generic CRUD actions are inherited from BaseCRUDController/BaseReadController (this
-    // controller overrides none of them), so the lookup walks the base types rather than pinning
-    // DeclaringType; CreateForCollector is declared on the controller itself.
+    // GetAll/GetById are inherited from BaseReadController (this controller overrides neither), so
+    // the lookup walks the base types rather than pinning DeclaringType; CreateForCollector is
+    // declared on the controller itself.
     private static MethodInfo ResolveAction(string methodName)
     {
         return typeof(MeterReadingsController)

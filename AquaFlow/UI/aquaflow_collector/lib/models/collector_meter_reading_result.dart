@@ -14,6 +14,8 @@ class CollectorMeterReadingResult {
     required this.invoiceId,
     required this.invoiceNumber,
     required this.invoiceTotalAmount,
+    this.invoiceStatus,
+    this.paymentMethod,
   });
 
   final double previousReadingValue;
@@ -23,7 +25,15 @@ class CollectorMeterReadingResult {
   final String? invoiceNumber;
   final double? invoiceTotalAmount;
 
+  /// `Issued`, or `Paid` when the collector recorded a cash payment.
+  final String? invoiceStatus;
+
+  /// Method of the invoice's completed payment (`Cash`), null while unpaid.
+  final String? paymentMethod;
+
   bool get hasInvoice => invoiceId != null;
+
+  bool get paidInCash => invoiceStatus == 'Paid' && paymentMethod == 'Cash';
 
   factory CollectorMeterReadingResult.fromJson(Map<String, dynamic> json) {
     return CollectorMeterReadingResult(
@@ -34,6 +44,8 @@ class CollectorMeterReadingResult {
       invoiceId: (json['invoiceId'] as num?)?.toInt(),
       invoiceNumber: json['invoiceNumber'] as String?,
       invoiceTotalAmount: (json['invoiceTotalAmount'] as num?)?.toDouble(),
+      invoiceStatus: json['invoiceStatus'] as String?,
+      paymentMethod: json['paymentMethod'] as String?,
     );
   }
 }

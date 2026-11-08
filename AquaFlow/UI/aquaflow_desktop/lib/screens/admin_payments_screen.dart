@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:aquaflow_desktop/widgets/lookup_dropdown.dart';
 import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_payment.dart';
 import 'package:aquaflow_desktop/services/admin_payment_exception.dart';
@@ -147,17 +148,12 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen>
         ),
         SizedBox(
           width: 200,
-          child: DropdownButtonFormField<String>(
-            initialValue: _statusFilter ?? '',
-            decoration: InputDecoration(
-              labelText: loc.statusFieldLabel,
-              prefixIcon: const Icon(Icons.filter_alt_outlined),
-            ),
-            items: [
-              DropdownMenuItem(value: '', child: Text(loc.allOption)),
-              for (final entry in _statusOptions(loc).entries)
-                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
-            ],
+          child: LookupDropdown(
+            route: 'PaymentStatuses',
+            value: _statusFilter ?? '',
+            includeAllOption: true,
+            label: loc.statusFieldLabel,
+            icon: Icons.filter_alt_outlined,
             onChanged: loading
                 ? null
                 : (value) => _setStatusFilter(value ?? ''),
@@ -300,7 +296,11 @@ class _PaymentStatusPill extends StatelessWidget {
 }
 
 String _paymentMethodLabel(String method, AppLocalizations loc) =>
-    method == 'Manual' ? loc.manualPaymentMethodLabel : method;
+    switch (method) {
+      'Manual' => loc.manualPaymentMethodLabel,
+      'Cash' => loc.cashPaymentMethodLabel,
+      _ => method,
+    };
 
 String _formatDate(DateTime? date) {
   if (date == null) return '—';

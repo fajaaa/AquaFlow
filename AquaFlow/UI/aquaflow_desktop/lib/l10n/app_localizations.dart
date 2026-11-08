@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_bs.dart';
+import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
 
 // ignore_for_file: type=lint
@@ -95,6 +96,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('bs'),
+    Locale('de'),
     Locale('en'),
   ];
 
@@ -536,6 +538,12 @@ abstract class AppLocalizations {
   /// **'Jezik'**
   String get defaultLanguageLabel;
 
+  /// Helper text under the default language dropdown on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Jezik novih korisnika pri registraciji'**
+  String get defaultLanguageHelper;
+
   /// Label for the default currency field on the company settings form.
   ///
   /// In bs, this message translates to:
@@ -662,11 +670,173 @@ abstract class AppLocalizations {
   /// **'Šifarnik'**
   String get codebookLabel;
 
+  /// No description provided for @statusCodebooksNavLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi i tipovi'**
+  String get statusCodebooksNavLabel;
+
+  /// No description provided for @statusCodebooksScreenSubtitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upravljanje statusima i tipovima koji se koriste u filterima i formama.'**
+  String get statusCodebooksScreenSubtitle;
+
+  /// No description provided for @lookupInvoiceStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi računa'**
+  String get lookupInvoiceStatuses;
+
+  /// No description provided for @lookupPaymentStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi plaćanja'**
+  String get lookupPaymentStatuses;
+
+  /// No description provided for @lookupPaymentMethods.
+  ///
+  /// In bs, this message translates to:
+  /// **'Načini plaćanja'**
+  String get lookupPaymentMethods;
+
+  /// No description provided for @lookupFaultReportStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi prijava kvarova'**
+  String get lookupFaultReportStatuses;
+
+  /// No description provided for @lookupWaterMeterRequestStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi zahtjeva za vodomjer'**
+  String get lookupWaterMeterRequestStatuses;
+
+  /// No description provided for @lookupWaterMeterStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi vodomjera'**
+  String get lookupWaterMeterStatuses;
+
+  /// No description provided for @lookupSupportTicketStatuses.
+  ///
+  /// In bs, this message translates to:
+  /// **'Statusi tiketa podrške'**
+  String get lookupSupportTicketStatuses;
+
+  /// No description provided for @lookupNotificationTypes.
+  ///
+  /// In bs, this message translates to:
+  /// **'Tipovi obavještenja'**
+  String get lookupNotificationTypes;
+
+  /// No description provided for @lookupNotificationAudiences.
+  ///
+  /// In bs, this message translates to:
+  /// **'Publika notifikacije'**
+  String get lookupNotificationAudiences;
+
+  /// No description provided for @lookupConsumptionAlertTypes.
+  ///
+  /// In bs, this message translates to:
+  /// **'Tipovi upozorenja o potrošnji'**
+  String get lookupConsumptionAlertTypes;
+
+  /// No description provided for @lookupNameEnColumn.
+  ///
+  /// In bs, this message translates to:
+  /// **'EN'**
+  String get lookupNameEnColumn;
+
+  /// No description provided for @lookupNameDeColumn.
+  ///
+  /// In bs, this message translates to:
+  /// **'DE'**
+  String get lookupNameDeColumn;
+
+  /// No description provided for @lookupSortOrderLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Redoslijed'**
+  String get lookupSortOrderLabel;
+
+  /// No description provided for @lookupSystemColumn.
+  ///
+  /// In bs, this message translates to:
+  /// **'Sistemski'**
+  String get lookupSystemColumn;
+
+  /// No description provided for @lookupActiveColumn.
+  ///
+  /// In bs, this message translates to:
+  /// **'Aktivan'**
+  String get lookupActiveColumn;
+
+  /// No description provided for @newLookupItemTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova stavka'**
+  String get newLookupItemTitle;
+
+  /// No description provided for @editLookupItemTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Uredi stavku'**
+  String get editLookupItemTitle;
+
+  /// No description provided for @newLookupItemButton.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dodaj stavku'**
+  String get newLookupItemButton;
+
+  /// No description provided for @lookupItemCreatedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Stavka je dodana.'**
+  String get lookupItemCreatedSuccess;
+
+  /// No description provided for @lookupItemSavedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Stavka je sačuvana.'**
+  String get lookupItemSavedSuccess;
+
+  /// No description provided for @lookupItemDeletedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Stavka je obrisana.'**
+  String get lookupItemDeletedSuccess;
+
+  /// No description provided for @deleteLookupItemDialogContent.
+  ///
+  /// In bs, this message translates to:
+  /// **'Jeste li sigurni da želite obrisati stavku \"{name}\"?'**
+  String deleteLookupItemDialogContent(Object name);
+
+  /// No description provided for @noLookupItemsMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema stavki.'**
+  String get noLookupItemsMessage;
+
+  /// No description provided for @lookupItemsEmptyFilteredMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nijedna stavka ne odgovara pretrazi.'**
+  String get lookupItemsEmptyFilteredMessage;
+
   /// Subtitle under the dashboard overview heading.
   ///
   /// In bs, this message translates to:
   /// **'Pregled ključnih pokazatelja'**
   String get dashboardOverviewSubtitle;
+
+  /// Shown instead of the dashboard charts when the session lacks the Dashboard.Read permission (e.g. a token issued before that permission was added) or the API returns 403.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nemate pravo pristupa dashboardu. Odjavite se i prijavite ponovo.'**
+  String get dashboardNoAccessMessage;
 
   /// Title for the revenue-over-time chart card on the dashboard overview.
   ///
@@ -1021,6 +1191,18 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Nema profila inkasanata.'**
   String get collectorsEmptyMessage;
+
+  /// No description provided for @collectorsSearchHint.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ime, email ili šifra radnika'**
+  String get collectorsSearchHint;
+
+  /// No description provided for @collectorsEmptyFilteredMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema inkasanata za odabrane filtere.'**
+  String get collectorsEmptyFilteredMessage;
 
   /// Table column header for a collector's employee code.
   ///
@@ -1856,24 +2038,6 @@ abstract class AppLocalizations {
   /// **'Potrošnja (m³)'**
   String get consumptionColumnLabel;
 
-  /// Table column header for a meter reading's sync status.
-  ///
-  /// In bs, this message translates to:
-  /// **'Sinhronizacija'**
-  String get syncColumnLabel;
-
-  /// Display label for the 'Synced' meter reading sync status.
-  ///
-  /// In bs, this message translates to:
-  /// **'Sinhronizovano'**
-  String get syncStatusSynced;
-
-  /// Display label for the 'Failed' meter reading sync status.
-  ///
-  /// In bs, this message translates to:
-  /// **'Neuspješno'**
-  String get syncStatusFailed;
-
   /// Snackbar message shown after a tariff is created.
   ///
   /// In bs, this message translates to:
@@ -2057,7 +2221,7 @@ abstract class AppLocalizations {
   /// Label for the billing-month filter chip on the invoices screen when no month is selected.
   ///
   /// In bs, this message translates to:
-  /// **'Mjesec'**
+  /// **'Mjesec obračuna'**
   String get monthFilterLabel;
 
   /// Empty-state message on the invoices screen when there are no rows.
@@ -2149,6 +2313,12 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Ručno'**
   String get manualPaymentMethodLabel;
+
+  /// Display label for the 'Cash' payment method (collector took cash at reading entry).
+  ///
+  /// In bs, this message translates to:
+  /// **'Gotovina'**
+  String get cashPaymentMethodLabel;
 
   /// Error shown when creating a notification but the signed-in admin's user id can't be resolved.
   ///
@@ -2531,7 +2701,7 @@ abstract class AppLocalizations {
   /// Table column header for a consumption alert's threshold value.
   ///
   /// In bs, this message translates to:
-  /// **'Granična vrijednost'**
+  /// **'Prosjek prethodnih'**
   String get thresholdValueColumnLabel;
 
   /// Status pill label for a resolved consumption alert.
@@ -2545,6 +2715,396 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Neriješeno'**
   String get unresolvedStatusLabel;
+
+  /// SnackBar shown after an involuntary sign-out because the refresh token was rejected (expired or revoked session).
+  ///
+  /// In bs, this message translates to:
+  /// **'Sesija je istekla. Prijavite se ponovo.'**
+  String get sessionExpiredMessage;
+
+  /// SnackBar shown after a successful own password change; the backend ends every session, so the user is signed out.
+  ///
+  /// In bs, this message translates to:
+  /// **'Lozinka je promijenjena. Prijavite se ponovo.'**
+  String get passwordChangedSignInAgain;
+
+  /// Label for the created-at date row on the notification detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Datum kreiranja'**
+  String get notificationDetailCreatedAtLabel;
+
+  /// Generic 'Description' section heading, used above the notification body text on the notification detail screen and above the description text on the fault report detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Opis'**
+  String get notificationDetailDescriptionHeading;
+
+  /// Section heading above the type/date detail rows on the notification detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Detalji'**
+  String get notificationDetailDetailsHeading;
+
+  /// Placeholder shown in the description section when the notification has no body text.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema dodatnog sadržaja.'**
+  String get notificationDetailEmptyBody;
+
+  /// Section heading above the image gallery on the notification detail screen, with the image count.
+  ///
+  /// In bs, this message translates to:
+  /// **'Slike ({count})'**
+  String notificationDetailImagesHeading(int count);
+
+  /// Notification detail screen app bar title.
+  ///
+  /// In bs, this message translates to:
+  /// **'Detalji obavijesti'**
+  String get notificationDetailTitle;
+
+  /// Status pill label shown on a read notification's detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pročitano'**
+  String get notificationStatusRead;
+
+  /// Status pill label shown on an unread notification's detail screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Novo'**
+  String get notificationStatusUnread;
+
+  /// Shared label for the notification type: the filter dropdown on the notifications list, and the type field on the notification detail screen (also shown uppercased as an eyebrow label there).
+  ///
+  /// In bs, this message translates to:
+  /// **'Tip obavijesti'**
+  String get notificationTypeFieldLabel;
+
+  /// Tooltip for the 'mark all as read' icon button on the notifications screen.
+  ///
+  /// In bs, this message translates to:
+  /// **'Označi sve kao pročitano'**
+  String get notificationsMarkAllReadTooltip;
+
+  /// Empty-state message shown when the notification list has no items matching the selected type filter.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema obavijesti za odabrani tip.'**
+  String get notificationsEmptyFilteredMessage;
+
+  /// Banner shown above the notification list (page 2 or later) when a new notification has arrived; paired with the commonRefresh action that jumps back to page 1.
+  ///
+  /// In bs, this message translates to:
+  /// **'Imate novih obavijesti'**
+  String get notificationsNewBanner;
+
+  /// Button/SnackBar action that opens the record a notification is about (invoice, fault report, request, ticket) or the notification itself from a push.
+  ///
+  /// In bs, this message translates to:
+  /// **'Otvori'**
+  String get notificationOpenAction;
+
+  /// SnackBar shown when the record a notification links to cannot be loaded (e.g. deleted or no longer visible).
+  ///
+  /// In bs, this message translates to:
+  /// **'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.'**
+  String get notificationOpenRelatedFailed;
+
+  /// Admin sidebar sub-item under 'Obavijesti': the admin's own inbox (shared NotificationsScreen).
+  ///
+  /// In bs, this message translates to:
+  /// **'Moje obavijesti'**
+  String get notificationsInboxNavLabel;
+
+  /// Admin sidebar sub-item under 'Obavijesti': the CRUD table for admin-authored notifications.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upravljanje obavijestima'**
+  String get notificationsManageNavLabel;
+
+  /// No description provided for @reportsNavLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izvještaji'**
+  String get reportsNavLabel;
+
+  /// No description provided for @reportsScreenTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izvještaji'**
+  String get reportsScreenTitle;
+
+  /// No description provided for @reportsScreenSubtitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preuzmite ili ispišite PDF izvještaje za odabrani period.'**
+  String get reportsScreenSubtitle;
+
+  /// No description provided for @reportsConsumptionTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potrošnja vode po naseljima'**
+  String get reportsConsumptionTitle;
+
+  /// No description provided for @reportsConsumptionDescription.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ukupna potrošnja vode po naseljima za odabrani period i grad.'**
+  String get reportsConsumptionDescription;
+
+  /// No description provided for @reportsBillingTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Računi i naplata'**
+  String get reportsBillingTitle;
+
+  /// No description provided for @reportsBillingDescription.
+  ///
+  /// In bs, this message translates to:
+  /// **'Izdati, plaćeni i neplaćeni računi sa iznosima naplate za odabrani period.'**
+  String get reportsBillingDescription;
+
+  /// No description provided for @reportsDownloadPdf.
+  ///
+  /// In bs, this message translates to:
+  /// **'Preuzmi PDF'**
+  String get reportsDownloadPdf;
+
+  /// No description provided for @reportsPrint.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ispiši'**
+  String get reportsPrint;
+
+  /// No description provided for @reportsInvalidRange.
+  ///
+  /// In bs, this message translates to:
+  /// **'Početni datum mora biti prije ili jednak krajnjem datumu.'**
+  String get reportsInvalidRange;
+
+  /// No description provided for @reportsSavedTo.
+  ///
+  /// In bs, this message translates to:
+  /// **'Sačuvano: {path}'**
+  String reportsSavedTo(String path);
+
+  /// No description provided for @rolesPermissionsNavLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Role i dozvole'**
+  String get rolesPermissionsNavLabel;
+
+  /// No description provided for @rolesPermissionsSubtitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Upravljanje rolama, dozvolama i njihovim dodjelama.'**
+  String get rolesPermissionsSubtitle;
+
+  /// No description provided for @rolesTabRoles.
+  ///
+  /// In bs, this message translates to:
+  /// **'Role'**
+  String get rolesTabRoles;
+
+  /// No description provided for @rolesTabPermissions.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvole'**
+  String get rolesTabPermissions;
+
+  /// No description provided for @moduleColumnLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Modul'**
+  String get moduleColumnLabel;
+
+  /// No description provided for @systemColumnLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Sistemska'**
+  String get systemColumnLabel;
+
+  /// No description provided for @systemBadgeLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Sistemska'**
+  String get systemBadgeLabel;
+
+  /// No description provided for @newRoleButtonLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova rola'**
+  String get newRoleButtonLabel;
+
+  /// No description provided for @editRoleDialogTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Uredi rolu'**
+  String get editRoleDialogTitle;
+
+  /// No description provided for @newPermissionButtonLabel.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova dozvola'**
+  String get newPermissionButtonLabel;
+
+  /// No description provided for @editPermissionDialogTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Uredi dozvolu'**
+  String get editPermissionDialogTitle;
+
+  /// No description provided for @systemItemLockedHint.
+  ///
+  /// In bs, this message translates to:
+  /// **'Sistemska stavka: ovo polje se ne može mijenjati.'**
+  String get systemItemLockedHint;
+
+  /// No description provided for @rolePermissionsAction.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvole'**
+  String get rolePermissionsAction;
+
+  /// No description provided for @rolePermissionsDialogTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvole role'**
+  String get rolePermissionsDialogTitle;
+
+  /// No description provided for @rolePermissionsDialogHint.
+  ///
+  /// In bs, this message translates to:
+  /// **'Promjena se primjenjuje odmah. Korisnici sa ovom rolom će se tiho osvježiti.'**
+  String get rolePermissionsDialogHint;
+
+  /// No description provided for @roleCreatedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Rola je dodana.'**
+  String get roleCreatedSuccess;
+
+  /// No description provided for @roleSavedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Rola je sačuvana.'**
+  String get roleSavedSuccess;
+
+  /// No description provided for @roleDeletedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Rola je obrisana.'**
+  String get roleDeletedSuccess;
+
+  /// No description provided for @permissionCreatedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvola je dodana.'**
+  String get permissionCreatedSuccess;
+
+  /// No description provided for @permissionSavedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvola je sačuvana.'**
+  String get permissionSavedSuccess;
+
+  /// No description provided for @permissionDeletedSuccess.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dozvola je obrisana.'**
+  String get permissionDeletedSuccess;
+
+  /// No description provided for @deleteRoleDialogTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obriši rolu'**
+  String get deleteRoleDialogTitle;
+
+  /// No description provided for @deleteRoleDialogContent.
+  ///
+  /// In bs, this message translates to:
+  /// **'Da li ste sigurni da želite obrisati ovu rolu? Brisanje nije moguće ako postoje korisnici sa tom rolom.'**
+  String get deleteRoleDialogContent;
+
+  /// No description provided for @deletePermissionDialogTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Obriši dozvolu'**
+  String get deletePermissionDialogTitle;
+
+  /// No description provided for @deletePermissionDialogContent.
+  ///
+  /// In bs, this message translates to:
+  /// **'Da li ste sigurni da želite obrisati ovu dozvolu? Brisanje nije moguće ako je dodijeljena nekoj roli.'**
+  String get deletePermissionDialogContent;
+
+  /// No description provided for @noRolesMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema rola.'**
+  String get noRolesMessage;
+
+  /// No description provided for @noPermissionsMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema dozvola.'**
+  String get noPermissionsMessage;
+
+  /// No description provided for @rolesPermissionsEmptyFilteredMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema rezultata za odabrane filtere.'**
+  String get rolesPermissionsEmptyFilteredMessage;
+
+  /// Consumption alerts table column header for the forecast model's expected value with its 95 % interval.
+  ///
+  /// In bs, this message translates to:
+  /// **'Očekivano (95 %)'**
+  String get expectedColumnLabel;
+
+  /// Expected consumption with its 95 % interval, e.g. 12.50 m³ (10.00-15.00).
+  ///
+  /// In bs, this message translates to:
+  /// **'{value} m³ ({lower}-{upper})'**
+  String expectedRangeValue(String value, String lower, String upper);
+
+  /// A water volume in cubic metres, e.g. 12.50 m³.
+  ///
+  /// In bs, this message translates to:
+  /// **'{value} m³'**
+  String cubicMetersValue(String value);
+
+  /// Label of the button on a consumption alert card that marks the alert as resolved.
+  ///
+  /// In bs, this message translates to:
+  /// **'Označi riješenim'**
+  String get markAsResolvedButtonLabel;
+
+  /// Shown on a consumption alert card instead of the expected range when the forecast model had too few previous readings.
+  ///
+  /// In bs, this message translates to:
+  /// **'Premalo historije'**
+  String get expectedInsufficientHistory;
+
+  /// Tooltip explaining why a consumption alert has no expected range.
+  ///
+  /// In bs, this message translates to:
+  /// **'Model treba najmanje 5 prethodnih očitanja za ovaj vodomjer.'**
+  String get expectedInsufficientHistoryTooltip;
+
+  /// Chip on a consumption alert card: the measured value is above the expected value.
+  ///
+  /// In bs, this message translates to:
+  /// **'Iznad očekivanog'**
+  String get alertAboveExpectedLabel;
+
+  /// Chip on a consumption alert card: the measured value is below the expected value.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ispod očekivanog'**
+  String get alertBelowExpectedLabel;
 }
 
 class _AppLocalizationsDelegate
@@ -2558,7 +3118,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['bs', 'en'].contains(locale.languageCode);
+      <String>['bs', 'de', 'en'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -2569,6 +3129,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'bs':
       return AppLocalizationsBs();
+    case 'de':
+      return AppLocalizationsDe();
     case 'en':
       return AppLocalizationsEn();
   }

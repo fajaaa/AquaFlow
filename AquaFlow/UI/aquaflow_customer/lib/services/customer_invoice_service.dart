@@ -11,7 +11,7 @@ import 'package:aquaflow_customer/models/customer_invoice_page.dart';
 import 'package:aquaflow_customer/models/customer_payment.dart';
 import 'package:aquaflow_customer/services/customer_invoice_exception.dart';
 import 'package:aquaflow_customer/shared/config/api_config.dart';
-import 'package:aquaflow_customer/shared/services/token_storage.dart';
+import 'package:aquaflow_customer/shared/services/authenticated_client.dart';
 
 /// Invoices of the signed-in customer, and the completed payments recorded
 /// against one of them. No CustomerId is ever sent - the backend resolves and
@@ -21,14 +21,11 @@ import 'package:aquaflow_customer/shared/services/token_storage.dart';
 class CustomerInvoiceService {
   CustomerInvoiceService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   /// One page of the caller's invoices, newest first. The backend pins
@@ -40,7 +37,6 @@ class CustomerInvoiceService {
     int pageSize = 20,
     int? waterMeterId,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices').replace(
       queryParameters: {
         'Page': '$page',
@@ -53,7 +49,7 @@ class CustomerInvoiceService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -95,7 +91,6 @@ class CustomerInvoiceService {
   /// invoice a single water meter ever accumulates (one invoice per counted
   /// meter reading).
   Future<List<CustomerInvoice>> fetchAllForMeter(int waterMeterId) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices').replace(
       queryParameters: {
         'WaterMeterId': '$waterMeterId',
@@ -106,7 +101,7 @@ class CustomerInvoiceService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -140,11 +135,10 @@ class CustomerInvoiceService {
   /// or unknown id comes back as 404, which surfaces as
   /// [CustomerInvoiceException] here).
   Future<CustomerInvoice> fetchById(int id) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices/$id');
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -165,20 +159,27 @@ class CustomerInvoiceService {
 
   /// Starts (or resumes) a checkout for the invoice's current remaining
   /// balance. The server always computes the charged amount - this never
-  /// sends one. There is no real payment provider behind this yet, so the
-  /// returned session is Pending, not a completed payment.
-  Future<CustomerCheckoutSession> checkout(int invoiceId) async {
-    final token = await _requireToken();
+  /// sends one. The returned session is never a completed payment by itself:
+  /// either it carries what the client needs to keep paying (`clientSecret`
+  /// for Stripe), or `alreadySucceeded` says the money was already taken and
+  /// only the server-side confirmation is outstanding.
+  ///
+  /// [idempotencyKey] identifies one payment attempt: the caller must resend
+  /// the SAME key when retrying after a network error/timeout, so a request
+  /// that actually reached the server never opens a second attempt.
+  Future<CustomerCheckoutSession> checkout(
+    int invoiceId,
+    String idempotencyKey,
+  ) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices/$invoiceId/checkout');
 
     final response = await _send(
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode(const {}),
+        body: jsonEncode({'idempotencyKey': idempotencyKey}),
       ),
     );
 
@@ -202,7 +203,6 @@ class CustomerInvoiceService {
   /// The backend pins `CustomerId` to the caller from the JWT, same as
   /// [fetchPage].
   Future<List<CustomerPayment>> fetchPayments(int invoiceId) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Payments').replace(
       queryParameters: {
         'InvoiceId': '$invoiceId',
@@ -212,7 +212,7 @@ class CustomerInvoiceService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -246,11 +246,10 @@ class CustomerInvoiceService {
   /// unknown id comes back as 404, which surfaces as
   /// [CustomerInvoiceException] here).
   Future<Uint8List> fetchPdfBytes(int invoiceId) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices/$invoiceId/pdf');
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -262,27 +261,24 @@ class CustomerInvoiceService {
     return response.bodyBytes;
   }
 
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CustomerInvoiceException('Niste prijavljeni.');
-    }
-    return token;
-  }
-
   Future<http.Response> _send(Future<http.Response> Function() call) async {
     try {
       return await call().timeout(_timeout);
     } on SocketException {
       throw CustomerInvoiceException(
         'Server nije dostupan na ${ApiConfig.baseUrl}.',
+        isNetworkError: true,
       );
     } on TimeoutException {
       throw const CustomerInvoiceException(
         'Server nije odgovorio na vrijeme.',
+        isNetworkError: true,
       );
     } on http.ClientException catch (e) {
-      throw CustomerInvoiceException('Greška mreže: ${e.message}');
+      throw CustomerInvoiceException(
+        'Greška mreže: ${e.message}',
+        isNetworkError: true,
+      );
     }
   }
 

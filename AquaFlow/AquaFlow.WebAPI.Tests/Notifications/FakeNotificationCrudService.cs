@@ -5,12 +5,24 @@ using AquaFlow.Services;
 
 namespace AquaFlow.WebAPI.Tests.Notifications;
 
-// Hand-written stand-in for IBaseCRUDService<...> so NotificationsController tests can
+// Hand-written stand-in for INotificationService so NotificationsController tests can
 // drive GetAll/GetById without a database.
-public class FakeNotificationCrudService
-    : IBaseCRUDService<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>
+public class FakeNotificationCrudService : INotificationService
 {
     private readonly List<NotificationResponse> _rows;
+
+    // What the last CreateWithImagesAsync call received (null until called).
+    public IReadOnlyList<(byte[] Data, string ContentType, string FileName)>? LastImages { get; private set; }
+
+    public Task<NotificationResponse> CreateWithImagesAsync(
+        NotificationInsertRequest request,
+        IReadOnlyList<(byte[] Data, string ContentType, string FileName)> images,
+        int createdById)
+    {
+        LastImages = images;
+        request.CreatedById = createdById;
+        return InsertAsync(request);
+    }
 
     public FakeNotificationCrudService(IEnumerable<NotificationResponse> rows)
     {

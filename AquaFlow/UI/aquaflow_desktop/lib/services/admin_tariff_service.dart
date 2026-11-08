@@ -9,19 +9,16 @@ import 'package:aquaflow_desktop/models/admin_tariff_draft.dart';
 import 'package:aquaflow_desktop/models/admin_tariff_page.dart';
 import 'package:aquaflow_desktop/services/admin_tariff_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 class AdminTariffService {
   AdminTariffService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<AdminTariffPage> fetch({
@@ -30,7 +27,6 @@ class AdminTariffService {
     String? name,
     bool? isActive,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -52,7 +48,7 @@ class AdminTariffService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -83,14 +79,12 @@ class AdminTariffService {
   }
 
   Future<AdminTariff> create(AdminTariffDraft draft) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Tariffs');
 
     final response = await _send(
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(draft.toJson()),
@@ -107,14 +101,12 @@ class AdminTariffService {
   }
 
   Future<AdminTariff> update(int id, AdminTariffDraft draft) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Tariffs/$id');
 
     final response = await _send(
       () => _client.put(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(draft.toJson()),
@@ -131,11 +123,10 @@ class AdminTariffService {
   }
 
   Future<void> delete(int id) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Tariffs/$id');
 
     final response = await _send(
-      () => _client.delete(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.delete(uri),
     );
 
     if (response.statusCode != 204) {
@@ -151,14 +142,6 @@ class AdminTariffService {
       throw const AdminTariffException('Tarifa je u neispravnom formatu.');
     }
     return AdminTariff.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminTariffException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

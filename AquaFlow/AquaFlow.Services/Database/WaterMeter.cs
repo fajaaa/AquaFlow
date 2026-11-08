@@ -21,7 +21,7 @@ public class WaterMeter : EntityBase
     [MaxLength(30)]
     public string? HouseNumber { get; set; }
     public DateTime InstalledAt { get; set; } = DateTime.UtcNow;
-    [MaxLength(30)]
+    [MaxLength(50)]
     public string Status { get; set; } = "Active";
     [Column(TypeName = "decimal(18,2)")]
     public decimal InitialReading { get; set; }
@@ -30,5 +30,4 @@ public class WaterMeter : EntityBase
     public ICollection<MeterReading> MeterReadings { get; set; } = new List<MeterReading>();
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public ICollection<FaultReport> FaultReports { get; set; } = new List<FaultReport>();
-    public ICollection<MeterAssignment> MeterAssignments { get; set; } = new List<MeterAssignment>();
 }

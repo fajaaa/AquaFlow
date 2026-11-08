@@ -1,32 +1,56 @@
+using System.Globalization;
+using AquaFlow.Model;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.InvoiceStateMachine;
 using FluentValidation;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace AquaFlow.Services;
 
+// Read-only over the generic API: the only way a reading is written is CreateForCollectorAsync, which
+// computes PreviousReadingValue/ConsumptionM3 server-side and bills the reading in the same SaveChanges.
+// A generic insert could add a reading with no invoice that CountingReadings would then take as the
+// new baseline (silently dropping that consumption from billing), and a generic update/delete could
+// rewrite or remove an already-billed reading - so, like InvoiceService, this extends EfReadService and
+// those methods do not exist.
 public class MeterReadingService
-    : EfCrudService<MeterReading, MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>,
+    : EfReadService<MeterReading, MeterReadingResponse, MeterReadingSearchObject>,
       IMeterReadingService
 {
     private readonly AquaFlowDbContext _dbContext;
     private readonly IValidator<MeterReadingCollectorEntryRequest>? _collectorEntryValidator;
+    private readonly ISystemNotificationService _systemNotifications;
+    // Same resolver InvoiceService uses: a cash payment taken at reading entry goes through the
+    // invoice state machine (Issued -> Paid) instead of setting Status directly. The states depend
+    // only on DbContext/mapper/notifications, so there is no DI cycle back to this service.
+    private readonly IInvoiceStateResolver _invoiceStateResolver;
+    // Runs spike detection after each new reading. WaterConsumptionAlertService only uses the static
+    // CountingReadings from here (not IMeterReadingService), so there is no DI cycle.
+    private readonly IWaterConsumptionAlertService _consumptionAlerts;
+    private readonly ILogger<MeterReadingService> _logger;
 
     public MeterReadingService(
         AquaFlowDbContext dbContext,
         IMapper mapper,
-        IEnumerable<IValidator<MeterReadingInsertRequest>> insertValidators,
-        IEnumerable<IValidator<MeterReadingUpdateRequest>> updateValidators,
-        IEnumerable<IValidator<MeterReadingPatchRequest>> patchValidators,
-        IEnumerable<IValidator<MeterReadingCollectorEntryRequest>> collectorEntryValidators)
-        : base(dbContext, mapper, insertValidators, updateValidators, patchValidators)
+        IEnumerable<IValidator<MeterReadingCollectorEntryRequest>> collectorEntryValidators,
+        ISystemNotificationService systemNotifications,
+        IInvoiceStateResolver invoiceStateResolver,
+        IWaterConsumptionAlertService consumptionAlerts,
+        ILogger<MeterReadingService> logger)
+        : base(dbContext, mapper)
     {
         _dbContext = dbContext;
         _collectorEntryValidator = collectorEntryValidators.FirstOrDefault();
+        _systemNotifications = systemNotifications;
+        _invoiceStateResolver = invoiceStateResolver;
+        _consumptionAlerts = consumptionAlerts;
+        _logger = logger;
     }
 
     public async Task<MeterReadingCollectorEntryResponse> CreateForCollectorAsync(int callerUserId, MeterReadingCollectorEntryRequest request)
@@ -42,6 +66,10 @@ public class MeterReadingService
             throw new ClientException("The signed-in user has no collector profile, so a meter reading cannot be recorded.");
         }
 
+        // Deliberately no per-collector meter assignment check: AquaFlow is a small utility where any
+        // collector may read any meter (there is no MeterAssignment concept - it was removed by the
+        // RemoveMeterAssignments migration). The boundary is the MeterReadings.Manage permission on the
+        // controller plus the meter status gate below (Removed/Inactive meters are rejected).
         var waterMeter = await _dbContext.WaterMeters.FirstOrDefaultAsync(meter => meter.Id == request.WaterMeterId);
         if (waterMeter == null)
         {
@@ -77,6 +105,15 @@ public class MeterReadingService
                 replayResponse.InvoiceId = existingReading.Invoice?.Id;
                 replayResponse.InvoiceNumber = existingReading.Invoice?.InvoiceNumber;
                 replayResponse.InvoiceTotalAmount = existingReading.Invoice?.TotalAmount;
+                replayResponse.InvoiceStatus = existingReading.Invoice?.Status;
+                // A replay never records a payment (even with PaidInCash): it only reports the one the
+                // original request may have recorded.
+                replayResponse.PaymentMethod = existingReading.Invoice == null
+                    ? null
+                    : await _dbContext.Payments
+                        .Where(payment => payment.InvoiceId == existingReading.Invoice.Id && payment.Status == PaymentStatus.Completed)
+                        .Select(payment => payment.PaymentMethod)
+                        .FirstOrDefaultAsync();
                 return replayResponse;
             }
         }
@@ -103,9 +140,11 @@ public class MeterReadingService
         }
 
         // Baseline comes from the most recent counting reading, not straight off WaterMeter.LastReading:
-        // that field is reverted on cancel only when nothing newer has landed (belt and braces - see
-        // IssuedInvoiceState.CancelAsync), so it can lag behind reality. It is still the right fallback
-        // when the meter has no readings at all (e.g. a freshly seeded meter with only InitialReading).
+        // that field is a denormalized copy (also editable via WaterMeter PATCH), so the reading history is
+        // the source of truth. IssuedInvoiceState.CancelAsync only lets the newest counting reading be
+        // un-billed and then reverts LastReading to its baseline, so the two agree after a cancel. LastReading
+        // is still the right fallback when the meter has no counting reading at all (e.g. a freshly seeded
+        // meter with only InitialReading, or every reading voided).
         var previousReading = lastCountingReading?.ReadingValue ?? waterMeter.LastReading;
         if (request.ReadingValue < previousReading)
         {
@@ -122,8 +161,14 @@ public class MeterReadingService
         }
 
         var readingDate = DateTime.UtcNow;
-        var periodFrom = new DateTime(readingDate.Year, readingDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var periodTo = periodFrom.AddMonths(1).AddDays(-1);
+        // Billing is reading-to-reading: the period runs from the previous counting reading to this one.
+        // Consecutive invoices of one meter are contiguous and never overlap (next From == previous To);
+        // a cancelled invoice's reading stops counting, so the next reading's period starts at the last
+        // counting reading again.
+        var periodFrom = lastCountingReading?.ReadingDate ?? waterMeter.InstalledAt;
+        var periodTo = readingDate;
+        var periodText = string.Create(
+            CultureInfo.InvariantCulture, $"{periodFrom:dd.MM.yyyy.} - {periodTo:dd.MM.yyyy.}");
 
         var entity = new MeterReading
         {
@@ -134,7 +179,6 @@ public class MeterReadingService
             PreviousReadingValue = previousReading,
             ConsumptionM3 = consumption,
             ReadingDate = readingDate,
-            Source = "Collector",
             PhotoUrl = request.PhotoUrl,
             Note = request.Note,
             ClientUuid = request.ClientUuid,
@@ -170,7 +214,7 @@ public class MeterReadingService
             invoice.InvoiceItems.Add(new InvoiceItem
             {
                 TariffId = tariff.Id,
-                Description = $"Potrošnja vode - {periodFrom:MM/yyyy}",
+                Description = $"Potrošnja vode {periodText}",
                 Quantity = entity.ConsumptionM3,
                 UnitPrice = tariff.PricePerM3,
                 Amount = subtotal
@@ -178,12 +222,52 @@ public class MeterReadingService
             _dbContext.Invoices.Add(invoice);
             entity.Invoice = invoice;
 
-            await _dbContext.SaveChangesAsync();
+            // The customer's "new invoice" notification points at the invoice id, which only exists
+            // after the INSERT - so it is staged after the first save and committed in the same
+            // transaction as the reading, the invoice and the LastReading update.
+            var customerUserId = await _systemNotifications.GetCustomerUserIdAsync(waterMeter.CustomerId);
+            string? paymentMethod = null;
+
+            await using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+            {
+                await _dbContext.SaveChangesAsync();
+
+                if (customerUserId is not null)
+                {
+                    _systemNotifications.Stage(
+                        new SystemNotificationMessage(
+                            $"Novi račun {invoice.InvoiceNumber}",
+                            $"Izdan je račun {invoice.InvoiceNumber} za period {periodText} u iznosu od {invoice.TotalAmount:0.00} KM.",
+                            NotificationType.Billing,
+                            RelatedEntityTypes.Invoice,
+                            invoice.Id),
+                        new[] { customerUserId.Value },
+                        callerUserId);
+                    await _dbContext.SaveChangesAsync();
+                }
+
+                // Cash taken on the spot: credited through the Issued state's RecordPaymentAsync, which
+                // joins this transaction (BaseInvoiceState.CreditInvoiceAsync), so the reading, the
+                // invoice and the payment commit together or not at all. The amount is the invoice's
+                // server-computed remaining balance - nothing amount-related comes from the client.
+                if (request.PaidInCash)
+                {
+                    await _invoiceStateResolver.Resolve(invoice.Status)
+                        .RecordPaymentAsync(invoice, callerUserId, PaymentMethod.Cash);
+                    paymentMethod = PaymentMethod.Cash;
+                }
+
+                await transaction.CommitAsync();
+            }
+
+            await _systemNotifications.DispatchPendingPushAsync();
 
             response = Mapper.Map<MeterReadingCollectorEntryResponse>(entity);
             response.InvoiceId = invoice.Id;
             response.InvoiceNumber = invoice.InvoiceNumber;
             response.InvoiceTotalAmount = invoice.TotalAmount;
+            response.InvoiceStatus = invoice.Status;
+            response.PaymentMethod = paymentMethod;
         }
         else
         {
@@ -196,6 +280,25 @@ public class MeterReadingService
             response.InvoiceId = null;
             response.InvoiceNumber = null;
             response.InvoiceTotalAmount = null;
+        }
+
+        // Spike detection for this meter right after the new reading is committed (and its invoice
+        // push requested). Best-effort only: the reading is already saved, so an analysis/alert failure
+        // is logged and must never fail the collector's entry. A ClientUuid replay returned earlier and
+        // never gets here, so a retry doesn't re-run it.
+        try
+        {
+            await _consumptionAlerts.RecomputeAsync(request.WaterMeterId, callerUserId);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Consumption alert recompute failed after reading {MeterReadingId} for water meter {WaterMeterId}.", entity.Id, request.WaterMeterId);
+            // The reading/invoice are already saved (Unchanged); only the failed alert/notification
+            // rows can still be pending - drop them so nothing half-done lingers in this context.
+            foreach (var pending in _dbContext.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).ToList())
+            {
+                pending.State = EntityState.Detached;
+            }
         }
 
         return response;
@@ -214,7 +317,7 @@ public class MeterReadingService
     // suggestion from the generic GET /MeterReadings?WaterMeterId=..&SortDescending=true listing, which
     // returns the raw last row regardless of VoidedAt/cancelled-invoice status. That could block a new
     // reading the server would actually accept (the cooldown check here is CountingReadings-filtered).
-    // The generic listing itself is left untouched - admin/backfill still needs to see voided/cancelled
+    // The generic listing itself is left untouched - the admin still needs to see voided/cancelled
     // rows for audit purposes.
     public async Task<MeterReadingResponse?> GetLastCountingReadingAsync(int waterMeterId)
     {
@@ -255,42 +358,6 @@ public class MeterReadingService
         if (!validationResult.IsValid)
         {
             throw new ValidationException(validationResult.Errors);
-        }
-    }
-
-    // Generic admin-facing CRUD (backfill): TariffId is optional, but when supplied must reference an
-    // existing tariff. Unlike the collector-entry path, an inactive tariff is allowed here (historical
-    // backfill may legitimately reference a tariff that has since been deactivated).
-    protected override async Task BeforeInsertAsync(MeterReadingInsertRequest request)
-    {
-        if (request.TariffId.HasValue)
-        {
-            await EnsureTariffExistsAsync(request.TariffId.Value);
-        }
-    }
-
-    protected override async Task BeforeUpdateAsync(int id, MeterReadingUpdateRequest request, MeterReading entity)
-    {
-        if (request.TariffId.HasValue)
-        {
-            await EnsureTariffExistsAsync(request.TariffId.Value);
-        }
-    }
-
-    protected override async Task BeforePatchAsync(int id, MeterReadingPatchRequest request, MeterReading entity)
-    {
-        if (request.TariffId.HasValue)
-        {
-            await EnsureTariffExistsAsync(request.TariffId.Value);
-        }
-    }
-
-    private async Task EnsureTariffExistsAsync(int tariffId)
-    {
-        var exists = await _dbContext.Tariffs.AnyAsync(t => t.Id == tariffId);
-        if (!exists)
-        {
-            throw new ClientException($"Tariff with id {tariffId} was not found.");
         }
     }
 }

@@ -9,6 +9,7 @@ import '../services/auth_api_service.dart';
 import '../services/auth_exception.dart';
 import '../services/preferences_api_service.dart';
 import '../services/push_notification_service.dart';
+import '../services/session_manager.dart';
 import '../services/token_storage.dart';
 import 'locale_provider.dart';
 import 'theme_provider.dart';
@@ -18,24 +19,40 @@ import 'theme_provider.dart';
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
 /// Owns all authentication state and is the single source of truth the UI
-/// listens to. Handles startup restore, login, logout and silent refresh.
+/// listens to. Handles startup restore, login and logout; the silent refresh
+/// itself lives in [SessionManager] (shared with `AuthenticatedClient`), and
+/// this provider follows its results: a refresh re-decodes [session] (the new
+/// JWT can carry different `Permission` claims or role), and a rejected
+/// refresh token signs the user out once and calls [onSessionExpired].
 class AuthProvider extends ChangeNotifier {
   AuthProvider({
     AuthApiService? authService,
     TokenStorage? tokenStorage,
+    SessionManager? sessionManager,
     PushNotificationService? pushNotificationService,
     PreferencesApiService? preferencesService,
     ThemeProvider? themeProvider,
     LocaleProvider? localeProvider,
+    this.onSessionExpired,
   }) : _authService = authService ?? AuthApiService(),
        _tokenStorage = tokenStorage ?? TokenStorage(),
+       _sessionManager = sessionManager ?? SessionManager.instance,
        _pushService = pushNotificationService ?? PushNotificationService(),
        _preferencesService = preferencesService ?? PreferencesApiService(),
        _themeProvider = themeProvider ?? ThemeProvider(),
-       _localeProvider = localeProvider ?? LocaleProvider();
+       _localeProvider = localeProvider ?? LocaleProvider() {
+    _sessionManager.onTokensRefreshed = _handleTokensRefreshed;
+    _sessionManager.onSessionExpired = _handleSessionExpired;
+  }
 
   final AuthApiService _authService;
   final TokenStorage _tokenStorage;
+  final SessionManager _sessionManager;
+
+  /// UI hook for an involuntary sign-out (refresh token rejected while the
+  /// app was in use) - `main.dart` shows the "session expired" SnackBar and
+  /// pops any pushed routes. Not called for a regular [logout].
+  final VoidCallback? onSessionExpired;
   final PushNotificationService _pushService;
   final PreferencesApiService _preferencesService;
   // Shared with `main.dart`'s widget tree (passed in, not created there) so
@@ -47,6 +64,7 @@ class AuthProvider extends ChangeNotifier {
   AuthStatus _status = AuthStatus.unknown;
   AuthSession? _session;
   bool _isBusy = false;
+  bool _isLoggingOut = false;
   String? _errorMessage;
 
   AuthStatus get status => _status;
@@ -69,9 +87,17 @@ class AuthProvider extends ChangeNotifier {
       return;
     }
 
-    final refreshToken = await _tokenStorage.getRefreshToken();
-    if (refreshToken != null && await _tryRefresh(refreshToken)) {
-      return;
+    // Same refresh path (and single-flight guard) as AuthenticatedClient;
+    // SessionManager stores the new pair itself.
+    final result = await _sessionManager.refresh();
+    final refreshedToken = result.accessToken;
+    if (refreshedToken != null) {
+      try {
+        _activate(refreshedToken);
+        return;
+      } catch (_) {
+        // Undecodable token - fall through to signed out.
+      }
     }
 
     await _tokenStorage.clear();
@@ -153,22 +179,37 @@ class AuthProvider extends ChangeNotifier {
   Future<String?> getRememberedEmail() => _tokenStorage.getRememberedEmail();
 
   Future<void> logout() async {
-    // Needs a valid access token, so this must run before the token is
-    // cleared below. Push (de)registration failures must never block logout.
-    await _unregisterPushToken();
-    await _tokenStorage.clear();
+    // While this runs, a 401 + failed refresh (e.g. right after a password
+    // change revoked every session) must not be treated as "session expired"
+    // on top of the logout the user asked for.
+    _isLoggingOut = true;
+    try {
+      // Needs a valid access token, so this must run before the token is
+      // cleared below. Push (de)registration failures must never block logout.
+      await _unregisterPushToken();
+      await _revokeRefreshToken();
+      await _tokenStorage.clear();
+    } finally {
+      _isLoggingOut = false;
+    }
     _session = null;
     _errorMessage = null;
     _setStatus(AuthStatus.unauthenticated);
   }
 
-  Future<bool> _tryRefresh(String refreshToken) async {
+  /// Best-effort `POST /Access/logout` so this device's refresh token can't
+  /// be used again. Short timeout; any failure is only logged - the local
+  /// sign-out always proceeds.
+  Future<void> _revokeRefreshToken() async {
     try {
-      final tokens = await _authService.refresh(refreshToken);
-      await _persistAndActivate(tokens);
-      return true;
-    } catch (_) {
-      return false;
+      final refreshToken = await _tokenStorage.getRefreshToken();
+      if (refreshToken == null) return;
+      await _authService.logout(
+        refreshToken,
+        timeout: const Duration(seconds: 5),
+      );
+    } catch (e) {
+      debugPrint('Logout request failed: $e');
     }
   }
 
@@ -181,11 +222,39 @@ class AuthProvider extends ChangeNotifier {
       tokens.refreshToken,
       remember: rememberMe,
     );
-    _session = AuthSession.fromAccessToken(tokens.accessToken);
+    _activate(tokens.accessToken);
+  }
+
+  void _activate(String accessToken) {
+    _session = AuthSession.fromAccessToken(accessToken);
     _setStatus(AuthStatus.authenticated);
     _registerPushToken();
     _applyThemePreference();
     _applyLanguagePreference();
+  }
+
+  /// [SessionManager] stored a new pair mid-session: re-decode the session so
+  /// role/permission-driven UI (e.g. the admin sidebar) follows the new JWT.
+  /// Ignored before sign-in - [bootstrap]/[login] activate the session
+  /// themselves.
+  void _handleTokensRefreshed(String accessToken) {
+    if (_status != AuthStatus.authenticated) return;
+    try {
+      _session = AuthSession.fromAccessToken(accessToken);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Refreshed access token could not be decoded: $e');
+    }
+  }
+
+  /// [SessionManager] already cleared the tokens; this signs the UI out once
+  /// (a burst of parallel 401s shares one refresh, so this runs once too).
+  void _handleSessionExpired() {
+    if (_isLoggingOut || _status != AuthStatus.authenticated) return;
+    _session = null;
+    _errorMessage = null;
+    _setStatus(AuthStatus.unauthenticated);
+    onSessionExpired?.call();
   }
 
   /// Fire-and-forget: fetches `UserPreference.Theme` and applies it to the
@@ -274,6 +343,12 @@ class AuthProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (_sessionManager.onTokensRefreshed == _handleTokensRefreshed) {
+      _sessionManager.onTokensRefreshed = null;
+    }
+    if (_sessionManager.onSessionExpired == _handleSessionExpired) {
+      _sessionManager.onSessionExpired = null;
+    }
     _authService.dispose();
     _pushService.dispose();
     _preferencesService.dispose();

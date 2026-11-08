@@ -7,6 +7,7 @@ public static class ActivityEventTypes
     public const string LoginSuccess = "LoginSuccess";
     public const string LoginFailed = "LoginFailed";
     public const string TokenRefreshed = "TokenRefreshed";
+    public const string Logout = "Logout";
     public const string Registered = "Registered";
     public const string PasswordChanged = "PasswordChanged";
     public const string AccountUpdated = "AccountUpdated";

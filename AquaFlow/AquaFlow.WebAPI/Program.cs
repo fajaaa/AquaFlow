@@ -2,7 +2,6 @@ using System.Text;
 using System.Threading.RateLimiting;
 using AquaFlow.Common.Services.CryptoService;
 using AquaFlow.Common.Services.MessageBus;
-using AquaFlow.Common.Services.PushNotificationService;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
@@ -18,9 +17,7 @@ using AquaFlow.Services.WaterMeterRequestStateMachine;
 using AquaFlow.WebAPI.Filters;
 using AquaFlow.WebAPI.RateLimiting;
 using AquaFlow.WebAPI.Services.AccessManager;
-using FirebaseAdmin;
 using FluentValidation;
-using Google.Apis.Auth.OAuth2;
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -102,45 +99,8 @@ if (string.IsNullOrWhiteSpace(jwtIssuer) ||
         "Set JwtToken__Issuer, JwtToken__Audience, and JwtToken__SecretKey with environment variables or user secrets.");
 }
 
-// Firebase Cloud Messaging (push notifications) is optional, unlike the connection string/JWT
-// config above: a missing/invalid value here must not stop the API from starting, since push is
-// a secondary feature, not auth infrastructure. When neither ServiceAccountJson nor
-// ServiceAccountJsonPath resolves to a usable credential, a no-op IPushNotificationSender is
-// registered instead (logs a warning and sends nothing) rather than throwing.
-var firebaseServiceAccountJson = builder.Configuration["Firebase:ServiceAccountJson"];
-var firebaseServiceAccountJsonPath = builder.Configuration["Firebase:ServiceAccountJsonPath"];
-var firebaseProjectId = builder.Configuration["Firebase:ProjectId"];
-
-FirebaseApp? firebaseApp = null;
-if (!string.IsNullOrWhiteSpace(firebaseServiceAccountJson))
-{
-    firebaseApp = FirebaseApp.Create(new AppOptions
-    {
-        Credential = CredentialFactory.FromJson<ServiceAccountCredential>(firebaseServiceAccountJson).ToGoogleCredential(),
-        ProjectId = string.IsNullOrWhiteSpace(firebaseProjectId) ? null : firebaseProjectId
-    });
-}
-else if (!string.IsNullOrWhiteSpace(firebaseServiceAccountJsonPath) && File.Exists(firebaseServiceAccountJsonPath))
-{
-    firebaseApp = FirebaseApp.Create(new AppOptions
-    {
-        Credential = CredentialFactory.FromFile<ServiceAccountCredential>(firebaseServiceAccountJsonPath).ToGoogleCredential(),
-        ProjectId = string.IsNullOrWhiteSpace(firebaseProjectId) ? null : firebaseProjectId
-    });
-}
-
-if (firebaseApp is not null)
-{
-    builder.Services.AddSingleton(firebaseApp);
-    builder.Services.AddScoped<IPushNotificationSender, FirebasePushNotificationSender>();
-}
-else
-{
-    builder.Services.AddScoped<IPushNotificationSender, NoOpPushNotificationSender>();
-}
-
-// RabbitMQ message publishing is optional infrastructure, just like Firebase above: a missing
-// connection string must not stop the API from starting, and a dead broker must not block
+// RabbitMQ message publishing is optional infrastructure: it carries NotificationPushRequested to AquaFlow.Subscriber
+// (the only FCM sender). A missing connection string must not stop the API from starting, and a dead broker must not block
 // requests. When no connection string is configured, a no-op IMessagePublisher is registered
 // instead (logs a warning and publishes nothing) rather than throwing.
 var rabbitMqConnectionString = builder.Configuration["RabbitMQ:ConnectionString"];
@@ -173,7 +133,8 @@ mapperConfig.NewConfig<User, UserResponse>()
     .Map(destination => destination.FirstName, source => source.CustomerProfile == null ? source.FirstName : source.CustomerProfile.FirstName)
     .Map(destination => destination.LastName, source => source.CustomerProfile == null ? source.LastName : source.CustomerProfile.LastName);
 mapperConfig.NewConfig<User, UserSensitiveResponse>()
-    .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name);
+    .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
+    .Map(destination => destination.UserRoleIsActive, source => source.UserRole == null || source.UserRole.IsActive);
 mapperConfig.NewConfig<UserRolePermission, UserRolePermissionResponse>()
     .Map(destination => destination.UserRole, source => source.UserRole == null ? string.Empty : source.UserRole.Name)
     .Map(destination => destination.PermissionCode, source => source.Permission == null ? string.Empty : source.Permission.Code)
@@ -229,7 +190,10 @@ builder.Services.AddScoped<IMapper, ServiceMapper>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDeviceTokenService, DeviceTokenService>();
 builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
+builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ISecurityStampService, SecurityStampService>();
 builder.Services.AddScoped<IPermissionLookupService, PermissionLookupService>();
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 builder.Services.AddScoped<IBaseReadService<ActivityLogResponse, ActivityLogSearchObject>>(
@@ -238,12 +202,18 @@ builder.Services.AddScoped<ISupportTicketService, SupportTicketService>();
 builder.Services.AddScoped<IBaseReadService<SupportTicketResponse, SupportTicketSearchObject>>(
     serviceProvider => serviceProvider.GetRequiredService<ISupportTicketService>());
 builder.Services.AddScoped<NotificationRecipientService>();
+// Shared FCM delivery (preference filter, invalid-token cleanup, errors swallowed) used by both the
+// admin NotificationService and SystemNotificationService. Both are scoped on purpose: the system
+// notifications are staged into the request's own DbContext so they commit with the business change.
+builder.Services.AddSingleton<INotificationPushPublisher, NotificationPushPublisher>();
+builder.Services.AddScoped<ISystemNotificationService, SystemNotificationService>();
 builder.Services.AddScoped<IAccessManager, AccessManager>();
 builder.Services.AddScoped<ICryptoService, CryptoService>();
 AddPatchMapping<UserPatchRequest, User>();
 builder.Services.AddScoped<IBaseCRUDService<UserResponse, UserSearchObject, UserInsertRequest, UserUpdateRequest, UserPatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IUserService>());
-AddCrud<UserRole, UserRoleResponse, UserRoleSearchObject, UserRoleInsertRequest, UserRoleUpdateRequest, UserRolePatchRequest>();
+AddPatchMapping<UserRolePatchRequest, UserRole>();
+builder.Services.AddScoped<IBaseCRUDService<UserRoleResponse, UserRoleSearchObject, UserRoleInsertRequest, UserRoleUpdateRequest, UserRolePatchRequest>, UserRoleService>();
 AddPatchMapping<PermissionPatchRequest, Permission>();
 builder.Services.AddScoped<IBaseCRUDService<PermissionResponse, PermissionSearchObject, PermissionInsertRequest, PermissionUpdateRequest, PermissionPatchRequest>, PermissionService>();
 AddPatchMapping<UserRolePermissionPatchRequest, UserRolePermission>();
@@ -269,15 +239,13 @@ AddPatchMapping<WaterMeterPatchRequest, WaterMeter>();
 builder.Services.AddScoped<IWaterMeterService, WaterMeterService>();
 builder.Services.AddScoped<IBaseCRUDService<WaterMeterResponse, WaterMeterSearchObject, WaterMeterInsertRequest, WaterMeterUpdateRequest, WaterMeterPatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IWaterMeterService>());
-// MeterReading is registered by hand (not AddCrud<>) because the collector data-entry flow
-// (CreateForCollectorAsync) needs billing-cycle resolution/validation and WaterMeter.LastReading
-// updates beyond the generic EfCrudService; the generic IBaseCRUDService alias still resolves to
-// the same MeterReadingService instance, same pattern as WaterMeterRequest/Invoice below.
-AddPatchMapping<MeterReadingPatchRequest, MeterReading>();
+// MeterReading is read-only over the generic API (MeterReadingService extends EfReadService): the
+// only write path is the collector data-entry flow (CreateForCollectorAsync), so there is no patch
+// mapping and no generic IBaseCRUDService alias - MeterReadingsController depends on
+// IMeterReadingService directly.
 builder.Services.AddScoped<IMeterReadingService, MeterReadingService>();
-builder.Services.AddScoped<IBaseCRUDService<MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest>>(
-    serviceProvider => serviceProvider.GetRequiredService<IMeterReadingService>());
 builder.Services.AddScoped<IConsumptionForecastingService, ConsumptionForecastingService>();
+builder.Services.AddScoped<IConsumptionInsightService, ConsumptionInsightService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 // WaterConsumptionAlert is registered by hand (not AddCrud<>) because RecomputeAsync is an extra
 // action beyond the generic EfCrudService; the generic IBaseCRUDService alias still resolves to
@@ -288,10 +256,24 @@ builder.Services.AddScoped<IBaseCRUDService<WaterConsumptionAlertResponse, Water
     serviceProvider => serviceProvider.GetRequiredService<IWaterConsumptionAlertService>());
 AddPatchMapping<TariffPatchRequest, Tariff>();
 builder.Services.AddScoped<IBaseCRUDService<TariffResponse, TariffSearchObject, TariffInsertRequest, TariffUpdateRequest, TariffPatchRequest>, TariffService>();
-// Payments:Provider selects which IPaymentProvider is registered (today only "Manual" exists);
+// Codebooks (lookup tables): one generic LookupService<T>, a thin subclass per table (LookupServices.cs).
+// No patch mapping: LookupService maps requests by hand.
+builder.Services.AddScoped<ILookupService<InvoiceStatusLookup>, InvoiceStatusLookupService>();
+builder.Services.AddScoped<ILookupService<PaymentStatusLookup>, PaymentStatusLookupService>();
+builder.Services.AddScoped<ILookupService<PaymentMethodLookup>, PaymentMethodLookupService>();
+builder.Services.AddScoped<ILookupService<FaultReportStatusLookup>, FaultReportStatusLookupService>();
+builder.Services.AddScoped<ILookupService<WaterMeterRequestStatusLookup>, WaterMeterRequestStatusLookupService>();
+builder.Services.AddScoped<ILookupService<WaterMeterStatusLookup>, WaterMeterStatusLookupService>();
+builder.Services.AddScoped<ILookupService<SupportTicketStatusLookup>, SupportTicketStatusLookupService>();
+builder.Services.AddScoped<ILookupService<NotificationTypeLookup>, NotificationTypeLookupService>();
+builder.Services.AddScoped<ILookupService<NotificationAudienceLookup>, NotificationAudienceLookupService>();
+builder.Services.AddScoped<ILookupService<ConsumptionAlertTypeLookup>, ConsumptionAlertTypeLookupService>();
+// Payment provider and Stripe keys come only from configuration/env (Payments__Provider,
+// Payments__Stripe__*); there is intentionally no database copy of payment settings.
+// Payments:Provider selects which IPaymentProvider is registered ("Manual" by default, or "Stripe");
 // Payments:Currency has no column to persist against and is only surfaced in
-// CheckoutSessionResponse. Adding a real provider (e.g. Stripe) later means adding one case here plus
-// a new IPaymentProvider implementation class - nothing in InvoiceService/InvoicesController changes.
+// CheckoutSessionResponse. Adding another provider means adding one case here plus a new
+// IPaymentProvider implementation class - nothing in InvoiceService/InvoicesController changes.
 builder.Services.Configure<PaymentsOptions>(builder.Configuration.GetSection("Payments"));
 builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection("Payments:Stripe"));
 var configuredPaymentProvider = builder.Configuration["Payments:Provider"];
@@ -323,14 +305,22 @@ builder.Services.AddScoped<IPaymentProvider>(_ =>
             $"Unknown payment provider '{providerName}'. Configure Payments:Provider to a supported value.")
     };
 });
-// Invoice uses the state machine (InvoiceService) instead of the generic CRUD service, so register
-// it by hand: the patch mapping, IInvoiceService, and the generic IBaseCRUDService alias resolving
-// to the same InvoiceService. Each invoice state is a keyed scoped BaseInvoiceState (status string as
-// key); IInvoiceStateResolver resolves the state for a status through those keyed registrations.
-AddPatchMapping<InvoicePatchRequest, Invoice>();
+// Saved cards follow the same provider switch: real Stripe customers/cards for Stripe, a NotSupported
+// stub (IsSupported = false) for Manual.
+builder.Services.AddScoped<IPaymentCardService>(serviceProvider =>
+{
+    return providerName switch
+    {
+        PaymentProvider.Stripe => ActivatorUtilities.CreateInstance<StripePaymentCardService>(serviceProvider),
+        _ => new NotSupportedPaymentCardService()
+    };
+});
+// Invoice uses the state machine (InvoiceService) instead of the generic CRUD service and is
+// read-only over the generic API (InvoiceService extends EfReadService), so there is no patch mapping
+// and no generic IBaseCRUDService alias - InvoicesController depends on IInvoiceService directly.
+// Each invoice state is a keyed scoped BaseInvoiceState (status string as key); IInvoiceStateResolver
+// resolves the state for a status through those keyed registrations.
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
-builder.Services.AddScoped<IBaseCRUDService<InvoiceResponse, InvoiceSearchObject, InvoiceInsertRequest, InvoiceUpdateRequest, InvoicePatchRequest>>(
-    serviceProvider => serviceProvider.GetRequiredService<IInvoiceService>());
 builder.Services.AddKeyedScoped<BaseInvoiceState, IssuedInvoiceState>(InvoiceStatus.Issued);
 builder.Services.AddKeyedScoped<BaseInvoiceState, PaidInvoiceState>(InvoiceStatus.Paid);
 builder.Services.AddKeyedScoped<BaseInvoiceState, CancelledInvoiceState>(InvoiceStatus.Cancelled);
@@ -343,6 +333,7 @@ builder.Services.AddHttpClient<IInvoicePdfService, InvoicePdfService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(5);
 });
+builder.Services.AddScoped<IReportPdfService, ReportPdfService>();
 // WaterMeterRequest mirrors the Invoice registration above: the state machine service is
 // registered by hand, the generic IBaseCRUDService alias resolves to the same instance, and each
 // request state is a keyed scoped BaseWaterMeterRequestState (status string as key) that
@@ -357,7 +348,9 @@ builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, RegisteredWaterMeter
 builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, RejectedWaterMeterRequestState>(WaterMeterRequestStatus.Rejected);
 builder.Services.AddKeyedScoped<BaseWaterMeterRequestState, CancelledWaterMeterRequestState>(WaterMeterRequestStatus.Cancelled);
 builder.Services.AddScoped<IWaterMeterRequestStateResolver, WaterMeterRequestStateResolver>();
-AddCrud<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject, InvoiceItemInsertRequest, InvoiceItemUpdateRequest, InvoiceItemPatchRequest>();
+// InvoiceItem is read-only: items are created only together with their invoice in
+// MeterReadingService.CreateForCollectorAsync, so only the IBaseReadService<...> registration exists.
+AddRead<InvoiceItem, InvoiceItemResponse, InvoiceItemSearchObject>();
 // PaymentsController is read-only (see its own comment): every Payment row is written
 // either by the invoice state machine or the payment provider confirmation path, never
 // through a generic CRUD surface, so only the IBaseReadService<...> alias is exposed to it.
@@ -379,14 +372,15 @@ builder.Services.AddKeyedScoped<BaseFaultReportState, ResolvedFaultReportState>(
 builder.Services.AddScoped<IFaultReportStateResolver, FaultReportStateResolver>();
 builder.Services.AddScoped<IFaultReportPhotoService, FaultReportPhotoService>();
 AddPatchMapping<NotificationPatchRequest, Notification>();
-builder.Services.AddScoped<IBaseCRUDService<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>, NotificationService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IBaseCRUDService<NotificationResponse, NotificationSearchObject, NotificationInsertRequest, NotificationUpdateRequest, NotificationPatchRequest>>(
+    serviceProvider => serviceProvider.GetRequiredService<INotificationService>());
 builder.Services.AddScoped<INotificationImageService, NotificationImageService>();
 AddPatchMapping<UserNotificationPatchRequest, UserNotification>();
 builder.Services.AddScoped<IUserNotificationService, UserNotificationService>();
 builder.Services.AddScoped<IBaseCRUDService<UserNotificationResponse, UserNotificationSearchObject, UserNotificationInsertRequest, UserNotificationUpdateRequest, UserNotificationPatchRequest>>(
     serviceProvider => serviceProvider.GetRequiredService<IUserNotificationService>());
 AddCrud<CompanySettings, CompanySettingsResponse, CompanySettingsSearchObject, CompanySettingsInsertRequest, CompanySettingsUpdateRequest, CompanySettingsPatchRequest>();
-AddCrud<PaymentSettings, PaymentSettingsResponse, PaymentSettingsSearchObject, PaymentSettingsInsertRequest, PaymentSettingsUpdateRequest, PaymentSettingsPatchRequest>();
 
 builder.Services.AddScoped<IValidator<UserRegisterRequest>, UserRegisterValidator>();
 builder.Services.AddScoped<IValidator<AccountUpdateRequest>, AccountUpdateValidator>();
@@ -428,19 +422,10 @@ builder.Services.AddScoped<IValidator<WaterMeterMarkBrokenRequest>, WaterMeterMa
 builder.Services.AddScoped<IValidator<WaterMeterRequestInsertRequest>, WaterMeterRequestInsertValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestUpdateRequest>, WaterMeterRequestUpdateValidator>();
 builder.Services.AddScoped<IValidator<WaterMeterRequestPatchRequest>, WaterMeterRequestPatchValidator>();
-builder.Services.AddScoped<IValidator<MeterReadingInsertRequest>, MeterReadingInsertValidator>();
-builder.Services.AddScoped<IValidator<MeterReadingUpdateRequest>, MeterReadingUpdateValidator>();
-builder.Services.AddScoped<IValidator<MeterReadingPatchRequest>, MeterReadingPatchValidator>();
 builder.Services.AddScoped<IValidator<MeterReadingCollectorEntryRequest>, MeterReadingCollectorEntryValidator>();
 builder.Services.AddScoped<IValidator<TariffInsertRequest>, TariffInsertValidator>();
 builder.Services.AddScoped<IValidator<TariffUpdateRequest>, TariffUpdateValidator>();
 builder.Services.AddScoped<IValidator<TariffPatchRequest>, TariffPatchValidator>();
-builder.Services.AddScoped<IValidator<InvoiceInsertRequest>, InvoiceInsertValidator>();
-builder.Services.AddScoped<IValidator<InvoiceUpdateRequest>, InvoiceUpdateValidator>();
-builder.Services.AddScoped<IValidator<InvoicePatchRequest>, InvoicePatchValidator>();
-builder.Services.AddScoped<IValidator<InvoiceItemInsertRequest>, InvoiceItemInsertValidator>();
-builder.Services.AddScoped<IValidator<InvoiceItemUpdateRequest>, InvoiceItemUpdateValidator>();
-builder.Services.AddScoped<IValidator<InvoiceItemPatchRequest>, InvoiceItemPatchValidator>();
 builder.Services.AddScoped<IValidator<PaymentInsertRequest>, PaymentInsertValidator>();
 builder.Services.AddScoped<IValidator<PaymentUpdateRequest>, PaymentUpdateValidator>();
 builder.Services.AddScoped<IValidator<PaymentPatchRequest>, PaymentPatchValidator>();
@@ -456,9 +441,6 @@ builder.Services.AddScoped<IValidator<UserNotificationPatchRequest>, UserNotific
 builder.Services.AddScoped<IValidator<CompanySettingsInsertRequest>, CompanySettingsInsertValidator>();
 builder.Services.AddScoped<IValidator<CompanySettingsUpdateRequest>, CompanySettingsUpdateValidator>();
 builder.Services.AddScoped<IValidator<CompanySettingsPatchRequest>, CompanySettingsPatchValidator>();
-builder.Services.AddScoped<IValidator<PaymentSettingsInsertRequest>, PaymentSettingsInsertValidator>();
-builder.Services.AddScoped<IValidator<PaymentSettingsUpdateRequest>, PaymentSettingsUpdateValidator>();
-builder.Services.AddScoped<IValidator<PaymentSettingsPatchRequest>, PaymentSettingsPatchValidator>();
 builder.Services.AddScoped<IValidator<SupportTicketCreateRequest>, SupportTicketCreateValidator>();
 builder.Services.AddScoped<IValidator<SupportTicketMessageCreateRequest>, SupportTicketMessageCreateValidator>();
 
@@ -479,6 +461,33 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
         ClockSkew = TimeSpan.Zero
+    };
+
+    // A valid signature/lifetime is not enough: the token's SecurityStamp must still match the
+    // user's current one, and the user must still exist and be active. Password change,
+    // deactivation, role change, soft delete and role-permission changes rotate the stamp, so
+    // every access token issued before that gets a 401 on its next request instead of living on
+    // until it expires. Tokens without the claim (issued before this check existed) are rejected
+    // too. SecurityStampService caches the lookup for at most 60 s per user (evicted immediately
+    // on change within this process - see SecurityStampService.CacheDuration).
+    o.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var userIdClaim = context.Principal?.FindFirst(ClaimNames.Id)?.Value;
+            var securityStamp = context.Principal?.FindFirst(ClaimNames.SecurityStamp)?.Value;
+            if (!int.TryParse(userIdClaim, out var userId) || string.IsNullOrEmpty(securityStamp))
+            {
+                context.Fail("Token is missing the user id or security stamp.");
+                return;
+            }
+
+            var securityStampService = context.HttpContext.RequestServices.GetRequiredService<ISecurityStampService>();
+            if (!await securityStampService.IsValidAsync(userId, securityStamp))
+            {
+                context.Fail("Token has been revoked.");
+            }
+        }
     };
 });
 builder.Services.AddAuthorization();
@@ -525,6 +534,16 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+// Docker quick start: when Database:MigrateOnStartup is true (set only in docker-compose.yml) the API
+// applies every pending EF Core migration - schema plus the HasData seed (roles, permissions,
+// codebooks, tariffs, demo accounts) - before it starts serving, so `docker compose up` alone yields
+// a ready 210126 database. Off by default: local development and the test host keep the explicit
+// `dotnet ef database update` step and never touch a database implicitly.
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    await MigrateDatabaseAsync(app);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -547,6 +566,44 @@ app.MapControllers();
 
 app.Run();
 
+// SQL Server can report healthy a moment before it accepts logins for a new database, so the
+// migration is retried a few times instead of crashing the container on the first transient error.
+// After the last attempt the exception propagates and the container exits (docker-compose restarts it).
+static async Task MigrateDatabaseAsync(WebApplication app)
+{
+    const int maxAttempts = 10;
+    var delay = TimeSpan.FromSeconds(5);
+    var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseMigration");
+
+    for (var attempt = 1; ; attempt++)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AquaFlowDbContext>();
+
+            var pending = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
+            if (pending.Count == 0)
+            {
+                logger.LogInformation("Database is up to date, no migrations to apply.");
+                return;
+            }
+
+            logger.LogInformation("Applying {Count} pending migration(s)...", pending.Count);
+            await dbContext.Database.MigrateAsync();
+            logger.LogInformation("Database migrations applied.");
+            return;
+        }
+        catch (Exception exception) when (attempt < maxAttempts)
+        {
+            logger.LogWarning(exception,
+                "Database migration attempt {Attempt}/{MaxAttempts} failed, retrying in {Delay}s.",
+                attempt, maxAttempts, delay.TotalSeconds);
+            await Task.Delay(delay);
+        }
+    }
+}
+
 void AddCrud<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>()
     where TEntity : EntityBase
     where TSearch : BaseSearchObject
@@ -555,6 +612,16 @@ void AddCrud<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatch
 
     builder.Services.AddScoped<IBaseCRUDService<TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>>(serviceProvider =>
         ActivatorUtilities.CreateInstance<EfCrudService<TEntity, TResponse, TSearch, TInsertRequest, TUpdateRequest, TPatchRequest>>(serviceProvider));
+}
+
+// Read-only counterpart of AddCrud: registers only IBaseReadService<...> over a generic EfReadService,
+// for resources that have no generic write path at all.
+void AddRead<TEntity, TResponse, TSearch>()
+    where TEntity : EntityBase
+    where TSearch : BaseSearchObject
+{
+    builder.Services.AddScoped<IBaseReadService<TResponse, TSearch>>(serviceProvider =>
+        ActivatorUtilities.CreateInstance<EfReadService<TEntity, TResponse, TSearch>>(serviceProvider));
 }
 
 void AddPatchMapping<TPatchRequest, TEntity>()

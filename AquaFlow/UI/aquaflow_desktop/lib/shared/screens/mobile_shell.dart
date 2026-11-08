@@ -43,10 +43,12 @@ class MobileShell extends StatefulWidget {
   final List<MobileTab> tabs;
 
   @override
-  State<MobileShell> createState() => _MobileShellState();
+  State<MobileShell> createState() => MobileShellState();
 }
 
-class _MobileShellState extends State<MobileShell> {
+/// Public so a role shell can switch tabs from outside the bottom bar (e.g.
+/// a notification deep link) through a `GlobalKey<MobileShellState>`.
+class MobileShellState extends State<MobileShell> {
   int _selectedIndex = 0;
 
   final PreferencesApiService _preferencesService = PreferencesApiService();
@@ -68,6 +70,12 @@ class _MobileShellState extends State<MobileShell> {
 
   void _onTabSelected(int index) {
     setState(() => _selectedIndex = index);
+  }
+
+  /// Selects tab [index] as if the user had tapped it.
+  void selectTab(int index) {
+    if (index < 0 || index >= widget.tabs.length) return;
+    _onTabSelected(index);
   }
 
   /// Fetches `GET /Account/preferences` just to have a base object (language/
@@ -103,7 +111,6 @@ class _MobileShellState extends State<MobileShell> {
         const UserPreferences(
           theme: 'light',
           language: 'bs',
-          receiveEmailNotifications: true,
           receivePushNotifications: true,
         );
     final updated = current.copyWith(theme: mode == ThemeMode.dark ? 'dark' : 'light');

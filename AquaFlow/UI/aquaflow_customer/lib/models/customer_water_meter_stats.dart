@@ -52,12 +52,12 @@ class CustomerWaterMeterStats {
     CustomerInvoice? latest;
     for (final invoice in invoices) {
       if (latest == null ||
-          invoice.billingPeriodFrom.isAfter(latest.billingPeriodFrom)) {
+          invoice.billingPeriodTo.isAfter(latest.billingPeriodTo)) {
         latest = invoice;
       }
     }
 
-    counted.sort((a, b) => a.billingPeriodFrom.compareTo(b.billingPeriodFrom));
+    counted.sort((a, b) => a.billingPeriodTo.compareTo(b.billingPeriodTo));
 
     return CustomerWaterMeterStats._(
       invoiceCount: invoices.length,

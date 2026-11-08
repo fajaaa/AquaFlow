@@ -34,7 +34,7 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
   final _taxNumberCtrl = TextEditingController();
   final _bankAccountCtrl = TextEditingController();
   final _logoUrlCtrl = TextEditingController();
-  final _defaultLanguageCtrl = TextEditingController();
+  String _defaultLanguage = 'bs';
   final _defaultCurrencyCtrl = TextEditingController();
 
   int? _settingsId;
@@ -63,7 +63,9 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
       _taxNumberCtrl.text = settings.taxNumber;
       _bankAccountCtrl.text = settings.bankAccount;
       _logoUrlCtrl.text = settings.logoUrl ?? '';
-      _defaultLanguageCtrl.text = settings.defaultLanguage;
+      _defaultLanguage = _languageOptions.contains(settings.defaultLanguage)
+          ? settings.defaultLanguage
+          : 'bs';
       _defaultCurrencyCtrl.text = settings.defaultCurrency;
       if (mounted) setState(() => _loading = false);
     } on CompanySettingsException catch (e) {
@@ -91,7 +93,7 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
       taxNumber: _taxNumberCtrl.text.trim(),
       bankAccount: _bankAccountCtrl.text.trim(),
       logoUrl: logo.isEmpty ? null : logo,
-      defaultLanguage: _defaultLanguageCtrl.text.trim(),
+      defaultLanguage: _defaultLanguage,
       defaultCurrency: _defaultCurrencyCtrl.text.trim(),
     );
 
@@ -128,7 +130,6 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
     _taxNumberCtrl.dispose();
     _bankAccountCtrl.dispose();
     _logoUrlCtrl.dispose();
-    _defaultLanguageCtrl.dispose();
     _defaultCurrencyCtrl.dispose();
     super.dispose();
   }
@@ -211,12 +212,34 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: _field(
-                          controller: _defaultLanguageCtrl,
-                          label: loc.defaultLanguageLabel,
-                          icon: Icons.language_outlined,
-                          validator: (value) => _required(context, value),
-                          maxLength: 10,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _defaultLanguage,
+                            decoration: InputDecoration(
+                              labelText: loc.defaultLanguageLabel,
+                              helperText: loc.defaultLanguageHelper,
+                              prefixIcon: const Icon(Icons.language_outlined),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'bs',
+                                child: Text('Bosanski'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'de',
+                                child: Text('Deutsch'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'en',
+                                child: Text('English'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() => _defaultLanguage = value);
+                            },
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -278,6 +301,8 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
       ),
     );
   }
+
+  static const _languageOptions = ['bs', 'de', 'en'];
 
   String? _required(BuildContext context, String? value) =>
       (value == null || value.trim().isEmpty)

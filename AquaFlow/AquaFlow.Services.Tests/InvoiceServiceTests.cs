@@ -1,12 +1,12 @@
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.Tests.Notifications;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Payments;
-using AquaFlow.Services.Validators;
-using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -34,6 +34,25 @@ public class InvoiceServiceTests
         Assert.Equal("Haris", second.CustomerFirstName);
         Assert.Equal("Hodzic", second.CustomerLastName);
         Assert.Equal("WM-2", second.WaterMeterSerialNumber);
+    }
+
+    // BillingMonth matches on the period end (reading date), not the period start.
+    [Fact]
+    public async Task GetAllAsync_BillingMonth_ReturnsOnlyInvoicesWhosePeriodEndsInThatMonth()
+    {
+        await using var context = CreateContext();
+        SeedTwoInvoicesInDifferentBillingCycles(context);
+        var first = context.Invoices.First(i => i.Id == 1);
+        first.BillingPeriodFrom = new DateTime(2026, 6, 20);
+        first.BillingPeriodTo = new DateTime(2026, 7, 15);
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var july = await service.GetAllAsync(new InvoiceSearchObject { BillingMonth = new DateTime(2026, 7, 9) });
+        var june = await service.GetAllAsync(new InvoiceSearchObject { BillingMonth = new DateTime(2026, 6, 1) });
+
+        Assert.Equal("INV-2026-0001", Assert.Single(july.Items).InvoiceNumber);
+        Assert.Equal("INV-2026-0002", Assert.Single(june.Items).InvoiceNumber);
     }
 
     [Fact]
@@ -259,13 +278,13 @@ public class InvoiceServiceTests
         return new InvoiceService(
             context,
             mapper,
-            new IValidator<Model.Requests.InvoiceInsertRequest>[] { new InvoiceInsertValidator() },
-            new IValidator<Model.Requests.InvoiceUpdateRequest>[] { new InvoiceUpdateValidator() },
-            new IValidator<Model.Requests.InvoicePatchRequest>[] { new InvoicePatchValidator() },
             new NotSupportedInvoiceStateResolver(),
             new NotSupportedPaymentProvider(),
+            new NotSupportedPaymentCardService(),
             Options.Create(new PaymentsOptions()),
-            Options.Create(new StripeOptions()));
+            Options.Create(new StripeOptions()),
+            NullLogger<InvoiceService>.Instance,
+            TestSystemNotifications.Create(context));
     }
 
     // GetAllAsync never touches the state resolver, so a minimal stub that throws if it were ever
@@ -283,6 +302,12 @@ public class InvoiceServiceTests
         public string Name => throw new NotSupportedException("InvoiceServiceTests does not exercise checkout.");
 
         public Task<PaymentCheckoutResult> CreateCheckoutAsync(PaymentCheckoutContext context) =>
+            throw new NotSupportedException("InvoiceServiceTests does not exercise checkout.");
+
+        public Task<PaymentResumeResult> ResumeCheckoutAsync(string providerTransactionId) =>
+            throw new NotSupportedException("InvoiceServiceTests does not exercise checkout.");
+
+        public Task<PaymentAttemptState> CancelCheckoutAsync(string providerTransactionId) =>
             throw new NotSupportedException("InvoiceServiceTests does not exercise checkout.");
     }
 }

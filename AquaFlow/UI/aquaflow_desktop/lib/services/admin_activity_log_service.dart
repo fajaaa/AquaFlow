@@ -8,7 +8,7 @@ import 'package:aquaflow_desktop/models/admin_activity_log.dart';
 import 'package:aquaflow_desktop/models/admin_activity_log_page.dart';
 import 'package:aquaflow_desktop/services/admin_activity_log_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 /// Read-only data layer over `/ActivityLogs` (requires `ActivityLogs.Read`).
 /// There are no write actions - rows are only ever created server-side via
@@ -16,14 +16,11 @@ import 'package:aquaflow_desktop/shared/services/token_storage.dart';
 class AdminActivityLogService {
   AdminActivityLogService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<AdminActivityLogPage> fetch({
@@ -33,7 +30,6 @@ class AdminActivityLogService {
     String? userEmail,
     String? eventType,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -59,7 +55,7 @@ class AdminActivityLogService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -89,14 +85,6 @@ class AdminActivityLogService {
       items: items,
       totalCount: (decoded['totalCount'] as num?)?.toInt() ?? items.length,
     );
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminActivityLogException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

@@ -9,6 +9,9 @@ class AdminConsumptionAlert {
     required this.alertType,
     required this.measuredValue,
     required this.thresholdValue,
+    this.expectedValue,
+    this.expectedLowerBound,
+    this.expectedUpperBound,
     required this.message,
     required this.isResolved,
     required this.resolvedAt,
@@ -24,6 +27,12 @@ class AdminConsumptionAlert {
   final String alertType;
   final double measuredValue;
   final double thresholdValue;
+
+  /// Forecast model's expectation and its 95 % interval; null for alerts
+  /// raised before the model existed or without enough history.
+  final double? expectedValue;
+  final double? expectedLowerBound;
+  final double? expectedUpperBound;
   final String message;
   final bool isResolved;
   final DateTime? resolvedAt;
@@ -46,6 +55,9 @@ class AdminConsumptionAlert {
       alertType: (json['alertType'] ?? '') as String,
       measuredValue: (json['measuredValue'] as num?)?.toDouble() ?? 0,
       thresholdValue: (json['thresholdValue'] as num?)?.toDouble() ?? 0,
+      expectedValue: (json['expectedValue'] as num?)?.toDouble(),
+      expectedLowerBound: (json['expectedLowerBound'] as num?)?.toDouble(),
+      expectedUpperBound: (json['expectedUpperBound'] as num?)?.toDouble(),
       message: (json['message'] ?? '') as String,
       isResolved: (json['isResolved'] as bool?) ?? false,
       resolvedAt: _date(json['resolvedAt']),

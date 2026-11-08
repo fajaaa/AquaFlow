@@ -7,8 +7,8 @@ namespace AquaFlow.Services.WaterMeterRequestStateMachine;
 // further transitions.
 public class RegisteredWaterMeterRequestState : BaseWaterMeterRequestState
 {
-    public RegisteredWaterMeterRequestState(AquaFlowDbContext dbContext, IMapper mapper)
-        : base(dbContext, mapper)
+    public RegisteredWaterMeterRequestState(AquaFlowDbContext dbContext, IMapper mapper, ISystemNotificationService systemNotifications)
+        : base(dbContext, mapper, systemNotifications)
     {
     }
 

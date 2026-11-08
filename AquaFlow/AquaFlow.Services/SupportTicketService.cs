@@ -16,12 +16,17 @@ namespace AquaFlow.Services;
 public class SupportTicketService
     : BaseReadService<SupportTicket, SupportTicketResponse, SupportTicketSearchObject>, ISupportTicketService
 {
-    private readonly AquaFlowDbContext _dbContext;
+    // Staff who answer tickets - recipients of the notifications about customer activity.
+    private const string ManagePermission = "SupportTickets.Manage";
 
-    public SupportTicketService(AquaFlowDbContext dbContext, IMapper mapper)
+    private readonly AquaFlowDbContext _dbContext;
+    private readonly ISystemNotificationService _systemNotifications;
+
+    public SupportTicketService(AquaFlowDbContext dbContext, IMapper mapper, ISystemNotificationService systemNotifications)
         : base(mapper)
     {
         _dbContext = dbContext;
+        _systemNotifications = systemNotifications;
     }
 
     // List/base source: only the Customer join is needed for CustomerName. Messages (and their
@@ -79,7 +84,7 @@ public class SupportTicketService
         return base.ApplySorting(query, search);
     }
 
-    public async Task<SupportTicketResponse> CreateForUserAsync(int userId, string subject, string body)
+    public async Task<SupportTicketResponse> CreateForUserAsync(int userId, string subject, string body, IReadOnlyCollection<SupportTicketPhotoUpload> photos)
     {
         // Resolve the caller's CustomerProfile, same lookup as WaterMeterRequestService.CreateForUserAsync.
         var customerId = await _dbContext.CustomerProfiles
@@ -107,18 +112,39 @@ public class SupportTicketService
                     SenderId = userId,
                     IsFromStaff = false,
                     Body = body,
-                    CreatedAt = now
+                    CreatedAt = now,
+                    Photos = ToPhotoEntities(photos, now)
                 }
             }
         };
 
-        _dbContext.SupportTickets.Add(ticket);
-        await _dbContext.SaveChangesAsync();
+        var staffUserIds = await _systemNotifications.GetUserIdsWithPermissionAsync(ManagePermission);
+
+        // Ticket, opening message and its photos are one object graph, so the first SaveChanges
+        // inserts all of them atomically. The staff notification points at the ticket id, which only
+        // exists after that INSERT, so it is staged afterwards and committed in the same transaction.
+        await using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+        {
+            _dbContext.SupportTickets.Add(ticket);
+            await _dbContext.SaveChangesAsync();
+
+            StageTicketNotification(
+                ticket,
+                staffUserIds,
+                "Novi tiket podrške",
+                $"Otvoren je novi tiket podrške: \"{ticket.Subject}\".",
+                userId);
+            await _dbContext.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+
+        await _systemNotifications.DispatchPendingPushAsync();
 
         return await GetByIdAsync(ticket.Id);
     }
 
-    public async Task<SupportTicketMessageResponse> AddMessageAsync(int ticketId, int senderId, bool isFromStaff, string body)
+    public async Task<SupportTicketMessageResponse> AddMessageAsync(int ticketId, int senderId, bool isFromStaff, string body, IReadOnlyCollection<SupportTicketPhotoUpload> photos)
     {
         var ticket = await LoadTicketAsync(ticketId);
         if (ticket.Status != SupportTicketStatus.Open)
@@ -133,16 +159,41 @@ public class SupportTicketService
             SenderId = senderId,
             IsFromStaff = isFromStaff,
             Body = body,
-            CreatedAt = now
+            CreatedAt = now,
+            Photos = ToPhotoEntities(photos, now)
         };
 
+        // The other side of the thread is told: a staff reply goes to the ticket's customer, a customer
+        // message to the staff.
+        if (isFromStaff)
+        {
+            StageTicketNotification(
+                ticket,
+                await CustomerRecipientAsync(ticket),
+                "Novi odgovor podrške",
+                $"Stigao je novi odgovor na vaš tiket \"{ticket.Subject}\".",
+                senderId);
+        }
+        else
+        {
+            StageTicketNotification(
+                ticket,
+                await _systemNotifications.GetUserIdsWithPermissionAsync(ManagePermission),
+                "Nova poruka u tiketu",
+                $"Korisnik je poslao novu poruku u tiketu \"{ticket.Subject}\".",
+                senderId);
+        }
+
+        // Message, its photos, the ticket's LastMessage* bump and the notification land in one
+        // SaveChanges.
         _dbContext.SupportTicketMessages.Add(message);
         ticket.LastMessageAt = now;
         ticket.LastMessageFromStaff = isFromStaff;
         await _dbContext.SaveChangesAsync();
+        await _systemNotifications.DispatchPendingPushAsync();
 
         // Load the sender's profile so the flattened SenderName populates (mirrors GetByIdAsync's
-        // includes); a brand-new message has no photos yet.
+        // includes); Photos are already the saved entities, so their metadata (incl. ids) maps as-is.
         await _dbContext.Entry(message).Reference(m => m.Sender).LoadAsync();
         if (message.Sender != null)
         {
@@ -152,7 +203,7 @@ public class SupportTicketService
         return Mapper.Map<SupportTicketMessageResponse>(message);
     }
 
-    public async Task<SupportTicketResponse> CloseAsync(int ticketId)
+    public async Task<SupportTicketResponse> CloseAsync(int ticketId, int actorUserId)
     {
         var ticket = await LoadTicketAsync(ticketId);
         if (ticket.Status == SupportTicketStatus.Closed)
@@ -162,12 +213,19 @@ public class SupportTicketService
 
         ticket.Status = SupportTicketStatus.Closed;
         ticket.ClosedAt = DateTime.UtcNow;
+        StageTicketNotification(
+            ticket,
+            await CustomerRecipientAsync(ticket),
+            "Tiket podrške je zatvoren",
+            $"Vaš tiket \"{ticket.Subject}\" je zatvoren.",
+            actorUserId);
         await _dbContext.SaveChangesAsync();
+        await _systemNotifications.DispatchPendingPushAsync();
 
         return await GetByIdAsync(ticketId);
     }
 
-    public async Task<SupportTicketResponse> ReopenAsync(int ticketId)
+    public async Task<SupportTicketResponse> ReopenAsync(int ticketId, int actorUserId)
     {
         var ticket = await LoadTicketAsync(ticketId);
         if (ticket.Status == SupportTicketStatus.Open)
@@ -177,26 +235,33 @@ public class SupportTicketService
 
         ticket.Status = SupportTicketStatus.Open;
         ticket.ClosedAt = null;
+        StageTicketNotification(
+            ticket,
+            await CustomerRecipientAsync(ticket),
+            "Tiket podrške je ponovo otvoren",
+            $"Vaš tiket \"{ticket.Subject}\" je ponovo otvoren.",
+            actorUserId);
         await _dbContext.SaveChangesAsync();
+        await _systemNotifications.DispatchPendingPushAsync();
 
         return await GetByIdAsync(ticketId);
     }
 
-    public async Task<int> AddPhotoAsync(int messageId, byte[] data, string contentType, string fileName)
+    // Staged after the rule checks and right before the SaveChanges that applies the ticket change,
+    // so the notification commits together with it (see SystemNotificationService). The actor is
+    // never notified about their own message/action.
+    private void StageTicketNotification(SupportTicket ticket, IEnumerable<int> recipientUserIds, string title, string body, int actorUserId)
     {
-        var photo = new SupportTicketMessagePhoto
-        {
-            SupportTicketMessageId = messageId,
-            Data = data,
-            ContentType = contentType,
-            FileName = fileName,
-            SizeBytes = data.LongLength
-        };
+        _systemNotifications.Stage(
+            new SystemNotificationMessage(title, body, NotificationType.Info, RelatedEntityTypes.SupportTicket, ticket.Id),
+            recipientUserIds,
+            actorUserId);
+    }
 
-        _dbContext.SupportTicketMessagePhotos.Add(photo);
-        await _dbContext.SaveChangesAsync();
-
-        return photo.Id;
+    private async Task<IEnumerable<int>> CustomerRecipientAsync(SupportTicket ticket)
+    {
+        var customerUserId = await _systemNotifications.GetCustomerUserIdAsync(ticket.CustomerId);
+        return customerUserId is null ? Array.Empty<int>() : new[] { customerUserId.Value };
     }
 
     public async Task<(byte[] Data, string ContentType, string FileName)> GetPhotoAsync(int ticketId, int messageId, int photoId)
@@ -226,6 +291,20 @@ public class SupportTicketService
             .Where(ticket => ticket.Id == ticketId)
             .Select(ticket => new SupportTicketOwnership(ticket.CustomerId, ticket.Status))
             .FirstOrDefaultAsync();
+    }
+
+    private static List<SupportTicketMessagePhoto> ToPhotoEntities(IReadOnlyCollection<SupportTicketPhotoUpload> photos, DateTime createdAt)
+    {
+        return photos
+            .Select(photo => new SupportTicketMessagePhoto
+            {
+                Data = photo.Data,
+                ContentType = photo.ContentType,
+                FileName = photo.FileName,
+                SizeBytes = photo.Data.LongLength,
+                CreatedAt = createdAt
+            })
+            .ToList();
     }
 
     // Loads the tracked ticket once so a transition (reply/close/reopen) can both read its Status

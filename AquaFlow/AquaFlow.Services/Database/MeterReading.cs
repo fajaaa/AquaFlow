@@ -18,15 +18,10 @@ public class MeterReading : EntityBase
     [Column(TypeName = "decimal(18,2)")]
     public decimal ConsumptionM3 { get; set; }
     public DateTime ReadingDate { get; set; } = DateTime.UtcNow;
-    [MaxLength(30)]
-    public string Source { get; set; } = "Collector";
     public string? PhotoUrl { get; set; }
     public string? Note { get; set; }
     [MaxLength(80)]
     public string? ClientUuid { get; set; }
-    [MaxLength(30)]
-    public string SyncStatus { get; set; } = "Synced";
-    public DateTime? SyncedAt { get; set; }
     public int? InvoiceId { get; set; }
     public Invoice? Invoice { get; set; }
     // Set when the invoice this reading billed gets cancelled (IssuedInvoiceState.CancelAsync), so the

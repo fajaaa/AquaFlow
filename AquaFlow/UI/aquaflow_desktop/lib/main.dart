@@ -15,6 +15,9 @@ import 'package:aquaflow_desktop/shared/theme/app_theme.dart';
 final _navigatorKey = GlobalKey<NavigatorState>();
 final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
+/// Inbox badge + new-notification signal for the "Moje obavijesti" sidebar
+/// item. Desktop has no FCM, so its polling (started/stopped by
+/// `AdminDashboardScreen`) is the only update path.
 final _notificationBadgeProvider = NotificationBadgeProvider();
 
 /// Created here (not inside [AquaFlowApp]'s `build`) so the same instance can
@@ -26,6 +29,20 @@ final _themeProvider = ThemeProvider();
 /// be passed into [AuthProvider], which applies the signed-in user's
 /// `UserPreference.Language` to it after login/session restore.
 final _localeProvider = LocaleProvider();
+
+/// Involuntary sign-out (the refresh token was rejected while the app was in
+/// use - see `SessionManager`): `AuthProvider` has already swapped `_AuthGate`
+/// to the login flow, so drop any pushed routes/dialogs left above it and tell
+/// the user why. Runs outside any screen, hence the root keys.
+void _handleSessionExpired() {
+  _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+  final messenger = _scaffoldMessengerKey.currentState;
+  if (messenger == null) return;
+  final loc = lookupAppLocalizations(_localeProvider.locale);
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(loc.sessionExpiredMessage)));
+}
 
 void main() {
   runApp(const AquaFlowApp());
@@ -42,6 +59,7 @@ class AquaFlowApp extends StatelessWidget {
           create: (_) => AuthProvider(
             themeProvider: _themeProvider,
             localeProvider: _localeProvider,
+            onSessionExpired: _handleSessionExpired,
           )..bootstrap(),
         ),
         ChangeNotifierProvider.value(value: _notificationBadgeProvider),
@@ -66,6 +84,13 @@ class AquaFlowApp extends StatelessWidget {
             locale: locale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
+            localeResolutionCallback: (locale, supported) {
+              if (locale != null &&
+                  supported.any((l) => l.languageCode == locale.languageCode)) {
+                return locale;
+              }
+              return const Locale('bs');
+            },
             home: const _AuthGate(),
           );
         },

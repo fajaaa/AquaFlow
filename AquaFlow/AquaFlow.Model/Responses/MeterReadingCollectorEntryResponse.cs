@@ -7,7 +7,10 @@ namespace AquaFlow.Model.Responses;
 // (same reason a negative one is), so no invoice is created for that reading at all.
 public class MeterReadingCollectorEntryResponse : MeterReadingResponse
 {
-    public int? InvoiceId { get; set; }
     public string? InvoiceNumber { get; set; }
     public decimal? InvoiceTotalAmount { get; set; }
+    // Issued, or Paid when the collector recorded a cash payment (request PaidInCash).
+    public string? InvoiceStatus { get; set; }
+    // Method of the invoice's Completed payment (e.g. "Cash"); null while unpaid or without an invoice.
+    public string? PaymentMethod { get; set; }
 }

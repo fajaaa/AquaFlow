@@ -1,7 +1,7 @@
-using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
+using AquaFlow.Services.Payments;
 
 namespace AquaFlow.WebAPI.Tests.Invoices;
 
@@ -31,7 +31,7 @@ public class FakeInvoiceService : IInvoiceService
         return Task.FromResult(CheckoutResponse ?? throw new NotSupportedException());
     }
 
-    public Task<PaymentResponse> ConfirmPaymentAsync(string provider, string providerTransactionId, bool succeeded)
+    public Task<PaymentResponse> ConfirmPaymentAsync(string provider, string providerTransactionId, PaymentConfirmationOutcome outcome)
         => throw new NotSupportedException();
 
     public Task<PageResult<InvoiceResponse>> GetAllAsync(InvoiceSearchObject? search = null)
@@ -60,18 +60,6 @@ public class FakeInvoiceService : IInvoiceService
 
         return Task.FromResult(row);
     }
-
-    public Task<InvoiceResponse> InsertAsync(InvoiceInsertRequest request)
-        => throw new NotSupportedException();
-
-    public Task<InvoiceResponse> UpdateAsync(int id, InvoiceUpdateRequest request)
-        => throw new NotSupportedException();
-
-    public Task<InvoiceResponse> PatchAsync(int id, InvoicePatchRequest request)
-        => throw new NotSupportedException();
-
-    public Task DeleteAsync(int id)
-        => throw new NotSupportedException();
 
     public Task<InvoiceResponse> IssueAsync(int id, int changedById)
         => throw new NotSupportedException();

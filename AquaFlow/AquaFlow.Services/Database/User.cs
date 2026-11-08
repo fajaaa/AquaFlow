@@ -28,6 +28,15 @@ public class User : EntityBase
     public int UserRoleId { get; set; }
     public UserRole? UserRole { get; set; }
 
+    // Carried in every access token (the SecurityStamp claim) and re-checked on each request by
+    // SecurityStampService: a new stamp invalidates every access token issued before it. Rotated
+    // on password change, deactivation, role change and soft delete (UserService.RevokeSessionsAsync),
+    // and when the permissions of the user's role change (SecurityStampService.RotateForRoleAsync /
+    // RotateForPermissionAsync).
+    [Required]
+    [MaxLength(64)]
+    public string SecurityStamp { get; set; } = SecurityStampService.NewStamp();
+
     public bool IsActive { get; set; } = true;
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }

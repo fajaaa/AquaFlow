@@ -222,7 +222,7 @@ public class CustomerProfilesControllerTests
             profiles: [new CustomerProfileResponse { Id = 10, UserId = 1, FirstName = "Old" }],
             out var service);
 
-        var result = await controller.Update(10, new CustomerProfileUpdateRequest { UserId = 1, FirstName = "New" });
+        var result = await controller.Update(10, new CustomerProfileUpdateRequest { FirstName = "New" });
 
         Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal("New", service.LastUpdate!.FirstName);
@@ -236,26 +236,10 @@ public class CustomerProfilesControllerTests
             profiles: [new CustomerProfileResponse { Id = 20, UserId = 2, FirstName = "Other" }],
             out var service);
 
-        var result = await controller.Update(20, new CustomerProfileUpdateRequest { UserId = 2, FirstName = "Hijacked" });
+        var result = await controller.Update(20, new CustomerProfileUpdateRequest { FirstName = "Hijacked" });
 
         Assert.IsType<NotFoundResult>(result.Result);
         Assert.Null(service.LastUpdate);
-    }
-
-    [Fact]
-    public async Task Update_OwnProfile_CannotReassignOwnership()
-    {
-        // Mass-assignment guard: the request body's UserId is forced back to the caller's own
-        // id, so an owner cannot hand their profile to another account on the way through.
-        var controller = CreateController(
-            BuildUser(userId: 1, role: CustomerRole),
-            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            out var service);
-
-        var result = await controller.Update(10, new CustomerProfileUpdateRequest { UserId = 2, FirstName = "Own" });
-
-        Assert.IsType<OkObjectResult>(result.Result);
-        Assert.Equal(1, service.LastUpdate!.UserId);
     }
 
     [Fact]
@@ -266,7 +250,7 @@ public class CustomerProfilesControllerTests
             profiles: [new CustomerProfileResponse { Id = 20, UserId = 2 }],
             out var service);
 
-        var result = await controller.Update(20, new CustomerProfileUpdateRequest { UserId = 2, FirstName = "Edited" });
+        var result = await controller.Update(20, new CustomerProfileUpdateRequest { FirstName = "Edited" });
 
         Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal("Edited", service.LastUpdate!.FirstName);
@@ -286,7 +270,6 @@ public class CustomerProfilesControllerTests
 
         Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal("New", service.LastPatch!.FirstName);
-        Assert.Equal(1, service.LastPatch!.UserId);
     }
 
     [Fact]
@@ -317,20 +300,6 @@ public class CustomerProfilesControllerTests
     }
 
     [Fact]
-    public async Task Patch_OwnProfile_CannotReassignOwnership()
-    {
-        var controller = CreateController(
-            BuildUser(userId: 1, role: CustomerRole),
-            profiles: [new CustomerProfileResponse { Id = 10, UserId = 1 }],
-            out var service);
-
-        var result = await controller.Patch(10, new CustomerProfilePatchRequest { UserId = 2 });
-
-        Assert.IsType<OkObjectResult>(result.Result);
-        Assert.Equal(1, service.LastPatch!.UserId);
-    }
-
-    [Fact]
     public async Task Patch_WithManagePermission_WritesAnyProfile()
     {
         var controller = CreateController(
@@ -344,27 +313,33 @@ public class CustomerProfilesControllerTests
         Assert.Equal("Edited", service.LastPatch!.FirstName);
     }
 
-    // Enforcement runs in the MVC authorization filter pipeline, which a direct method call
-    // bypasses (see AquaFlow.WebAPI.Tests remarks in AGENTS.md), so this pins the declarative
-    // gate itself: Delete is the one action with no self-service caller at all.
+    // DELETE /CustomerProfiles/{id} must not exist: a customer is deactivated through the user account
+    // (already a soft delete), never by dropping the profile their meters/invoices hang off. The inherited
+    // BaseCRUDController.Delete is overridden with [NonAction], which is exactly what MVC's action
+    // discovery checks to skip a public method, so pinning the attribute pins that the route is not
+    // registered (404/405 at the HTTP level).
     [Fact]
-    public void Delete_RequiresCustomersManagePermission()
+    public void Delete_IsNotAnMvcAction()
     {
         var method = typeof(CustomerProfilesController)
             .GetMethods()
-            .Single(m => m.Name == nameof(CustomerProfilesController.Delete) && m.DeclaringType == typeof(CustomerProfilesController));
+            .Single(m => m.Name == nameof(CustomerProfilesController.Delete));
 
-        var attribute = method
-            .GetCustomAttributes(typeof(RequirePermissionAttribute), inherit: false)
-            .Cast<RequirePermissionAttribute>()
-            .SingleOrDefault();
-
-        Assert.NotNull(attribute);
-        var codes = Assert.IsType<string[]>(attribute!.Arguments![0]);
-        Assert.Contains(ManagePermission, codes);
+        Assert.Equal(typeof(CustomerProfilesController), method.DeclaringType);
+        Assert.True(method.IsDefined(typeof(NonActionAttribute), inherit: false));
     }
 
-    // The mirror of the test above: the other five actions must stay ungated (and the gate
+    // UserId and CustomerCode are fixed at creation: they must not be settable through Update/Patch.
+    [Theory]
+    [InlineData(typeof(CustomerProfileUpdateRequest))]
+    [InlineData(typeof(CustomerProfilePatchRequest))]
+    public void UpdateAndPatchRequests_DoNotExposeUserIdOrCustomerCode(Type requestType)
+    {
+        Assert.Null(requestType.GetProperty(nameof(CustomerProfileInsertRequest.UserId)));
+        Assert.Null(requestType.GetProperty(nameof(CustomerProfileInsertRequest.CustomerCode)));
+    }
+
+    // The self-service actions must stay ungated (and the gate
     // must stay off the class) or the customer/collector app's self-service profile flow
     // breaks - the ownership pinning inside those actions is what protects them.
     [Theory]
@@ -381,66 +356,6 @@ public class CustomerProfilesControllerTests
 
         Assert.Empty(method.GetCustomAttributes(typeof(RequirePermissionAttribute), inherit: false));
         Assert.Empty(typeof(CustomerProfilesController).GetCustomAttributes(typeof(RequirePermissionAttribute), inherit: true));
-    }
-
-    // The reflection test above pins that the attribute is present; these run the gate it
-    // declares through the real authorization filter, so the 403 a permission-less caller
-    // actually gets is asserted rather than inferred (see AGENTS.md).
-    [Fact]
-    public void Delete_WithoutManagePermission_IsForbidden()
-    {
-        var context = AuthorizeDelete(BuildUser(userId: 1, role: CustomerRole));
-
-        Assert.IsType<ForbidResult>(context.Result);
-    }
-
-    [Fact]
-    public void Delete_WithManagePermission_IsAllowed()
-    {
-        var context = AuthorizeDelete(BuildUser(userId: 99, role: AdminRole, permissions: [ManagePermission]));
-
-        // A null Result means the filter did not short-circuit, so the action runs.
-        Assert.Null(context.Result);
-    }
-
-    [Fact]
-    public void Delete_Unauthenticated_IsUnauthorized()
-    {
-        var context = AuthorizeDelete(new ClaimsPrincipal(new ClaimsIdentity()));
-
-        Assert.IsType<UnauthorizedResult>(context.Result);
-    }
-
-    // Instantiates the [RequirePermission] filter declared on Delete and runs it against a
-    // request carrying the given principal, returning the filter context so the caller can
-    // assert on the short-circuit result (null = passed through).
-    private static AuthorizationFilterContext AuthorizeDelete(ClaimsPrincipal user)
-    {
-        var attribute = typeof(CustomerProfilesController)
-            .GetMethods()
-            .Single(m => m.Name == nameof(CustomerProfilesController.Delete) && m.DeclaringType == typeof(CustomerProfilesController))
-            .GetCustomAttributes(typeof(RequirePermissionAttribute), inherit: false)
-            .Cast<RequirePermissionAttribute>()
-            .Single();
-
-        var filter = (IAuthorizationFilter)attribute.CreateInstance(new EmptyServiceProvider());
-
-        var context = new AuthorizationFilterContext(
-            new ActionContext(
-                new DefaultHttpContext { User = user },
-                new RouteData(),
-                new ActionDescriptor()),
-            new List<IFilterMetadata>());
-
-        filter.OnAuthorization(context);
-        return context;
-    }
-
-    // The filter's only constructor dependency is the permission-code array, which the
-    // attribute supplies via TypeFilterAttribute.Arguments - nothing is resolved from DI.
-    private sealed class EmptyServiceProvider : IServiceProvider
-    {
-        public object? GetService(Type serviceType) => null;
     }
 
     private static CustomerProfilesController CreateController(

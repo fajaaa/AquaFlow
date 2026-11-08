@@ -13,33 +13,39 @@ import 'package:aquaflow_desktop/models/admin_user.dart';
 import 'package:aquaflow_desktop/models/admin_user_role_option.dart';
 import 'package:aquaflow_desktop/services/admin_collector_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 class AdminCollectorService {
   AdminCollectorService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<AdminCollectorProfilePage> fetch({
     required int page,
     required int pageSize,
+    String? term,
+    bool? isActive,
   }) {
-    return fetchCollectors(page: page, pageSize: pageSize);
+    return fetchCollectors(
+      page: page,
+      pageSize: pageSize,
+      term: term,
+      isActive: isActive,
+    );
   }
 
   Future<AdminCollectorProfilePage> fetchCollectors({
     int page = 1,
     int pageSize = 10,
+    String? term,
+    bool? isActive,
   }) async {
-    final token = await _requireToken();
+    final trimmedTerm = term?.trim() ?? '';
     final uri = Uri.parse('${ApiConfig.baseUrl}/CollectorProfiles').replace(
       queryParameters: {
         'Page': '$page',
@@ -47,11 +53,13 @@ class AdminCollectorService {
         'IncludeTotalCount': 'true',
         'SortBy': 'EmployeeCode',
         'SortDescending': 'true',
+        if (trimmedTerm.isNotEmpty) 'Term': trimmedTerm,
+        if (isActive != null) 'IsActive': '$isActive',
       },
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -84,13 +92,12 @@ class AdminCollectorService {
   }
 
   Future<AdminCollectorProfile?> fetchCollectorProfile(int userId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/CollectorProfiles',
     ).replace(queryParameters: {'UserId': '$userId', 'PageSize': '1'});
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -111,13 +118,12 @@ class AdminCollectorService {
   /// Fetches the CustomerProfile owned by [userId] (collectors reuse the
   /// same profile table as customers), or null if they don't have one yet.
   Future<AdminCustomerProfile?> fetchCustomerProfile(int userId) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles').replace(
       queryParameters: {'UserId': '$userId', 'PageSize': '1'},
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -140,8 +146,7 @@ class AdminCollectorService {
   }
 
   Future<AdminCollectorProfile> createCollectorProfile(int userId) async {
-    final token = await _requireToken();
-    return _postCollectorProfile(token, AdminCollectorProfileDraft(userId: userId));
+    return _postCollectorProfile(AdminCollectorProfileDraft(userId: userId));
   }
 
   /// Saves an edit of an existing collector: patches the collector's own
@@ -163,10 +168,7 @@ class AdminCollectorService {
     required String lastName,
     int? existingProfileId,
   }) async {
-    final token = await _requireToken();
-
     await _patchCollectorUser(
-      token,
       userId,
       email: email,
       phone: phone,
@@ -177,25 +179,23 @@ class AdminCollectorService {
     final profile = AdminCustomerProfileDraft(
       firstName: firstName,
       lastName: lastName,
-      theme: 'light',
     );
     if (existingProfileId != null) {
-      await _patchCustomerProfile(token, existingProfileId, userId, profile);
+      await _patchCustomerProfile(existingProfileId, userId, profile);
     } else {
-      await _postCustomerProfile(token, userId, profile);
+      await _postCustomerProfile(userId, profile);
     }
 
-    return _fetchCollectorProfileById(token, collectorProfileId);
+    return _fetchCollectorProfileById(collectorProfileId);
   }
 
   Future<AdminCollectorProfile> _fetchCollectorProfileById(
-    String token,
     int id,
   ) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/CollectorProfiles/$id');
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -208,7 +208,6 @@ class AdminCollectorService {
   }
 
   Future<void> _patchCollectorUser(
-    String token,
     int userId, {
     required String email,
     required String phone,
@@ -230,7 +229,6 @@ class AdminCollectorService {
       () => _client.patch(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(body),
@@ -245,7 +243,6 @@ class AdminCollectorService {
   }
 
   Future<void> _patchCustomerProfile(
-    String token,
     int profileId,
     int userId,
     AdminCustomerProfileDraft profile,
@@ -256,7 +253,6 @@ class AdminCollectorService {
       () => _client.patch(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(profile.toJson(userId)),
@@ -277,7 +273,6 @@ class AdminCollectorService {
     String? firstName,
     String? lastName,
     bool isActive = true,
-    String theme = 'light',
   }) async {
     final first = firstName?.trim() ?? '';
     final last = lastName?.trim() ?? '';
@@ -288,10 +283,8 @@ class AdminCollectorService {
       );
     }
 
-    final token = await _requireToken();
-    final collectorRoleId = await _fetchCollectorRoleId(token);
+    final collectorRoleId = await _fetchCollectorRoleId();
     final user = await _postCollectorUser(
-      token,
       email: email.trim(),
       password: password.trim(),
       phone: phone.trim(),
@@ -301,20 +294,18 @@ class AdminCollectorService {
 
     if (hasProfileInput) {
       await _postCustomerProfile(
-        token,
         user.id,
         AdminCustomerProfileDraft(
           firstName: first,
           lastName: last,
-          theme: theme,
         ),
       );
     }
 
-    return _postCollectorProfile(token, AdminCollectorProfileDraft(userId: user.id));
+    return _postCollectorProfile(AdminCollectorProfileDraft(userId: user.id));
   }
 
-  Future<int> _fetchCollectorRoleId(String token) async {
+  Future<int> _fetchCollectorRoleId() async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/UserRoles').replace(
       queryParameters: {
         'Name': 'Collector',
@@ -325,7 +316,7 @@ class AdminCollectorService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -354,8 +345,7 @@ class AdminCollectorService {
     throw const AdminCollectorException('Rola Collector nije pronađena.');
   }
 
-  Future<AdminUser> _postCollectorUser(
-    String token, {
+  Future<AdminUser> _postCollectorUser({
     required String email,
     required String password,
     required String phone,
@@ -368,7 +358,6 @@ class AdminCollectorService {
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -398,7 +387,6 @@ class AdminCollectorService {
   }
 
   Future<void> _postCustomerProfile(
-    String token,
     int userId,
     AdminCustomerProfileDraft profile,
   ) async {
@@ -408,7 +396,6 @@ class AdminCollectorService {
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(profile.toJson(userId)),
@@ -423,7 +410,6 @@ class AdminCollectorService {
   }
 
   Future<AdminCollectorProfile> _postCollectorProfile(
-    String token,
     AdminCollectorProfileDraft draft,
   ) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/CollectorProfiles');
@@ -432,7 +418,6 @@ class AdminCollectorService {
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(draft.toJson()),
@@ -456,14 +441,6 @@ class AdminCollectorService {
       );
     }
     return AdminCollectorProfile.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminCollectorException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

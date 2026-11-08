@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -17,15 +19,30 @@ import '../widgets/paged_table_pagination_bar.dart';
 import '../widgets/refresh_button.dart';
 import 'notification_detail_screen.dart';
 
+/// The signed-in user's inbox (`GET /UserNotifications/mine`, newest first,
+/// paged + type filter). Mobile "Obavijesti" tab and the desktop "Moje
+/// obavijesti" sidebar item.
+///
+/// Keeps itself current via [NotificationBadgeProvider.inboxVersion]: when
+/// the provider detects a new notification (poll or foreground push), page 1
+/// is reloaded silently - no loader, the list and its scroll position stay,
+/// rows marked read in this session stay read - while on a later page a
+/// "new notifications" banner offers the jump back instead of moving the
+/// user.
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  const NotificationsScreen({super.key, this.service});
+
+  /// Defaults to a fresh [NotificationService]; injectable for tests.
+  final NotificationService? service;
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final NotificationService _service = NotificationService();
+  late final NotificationService _service =
+      widget.service ?? NotificationService();
+  late final NotificationBadgeProvider _badge;
 
   NotificationPage? _pageData;
   bool _loading = true;
@@ -36,15 +53,50 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   int _pageSize = 10;
   int _requestSerial = 0;
 
+  /// Last [NotificationBadgeProvider.inboxVersion] this screen reacted to.
+  late int _handledInboxVersion;
+
+  /// A new notification arrived while the user was past page 1.
+  bool _hasNewNotifications = false;
+
+  /// A new notification arrived while a regular load was running; reload
+  /// page 1 silently once it is done (that load may predate the arrival).
+  bool _silentReloadPending = false;
+
+  /// Read receipts saved from this screen's detail views (row id -> readAt),
+  /// re-applied to every page load so a reload whose request raced the
+  /// PATCH can't bring the "Novo" badge back.
+  final Map<int, DateTime> _locallyRead = {};
+
   @override
   void initState() {
     super.initState();
+    _badge = context.read<NotificationBadgeProvider>();
+    _handledInboxVersion = _badge.inboxVersion;
+    _badge.addListener(_onBadgeChanged);
     _load();
   }
 
-  Future<void> _load({bool resetPage = false}) async {
+  void _onBadgeChanged() {
+    final version = _badge.inboxVersion;
+    if (!mounted || version == _handledInboxVersion) return;
+    _handledInboxVersion = version;
+
+    if (_page != 1) {
+      setState(() => _hasNewNotifications = true);
+    } else if (_loading) {
+      _silentReloadPending = true;
+    } else {
+      unawaited(_load(silent: true));
+    }
+  }
+
+  /// [silent] refreshes the current page in the background: no loader, no
+  /// disabled controls, and a failure keeps what is already on screen.
+  Future<void> _load({bool resetPage = false, bool silent = false}) async {
     final session = context.read<AuthProvider>().session;
     if (session == null) {
+      if (silent) return;
       setState(() {
         _loading = false;
         _error = AppLocalizations.of(context).notLoggedInError;
@@ -53,11 +105,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     final requestId = ++_requestSerial;
-    setState(() {
-      if (resetPage) _page = 1;
-      _loading = true;
-      _error = null;
-    });
+    if (!silent) {
+      setState(() {
+        if (resetPage) _page = 1;
+        _loading = true;
+        _error = null;
+      });
+    }
 
     try {
       final pageData = await _service.fetchMine(
@@ -67,18 +121,45 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       );
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
-        _pageData = pageData;
+        _pageData = _withLocalReads(pageData);
         _loading = false;
+        _error = null;
+        if (_page == 1) _hasNewNotifications = false;
       });
       context.read<NotificationBadgeProvider>().markSeen();
     } on NotificationException catch (e) {
       if (!mounted || requestId != _requestSerial) return;
       setState(() {
-        _pageData = null;
         _loading = false;
-        _error = e.message;
+        if (!silent) {
+          _pageData = null;
+          _error = e.message;
+        }
       });
     }
+
+    if (_silentReloadPending && mounted) {
+      _silentReloadPending = false;
+      if (_page == 1) {
+        unawaited(_load(silent: true));
+      } else {
+        setState(() => _hasNewNotifications = true);
+      }
+    }
+  }
+
+  NotificationPage _withLocalReads(NotificationPage page) {
+    if (_locallyRead.isEmpty) return page;
+    return NotificationPage(
+      items: [
+        for (final item in page.items)
+          if (!item.isRead && _locallyRead.containsKey(item.id))
+            item.copyWith(readAt: _locallyRead[item.id])
+          else
+            item,
+      ],
+      totalCount: page.totalCount,
+    );
   }
 
   Future<void> _markAllAsRead() async {
@@ -129,6 +210,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   /// Patches the just-opened item in the already-loaded page in place, so the
   /// "Novo" badge on its list card clears without a full reload.
   void _applyMarkedRead(UserNotificationItem updated) {
+    final readAt = updated.readAt;
+    if (readAt != null) _locallyRead[updated.id] = readAt;
     final pageData = _pageData;
     if (!mounted || pageData == null) return;
     setState(() {
@@ -144,6 +227,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   void dispose() {
+    _badge.removeListener(_onBadgeChanged);
     _service.dispose();
     super.dispose();
   }
@@ -174,6 +258,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: _buildFilters(),
           ),
+          if (_hasNewNotifications)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: _NewNotificationsBanner(
+                onRefresh: _loading ? null : () => _load(resetPage: true),
+              ),
+            ),
           if (_loading && pageData != null)
             const LinearProgressIndicator(minHeight: 2),
           Expanded(child: _buildContent()),
@@ -293,6 +384,49 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   int _totalPages(int totalCount) {
     if (totalCount <= 0) return 1;
     return ((totalCount + _pageSize - 1) / _pageSize).floor();
+  }
+}
+
+/// Compact "new notifications - refresh" strip shown above the list when
+/// something new arrived while the user was past page 1.
+class _NewNotificationsBanner extends StatelessWidget {
+  const _NewNotificationsBanner({required this.onRefresh});
+
+  final VoidCallback? onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final loc = AppLocalizations.of(context);
+
+    return Material(
+      key: const ValueKey('notifications-new-banner'),
+      color: colorScheme.primaryContainer,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
+        child: Row(
+          children: [
+            Icon(
+              Icons.notifications_active_outlined,
+              size: 20,
+              color: colorScheme.onPrimaryContainer,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                loc.notificationsNewBanner,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ),
+            TextButton(onPressed: onRefresh, child: Text(loc.commonRefresh)),
+          ],
+        ),
+      ),
+    );
   }
 }
 

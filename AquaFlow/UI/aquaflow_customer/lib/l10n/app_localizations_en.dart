@@ -154,6 +154,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get defaultLanguageLabel => 'Language';
 
   @override
+  String get defaultLanguageHelper =>
+      'Language new users start with when they register';
+
+  @override
   String get defaultCurrencyLabel => 'Currency';
 
   @override
@@ -633,6 +637,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentProcessingMessage => 'Payment processing.';
 
   @override
+  String get paymentAlreadySucceededMessage =>
+      'Payment processing. The payment was already made and is awaiting confirmation.';
+
+  @override
   String get paymentCancelledMessage => 'Payment cancelled.';
 
   @override
@@ -723,11 +731,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addImageButtonLabel => 'Add image';
 
   @override
-  String sendingPhotoLabel(int current, int total) {
-    return 'Sending photo $current/$total...';
-  }
-
-  @override
   String get newFaultReportSubmitButton => 'Submit report';
 
   @override
@@ -815,4 +818,191 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supportTicketClosedBanner => 'This ticket is closed';
+
+  @override
+  String get sessionExpiredMessage =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get passwordChangedSignInAgain =>
+      'Your password has been changed. Please sign in again.';
+
+  @override
+  String get notificationsNewBanner => 'You have new notifications';
+
+  @override
+  String get notificationOpenAction => 'Open';
+
+  @override
+  String get notificationOpenRelatedFailed =>
+      'The related item couldn\'t be opened. It may no longer be available.';
+
+  @override
+  String get savedCardsTitle => 'My cards';
+
+  @override
+  String get savedCardsSubtitle => 'Saved cards for paying invoices';
+
+  @override
+  String get savedCardsAdd => 'Add card';
+
+  @override
+  String get savedCardsEmpty => 'You have no saved cards.';
+
+  @override
+  String get savedCardsUnsupported =>
+      'Saving cards is currently not available.';
+
+  @override
+  String get savedCardsExpired => 'Expired';
+
+  @override
+  String get savedCardsDeleteTitle => 'Delete card?';
+
+  @override
+  String savedCardsDeleteMessage(String brand, String last4) {
+    return 'The $brand card •••• $last4 will be removed.';
+  }
+
+  @override
+  String get savedCardsDeleted => 'Card deleted.';
+
+  @override
+  String get savedCardsAdded => 'Card added.';
+
+  @override
+  String get insightHeading => 'Forecast and recommendations';
+
+  @override
+  String insightExpectedConsumption(String value, String lower, String upper) {
+    return 'Expected consumption in the next period: $value m³ ($lower-$upper m³)';
+  }
+
+  @override
+  String insightEstimatedAmount(String amount, String currency) {
+    return 'Estimated amount: $amount $currency';
+  }
+
+  @override
+  String get insightAlertTitle => 'Active consumption alert';
+
+  @override
+  String insightAlertBody(
+    String measured,
+    String expected,
+    String lower,
+    String upper,
+    String baseline,
+  ) {
+    return 'Measured: $measured m³. The model expected $expected m³ (95 % interval $lower-$upper m³). Average of previous readings: $baseline m³.';
+  }
+
+  @override
+  String insightAlertBodyNoModel(String measured, String baseline) {
+    return 'Measured: $measured m³. Average of previous readings: $baseline m³.';
+  }
+
+  @override
+  String get insightWhyLabel => 'Why?';
+
+  @override
+  String insightWhyExpected(String expected, String lower, String upper) {
+    return 'The model expected $expected m³ (95 % interval $lower-$upper m³).';
+  }
+
+  @override
+  String get insightFootnote =>
+      'The forecast is calculated by an ML.NET SSA model from your readings.';
+
+  @override
+  String get insightTipLeak =>
+      'Check the toilet cistern and the taps. Close all taps and watch whether the meter keeps running.';
+
+  @override
+  String get insightTipSaving =>
+      'Tips: take shorter showers, run washing machines and dishwashers only with full loads, water the garden in the evening.';
+
+  @override
+  String get insightLeakTitle => 'Possible water leak';
+
+  @override
+  String insightLeakBody(String measured) {
+    return 'The latest consumption ($measured m³) is far above the usual level.';
+  }
+
+  @override
+  String insightLeakWhy(String measured, String baseline) {
+    return '$measured m³ was measured, while your average of previous readings is $baseline m³.';
+  }
+
+  @override
+  String get insightMeterCheckTitle => 'Meter check suggested';
+
+  @override
+  String get insightMeterCheckBody =>
+      'Consumption is unusual without a clear sign of a leak - the meter may be faulty.';
+
+  @override
+  String get insightReportFaultButton => 'Report a fault';
+
+  @override
+  String get insightForecastTitle => 'Higher consumption expected';
+
+  @override
+  String insightForecastBody(String percent) {
+    return 'The forecast for the next period is $percent % above your average.';
+  }
+
+  @override
+  String insightForecastWhy(
+    String predicted,
+    String percent,
+    String average,
+    String lower,
+    String upper,
+  ) {
+    return 'The forecast of $predicted m³ ($lower-$upper m³) is $percent % above your average of $average m³ (recent readings).';
+  }
+
+  @override
+  String get insightSettlementTitle => 'Above your neighbourhood average';
+
+  @override
+  String insightSettlementBody(String percent) {
+    return 'Your consumption is $percent % above the average in your neighbourhood. Compare yourself with your neighbours.';
+  }
+
+  @override
+  String insightSettlementWhy(
+    String average,
+    String percent,
+    String settlementAverage,
+  ) {
+    return 'Your average of $average m³ is $percent % above the neighbourhood average of $settlementAverage m³.';
+  }
+
+  @override
+  String get insightOnTrackTitle => 'Consumption is on track';
+
+  @override
+  String get insightOnTrackBody =>
+      'Great! The forecast matches your usual consumption.';
+
+  @override
+  String insightOnTrackWhy(String predicted, String average) {
+    return 'The forecast of $predicted m³ is close to your average of $average m³.';
+  }
+
+  @override
+  String get insightNotEnoughTitle => 'Not enough data';
+
+  @override
+  String insightNotEnoughBody(String missing) {
+    return '$missing more readings are needed for a forecast.';
+  }
+
+  @override
+  String insightNotEnoughWhy(String count, String required) {
+    return 'You have $count of the $required required readings.';
+  }
 }

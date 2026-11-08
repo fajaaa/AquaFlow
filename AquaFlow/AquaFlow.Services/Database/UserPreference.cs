@@ -11,6 +11,5 @@ public class UserPreference : EntityBase
     public string Language { get; set; } = "bs";
     [MaxLength(20)]
     public string Theme { get; set; } = "light";
-    public bool ReceiveEmailNotifications { get; set; } = true;
     public bool ReceivePushNotifications { get; set; } = true;
 }

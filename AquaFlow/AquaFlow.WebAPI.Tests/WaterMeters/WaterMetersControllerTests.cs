@@ -25,6 +25,32 @@ public class WaterMetersControllerTests
     private const string AdminRole = "Admin";
     private const string CollectorRole = "Collector";
 
+    // DELETE /WaterMeters/{id} must not exist: a meter is retired through POST {id}/mark-broken and its
+    // readings/invoices are history. The inherited BaseCRUDController.Delete is overridden with
+    // [NonAction], which is exactly what MVC's action discovery checks to skip a public method, so
+    // pinning the attribute pins that the route is not registered (404/405 at the HTTP level).
+    [Fact]
+    public void Delete_IsNotAnMvcAction()
+    {
+        var method = typeof(WaterMetersController)
+            .GetMethods()
+            .Single(m => m.Name == nameof(WaterMetersController.Delete));
+
+        Assert.Equal(typeof(WaterMetersController), method.DeclaringType);
+        Assert.True(method.IsDefined(typeof(NonActionAttribute), inherit: false));
+    }
+
+    // Status, LastReading and CustomerId are server-owned: they must not be settable through Update/Patch.
+    [Theory]
+    [InlineData(typeof(WaterMeterUpdateRequest))]
+    [InlineData(typeof(WaterMeterPatchRequest))]
+    public void UpdateAndPatchRequests_DoNotExposeServerOwnedFields(Type requestType)
+    {
+        Assert.Null(requestType.GetProperty("Status"));
+        Assert.Null(requestType.GetProperty("LastReading"));
+        Assert.Null(requestType.GetProperty("CustomerId"));
+    }
+
     // Enforcement runs in the MVC authorization filter pipeline, which a direct method
     // call bypasses (see AquaFlow.WebAPI.Tests remarks in AGENTS.md), so this pins the
     // declarative gate itself: if [RequirePermission] is ever dropped from one of these
@@ -34,7 +60,6 @@ public class WaterMetersControllerTests
     [InlineData(nameof(WaterMetersController.Create))]
     [InlineData(nameof(WaterMetersController.Update))]
     [InlineData(nameof(WaterMetersController.Patch))]
-    [InlineData(nameof(WaterMetersController.Delete))]
     public void WriteAction_RequiresWaterMetersManagePermission(string methodName)
     {
         var method = typeof(WaterMetersController)
@@ -128,7 +153,8 @@ public class WaterMetersControllerTests
     public async Task GetAll_CollectorRole_PassesSearchThroughWithoutPinning()
     {
         // A collector may read any water meter (unlike Customer), so the search is not pinned to
-        // any profile - it passes through to the service unmodified, same as Admin.
+        // any profile - it passes through to the service unmodified, same as Admin. This is a
+        // deliberate product decision: there is no per-collector meter assignment.
         var controller = CreateController(
             BuildUser(userId: 5, role: CollectorRole),
             profiles: [],
@@ -234,7 +260,6 @@ public class WaterMetersControllerTests
     [InlineData(nameof(WaterMetersController.Create))]
     [InlineData(nameof(WaterMetersController.Update))]
     [InlineData(nameof(WaterMetersController.Patch))]
-    [InlineData(nameof(WaterMetersController.Delete))]
     public void WriteAction_WithoutManagePermission_IsForbidden(string methodName)
     {
         // An ordinary authenticated customer - exactly the caller the missing gate let through.
@@ -247,7 +272,6 @@ public class WaterMetersControllerTests
     [InlineData(nameof(WaterMetersController.Create))]
     [InlineData(nameof(WaterMetersController.Update))]
     [InlineData(nameof(WaterMetersController.Patch))]
-    [InlineData(nameof(WaterMetersController.Delete))]
     public void WriteAction_WithManagePermission_IsAllowed(string methodName)
     {
         var context = AuthorizeWriteAction(
@@ -328,6 +352,33 @@ public class WaterMetersControllerTests
         Assert.Equal(ActivityEventTypes.WaterMeterMarkedBroken, call.EventType);
         Assert.Contains("WM-1", call.Description);
         Assert.Contains("Vodomjer ne registruje potrosnju.", call.Description);
+    }
+
+    // Mirror of GetAll_CollectorRole_PassesSearchThroughWithoutPinning for the write side: there is
+    // no per-collector meter assignment, so any collector holding MeterReadings.Manage may mark any
+    // meter broken, whichever customer owns it.
+    [Fact]
+    public async Task MarkBroken_AnyCollector_CanMarkAnyCustomersMeter()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 7, role: CollectorRole, permissions: [ReadingsManagePermission]),
+            profiles:
+            [
+                new CustomerProfileResponse { Id = 10, UserId = 1 },
+                new CustomerProfileResponse { Id = 20, UserId = 2 }
+            ],
+            meters:
+            [
+                new WaterMeterResponse { Id = 1, CustomerId = 10, SerialNumber = "WM-1", Status = "Active" },
+                new WaterMeterResponse { Id = 2, CustomerId = 20, SerialNumber = "WM-2", Status = "Active" }
+            ]);
+
+        var result = await controller.MarkBroken(2, new WaterMeterMarkBrokenRequest { Reason = "Vodomjer ne registruje potrosnju." });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<WaterMeterResponse>(ok.Value);
+        Assert.Equal(2, response.Id);
+        Assert.Equal("Removed", response.Status);
     }
 
     [Fact]

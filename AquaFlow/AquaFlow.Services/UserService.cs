@@ -14,10 +14,12 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
 {
     private readonly AquaFlowDbContext _dbContext;
     private readonly ICryptoService _cryptoService;
+    private readonly ISecurityStampService _securityStampService;
 
     public UserService(
         AquaFlowDbContext dbContext,
         ICryptoService cryptoService,
+        ISecurityStampService securityStampService,
         IMapper mapper,
         IEnumerable<IValidator<UserInsertRequest>> insertValidators,
         IEnumerable<IValidator<UserUpdateRequest>> updateValidators,
@@ -26,6 +28,7 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
     {
         _dbContext = dbContext;
         _cryptoService = cryptoService;
+        _securityStampService = securityStampService;
     }
 
     protected override IQueryable<User> GetDataSource() =>
@@ -109,10 +112,18 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
             await EnsureUniqueEmailAsync(request.Email, id);
         }
 
+        var wasActive = entity.IsActive;
+        var previousRoleId = entity.UserRoleId;
+
         Mapper.Map(request, entity);
         if (request.Password != null)
         {
             SetPassword(entity, request.Password);
+        }
+
+        if (MustRevokeSessions(entity, passwordChanged: request.Password != null, wasActive, previousRoleId))
+        {
+            await RevokeSessionsAsync(entity);
         }
 
         entity.UpdatedAt = DateTime.UtcNow;
@@ -134,8 +145,19 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
 
         await EnsureUniqueEmailAsync(request.Email, id);
 
+        var wasActive = entity.IsActive;
+        var previousRoleId = entity.UserRoleId;
+
         Mapper.Map(request, entity);
+        // PUT always carries a (validated, non-empty) password and always re-hashes it, so a PUT
+        // always counts as a password reset and always ends the user's sessions.
         SetPassword(entity, request.Password);
+
+        if (MustRevokeSessions(entity, passwordChanged: true, wasActive, previousRoleId))
+        {
+            await RevokeSessionsAsync(entity);
+        }
+
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
@@ -149,10 +171,9 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         var entity = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted)
             ?? throw new KeyNotFoundException($"User with id {id} was not found.");
 
-        // RefreshToken.UserId is a Restrict FK, so a logged-in user's refresh tokens
-        // (login artifacts, not business data) should be revoked when the account is deleted.
-        var tokens = await _dbContext.RefreshTokens.Where(t => t.UserId == id).ToListAsync();
-        _dbContext.RefreshTokens.RemoveRange(tokens);
+        // Ends every session of the deleted account: its refresh tokens (login artifacts, not
+        // business data; RefreshToken.UserId is a Restrict FK) and every access token in flight.
+        await RevokeSessionsAsync(entity);
 
         entity.IsDeleted = true;
         entity.IsActive = false;
@@ -202,9 +223,20 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         }
 
         SetPassword(entity, request.NewPassword);
+        // Every device is signed out, including the one that made the change - a password change
+        // is the user's way of ending a session they no longer trust.
+        await RevokeSessionsAsync(entity);
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task<UserSensitiveResponse?> GetSensitiveByIdAsync(int id)
+    {
+        var user = await _dbContext.Users.AsNoTracking().Include(u => u.UserRole)
+            .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
+
+        return user == null ? null : Mapper.Map<UserSensitiveResponse>(user);
     }
 
     public async Task<UserSensitiveResponse?> GetByEmailAsync(string email)
@@ -233,6 +265,25 @@ public class UserService : BaseCRUDService<User, UserResponse, UserSearchObject,
         {
             throw new ClientException($"User with email '{email}' already exists.");
         }
+    }
+
+    // Only security-relevant changes end sessions; editing email/phone/name never does.
+    private static bool MustRevokeSessions(User entity, bool passwordChanged, bool wasActive, int previousRoleId) =>
+        passwordChanged ||
+        (wasActive && !entity.IsActive) ||
+        entity.UserRoleId != previousRoleId;
+
+    // The one place a user's sessions are ended: a new SecurityStamp (every access token issued
+    // before it fails validation on its next request) plus removal of ALL refresh tokens (no
+    // device can obtain a new access token). Only staged on the tracked entity - the caller's
+    // SaveChangesAsync writes it in the same save as the change that caused it, and
+    // SecurityStampService evicts its cached stamp once that save succeeds.
+    private async Task RevokeSessionsAsync(User entity)
+    {
+        _securityStampService.Rotate(entity);
+
+        var tokens = await _dbContext.RefreshTokens.Where(t => t.UserId == entity.Id).ToListAsync();
+        _dbContext.RefreshTokens.RemoveRange(tokens);
     }
 
     private void SetPassword(User entity, string password)

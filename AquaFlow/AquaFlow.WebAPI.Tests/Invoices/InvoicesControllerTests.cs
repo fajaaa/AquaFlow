@@ -28,6 +28,25 @@ public class InvoicesControllerTests
     private const string CustomerRole = "Customer";
     private const string AdminRole = "Admin";
 
+    // /Invoices has no generic POST/PUT/PATCH/DELETE at all (BaseReadController, not
+    // BaseCRUDController): an invoice is created Issued by the meter-reading flow and only ever
+    // changed through checkout/payments/cancel, which write Payment and InvoiceStatusHistory rows.
+    // A gated-but-present PATCH would still let an Invoices.Manage holder flip Status to Paid with
+    // no payment behind it, so this pins that the actions do not exist, not merely that they are gated.
+    [Theory]
+    [InlineData("Create")]
+    [InlineData("Update")]
+    [InlineData("Patch")]
+    [InlineData("Delete")]
+    public void Controller_HasNoGenericWriteAction(string methodName)
+    {
+        var methods = typeof(InvoicesController)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .Where(m => m.Name == methodName);
+
+        Assert.Empty(methods);
+    }
+
     [Fact]
     public void Checkout_RequiresInvoicesPayPermission()
     {

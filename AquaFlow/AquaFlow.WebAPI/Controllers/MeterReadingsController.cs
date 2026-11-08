@@ -8,15 +8,21 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AquaFlow.WebAPI.Controllers;
 
-// Gated at class level, so the generic CRUD actions (reads included) are covered too. That is
-// correct here because this controller has no self-service callers: the only consumers are the
-// admin backfill path and the collector's data entry/duplicate-check lookups, and both roles
-// already hold MeterReadings.Manage. A customer never touches this controller - their consumption
-// data reaches them through the invoice endpoints - so unlike WaterMetersController there is no
-// read path that a class-level gate would break, and leaving GetAll ungated would have leaked
-// every customer's readings to any authenticated caller.
+// Gated at class level, so the inherited reads are covered too. That is correct here because this
+// controller has no self-service callers: the only consumers are the admin's read-only readings
+// screen and the collector's data entry/last-counting lookups, and both roles already hold
+// MeterReadings.Manage. A customer never touches this controller - their consumption data reaches
+// them through the invoice endpoints - so unlike WaterMetersController there is no read path that a
+// class-level gate would break, and leaving GetAll ungated would have leaked every customer's
+// readings to any authenticated caller.
+//
+// Derives from BaseReadController, not BaseCRUDController: there is no generic POST/PUT/PATCH/DELETE.
+// A reading is written only through collector-entry (which computes consumption and bills it in the
+// same step); a generic insert could create an unbilled reading that becomes the next consumption
+// baseline, and a generic edit/delete could rewrite an already-invoiced reading. Since the Collector
+// role holds MeterReadings.Manage, gating those routes by permission alone would not have been enough.
 [RequirePermission(ManagePermission)]
-public class MeterReadingsController : BaseCRUDController<MeterReadingResponse, MeterReadingSearchObject, MeterReadingInsertRequest, MeterReadingUpdateRequest, MeterReadingPatchRequest, IMeterReadingService>
+public class MeterReadingsController : BaseReadController<MeterReadingResponse, MeterReadingSearchObject, IMeterReadingService>
 {
     private const string ManagePermission = "MeterReadings.Manage";
 
@@ -26,9 +32,7 @@ public class MeterReadingsController : BaseCRUDController<MeterReadingResponse, 
 
     // The collector's data-entry endpoint: CollectorId is never taken from the request body (the
     // DTO does not even carry it) - it is always resolved from the caller's JWT user id, same trust
-    // model as NotificationsController.Create. Kept as a separate route from the generic POST
-    // /MeterReadings (which stays available for administrative backfill) because the request shape
-    // and business rules (billing cycle resolution, duplicate check, LastReading update) differ.
+    // model as NotificationsController.Create. This is the only write route on the controller.
     // The [RequirePermission] below is redundant with the class-level gate; kept deliberately so
     // this route stays gated on its own if the class-level attribute is ever narrowed.
     [HttpPost("collector-entry")]
@@ -48,7 +52,7 @@ public class MeterReadingsController : BaseCRUDController<MeterReadingResponse, 
     }
 
     // The collector app's cooldown/tariff-suggestion lookup: unlike the generic GET /MeterReadings
-    // listing (which stays available, unfiltered, for admin/backfill audit of voided/cancelled rows),
+    // listing (which stays available, unfiltered, for the admin's audit of voided/cancelled rows),
     // this returns the last reading that still counts towards billing, so the client-side cooldown
     // display agrees with what a new POST /MeterReadings/collector-entry would actually accept.
     // The [RequirePermission] below is redundant with the class-level gate; kept deliberately, same

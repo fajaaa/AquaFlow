@@ -15,7 +15,6 @@ public class UserPreferenceUpdateValidatorTests
         {
             Theme = "light",
             Language = "fr",
-            ReceiveEmailNotifications = true,
             ReceivePushNotifications = true
         });
 
@@ -25,6 +24,8 @@ public class UserPreferenceUpdateValidatorTests
 
     [Theory]
     [InlineData("bs")]
+    [InlineData("de")]
+    [InlineData("DE")]
     [InlineData("en")]
     [InlineData("BS")]
     [InlineData("EN")]
@@ -36,7 +37,6 @@ public class UserPreferenceUpdateValidatorTests
         {
             Theme = "light",
             Language = language,
-            ReceiveEmailNotifications = true,
             ReceivePushNotifications = true
         });
 

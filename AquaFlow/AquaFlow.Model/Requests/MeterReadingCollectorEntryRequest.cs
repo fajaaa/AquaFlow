@@ -18,4 +18,7 @@ public class MeterReadingCollectorEntryRequest
     public string? Note { get; set; }
     public string? PhotoUrl { get; set; }
     public string? ClientUuid { get; set; }
+    // The present customer paid the auto-issued invoice in cash. Only a flag: the amount is always the
+    // server-computed invoice total. Ignored when no invoice is created (zero consumption).
+    public bool PaidInCash { get; set; }
 }

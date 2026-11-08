@@ -206,6 +206,10 @@
   "@defaultLanguageLabel": {
     "description": "Label for the default language field on the company settings form."
   },
+  "defaultLanguageHelper": "Jezik novih korisnika pri registraciji",
+  "@defaultLanguageHelper": {
+    "description": "Helper text under the default language dropdown on the company settings form."
+  },
   "defaultCurrencyLabel": "Valuta",
   "@defaultCurrencyLabel": {
     "description": "Label for the default currency field on the company settings form."
@@ -889,6 +893,10 @@
   "@paymentProcessingMessage": {
     "description": "Snackbar shown after the Stripe payment sheet is presented successfully."
   },
+  "paymentAlreadySucceededMessage": "Plaćanje u obradi. Uplata je već izvršena i čeka potvrdu.",
+  "@paymentAlreadySucceededMessage": {
+    "description": "Snackbar shown when checkout reports the invoice's open payment attempt already succeeded at the provider (awaiting server confirmation), so no payment sheet is opened."
+  },
   "paymentCancelledMessage": "Plaćanje je otkazano.",
   "@paymentCancelledMessage": {
     "description": "Error message shown when the customer cancels the Stripe payment sheet."
@@ -1014,18 +1022,6 @@
   "@addImageButtonLabel": {
     "description": "Button label to add a photo, on the new fault report and new support ticket dialogs."
   },
-  "sendingPhotoLabel": "Slanje fotografije {current}/{total}...",
-  "@sendingPhotoLabel": {
-    "description": "Progress message shown while uploading photos on the new fault report dialog.",
-    "placeholders": {
-      "current": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "newFaultReportSubmitButton": "Pošalji prijavu",
   "@newFaultReportSubmitButton": {
     "description": "Submit button label on the new fault report dialog."
@@ -1148,5 +1144,128 @@
   "supportTicketClosedBanner": "Tiket je zatvoren",
   "@supportTicketClosedBanner": {
     "description": "Banner shown instead of the reply composer once a support ticket is closed."
-  }
+  },
+  "sessionExpiredMessage": "Sesija je istekla. Prijavite se ponovo.",
+  "@sessionExpiredMessage": {
+    "description": "SnackBar shown after an involuntary sign-out because the refresh token was rejected (expired or revoked session)."
+  },
+  "passwordChangedSignInAgain": "Lozinka je promijenjena. Prijavite se ponovo.",
+  "@passwordChangedSignInAgain": {
+    "description": "SnackBar shown after a successful own password change; the backend ends every session, so the user is signed out."
+  },
+  "notificationsNewBanner": "Imate novih obavijesti",
+  "@notificationsNewBanner": {
+    "description": "Banner shown above the notification list (page 2 or later) when a new notification has arrived; paired with the commonRefresh action that jumps back to page 1."
+  },
+  "notificationOpenAction": "Otvori",
+  "@notificationOpenAction": {
+    "description": "Button/SnackBar action that opens the record a notification is about (invoice, fault report, request, ticket) or the notification itself from a push."
+  },
+  "notificationOpenRelatedFailed": "Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.",
+  "@notificationOpenRelatedFailed": {
+    "description": "SnackBar shown when the record a notification links to cannot be loaded (e.g. deleted or no longer visible)."
+  },
+  "savedCardsTitle": "Moje kartice",
+  "@savedCardsTitle": {
+    "description": "Saved payment cards screen: savedCardsTitle."
+  },
+  "savedCardsSubtitle": "Spremljene kartice za plaćanje računa",
+  "@savedCardsSubtitle": {
+    "description": "Saved payment cards screen: savedCardsSubtitle."
+  },
+  "savedCardsAdd": "Dodaj karticu",
+  "@savedCardsAdd": {
+    "description": "Saved payment cards screen: savedCardsAdd."
+  },
+  "savedCardsEmpty": "Nemate spremljenih kartica.",
+  "@savedCardsEmpty": {
+    "description": "Saved payment cards screen: savedCardsEmpty."
+  },
+  "savedCardsUnsupported": "Spremanje kartica trenutno nije dostupno.",
+  "@savedCardsUnsupported": {
+    "description": "Saved payment cards screen: savedCardsUnsupported."
+  },
+  "savedCardsExpired": "Isteklo",
+  "@savedCardsExpired": {
+    "description": "Saved payment cards screen: savedCardsExpired."
+  },
+  "savedCardsDeleteTitle": "Obrisati karticu?",
+  "@savedCardsDeleteTitle": {
+    "description": "Saved payment cards screen: savedCardsDeleteTitle."
+  },
+  "savedCardsDeleteMessage": "Kartica {brand} •••• {last4} bit će uklonjena.",
+  "@savedCardsDeleteMessage": {
+    "description": "Saved payment cards screen: savedCardsDeleteMessage.",
+    "placeholders": {
+      "brand": { "type": "String" },
+      "last4": { "type": "String" }
+    }
+  },
+  "savedCardsDeleted": "Kartica je obrisana.",
+  "@savedCardsDeleted": {
+    "description": "Saved payment cards screen: savedCardsDeleted."
+  },
+  "savedCardsAdded": "Kartica je dodana.",
+  "@savedCardsAdded": {
+    "description": "Saved payment cards screen: savedCardsAdded."
+  },
+
+  "insightHeading": "Prognoza i preporuke",
+  "@insightHeading": {"description":"Customer water meter detail, forecast card: insightHeading."},
+  "insightExpectedConsumption": "Očekivana potrošnja u narednom periodu: {value} m³ ({lower}-{upper} m³)",
+  "@insightExpectedConsumption": {"description":"Customer water meter detail, forecast card: insightExpectedConsumption.","placeholders":{"value":{"type":"String"},"lower":{"type":"String"},"upper":{"type":"String"}}},
+  "insightEstimatedAmount": "Procijenjeni iznos: {amount} {currency}",
+  "@insightEstimatedAmount": {"description":"Customer water meter detail, forecast card: insightEstimatedAmount.","placeholders":{"amount":{"type":"String"},"currency":{"type":"String"}}},
+  "insightAlertTitle": "Aktivno upozorenje o potrošnji",
+  "@insightAlertTitle": {"description":"Customer water meter detail, forecast card: insightAlertTitle."},
+  "insightAlertBody": "Izmjereno: {measured} m³. Model je očekivao {expected} m³ (95 % interval {lower}-{upper} m³). Prosjek prethodnih očitanja: {baseline} m³.",
+  "@insightAlertBody": {"description":"Customer water meter detail, forecast card: insightAlertBody.","placeholders":{"measured":{"type":"String"},"expected":{"type":"String"},"lower":{"type":"String"},"upper":{"type":"String"},"baseline":{"type":"String"}}},
+  "insightAlertBodyNoModel": "Izmjereno: {measured} m³. Prosjek prethodnih očitanja: {baseline} m³.",
+  "@insightAlertBodyNoModel": {"description":"Customer water meter detail, forecast card: insightAlertBodyNoModel.","placeholders":{"measured":{"type":"String"},"baseline":{"type":"String"}}},
+  "insightWhyLabel": "Zašto?",
+  "@insightWhyLabel": {"description":"Customer water meter detail, forecast card: insightWhyLabel."},
+  "insightWhyExpected": "Model je očekivao {expected} m³ (95 % interval {lower}-{upper} m³).",
+  "@insightWhyExpected": {"description":"Customer water meter detail, forecast card: insightWhyExpected.","placeholders":{"expected":{"type":"String"},"lower":{"type":"String"},"upper":{"type":"String"}}},
+  "insightFootnote": "Prognoza je izračunata ML.NET SSA modelom iz vaših očitanja.",
+  "@insightFootnote": {"description":"Customer water meter detail, forecast card: insightFootnote."},
+  "insightTipLeak": "Provjerite vodokotlić i slavine. Zatvorite sve slavine i pratite vrti li se vodomjer i dalje.",
+  "@insightTipLeak": {"description":"Customer water meter detail, forecast card: insightTipLeak."},
+  "insightTipSaving": "Savjeti: kraće tuširanje, perite veš i suđe samo s punim punjenjem, baštu zalijevajte uveče.",
+  "@insightTipSaving": {"description":"Customer water meter detail, forecast card: insightTipSaving."},
+  "insightLeakTitle": "Moguće curenje vode",
+  "@insightLeakTitle": {"description":"Customer water meter detail, forecast card: insightLeakTitle."},
+  "insightLeakBody": "Zadnja potrošnja ({measured} m³) znatno premašuje uobičajeni nivo.",
+  "@insightLeakBody": {"description":"Customer water meter detail, forecast card: insightLeakBody.","placeholders":{"measured":{"type":"String"}}},
+  "insightLeakWhy": "Izmjereno je {measured} m³, a vaš prosjek prethodnih očitanja je {baseline} m³.",
+  "@insightLeakWhy": {"description":"Customer water meter detail, forecast card: insightLeakWhy.","placeholders":{"measured":{"type":"String"},"baseline":{"type":"String"}}},
+  "insightMeterCheckTitle": "Provjera vodomjera",
+  "@insightMeterCheckTitle": {"description":"Customer water meter detail, forecast card: insightMeterCheckTitle."},
+  "insightMeterCheckBody": "Potrošnja je neuobičajena, a nema jasnog znaka curenja - vodomjer je možda neispravan.",
+  "@insightMeterCheckBody": {"description":"Customer water meter detail, forecast card: insightMeterCheckBody."},
+  "insightReportFaultButton": "Prijavi kvar",
+  "@insightReportFaultButton": {"description":"Customer water meter detail, forecast card: insightReportFaultButton."},
+  "insightForecastTitle": "Očekuje se veća potrošnja",
+  "@insightForecastTitle": {"description":"Customer water meter detail, forecast card: insightForecastTitle."},
+  "insightForecastBody": "Prognoza za naredni period je {percent} % iznad vašeg prosjeka.",
+  "@insightForecastBody": {"description":"Customer water meter detail, forecast card: insightForecastBody.","placeholders":{"percent":{"type":"String"}}},
+  "insightForecastWhy": "Prognoza {predicted} m³ ({lower}-{upper} m³) je {percent} % iznad vašeg prosjeka od {average} m³ (zadnja očitanja).",
+  "@insightForecastWhy": {"description":"Customer water meter detail, forecast card: insightForecastWhy.","placeholders":{"predicted":{"type":"String"},"percent":{"type":"String"},"average":{"type":"String"},"lower":{"type":"String"},"upper":{"type":"String"}}},
+  "insightSettlementTitle": "Iznad prosjeka vašeg naselja",
+  "@insightSettlementTitle": {"description":"Customer water meter detail, forecast card: insightSettlementTitle."},
+  "insightSettlementBody": "Vaša potrošnja je {percent} % iznad prosjeka u vašem naselju. Uporedite se sa susjedima.",
+  "@insightSettlementBody": {"description":"Customer water meter detail, forecast card: insightSettlementBody.","placeholders":{"percent":{"type":"String"}}},
+  "insightSettlementWhy": "Vaš prosjek od {average} m³ je {percent} % iznad prosjeka naselja od {settlementAverage} m³.",
+  "@insightSettlementWhy": {"description":"Customer water meter detail, forecast card: insightSettlementWhy.","placeholders":{"average":{"type":"String"},"percent":{"type":"String"},"settlementAverage":{"type":"String"}}},
+  "insightOnTrackTitle": "Potrošnja je u uobičajenim granicama",
+  "@insightOnTrackTitle": {"description":"Customer water meter detail, forecast card: insightOnTrackTitle."},
+  "insightOnTrackBody": "Odlično! Prognoza je u skladu s vašom dosadašnjom potrošnjom.",
+  "@insightOnTrackBody": {"description":"Customer water meter detail, forecast card: insightOnTrackBody."},
+  "insightOnTrackWhy": "Prognoza {predicted} m³ je blizu vašeg prosjeka od {average} m³.",
+  "@insightOnTrackWhy": {"description":"Customer water meter detail, forecast card: insightOnTrackWhy.","placeholders":{"predicted":{"type":"String"},"average":{"type":"String"}}},
+  "insightNotEnoughTitle": "Nedovoljno podataka",
+  "@insightNotEnoughTitle": {"description":"Customer water meter detail, forecast card: insightNotEnoughTitle."},
+  "insightNotEnoughBody": "Potrebno je još {missing} očitanja za prognozu.",
+  "@insightNotEnoughBody": {"description":"Customer water meter detail, forecast card: insightNotEnoughBody.","placeholders":{"missing":{"type":"String"}}},
+  "insightNotEnoughWhy": "Imate {count} od {required} potrebnih očitanja.",
+  "@insightNotEnoughWhy": {"description":"Customer water meter detail, forecast card: insightNotEnoughWhy.","placeholders":{"count":{"type":"String"},"required":{"type":"String"}}}
 }

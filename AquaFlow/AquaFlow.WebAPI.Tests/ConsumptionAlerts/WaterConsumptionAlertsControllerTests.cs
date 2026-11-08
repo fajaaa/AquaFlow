@@ -31,12 +31,35 @@ public class WaterConsumptionAlertsControllerTests
     [
         nameof(WaterConsumptionAlertsController.GetAll),
         nameof(WaterConsumptionAlertsController.GetById),
-        nameof(WaterConsumptionAlertsController.Create),
-        nameof(WaterConsumptionAlertsController.Update),
-        nameof(WaterConsumptionAlertsController.Patch),
-        nameof(WaterConsumptionAlertsController.Delete),
+        nameof(WaterConsumptionAlertsController.Resolve),
         nameof(WaterConsumptionAlertsController.Recompute)
     ];
+
+    // Alerts are produced by the forecasting model: POST/PUT/PATCH/DELETE /WaterConsumptionAlerts/...
+    // must not be registered. [NonAction] on the overrides is what MVC action discovery checks.
+    [Theory]
+    [InlineData(nameof(WaterConsumptionAlertsController.Create))]
+    [InlineData(nameof(WaterConsumptionAlertsController.Update))]
+    [InlineData(nameof(WaterConsumptionAlertsController.Patch))]
+    [InlineData(nameof(WaterConsumptionAlertsController.Delete))]
+    public void ManualWrites_AreNotMvcActions(string methodName)
+    {
+        var method = typeof(WaterConsumptionAlertsController)
+            .GetMethods()
+            .Single(m => m.Name == methodName);
+
+        Assert.Equal(typeof(WaterConsumptionAlertsController), method.DeclaringType);
+        Assert.True(method.IsDefined(typeof(NonActionAttribute), inherit: false));
+    }
+
+    [Fact]
+    public void Resolve_IsHttpPostOnIdResolve()
+    {
+        var method = typeof(WaterConsumptionAlertsController).GetMethod(nameof(WaterConsumptionAlertsController.Resolve))!;
+
+        var route = Assert.Single(method.GetCustomAttributes(typeof(HttpPostAttribute), inherit: false).Cast<HttpPostAttribute>());
+        Assert.Equal("{id:int}/resolve", route.Template);
+    }
 
     // Enforcement runs in the MVC authorization filter pipeline, which a direct method call
     // bypasses (see the AquaFlow.WebAPI.Tests remarks in AGENTS.md), so this pins the declarative

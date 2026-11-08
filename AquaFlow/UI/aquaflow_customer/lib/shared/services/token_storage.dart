@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Persists the JWT access/refresh tokens in the platform secure store
@@ -14,9 +15,17 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// run) and never written to disk, so a cold app restart finds nothing to
 /// restore and falls back to the login screen instead of silently resuming
 /// the session.
+///
+/// The in-memory pair is held in `static` fields, i.e. shared by every
+/// [TokenStorage] instance in the process - `AuthProvider`, `SessionManager`
+/// and any other caller may each construct their own instance, and all of
+/// them must see the same "remember me = false" tokens (the secure store
+/// itself is already process-wide). Static fields were chosen over a
+/// singleton factory so the constructor can keep accepting an injected
+/// [FlutterSecureStorage] (tests); a singleton would silently ignore it.
 class TokenStorage {
   TokenStorage([FlutterSecureStorage? storage])
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 
@@ -24,8 +33,8 @@ class TokenStorage {
   static const _refreshTokenKey = 'aquaflow.refreshToken';
   static const _rememberedEmailKey = 'aquaflow.rememberedEmail';
 
-  String? _memoryAccessToken;
-  String? _memoryRefreshToken;
+  static String? _memoryAccessToken;
+  static String? _memoryRefreshToken;
 
   Future<void> saveTokens(
     String accessToken,
@@ -45,6 +54,18 @@ class TokenStorage {
       _memoryAccessToken = accessToken;
       _memoryRefreshToken = refreshToken;
     }
+  }
+
+  /// Stores a refreshed token pair in the same place the current session
+  /// lives: memory-only for a "remember me = false" session, the secure store
+  /// otherwise. Used by `SessionManager` after a silent refresh, which must
+  /// not turn a memory-only session into a persisted one (or vice versa).
+  Future<void> replaceTokens(String accessToken, String refreshToken) {
+    return saveTokens(
+      accessToken,
+      refreshToken,
+      remember: _memoryRefreshToken == null,
+    );
   }
 
   Future<String?> getAccessToken() async {
@@ -77,4 +98,12 @@ class TokenStorage {
 
   Future<String?> getRememberedEmail() =>
       _storage.read(key: _rememberedEmailKey);
+
+  /// Drops the process-wide in-memory tokens without touching the secure
+  /// store, so each test starts from a clean slate.
+  @visibleForTesting
+  static void resetMemoryForTesting() {
+    _memoryAccessToken = null;
+    _memoryRefreshToken = null;
+  }
 }

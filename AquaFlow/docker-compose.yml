@@ -43,14 +43,23 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: aquaflow-api
+    restart: unless-stopped
+    # Optional developer-local secrets (gitignored, never baked into the image - .dockerignore excludes
+    # .env): Payments__Provider=Stripe + Payments__Stripe__* enable Stripe inside Docker. The values under
+    # "environment" below take precedence, so the container always uses the Docker database/broker.
+    env_file:
+      - path: ./AquaFlow.WebAPI/.env
+        required: false
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=aquaflow-db;Database=AquaFlow;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False
+      - ConnectionStrings__DefaultConnection=Server=aquaflow-db;Database=210126;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False
       - JwtToken__Issuer=AquaFlow
       - JwtToken__Audience=AquaFlowClients
       - JwtToken__SecretKey=dev-only-secret-change-me-at-least-32-chars
-      - JwtToken__DurationInMinutes=60
+      - JwtToken__DurationInMinutes=15
       - RabbitMQ__ConnectionString=host=aquaflow-rabbitmq;username=admin;password=admin
+      # Apply pending EF Core migrations (schema + seed data) on start-up, so `docker compose up` is enough.
+      - Database__MigrateOnStartup=true
     ports:
       - "5161:5161"
     expose:
@@ -68,11 +77,22 @@ services:
       context: .
       dockerfile: AquaFlow.Subscriber/Dockerfile
     container_name: aquaflow-subscriber
+    restart: unless-stopped
+    # Firebase:* credentials come from the developer-local .env (gitignored), optional.
+    env_file:
+      - path: ./AquaFlow.WebAPI/.env
+        required: false
     environment:
-      - RABBITMQ_CONNECTIONSTRING=host=aquaflow-rabbitmq;username=admin;password=admin
+      - ConnectionStrings__DefaultConnection=Server=aquaflow-db;Database=210126;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False
+      - RabbitMQ__ConnectionString=host=aquaflow-rabbitmq;username=admin;password=admin
     depends_on:
+      aquaflow-db:
+        condition: service_healthy
       aquaflow-rabbitmq:
         condition: service_healthy
+      # The API owns the schema (it applies the migrations on start-up), so the worker starts after it.
+      aquaflow-api:
+        condition: service_started
     networks:
       - aquaflow-net
 

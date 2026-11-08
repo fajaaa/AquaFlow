@@ -6,6 +6,7 @@ import 'package:aquaflow_collector/l10n/app_localizations.dart';
 import 'package:aquaflow_collector/models/collector_water_meter.dart';
 import 'package:aquaflow_collector/screens/collector_fault_reports_screen.dart';
 import 'package:aquaflow_collector/screens/collector_meter_reading_entry_screen.dart';
+import 'package:aquaflow_collector/screens/collector_meter_reading_history_screen.dart';
 import 'package:aquaflow_collector/services/collector_water_meter_exception.dart';
 import 'package:aquaflow_collector/services/collector_water_meter_service.dart';
 import 'package:aquaflow_collector/shared/navigation/app_navigation.dart';
@@ -200,7 +201,13 @@ class _CollectorWaterMetersScreenState
       separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final meter = _meters[index];
-        return _WaterMeterCard(meter: meter, onTap: () => _openEntry(meter));
+        return _WaterMeterCard(
+          meter: meter,
+          onTap: () => _openEntry(meter),
+          onHistory: () => context.pushScreen(
+            CollectorMeterReadingHistoryScreen(meter: meter),
+          ),
+        );
       },
     );
   }
@@ -227,10 +234,15 @@ final _skeletonMeter = CollectorWaterMeter(
 /// this card also surfaces the owning customer's name, since a collector
 /// works across many customers' meters.
 class _WaterMeterCard extends StatelessWidget {
-  const _WaterMeterCard({required this.meter, required this.onTap});
+  const _WaterMeterCard({
+    required this.meter,
+    required this.onTap,
+    this.onHistory,
+  });
 
   final CollectorWaterMeter meter;
   final VoidCallback onTap;
+  final VoidCallback? onHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +347,19 @@ class _WaterMeterCard extends StatelessWidget {
                                 ),
                               ),
                             ],
+                            const Spacer(),
+                            if (onHistory != null)
+                              SizedBox(
+                                width: 32,
+                                height: 24,
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  iconSize: 20,
+                                  tooltip: loc.readingHistoryTooltip,
+                                  onPressed: onHistory,
+                                  icon: const Icon(Icons.history),
+                                ),
+                              ),
                           ],
                         ),
                         const SizedBox(height: 3),

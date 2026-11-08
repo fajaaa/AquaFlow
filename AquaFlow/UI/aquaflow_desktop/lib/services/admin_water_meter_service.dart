@@ -7,23 +7,19 @@ import 'package:http/http.dart' as http;
 import 'package:aquaflow_desktop/models/admin_water_meter.dart';
 import 'package:aquaflow_desktop/services/admin_water_meter_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 class AdminWaterMeterService {
   AdminWaterMeterService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<List<AdminWaterMeter>> fetchForCustomer(int customerId) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeters').replace(
       queryParameters: {
         'CustomerId': '$customerId',
@@ -33,7 +29,7 @@ class AdminWaterMeterService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -66,7 +62,6 @@ class AdminWaterMeterService {
     int? settlementId,
     int pageSize = 20,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'PageSize': '$pageSize',
       'IncludeTotalCount': 'true',
@@ -85,7 +80,7 @@ class AdminWaterMeterService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -108,14 +103,6 @@ class AdminWaterMeterService {
         .whereType<Map<String, dynamic>>()
         .map(AdminWaterMeter.fromJson)
         .toList();
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminWaterMeterException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

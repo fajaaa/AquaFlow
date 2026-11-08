@@ -1,3 +1,4 @@
+using AquaFlow.Model;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Responses;
 using AquaFlow.Services.Database;
@@ -15,10 +16,16 @@ public abstract class BaseFaultReportState
     protected AquaFlowDbContext DbContext { get; }
     protected IMapper Mapper { get; }
 
-    public BaseFaultReportState(AquaFlowDbContext dbContext, IMapper mapper)
+    // Stages the business event's in-app notification into the same SaveChanges as the transition
+    // (see SystemNotificationService for why); the service that drove the transition dispatches
+    // the push after it returns.
+    protected ISystemNotificationService SystemNotifications { get; }
+
+    public BaseFaultReportState(AquaFlowDbContext dbContext, IMapper mapper, ISystemNotificationService systemNotifications)
     {
         DbContext = dbContext;
         Mapper = mapper;
+        SystemNotifications = systemNotifications;
     }
 
     // The FaultReportStatus this state represents (must be one of the FaultReportStatus constants,
@@ -83,6 +90,71 @@ public abstract class BaseFaultReportState
             ? $"Report assigned to collector {collectorId}."
             : $"Report assigned to collector {collectorId}: {note}";
     }
+
+    // Assign (from New) and reassign (from Assigned) notify the same parties: the reporter that the
+    // report is being handled, the newly assigned collector that they have a job, and - on a
+    // reassignment to someone else - the previous collector that the job was taken off them. Must be
+    // called before AssignedCollectorId is overwritten (previousCollectorId comes from the entity).
+    protected async Task StageAssignmentNotificationsAsync(FaultReport report, int collectorId, int changedById)
+    {
+        var previousCollectorId = report.AssignedCollectorId;
+
+        StageNotification(
+            report,
+            report.ReportedById,
+            "Prijava kvara je dodijeljena",
+            $"Vaša prijava kvara \"{report.Title}\" dodijeljena je inkasantu.",
+            changedById);
+        StageNotification(
+            report,
+            await SystemNotifications.GetCollectorUserIdAsync(collectorId),
+            "Nova prijava kvara za vas",
+            $"Dodijeljena vam je prijava kvara \"{report.Title}\".",
+            changedById);
+
+        if (previousCollectorId is { } previous && previous != collectorId)
+        {
+            StageNotification(
+                report,
+                await SystemNotifications.GetCollectorUserIdAsync(previous),
+                "Prijava kvara je preraspodijeljena",
+                $"Prijava kvara \"{report.Title}\" preraspodijeljena je drugom inkasantu.",
+                changedById);
+        }
+    }
+
+    // Stages a system notification about this report for one recipient. Called by a state right
+    // before its TransitionAsync, i.e. after every guard passed, so the notification lands in the
+    // transition's own SaveChanges. The actor (e.g. a collector resolving their own report) is
+    // dropped by SystemNotificationService.Stage.
+    protected void StageNotification(FaultReport report, int? recipientUserId, string title, string body, int changedById)
+    {
+        if (recipientUserId is null)
+        {
+            return;
+        }
+
+        SystemNotifications.Stage(
+            new SystemNotificationMessage(title, body, NotificationType.Info, RelatedEntityTypes.FaultReport, report.Id),
+            new[] { recipientUserId.Value },
+            changedById);
+    }
+
+    protected void StageStartedNotification(FaultReport report, int changedById) =>
+        StageNotification(
+            report,
+            report.ReportedById,
+            "Započeti radovi po prijavi kvara",
+            $"Započeti su radovi po vašoj prijavi kvara \"{report.Title}\".",
+            changedById);
+
+    protected void StageResolvedNotification(FaultReport report, int changedById) =>
+        StageNotification(
+            report,
+            report.ReportedById,
+            "Prijava kvara je riješena",
+            $"Vaša prijava kvara \"{report.Title}\" je riješena.",
+            changedById);
 
     private ClientException NotAllowed(string action)
     {

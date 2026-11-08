@@ -8,7 +8,7 @@ single ASP.NET Core Web API and three role-specific Flutter clients.
 | Role | Client | Platforms | Scope |
 | --- | --- | --- | --- |
 | Admin | `aquaflow_desktop` | Windows / macOS / Linux | Users, tariffs, invoices, payments, location codebook, requests, fault reports, support tickets, notifications, company settings |
-| Collector | `aquaflow_collector` | Android / iOS | Meter lookup, reading entry, assigned connection requests and fault reports |
+| Collector | `aquaflow_collector` | Android / iOS | Meter lookup and reading entry for any active meter, assigned connection requests and fault reports |
 | Customer | `aquaflow_customer` | Android / iOS | Own meters and invoices, invoice payment, new-connection requests, fault reports, support tickets, notification inbox |
 
 ---
@@ -42,12 +42,24 @@ access token plus a rotating refresh token. Self-registration always creates a C
 A City → Municipality → Settlement hierarchy backs every address in the system: customer
 profiles, water meters, connection requests and fault reports.
 
+**Status and type codebooks**
+Invoice/payment/fault report/meter request/meter/support ticket statuses, payment methods,
+notification types, notification audiences and consumption alert types are lookup tables (`/InvoiceStatuses`,
+`/PaymentMethods`, ...; read by any signed-in user, edited with `Codebooks.Manage`). Business
+columns keep their string values but are real FKs to each codebook's unique `Code`, so the
+state machines are unchanged and the database rejects unknown values. Seeded system rows cannot
+be deleted or deactivated and cannot change their `Code`; other rows can be deleted only while unused.
+
 **Water meters and readings**
 Collectors search the meter register on site and submit a reading through a dedicated entry
 endpoint. The server validates the reading (minimum 15-day spacing from the last billable
 reading, no lower value than the previous one unless the meter was physically replaced,
 retry-safe through a client-supplied idempotency key) and, when consumption is greater than
 zero, generates the priced invoice in the same transaction.
+If the customer is present and pays in cash, the collector ticks "customer pays cash" and the
+invoice is paid (Issued → Paid through the invoice state machine) in that same transaction.
+The collector app also shows each meter's reading history, and collectors can file a new fault
+report with photos from the field (the report and its photos are saved atomically).
 
 **New-connection requests**
 A customer requests service at an address, an administrator assigns it to a collector, and the
@@ -57,14 +69,29 @@ collector registers the physical meter on site. The request moves through
 **Tariffs and invoicing**
 Administrators maintain price-per-m³ tariffs (several may be active at once, e.g. household
 versus commercial). Invoices carry a year-scoped sequential number and move through
-`Issued → Paid | Cancelled`; a partial payment keeps the invoice `Issued`. Cancelling an
+`Issued → Paid | Cancelled`; partial payments are not supported - an invoice is paid in full (Stripe, cash at reading entry, or a manual admin record) and then becomes `Paid`. Cancelling an
 invoice voids the reading it billed, so the consumption is re-billed by the next reading
-instead of being silently lost.
+instead of being silently lost. Only the meter's newest reading can be un-billed: an invoice
+is rejected for cancellation while a newer reading still counts for the same meter, so a
+meter's invoices are cancelled newest-to-oldest and no consumption range is ever left uncovered.
+Invoices are billed reading-to-reading: the billing period runs from the previous counting reading (the meter's installation date for the first one) to the current reading, so consecutive invoices of a meter are contiguous and never overlap; the admin month filter (`BillingMonth`) matches on the period end.
 
 **Payments**
 A pluggable payment provider abstraction ships with a manual provider (payments recorded by
 staff) and an optional Stripe provider that creates a PaymentIntent for the mobile
-PaymentSheet flow and confirms the payment through a signed webhook.
+PaymentSheet flow and confirms the payment through a signed webhook. A checkout that is
+retried resumes the invoice's still-open attempt (same PaymentIntent and client secret)
+instead of creating a new one; a declined card (`payment_intent.payment_failed`) keeps the
+attempt open, and only `payment_intent.canceled` ends it. If the customer already paid but
+the webhook has not arrived yet, checkout confirms the payment instead of opening a second
+PaymentSheet. The mobile app sends one idempotency key per payment attempt and reuses it when
+retrying after a network error.
+With Stripe, customers also manage saved cards (a Stripe Customer is created lazily and stored
+as `CustomerProfile.StripeCustomerId`): `GET /PaymentCards` lists them, `POST /PaymentCards/setup`
+adds one without paying (SetupIntent + ephemeral key) and `DELETE /PaymentCards/{paymentMethodId}`
+removes one (404 for a card that is not the caller's). The checkout response carries
+`StripeCustomerId`/`EphemeralKeySecret` so the PaymentSheet offers saved cards and "save card";
+with the Manual provider `IsSupported` is `false` and those fields stay null.
 
 **Fault reports and support tickets**
 Customers report faults against their own account (with photo attachments) and staff triage
@@ -73,9 +100,18 @@ conversations between a customer and staff, with photo attachments per message a
 `Open`/`Closed` lifecycle.
 
 **Notifications**
-Administrators publish notifications to an audience (everyone, all customers, all collectors,
-or one settlement), optionally with images. Recipients get an in-app inbox with per-item read
+Administrators publish notifications to an audience (everyone, all customers, all collectors),
+optionally with images. Recipients get an in-app inbox with per-item read
 state and an unread badge, plus a push notification on mobile via Firebase Cloud Messaging.
+A notification and its images are created atomically (`POST /Notifications/with-images`); the push
+is published only after the commit.
+
+**Consumption forecast and recommendations**
+Each meter's reading history feeds an ML.NET SSA forecast of the next period (with a 95%
+interval). A reading far from what the model expected raises an alert (re-checked after every
+reading) and notifies the customer. Customers also get personalised, explainable water-saving
+recommendations for their own meter via `GET /ConsumptionInsights/water-meters/{id}`: rules over
+the forecast, the open alert and the settlement average, each carrying the numbers behind it.
 
 **Audit trail**
 Security-relevant events (sign-in success and failure, token refresh, registration, password
@@ -85,8 +121,9 @@ listing requires a dedicated permission.
 
 **Company and payment settings, user preferences**
 A single administrator-managed record holds company details and payment gateway
-configuration. Each user has a persisted theme, language and notification preferences that the
-clients apply on start-up.
+configuration. Each user has a persisted theme, language and push-notification preference that the
+clients apply on start-up. Theme and language live only in user preferences (there is no copy on the
+customer profile); `CompanySettings.DefaultLanguage` is the default language for new registrations.
 
 ---
 
@@ -175,16 +212,22 @@ container credentials are development placeholders defined in
 [docker-compose.yml](AquaFlow/docker-compose.yml); they are not intended for any shared or
 hosted environment.
 
-Migrations still have to be applied by hand (the API does not migrate on start-up):
-
-```powershell
-dotnet ef database update --project .\AquaFlow\AquaFlow.Services --startup-project .\AquaFlow\AquaFlow.WebAPI
-```
-
-That connects to the database over its host-mapped port (`localhost,1435`), so it works the
-same whether SQL Server is running in Docker or locally. Then open
+No manual migration step is needed here: in Docker the API runs with
+`Database__MigrateOnStartup=true`, so on start-up it creates the `210126` database and applies every
+pending migration (schema plus seed data: roles, permissions, codebooks, tariffs and the demo
+accounts) before it starts serving, retrying while SQL Server is still warming up. Follow it with
+`docker compose --file .\AquaFlow\docker-compose.yml logs -f aquaflow-api`. Then open
 `http://localhost:5161/scalar/v1` to confirm the API is up, and skip ahead to
 [Login credentials](#login-credentials) to sign in from a client.
+
+The API and worker containers also read the optional, gitignored `AquaFlow.WebAPI/.env` (it is
+never copied into an image): set `Payments__Provider=Stripe` with the `Payments__Stripe__*` keys to
+use Stripe in Docker, and `Firebase__ServiceAccountJson` (inline JSON - a host file path does not
+exist inside the container) for push delivery by the worker. Values defined in
+`docker-compose.yml` (database, broker, JWT) always take precedence over `.env`.
+
+Outside Docker (step-by-step setup below) migrations are applied explicitly with
+`dotnet ef database update`; the API never migrates a database implicitly there.
 
 To stop everything: `docker compose --file .\AquaFlow\docker-compose.yml down` (add `-v` to also
 drop the database volume and start clean next time).
@@ -226,12 +269,14 @@ notepad .\AquaFlow\AquaFlow.WebAPI\.env
 At minimum, set:
 
 ```env
-ConnectionStrings__DefaultConnection=Server=localhost,1435;Database=AquaFlow;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False
+ConnectionStrings__DefaultConnection=Server=localhost,1435;Database=210126;User Id=sa;Password=AquaFlow123!;TrustServerCertificate=True;Encrypt=False
 JwtToken__Issuer=AquaFlow
 JwtToken__Audience=AquaFlowClients
 JwtToken__SecretKey=<random-value-at-least-32-characters>
 RabbitMQ__ConnectionString=host=localhost;username=admin;password=admin
 ```
+
+The database is named after the student index number (`210126`), as required by the course rules.
 
 See [Configuration](#configuration) for the full key reference, why `.env` isn't committed, and
 how the submitted archive replaces this step for a grader. `TrustServerCertificate=True` and
@@ -257,14 +302,13 @@ The API listens on `http://localhost:5161` (bound to all interfaces so a phone o
 same network can reach it for testing). The `https` profile additionally listens on
 `https://localhost:7286`.
 
-The notification worker (`AquaFlow.Subscriber`) is a separate process; run it in its own
-terminal if you want to see the RabbitMQ messages the API publishes actually get consumed:
-
-```powershell
-dotnet run --project .\AquaFlow\AquaFlow.Subscriber\AquaFlow.Subscriber.csproj
-```
-
-It only needs RabbitMQ (from step 1) to be running, not the API.
+Push notifications: after a notification and its inbox rows are committed, the API only publishes
+`NotificationPushRequested` to RabbitMQ (it never calls FCM). `AquaFlow.Subscriber` is the single
+owner of delivery: it loads the recipients' device tokens, sends via FCM, deactivates invalid
+tokens and sets `PushDispatchedAt`. It retries 3x with backoff; failed messages go to the EasyNetQ
+error queue. Firebase credentials are configured only for the subscriber (not the API); without
+RabbitMQ the API logs a warning and push delivery is disabled. Run it with
+`dotnet run --project .\AquaFlow\AquaFlow.Subscriber\AquaFlow.Subscriber.csproj`.
 
 ### 5. Verify
 
@@ -283,6 +327,7 @@ bearer token.
 cd .\AquaFlow\UI\aquaflow_desktop      # or aquaflow_customer / aquaflow_collector
 flutter pub get
 flutter run
+# physical phone: flutter run --dart-define=API_BASE_URL=http://<PC-LAN-IP>:5161
 ```
 
 Sign in with an account whose role matches the client; a role mismatch is rejected with an
@@ -339,7 +384,7 @@ Configuration is resolved by the standard ASP.NET Core provider chain. Later sou
 | `ConnectionStrings__DefaultConnection` | Yes | SQL Server connection string. Start-up fails if absent. |
 | `JwtToken__Issuer`, `JwtToken__Audience` | Yes | Token issuer and audience. |
 | `JwtToken__SecretKey` | Yes | Signing key, minimum 32 characters. Use a random, per-environment value. |
-| `JwtToken__DurationInMinutes` | No | Access token lifetime, default `60`. |
+| `JwtToken__DurationInMinutes` | No | Access token lifetime, default `15`. |
 | `RabbitMQ__ConnectionString` | No | Broker connection string (`host=...;username=...;password=...`). Blank registers a no-op publisher; every other feature keeps working. |
 | `Payments__Provider` | No | `Manual` (default) or `Stripe`. |
 | `Payments__Currency` | No | Currency code used for checkout amounts. |
@@ -349,8 +394,7 @@ Configuration is resolved by the standard ASP.NET Core provider chain. Later sou
 | `Firebase__ServiceAccountJson` / `Firebase__ServiceAccountJsonPath` | No | Service account credential, inline or by path. |
 | `Firebase__ProjectId` | No | Firebase project id. |
 
-Push notifications are optional: with no Firebase credential configured, the API registers a
-no-op sender and every other feature keeps working.
+Push delivery is owned by `AquaFlow.Subscriber`; the API does not read the `Firebase__*` keys.
 
 Never commit real values for any of the keys above — in particular the JWT signing key, the
 database password, Stripe keys, and the Firebase service account JSON. `.env` files are
@@ -385,23 +429,36 @@ Authorization is enforced server-side, not by hiding actions in the user interfa
 
 - **Authentication.** Every controller that derives from the read/CRUD base requires a valid
   bearer token; unauthenticated calls return `401`. Only `/Access/login`, `/Access/refresh`,
-  `/Access/register` and the payment webhook are anonymous.
+  `/Access/logout`, `/Access/register` and the payment webhook are anonymous.
+- **Session revocation.** Access tokens live 15 minutes by default and carry the user's security
+  stamp, which is re-checked on every request. A password change, deactivation, role change or
+  account deletion rotates the stamp and deletes all of the user's refresh tokens, so every
+  device is signed out on its next request. Changing a role's permissions only rotates the stamp:
+  clients silently refresh into a token with the updated permissions.
 - **Permissions.** A `RequirePermission` authorization filter gates actions on permission codes
   carried as JWT claims (`403` when the caller is authenticated but not entitled). Codes are
   granted per role and stored in the database, so entitlements change without a code change.
 - **Ownership pinning.** Self-service endpoints derive the acting user from the token's `Id`
   claim and ignore any client-supplied identity: a customer only ever sees their own profile,
-  meters, invoices, requests, reports and tickets; a collector sees the work assigned to them.
-  Write requests that carry an owner field have it forced back to the caller's own value, which
+  meters, invoices, requests, reports and tickets; a collector only sees the new-connection
+  requests and fault reports assigned to them. Meters are deliberately *not* assigned to
+  collectors: meter search, reading entry and marking a meter broken are open to every collector
+  for every active meter, bounded by the `MeterReadings.Manage` permission and the meter's status
+  (a `Removed` or `Inactive` meter accepts no new readings). Write requests that carry an owner field have it forced back to the caller's own value, which
   blocks mass-assignment attempts.
+- **Admin-only reads.** Endpoints whose responses describe other people or the company as a
+  whole are permission-gated on reads too, not only on writes: the user directory (`/Users`
+  requires `Users.Read` or `Users.Manage`) and the dashboard statistics (`/Dashboard` requires
+  `Dashboard.Read`). Hiding a menu entry in a client is never treated as access control.
 - **Non-disclosure responses.** Reads outside the caller's scope return `404` rather than `403`,
   so a response never confirms that another user's record exists.
 - **Password storage.** Passwords are hashed with PBKDF2 (SHA-256, per-user salt); plaintext is
   never stored. Changing a password requires the current one, so a stolen access token alone
   cannot take over an account.
 - **Refresh tokens.** Only SHA-256 hashes are persisted; the raw token is returned to the client
-  once. Refreshing rotates the token, expired tokens are purged, and a soft-deleted user's
-  tokens are removed so the account can neither sign in nor refresh.
+  once. There is one refresh token per signed-in device: refreshing rotates only that device's
+  token (a used token can never be exchanged twice), `POST /Access/logout` deletes it, and expired
+  tokens are purged.
 - **Rate limiting.** `/Access/login` and `/Access/refresh` are limited to 5 requests per minute
   per client IP; every other endpoint is covered by a global 300 requests per minute limit
   partitioned per authenticated user (or per IP when anonymous). Exceeded limits return `429`.
@@ -447,8 +504,9 @@ shared or public environment:
 1. `POST /Access/login` with `{ "email": "<email>", "password": "<password>" }`.
 2. Read `accessToken` from the response.
 3. Send `Authorization: Bearer <accessToken>` on every subsequent request.
-4. When the access token expires, exchange the refresh token at `POST /Access/refresh`; both
-   tokens are rotated.
+4. When the access token expires (or is revoked - any `401`), exchange the refresh token at
+   `POST /Access/refresh`; both tokens are rotated.
+5. To sign out, send `{ "refreshToken": "<refreshToken>" }` to `POST /Access/logout` (`204`).
 
 The Flutter clients do this automatically and keep tokens in the platform secure store.
 
@@ -456,18 +514,36 @@ The Flutter clients do this automatically and keep tokens in the platform secure
 
 | Area | Endpoints |
 | --- | --- |
-| Access & account | `/Access/login`, `/Access/refresh`, `/Access/register`, `/Account/me`, `/Account/me/password`, `/Account/preferences` |
+| Access & account | `/Access/login`, `/Access/refresh`, `/Access/logout`, `/Access/register`, `/Account/me`, `/Account/me/password`, `/Account/preferences` |
 | Users & roles | `/Users`, `/UserRoles`, `/Permissions`, `/UserRolePermissions`, `/CustomerProfiles`, `/CollectorProfiles` |
 | Locations | `/Cities`, `/Municipalities`, `/Settlements` |
 | Meters & readings | `/WaterMeters`, `/WaterMeterRequests`, `/MeterReadings`, `/Tariffs` |
-| Billing | `/Invoices`, `/InvoiceItems`, `/Payments`, `/Payments/stripe-config`, `/Payments/webhook/stripe` |
+| Billing | `/Invoices`, `/InvoiceItems`, `/Payments`, `/Payments/stripe-config`, `/Payments/webhook/stripe`, `/PaymentCards`, `/PaymentCards/setup` |
 | Support | `/FaultReports`, `/SupportTickets` |
 | Messaging | `/Notifications`, `/UserNotifications`, `/DeviceTokens` |
-| Operations | `/ActivityLogs`, `/CompanySettings`, `/PaymentSettings` |
+| Operations | `/ActivityLogs`, `/CompanySettings`, `/WaterConsumptionAlerts` (GET only) + `/WaterConsumptionAlerts/recompute` + `POST /WaterConsumptionAlerts/{id}/resolve` (alerts are model-generated; no manual create/edit/delete), `/ConsumptionInsights/water-meters/{id}`, `/Dashboard/*` |
+| Reports | `/Reports/consumption/pdf`, `/Reports/billing/pdf` |
+| Codebooks | `/InvoiceStatuses`, `/PaymentStatuses`, `/PaymentMethods`, `/FaultReportStatuses`, `/WaterMeterRequestStatuses`, `/WaterMeterStatuses`, `/SupportTicketStatuses`, `/NotificationTypes`, `/NotificationAudiences`, `/ConsumptionAlertTypes` |
+
+Payment configuration (provider and Stripe keys) comes only from environment/configuration (`Payments__Provider`, `Payments__Stripe__*`); there is no database copy.
 
 Unless stated otherwise, a resource supports `GET` (list), `GET /{id}`, `POST`, `PUT /{id}`,
-`PATCH /{id}` and `DELETE /{id}`. `/Payments` and `/ActivityLogs` are read-only — their rows are
-written by the flows that produce them.
+`PATCH /{id}` and `DELETE /{id}`. The exceptions are the records whose history matters:
+
+- `/Invoices`, `/InvoiceItems`, `/MeterReadings`, `/Payments` and `/ActivityLogs` are read-only
+  over the generic API (only `GET` and `GET /{id}`). Their rows are written by the flows that
+  produce them: a reading and its Issued invoice (with its items) are created together by
+  `POST /MeterReadings/collector-entry`, and an invoice then changes only through the transitions
+  below.
+- `/FaultReports` and `/WaterMeterRequests` have no `DELETE /{id}`. They are closed through a status
+  transition, never physically removed, and a closed record (a resolved report; a registered,
+  rejected or cancelled request) can no longer be edited with `PUT`/`PATCH`.
+- `/WaterMeters` and `/CustomerProfiles` have no `DELETE /{id}`: meters and customer profiles are never
+  physically deleted (a customer is deactivated through the user account). A meter changes status
+  only through `POST /WaterMeters/{id}/mark-broken`; its billing fields (`status`, `lastReading`,
+  `customerId`) are server-owned, and `PUT`/`PATCH` only edit descriptive fields (`initialReading`
+  and `installedAt` only until the first reading exists). `userId` and `customerCode` of a profile
+  are fixed at creation.
 
 ### Workflow endpoints
 
@@ -484,8 +560,8 @@ permitted:
 
 Meter readings have their own entry points: `POST /MeterReadings/collector-entry` (validated
 field entry, auto-invoicing, idempotent on retry) and `GET /MeterReadings/last-counting` (the
-most recent reading that still counts towards billing). The generic `/MeterReadings` CRUD
-surface remains available for administrative backfill.
+most recent reading that still counts towards billing). There is no generic create, update or
+delete for readings: a billed reading is voided only by cancelling its invoice.
 
 ### Paging, filtering and sorting
 

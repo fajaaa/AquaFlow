@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import 'package:aquaflow_customer/l10n/app_localizations.dart';
-import 'package:aquaflow_customer/models/customer_fault_report.dart';
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
 import 'package:aquaflow_customer/services/customer_fault_report_exception.dart';
 import 'package:aquaflow_customer/services/customer_fault_report_service.dart';
@@ -25,11 +24,17 @@ const int _maxPhotos = 3;
 
 /// Opens the "Nova prijava kvara" dialog and resolves to `true` when a report
 /// was successfully created. Reached from `CustomerFaultReportsScreen`.
-Future<bool?> showNewFaultReportDialog(BuildContext context) {
+///
+/// [waterMeterId] preselects one of the caller's meters (and prefills the
+/// location from it), e.g. when opened from a consumption recommendation.
+Future<bool?> showNewFaultReportDialog(
+  BuildContext context, {
+  int? waterMeterId,
+}) {
   return showDialog<bool>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const NewFaultReportDialog(),
+    builder: (_) => NewFaultReportDialog(initialWaterMeterId: waterMeterId),
   );
 }
 
@@ -45,13 +50,14 @@ Future<bool?> showNewFaultReportDialog(BuildContext context) {
 /// a profile (or with an incomplete one) can still submit as long as a Naselje
 /// is selected.
 ///
-/// The report is created first, then photos are uploaded sequentially
-/// (`CustomerFaultReportService.uploadPhoto`), showing a "n/total" progress
-/// indicator. If a photo upload fails, the already-created report is kept
-/// (never re-created on retry) and the dialog stays open so the remaining
-/// photos can be resent.
+/// Report and photos go out in one request
+/// (`CustomerFaultReportService.createWithPhotos`), saved atomically on the
+/// server. On any error nothing was saved, so the dialog stays open with the
+/// form and the selected photos intact and shows the server message.
 class NewFaultReportDialog extends StatefulWidget {
-  const NewFaultReportDialog({super.key});
+  const NewFaultReportDialog({super.key, this.initialWaterMeterId});
+
+  final int? initialWaterMeterId;
 
   @override
   State<NewFaultReportDialog> createState() => _NewFaultReportDialogState();
@@ -87,9 +93,6 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
   int? _selectedCityId;
   int? _selectedMunicipalityId;
   int? _selectedSettlementId;
-
-  CustomerFaultReport? _createdReport;
-  int _uploadedPhotoCount = 0;
 
   int? get _userId => context.read<AuthProvider>().session?.id;
 
@@ -138,6 +141,12 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
         _waterMeters = results[0] as List<CustomerWaterMeter>;
         _loading = false;
       });
+      final initialId = widget.initialWaterMeterId;
+      if (initialId != null && _selectedWaterMeterId == null) {
+        if (_waterMeters.any((m) => m.id == initialId)) {
+          _onWaterMeterChanged(initialId);
+        }
+      }
     } on CustomerWaterMeterException catch (e) {
       _failLoad(e.message);
     } on ProfileException catch (e) {
@@ -283,7 +292,7 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
     final form = _formKey.currentState;
     if (form == null || !form.validate()) return;
     final settlementId = _selectedSettlementId;
-    if (_createdReport == null && settlementId == null) return;
+    if (settlementId == null) return;
 
     setState(() {
       _submitting = true;
@@ -291,25 +300,15 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
     });
 
     try {
-      var report = _createdReport;
-      if (report == null) {
-        report = await _reportService.create(
-          title: _titleCtrl.text,
-          description: _descriptionCtrl.text,
-          settlementId: settlementId!,
-          street: _streetCtrl.text,
-          houseNumber: _houseNumberCtrl.text,
-          waterMeterId: _selectedWaterMeterId,
-        );
-        if (!mounted) return;
-        setState(() => _createdReport = report);
-      }
-
-      for (var i = _uploadedPhotoCount; i < _selectedImages.length; i++) {
-        await _reportService.uploadPhoto(report.id, _selectedImages[i]);
-        if (!mounted) return;
-        setState(() => _uploadedPhotoCount = i + 1);
-      }
+      await _reportService.createWithPhotos(
+        title: _titleCtrl.text,
+        description: _descriptionCtrl.text,
+        settlementId: settlementId,
+        street: _streetCtrl.text,
+        houseNumber: _houseNumberCtrl.text,
+        waterMeterId: _selectedWaterMeterId,
+        photos: [for (final f in _selectedImages) XFile(f.path)],
+      );
 
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -389,7 +388,7 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
 
     final atPhotoLimit = _selectedImages.length >= _maxPhotos;
     final enabled = !_submitting;
-    final locationEditable = enabled && _createdReport == null;
+    final locationEditable = enabled;
 
     return Form(
       key: _formKey,
@@ -400,7 +399,7 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
           children: [
             TextFormField(
               controller: _titleCtrl,
-              enabled: enabled && _createdReport == null,
+              enabled: enabled,
               maxLength: 150,
               validator: (value) => _requiredValidator(context, value),
               decoration: InputDecoration(
@@ -413,7 +412,7 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _descriptionCtrl,
-              enabled: enabled && _createdReport == null,
+              enabled: enabled,
               maxLines: 4,
               maxLength: 1000,
               validator: (value) => _requiredValidator(context, value),
@@ -534,29 +533,14 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
                   separatorBuilder: (_, _) => const SizedBox(width: 8),
                   itemBuilder: (context, index) => _PhotoThumbnail(
                     file: _selectedImages[index],
-                    uploaded: index < _uploadedPhotoCount,
-                    onRemove: enabled && _createdReport == null
-                        ? () => _removeImage(index)
-                        : null,
+                    onRemove: enabled ? () => _removeImage(index) : null,
                   ),
                 ),
               ),
             ],
-            if (_submitting && _selectedImages.isNotEmpty) ...[
+            if (_submitting) ...[
               const SizedBox(height: 12),
-              LinearProgressIndicator(
-                value: _selectedImages.isEmpty
-                    ? null
-                    : _uploadedPhotoCount / _selectedImages.length,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                loc.sendingPhotoLabel(
-                  _uploadedPhotoCount + 1,
-                  _selectedImages.length,
-                ),
-                style: theme.textTheme.bodySmall,
-              ),
+              const LinearProgressIndicator(),
             ],
             if (_error != null) ...[
               const SizedBox(height: 12),
@@ -574,9 +558,6 @@ class _NewFaultReportDialogState extends State<NewFaultReportDialog> {
   }
 
   String? _settlementValidator(BuildContext context, int? value) {
-    // Once the report row exists (photo-retry state) the location is already
-    // stored server-side, so it no longer blocks resubmission.
-    if (_createdReport != null) return null;
     if (value == null || value == 0) {
       return AppLocalizations.of(context).settlementRequiredError;
     }
@@ -640,12 +621,10 @@ class _CascadingDropdown extends StatelessWidget {
 class _PhotoThumbnail extends StatelessWidget {
   const _PhotoThumbnail({
     required this.file,
-    required this.uploaded,
     required this.onRemove,
   });
 
   final File file;
-  final bool uploaded;
   final VoidCallback? onRemove;
 
   @override
@@ -656,19 +635,6 @@ class _PhotoThumbnail extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           child: Image.file(file, width: 76, height: 76, fit: BoxFit.cover),
         ),
-        if (uploaded)
-          Positioned(
-            left: 2,
-            bottom: 2,
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: const BoxDecoration(
-                color: Colors.black54,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check, size: 14, color: Colors.white),
-            ),
-          ),
         if (onRemove != null)
           Positioned(
             right: -4,

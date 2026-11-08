@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_bs.dart';
+import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
 
 // ignore_for_file: type=lint
@@ -95,6 +96,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('bs'),
+    Locale('de'),
     Locale('en'),
   ];
 
@@ -349,6 +351,12 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Jezik'**
   String get defaultLanguageLabel;
+
+  /// Helper text under the default language dropdown on the company settings form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Jezik novih korisnika pri registraciji'**
+  String get defaultLanguageHelper;
 
   /// Label for the default currency field on the company settings form.
   ///
@@ -968,6 +976,42 @@ abstract class AppLocalizations {
   /// **'Prijave kvarova'**
   String get faultReportsTooltip;
 
+  /// No description provided for @readingHistoryTooltip.
+  ///
+  /// In bs, this message translates to:
+  /// **'Historija očitanja'**
+  String get readingHistoryTooltip;
+
+  /// No description provided for @readingHistoryTitle.
+  ///
+  /// In bs, this message translates to:
+  /// **'Historija očitanja'**
+  String get readingHistoryTitle;
+
+  /// No description provided for @readingHistoryEmptyMessage.
+  ///
+  /// In bs, this message translates to:
+  /// **'Za ovaj vodomjer još nema evidentiranih očitanja.'**
+  String get readingHistoryEmptyMessage;
+
+  /// No description provided for @readingHistoryVoidedPill.
+  ///
+  /// In bs, this message translates to:
+  /// **'Stornirano'**
+  String get readingHistoryVoidedPill;
+
+  /// No description provided for @readingHistoryConsumption.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potrošnja: {value} m³'**
+  String readingHistoryConsumption(String value);
+
+  /// No description provided for @readingHistoryPageIndicator.
+  ///
+  /// In bs, this message translates to:
+  /// **'Stranica {page} / {total}'**
+  String readingHistoryPageIndicator(int page, int total);
+
   /// Hint text for the free-text search field on the collector water meters screen.
   ///
   /// In bs, this message translates to:
@@ -1152,6 +1196,36 @@ abstract class AppLocalizations {
     String total,
   );
 
+  /// Snackbar message after a reading is submitted and the collector recorded that the customer paid the generated invoice in cash.
+  ///
+  /// In bs, this message translates to:
+  /// **'Očitanje je snimljeno. Račun {invoiceNumber} ({total} BAM) je plaćen gotovinom.'**
+  String readingSubmittedPaidInCashSuccess(String invoiceNumber, String total);
+
+  /// Checkbox on the reading entry screen: the present customer pays the invoice in cash right away.
+  ///
+  /// In bs, this message translates to:
+  /// **'Kupac plaća gotovinom'**
+  String get paidInCashCheckboxLabel;
+
+  /// Subtitle under the cash payment checkbox.
+  ///
+  /// In bs, this message translates to:
+  /// **'Račun će odmah biti evidentiran kao plaćen.'**
+  String get paidInCashCheckboxSubtitle;
+
+  /// Title of the confirm dialog before submitting a reading with a cash payment.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potvrda gotovinske uplate'**
+  String get paidInCashConfirmTitle;
+
+  /// Body of the cash payment confirm dialog, with the already-formatted previewed invoice total.
+  ///
+  /// In bs, this message translates to:
+  /// **'Potvrđujete da ste od kupca primili {total} BAM u gotovini? Račun će biti evidentiran kao plaćen.'**
+  String paidInCashConfirmMessage(String total);
+
   /// Snackbar message shown after a meter reading is submitted with zero consumption, so the server created no invoice.
   ///
   /// In bs, this message translates to:
@@ -1319,6 +1393,138 @@ abstract class AppLocalizations {
   /// In bs, this message translates to:
   /// **'Riješi'**
   String get resolveActionButton;
+
+  /// SnackBar shown after an involuntary sign-out because the refresh token was rejected (expired or revoked session).
+  ///
+  /// In bs, this message translates to:
+  /// **'Sesija je istekla. Prijavite se ponovo.'**
+  String get sessionExpiredMessage;
+
+  /// SnackBar shown after a successful own password change; the backend ends every session, so the user is signed out.
+  ///
+  /// In bs, this message translates to:
+  /// **'Lozinka je promijenjena. Prijavite se ponovo.'**
+  String get passwordChangedSignInAgain;
+
+  /// Banner shown above the notification list (page 2 or later) when a new notification has arrived; paired with the commonRefresh action that jumps back to page 1.
+  ///
+  /// In bs, this message translates to:
+  /// **'Imate novih obavijesti'**
+  String get notificationsNewBanner;
+
+  /// Button/SnackBar action that opens the record a notification is about (invoice, fault report, request, ticket) or the notification itself from a push.
+  ///
+  /// In bs, this message translates to:
+  /// **'Otvori'**
+  String get notificationOpenAction;
+
+  /// SnackBar shown when the record a notification links to cannot be loaded (e.g. deleted or no longer visible).
+  ///
+  /// In bs, this message translates to:
+  /// **'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.'**
+  String get notificationOpenRelatedFailed;
+
+  /// Tooltip/label for the entry point that opens the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova prijava kvara'**
+  String get newFaultReportTooltip;
+
+  /// Title of the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nova prijava kvara'**
+  String get newFaultReportDialogTitle;
+
+  /// Submit button of the new fault report dialog.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pošalji prijavu'**
+  String get newFaultReportSubmitButton;
+
+  /// SnackBar after a fault report was filed.
+  ///
+  /// In bs, this message translates to:
+  /// **'Prijava kvara je poslana.'**
+  String get newFaultReportCreatedMessage;
+
+  /// Title field label of the fault report form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Naslov'**
+  String get faultReportTitleLabel;
+
+  /// Description field label of the fault report form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Opis'**
+  String get faultReportDescriptionLabel;
+
+  /// Validation error for an over-long fault report title.
+  ///
+  /// In bs, this message translates to:
+  /// **'Naslov može imati najviše 150 znakova.'**
+  String get faultReportTitleTooLongError;
+
+  /// Label of the optional water meter section.
+  ///
+  /// In bs, this message translates to:
+  /// **'Vodomjer (opcionalno)'**
+  String get waterMeterOptionalLabel;
+
+  /// Hint of the water meter search field in the fault report form.
+  ///
+  /// In bs, this message translates to:
+  /// **'Pretraži vodomjer (serijski broj, vlasnik, adresa)'**
+  String get waterMeterSearchHint;
+
+  /// Shown when the water meter search returned nothing.
+  ///
+  /// In bs, this message translates to:
+  /// **'Nema pronađenih vodomjera.'**
+  String get waterMeterNoResults;
+
+  /// Tooltip of the button that clears the selected water meter.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ukloni vodomjer'**
+  String get waterMeterClearTooltip;
+
+  /// Optional street field label.
+  ///
+  /// In bs, this message translates to:
+  /// **'Ulica (opcionalno)'**
+  String get streetOptionalLabel;
+
+  /// Optional house number field label.
+  ///
+  /// In bs, this message translates to:
+  /// **'Kućni broj (opcionalno)'**
+  String get houseNumberOptionalLabel;
+
+  /// Number of attached photos out of the maximum.
+  ///
+  /// In bs, this message translates to:
+  /// **'Fotografije: {count}/{max}'**
+  String photoCountLabel(int count, int max);
+
+  /// Button that opens the camera/gallery chooser.
+  ///
+  /// In bs, this message translates to:
+  /// **'Dodaj sliku'**
+  String get addPhotoButtonLabel;
+
+  /// Image source option: camera.
+  ///
+  /// In bs, this message translates to:
+  /// **'Slikaj'**
+  String get takePhotoOption;
+
+  /// Image source option: gallery.
+  ///
+  /// In bs, this message translates to:
+  /// **'Iz galerije'**
+  String get chooseFromGalleryOption;
 }
 
 class _AppLocalizationsDelegate
@@ -1332,7 +1538,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['bs', 'en'].contains(locale.languageCode);
+      <String>['bs', 'de', 'en'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -1343,6 +1549,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'bs':
       return AppLocalizationsBs();
+    case 'de':
+      return AppLocalizationsDe();
     case 'en':
       return AppLocalizationsEn();
   }

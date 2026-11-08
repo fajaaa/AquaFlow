@@ -8,21 +8,19 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/notification_image.dart';
 import '../models/notification_page.dart';
+import '../models/unread_notification_summary.dart';
 import '../models/user_notification_item.dart';
 import 'notification_exception.dart';
-import 'token_storage.dart';
+import 'authenticated_client.dart';
 
 class NotificationService {
   NotificationService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<NotificationPage> fetchMine({
@@ -30,7 +28,6 @@ class NotificationService {
     required int pageSize,
     String? type,
   }) async {
-    final token = await _requireToken();
     final selectedType = type?.trim();
 
     final query = <String, String>{
@@ -49,7 +46,7 @@ class NotificationService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -88,8 +85,6 @@ class NotificationService {
   Future<UserNotificationItem?> fetchByNotificationId(
     int notificationId,
   ) async {
-    final token = await _requireToken();
-
     final uri = Uri.parse('${ApiConfig.baseUrl}/UserNotifications/mine')
         .replace(
           queryParameters: {
@@ -99,7 +94,7 @@ class NotificationService {
         );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -121,24 +116,26 @@ class NotificationService {
     return UserNotificationItem.fromJson(first);
   }
 
-  /// Number of unread inbox rows for the signed-in user, used for the mobile
-  /// shells' "Obavijesti" tab badge. Backed by the same `/UserNotifications/
+  /// Unread count plus the newest unread inbox row for the signed-in user -
+  /// the probe `NotificationBadgeProvider` polls for the "Obavijesti" badge
+  /// and its new-notification signal. Backed by the same `/UserNotifications/
   /// mine` endpoint as [fetchMine] - `IsRead=false` + `IncludeTotalCount=true`
-  /// + `PageSize=1` so only the count is paid for, not a full page of items.
-  Future<int> fetchUnreadCount() async {
-    final token = await _requireToken();
-
+  /// + `PageSize=1`, newest first, so only the count and a single row are
+  /// paid for, not a full page of items.
+  Future<UnreadNotificationSummary> fetchUnreadSummary() async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/UserNotifications/mine')
         .replace(
           queryParameters: {
             'IsRead': 'false',
             'IncludeTotalCount': 'true',
             'PageSize': '1',
+            'SortBy': 'CreatedAt',
+            'SortDescending': 'true',
           },
         );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -155,7 +152,17 @@ class NotificationService {
       throw const NotificationException('Odgovor je u neispravnom formatu.');
     }
 
-    return (decoded['totalCount'] as num?)?.toInt() ?? 0;
+    final itemsJson = decoded['items'];
+    final first = itemsJson is List && itemsJson.isNotEmpty
+        ? itemsJson.first
+        : null;
+
+    return UnreadNotificationSummary(
+      unreadCount: (decoded['totalCount'] as num?)?.toInt() ?? 0,
+      latest: first is Map<String, dynamic>
+          ? UserNotificationItem.fromJson(first)
+          : null,
+    );
   }
 
   /// Persists a read receipt for [userNotificationId] via `PATCH
@@ -163,7 +170,6 @@ class NotificationService {
   /// the row may only patch `ReadAt` this way - any other field throws a
   /// `ClientException` on the backend (`UserNotificationsController.Patch`).
   Future<void> markAsRead(int userNotificationId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/UserNotifications/$userNotificationId',
     );
@@ -172,7 +178,6 @@ class NotificationService {
       () => _client.patch(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({'readAt': DateTime.now().toUtc().toIso8601String()}),
@@ -190,13 +195,12 @@ class NotificationService {
   /// request via `POST /UserNotifications/mark-all-read`, instead of one
   /// `PATCH` per row.
   Future<void> markAllAsRead() async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/UserNotifications/mark-all-read',
     );
 
     final response = await _send(
-      () => _client.post(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.post(uri),
     );
 
     if (response.statusCode != 204) {
@@ -212,13 +216,12 @@ class NotificationService {
   /// recipient of the notification, not just a Notifications.Manage holder
   /// (see NotificationsController.AuthorizeImageReadAsync on the backend).
   Future<List<NotificationImage>> fetchImages(int notificationId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/Notifications/$notificationId/images',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -243,13 +246,12 @@ class NotificationService {
   /// Raw bytes of one image (`GET /Notifications/{id}/images/{imageId}`), for
   /// `Image.memory` via the shared `AuthenticatedImage` widget.
   Future<Uint8List> fetchImageBytes(int notificationId, int imageId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/Notifications/$notificationId/images/$imageId',
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -259,14 +261,6 @@ class NotificationService {
     }
 
     return response.bodyBytes;
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const NotificationException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

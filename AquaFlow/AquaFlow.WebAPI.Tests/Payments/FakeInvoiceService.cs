@@ -1,7 +1,7 @@
-using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services;
+using AquaFlow.Services.Payments;
 
 namespace AquaFlow.WebAPI.Tests.Payments;
 
@@ -12,18 +12,18 @@ namespace AquaFlow.WebAPI.Tests.Payments;
 // only member PaymentsWebhookController ever calls) and stubs out everything else.
 public class FakeInvoiceService : IInvoiceService
 {
-    public List<(string Provider, string ProviderTransactionId, bool Succeeded)> ConfirmPaymentCalls { get; } = [];
+    public List<(string Provider, string ProviderTransactionId, PaymentConfirmationOutcome Outcome)> ConfirmPaymentCalls { get; } = [];
 
     // Set by a test to simulate InvoiceService.ConfirmPaymentAsync rejecting the confirmation
-    // (e.g. unknown transaction id, or a payment already confirmed under a different outcome) -
+    // (e.g. unknown transaction id, or an invoice that is no longer Issued) -
     // PaymentsWebhookController must swallow this and still return 200 to Stripe.
     public Exception? ConfirmPaymentException { get; set; }
 
     public PaymentResponse ConfirmPaymentResponse { get; set; } = new();
 
-    public Task<PaymentResponse> ConfirmPaymentAsync(string provider, string providerTransactionId, bool succeeded)
+    public Task<PaymentResponse> ConfirmPaymentAsync(string provider, string providerTransactionId, PaymentConfirmationOutcome outcome)
     {
-        ConfirmPaymentCalls.Add((provider, providerTransactionId, succeeded));
+        ConfirmPaymentCalls.Add((provider, providerTransactionId, outcome));
         if (ConfirmPaymentException is not null)
         {
             throw ConfirmPaymentException;
@@ -39,18 +39,6 @@ public class FakeInvoiceService : IInvoiceService
         => throw new NotSupportedException();
 
     public Task<InvoiceResponse> GetByIdAsync(int id)
-        => throw new NotSupportedException();
-
-    public Task<InvoiceResponse> InsertAsync(InvoiceInsertRequest request)
-        => throw new NotSupportedException();
-
-    public Task<InvoiceResponse> UpdateAsync(int id, InvoiceUpdateRequest request)
-        => throw new NotSupportedException();
-
-    public Task<InvoiceResponse> PatchAsync(int id, InvoicePatchRequest request)
-        => throw new NotSupportedException();
-
-    public Task DeleteAsync(int id)
         => throw new NotSupportedException();
 
     public Task<InvoiceResponse> RecordPaymentAsync(int id, int changedById)

@@ -29,7 +29,6 @@ public class FaultReportsControllerTests
     [Theory]
     [InlineData(nameof(FaultReportsController.Update))]
     [InlineData(nameof(FaultReportsController.Patch))]
-    [InlineData(nameof(FaultReportsController.Delete))]
     [InlineData(nameof(FaultReportsController.Assign))]
     public void WriteAction_RequiresFaultReportsManagePermission(string methodName)
     {
@@ -45,6 +44,34 @@ public class FaultReportsControllerTests
         Assert.NotNull(attribute);
         var codes = Assert.IsType<string[]>(attribute!.Arguments![0]);
         Assert.Contains(ManagePermission, codes);
+    }
+
+    // DELETE /FaultReports/{id} must not exist: a report is closed through the state machine
+    // (Resolve), never physically removed. The inherited BaseCRUDController.Delete is overridden with
+    // [NonAction], which is exactly what MVC's action discovery checks to skip a public method, so
+    // pinning the attribute pins that the route is not registered.
+    [Fact]
+    public void Delete_IsNotAnMvcAction()
+    {
+        var method = typeof(FaultReportsController)
+            .GetMethods()
+            .Single(m => m.Name == nameof(FaultReportsController.Delete));
+
+        Assert.Equal(typeof(FaultReportsController), method.DeclaringType);
+        Assert.True(method.IsDefined(typeof(NonActionAttribute), inherit: false));
+    }
+
+    // Photo deletion is a different action (DELETE {id}/photos/{photoId}) and must stay routable.
+    [Fact]
+    public void DeletePhoto_IsStillAnHttpDeleteAction()
+    {
+        var method = typeof(FaultReportsController)
+            .GetMethods()
+            .Single(m => m.Name == nameof(FaultReportsController.DeletePhoto));
+
+        Assert.False(method.IsDefined(typeof(NonActionAttribute), inherit: false));
+        var route = Assert.Single(method.GetCustomAttributes(typeof(HttpDeleteAttribute), inherit: false).Cast<HttpDeleteAttribute>());
+        Assert.Equal("{id:int}/photos/{photoId:int}", route.Template);
     }
 
     // Ownership is keyed on the reporting account (ReportedById), not the CustomerProfile - no
@@ -162,6 +189,43 @@ public class FaultReportsControllerTests
         var page = Assert.IsType<PageResult<FaultReportResponse>>(ok.Value);
         Assert.Empty(page.Items);
         Assert.Equal(0, page.TotalCount);
+    }
+
+    [Fact]
+    public async Task GetAll_Collector_SeesReportTheyFiledThemselves_EvenWithoutProfile()
+    {
+        var controller = CreateController(
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            reports:
+            [
+                new FaultReportResponse { Id = 1, ReportedById = 5, Title = "Mine", AssignedCollectorId = null },
+                new FaultReportResponse { Id = 2, ReportedById = 9, Title = "Someone else's", AssignedCollectorId = null }
+            ]);
+
+        var result = await controller.GetAll(new FaultReportSearchObject { OrReportedById = 9 });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var page = Assert.IsType<PageResult<FaultReportResponse>>(ok.Value);
+        Assert.Equal(1, Assert.Single(page.Items).Id);
+    }
+
+    [Fact]
+    public async Task CreateWithPhotos_CollectorWithNonExistentMeter_ReturnsBadRequest()
+    {
+        var service = new FakeFaultReportCrudService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 5, role: CollectorRole, permissions: []),
+            profiles: [],
+            waterMeters: []);
+
+        var result = await controller.CreateWithPhotos(
+            new FaultReportWithPhotosRequest { Title = "Leak", Description = "Wet", SettlementId = 1, WaterMeterId = 999 },
+            null);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Null(service.LastInsertRequest);
     }
 
     [Fact]
@@ -297,6 +361,31 @@ public class FaultReportsControllerTests
         Assert.Equal("Butmirska cesta", service.LastInsertRequest.Street);
         Assert.Equal("bb", service.LastInsertRequest.HouseNumber);
         Assert.Equal("New", service.LastInsertRequest.Status);
+    }
+
+    // An admin filing on behalf of a customer keeps the customer in ReportedById (trusted body),
+    // but the actor handed to the service - who is kept out of the "new report" staff
+    // notification - is always the JWT caller.
+    [Fact]
+    public async Task Create_ManageHolderOnBehalfOfCustomer_PassesJwtCallerAsActor()
+    {
+        var service = new FakeFaultReportCrudService([]);
+        var controller = CreateController(
+            service,
+            BuildUser(userId: 99, role: AdminRole, permissions: [ManagePermission]),
+            profiles: []);
+
+        var result = await controller.Create(new FaultReportInsertRequest
+        {
+            ReportedById = 7,
+            SettlementId = 3,
+            Title = "Leak",
+            Description = "Reported by phone"
+        });
+
+        Assert.IsType<CreatedAtActionResult>(result.Result);
+        Assert.Equal(7, service.LastInsertRequest!.ReportedById);
+        Assert.Equal(99, service.LastCreateActorUserId);
     }
 
     // A caller with no CustomerProfile owns no meters, so attaching any WaterMeterId must fail

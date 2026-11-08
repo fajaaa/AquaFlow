@@ -8,19 +8,16 @@ import 'package:aquaflow_desktop/models/admin_invoice.dart';
 import 'package:aquaflow_desktop/models/admin_invoice_page.dart';
 import 'package:aquaflow_desktop/services/admin_invoice_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 class AdminInvoiceService {
   AdminInvoiceService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<AdminInvoicePage> fetch({
@@ -28,9 +25,8 @@ class AdminInvoiceService {
     required int pageSize,
     String? invoiceNumber,
     String? status,
-    DateTime? billingPeriodFrom,
+    DateTime? billingMonth,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -46,8 +42,9 @@ class AdminInvoiceService {
     if (status != null && status.isNotEmpty) {
       query['Status'] = status;
     }
-    if (billingPeriodFrom != null) {
-      query['BillingPeriodFrom'] = billingPeriodFrom.toIso8601String();
+    if (billingMonth != null) {
+      query['BillingMonth'] = '${billingMonth.year.toString().padLeft(4, '0')}-'
+          '${billingMonth.month.toString().padLeft(2, '0')}-01';
     }
 
     final uri = Uri.parse(
@@ -55,7 +52,7 @@ class AdminInvoiceService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -90,11 +87,10 @@ class AdminInvoiceService {
   Future<AdminInvoice> cancel(int id) => _postAction(id, 'cancel');
 
   Future<AdminInvoice> _postAction(int id, String action) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Invoices/$id/$action');
 
     final response = await _send(
-      () => _client.post(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.post(uri),
     );
 
     if (response.statusCode != 200) {
@@ -112,14 +108,6 @@ class AdminInvoiceService {
       throw const AdminInvoiceException('Račun je u neispravnom formatu.');
     }
     return AdminInvoice.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminInvoiceException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

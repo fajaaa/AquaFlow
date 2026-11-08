@@ -242,6 +242,9 @@ class AppLocalizationsBs extends AppLocalizations {
   String get defaultLanguageLabel => 'Jezik';
 
   @override
+  String get defaultLanguageHelper => 'Jezik novih korisnika pri registraciji';
+
+  @override
   String get defaultCurrencyLabel => 'Valuta';
 
   @override
@@ -307,7 +310,93 @@ class AppLocalizationsBs extends AppLocalizations {
   String get codebookLabel => 'Šifarnik';
 
   @override
+  String get statusCodebooksNavLabel => 'Statusi i tipovi';
+
+  @override
+  String get statusCodebooksScreenSubtitle =>
+      'Upravljanje statusima i tipovima koji se koriste u filterima i formama.';
+
+  @override
+  String get lookupInvoiceStatuses => 'Statusi računa';
+
+  @override
+  String get lookupPaymentStatuses => 'Statusi plaćanja';
+
+  @override
+  String get lookupPaymentMethods => 'Načini plaćanja';
+
+  @override
+  String get lookupFaultReportStatuses => 'Statusi prijava kvarova';
+
+  @override
+  String get lookupWaterMeterRequestStatuses => 'Statusi zahtjeva za vodomjer';
+
+  @override
+  String get lookupWaterMeterStatuses => 'Statusi vodomjera';
+
+  @override
+  String get lookupSupportTicketStatuses => 'Statusi tiketa podrške';
+
+  @override
+  String get lookupNotificationTypes => 'Tipovi obavještenja';
+
+  @override
+  String get lookupNotificationAudiences => 'Publika notifikacije';
+
+  @override
+  String get lookupConsumptionAlertTypes => 'Tipovi upozorenja o potrošnji';
+
+  @override
+  String get lookupNameEnColumn => 'EN';
+
+  @override
+  String get lookupNameDeColumn => 'DE';
+
+  @override
+  String get lookupSortOrderLabel => 'Redoslijed';
+
+  @override
+  String get lookupSystemColumn => 'Sistemski';
+
+  @override
+  String get lookupActiveColumn => 'Aktivan';
+
+  @override
+  String get newLookupItemTitle => 'Nova stavka';
+
+  @override
+  String get editLookupItemTitle => 'Uredi stavku';
+
+  @override
+  String get newLookupItemButton => 'Dodaj stavku';
+
+  @override
+  String get lookupItemCreatedSuccess => 'Stavka je dodana.';
+
+  @override
+  String get lookupItemSavedSuccess => 'Stavka je sačuvana.';
+
+  @override
+  String get lookupItemDeletedSuccess => 'Stavka je obrisana.';
+
+  @override
+  String deleteLookupItemDialogContent(Object name) {
+    return 'Jeste li sigurni da želite obrisati stavku \"$name\"?';
+  }
+
+  @override
+  String get noLookupItemsMessage => 'Nema stavki.';
+
+  @override
+  String get lookupItemsEmptyFilteredMessage =>
+      'Nijedna stavka ne odgovara pretrazi.';
+
+  @override
   String get dashboardOverviewSubtitle => 'Pregled ključnih pokazatelja';
+
+  @override
+  String get dashboardNoAccessMessage =>
+      'Nemate pravo pristupa dashboardu. Odjavite se i prijavite ponovo.';
 
   @override
   String get dashboardRevenueTrendChartTitle => 'Prihod od naplate';
@@ -502,6 +591,13 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get collectorsEmptyMessage => 'Nema profila inkasanata.';
+
+  @override
+  String get collectorsSearchHint => 'Ime, email ili šifra radnika';
+
+  @override
+  String get collectorsEmptyFilteredMessage =>
+      'Nema inkasanata za odabrane filtere.';
 
   @override
   String get collectorCodeColumnLabel => 'Šifra inkasanta';
@@ -969,15 +1065,6 @@ class AppLocalizationsBs extends AppLocalizations {
   String get consumptionColumnLabel => 'Potrošnja (m³)';
 
   @override
-  String get syncColumnLabel => 'Sinhronizacija';
-
-  @override
-  String get syncStatusSynced => 'Sinhronizovano';
-
-  @override
-  String get syncStatusFailed => 'Neuspješno';
-
-  @override
   String get tariffCreatedSuccess => 'Tarifa je dodana.';
 
   @override
@@ -1076,7 +1163,7 @@ class AppLocalizationsBs extends AppLocalizations {
   String get invoiceNumberFieldLabel => 'Broj računa';
 
   @override
-  String get monthFilterLabel => 'Mjesec';
+  String get monthFilterLabel => 'Mjesec obračuna';
 
   @override
   String get noInvoicesMessage => 'Nema računa.';
@@ -1123,6 +1210,9 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get manualPaymentMethodLabel => 'Ručno';
+
+  @override
+  String get cashPaymentMethodLabel => 'Gotovina';
 
   @override
   String get cannotDetermineAdminUserError =>
@@ -1335,11 +1425,228 @@ class AppLocalizationsBs extends AppLocalizations {
   String get measuredValueColumnLabel => 'Izmjerena vrijednost';
 
   @override
-  String get thresholdValueColumnLabel => 'Granična vrijednost';
+  String get thresholdValueColumnLabel => 'Prosjek prethodnih';
 
   @override
   String get resolvedStatusLabel => 'Riješeno';
 
   @override
   String get unresolvedStatusLabel => 'Neriješeno';
+
+  @override
+  String get sessionExpiredMessage => 'Sesija je istekla. Prijavite se ponovo.';
+
+  @override
+  String get passwordChangedSignInAgain =>
+      'Lozinka je promijenjena. Prijavite se ponovo.';
+
+  @override
+  String get notificationDetailCreatedAtLabel => 'Datum kreiranja';
+
+  @override
+  String get notificationDetailDescriptionHeading => 'Opis';
+
+  @override
+  String get notificationDetailDetailsHeading => 'Detalji';
+
+  @override
+  String get notificationDetailEmptyBody => 'Nema dodatnog sadržaja.';
+
+  @override
+  String notificationDetailImagesHeading(int count) {
+    return 'Slike ($count)';
+  }
+
+  @override
+  String get notificationDetailTitle => 'Detalji obavijesti';
+
+  @override
+  String get notificationStatusRead => 'Pročitano';
+
+  @override
+  String get notificationStatusUnread => 'Novo';
+
+  @override
+  String get notificationTypeFieldLabel => 'Tip obavijesti';
+
+  @override
+  String get notificationsMarkAllReadTooltip => 'Označi sve kao pročitano';
+
+  @override
+  String get notificationsEmptyFilteredMessage =>
+      'Nema obavijesti za odabrani tip.';
+
+  @override
+  String get notificationsNewBanner => 'Imate novih obavijesti';
+
+  @override
+  String get notificationOpenAction => 'Otvori';
+
+  @override
+  String get notificationOpenRelatedFailed =>
+      'Povezanu stavku nije moguće otvoriti. Možda više nije dostupna.';
+
+  @override
+  String get notificationsInboxNavLabel => 'Moje obavijesti';
+
+  @override
+  String get notificationsManageNavLabel => 'Upravljanje obavijestima';
+
+  @override
+  String get reportsNavLabel => 'Izvještaji';
+
+  @override
+  String get reportsScreenTitle => 'Izvještaji';
+
+  @override
+  String get reportsScreenSubtitle =>
+      'Preuzmite ili ispišite PDF izvještaje za odabrani period.';
+
+  @override
+  String get reportsConsumptionTitle => 'Potrošnja vode po naseljima';
+
+  @override
+  String get reportsConsumptionDescription =>
+      'Ukupna potrošnja vode po naseljima za odabrani period i grad.';
+
+  @override
+  String get reportsBillingTitle => 'Računi i naplata';
+
+  @override
+  String get reportsBillingDescription =>
+      'Izdati, plaćeni i neplaćeni računi sa iznosima naplate za odabrani period.';
+
+  @override
+  String get reportsDownloadPdf => 'Preuzmi PDF';
+
+  @override
+  String get reportsPrint => 'Ispiši';
+
+  @override
+  String get reportsInvalidRange =>
+      'Početni datum mora biti prije ili jednak krajnjem datumu.';
+
+  @override
+  String reportsSavedTo(String path) {
+    return 'Sačuvano: $path';
+  }
+
+  @override
+  String get rolesPermissionsNavLabel => 'Role i dozvole';
+
+  @override
+  String get rolesPermissionsSubtitle =>
+      'Upravljanje rolama, dozvolama i njihovim dodjelama.';
+
+  @override
+  String get rolesTabRoles => 'Role';
+
+  @override
+  String get rolesTabPermissions => 'Dozvole';
+
+  @override
+  String get moduleColumnLabel => 'Modul';
+
+  @override
+  String get systemColumnLabel => 'Sistemska';
+
+  @override
+  String get systemBadgeLabel => 'Sistemska';
+
+  @override
+  String get newRoleButtonLabel => 'Nova rola';
+
+  @override
+  String get editRoleDialogTitle => 'Uredi rolu';
+
+  @override
+  String get newPermissionButtonLabel => 'Nova dozvola';
+
+  @override
+  String get editPermissionDialogTitle => 'Uredi dozvolu';
+
+  @override
+  String get systemItemLockedHint =>
+      'Sistemska stavka: ovo polje se ne može mijenjati.';
+
+  @override
+  String get rolePermissionsAction => 'Dozvole';
+
+  @override
+  String get rolePermissionsDialogTitle => 'Dozvole role';
+
+  @override
+  String get rolePermissionsDialogHint =>
+      'Promjena se primjenjuje odmah. Korisnici sa ovom rolom će se tiho osvježiti.';
+
+  @override
+  String get roleCreatedSuccess => 'Rola je dodana.';
+
+  @override
+  String get roleSavedSuccess => 'Rola je sačuvana.';
+
+  @override
+  String get roleDeletedSuccess => 'Rola je obrisana.';
+
+  @override
+  String get permissionCreatedSuccess => 'Dozvola je dodana.';
+
+  @override
+  String get permissionSavedSuccess => 'Dozvola je sačuvana.';
+
+  @override
+  String get permissionDeletedSuccess => 'Dozvola je obrisana.';
+
+  @override
+  String get deleteRoleDialogTitle => 'Obriši rolu';
+
+  @override
+  String get deleteRoleDialogContent =>
+      'Da li ste sigurni da želite obrisati ovu rolu? Brisanje nije moguće ako postoje korisnici sa tom rolom.';
+
+  @override
+  String get deletePermissionDialogTitle => 'Obriši dozvolu';
+
+  @override
+  String get deletePermissionDialogContent =>
+      'Da li ste sigurni da želite obrisati ovu dozvolu? Brisanje nije moguće ako je dodijeljena nekoj roli.';
+
+  @override
+  String get noRolesMessage => 'Nema rola.';
+
+  @override
+  String get noPermissionsMessage => 'Nema dozvola.';
+
+  @override
+  String get rolesPermissionsEmptyFilteredMessage =>
+      'Nema rezultata za odabrane filtere.';
+
+  @override
+  String get expectedColumnLabel => 'Očekivano (95 %)';
+
+  @override
+  String expectedRangeValue(String value, String lower, String upper) {
+    return '$value m³ ($lower-$upper)';
+  }
+
+  @override
+  String cubicMetersValue(String value) {
+    return '$value m³';
+  }
+
+  @override
+  String get markAsResolvedButtonLabel => 'Označi riješenim';
+
+  @override
+  String get expectedInsufficientHistory => 'Premalo historije';
+
+  @override
+  String get expectedInsufficientHistoryTooltip =>
+      'Model treba najmanje 5 prethodnih očitanja za ovaj vodomjer.';
+
+  @override
+  String get alertAboveExpectedLabel => 'Iznad očekivanog';
+
+  @override
+  String get alertBelowExpectedLabel => 'Ispod očekivanog';
 }

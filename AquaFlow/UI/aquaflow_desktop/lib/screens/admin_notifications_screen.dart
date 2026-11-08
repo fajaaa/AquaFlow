@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import 'package:aquaflow_desktop/widgets/lookup_dropdown.dart';
+import 'package:aquaflow_desktop/services/admin_lookup_service.dart';
 import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_notification_draft.dart';
 import 'package:aquaflow_desktop/models/admin_notification_image.dart';
@@ -39,11 +41,37 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
   String? _typeFilter;
   String? _audienceFilter;
 
+  // Audience code -> localized codebook name for the table; until it loads (or for an unknown
+  // code) the built-in labels in _audienceLabel are used.
+  Map<String, String> _audienceNames = const {};
+
   @override
   void initState() {
     super.initState();
     load();
+    _loadAudienceNames();
   }
+
+  Future<void> _loadAudienceNames() async {
+    try {
+      final items = await AdminLookupService().fetchActive(
+        'NotificationAudiences',
+      );
+      if (!mounted) return;
+      final language = Localizations.localeOf(context).languageCode;
+      setState(() {
+        _audienceNames = {
+          for (final item in items)
+            item.code.toLowerCase(): item.localizedName(language),
+        };
+      });
+    } catch (_) {
+      // Keep the fallback labels.
+    }
+  }
+
+  String _audienceName(String audience, AppLocalizations loc) =>
+      _audienceNames[audience.toLowerCase()] ?? _audienceLabel(audience, loc);
 
   @override
   Future<({List<AppNotification> items, int totalCount})> fetchPage() async {
@@ -250,23 +278,12 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         ),
         SizedBox(
           width: 210,
-          child: DropdownButtonFormField<String>(
-            initialValue: _typeFilter ?? '',
-            decoration: InputDecoration(
-              labelText: loc.typeFieldLabel,
-              prefixIcon: const Icon(Icons.category_outlined),
-            ),
-            items: [
-              DropdownMenuItem(
-                value: '',
-                child: Text(loc.notificationsAllTypesOption),
-              ),
-              for (final option in _notificationTypeOptions(loc))
-                DropdownMenuItem(
-                  value: option.value,
-                  child: Text(option.label),
-                ),
-            ],
+          child: LookupDropdown(
+            route: 'NotificationTypes',
+            value: _typeFilter ?? '',
+            includeAllOption: true,
+            label: loc.typeFieldLabel,
+            icon: Icons.category_outlined,
             onChanged: loading || mutating
                 ? null
                 : (value) => _setTypeFilter(value ?? ''),
@@ -274,20 +291,13 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         ),
         SizedBox(
           width: 220,
-          child: DropdownButtonFormField<String>(
-            initialValue: _audienceFilter ?? '',
-            decoration: InputDecoration(
-              labelText: loc.audienceFieldLabel,
-              prefixIcon: const Icon(Icons.group_outlined),
-            ),
-            items: [
-              DropdownMenuItem(value: '', child: Text(loc.allAudiencesOption)),
-              for (final option in _audienceOptions(loc))
-                DropdownMenuItem(
-                  value: option.value,
-                  child: Text(option.label),
-                ),
-            ],
+          child: LookupDropdown(
+            route: 'NotificationAudiences',
+            value: _audienceFilter ?? '',
+            includeAllOption: true,
+            excludeCodes: const {'Direct'},
+            label: loc.audienceFieldLabel,
+            icon: Icons.group_outlined,
             onChanged: loading || mutating
                 ? null
                 : (value) => _setAudienceFilter(value ?? ''),
@@ -372,9 +382,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                               ),
                             ),
                             if (!isSmallScreen)
-                              DataCell(
-                                Text(_audienceLabel(item.audience, loc)),
-                              ),
+                              DataCell(Text(_audienceName(item.audience, loc))),
                             if (!isSmallScreen)
                               DataCell(Text(_formatDate(item.createdAt))),
                             DataCell(
@@ -640,9 +648,19 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
 
     try {
       var saved = _savedNotification;
-      saved = saved == null
-          ? await _service.create(draft)
-          : await _service.update(saved.id, draft);
+      if (saved == null) {
+        // New notification: one atomic call (notification + all selected images; the push goes
+        // out only after everything is committed). On failure nothing was saved, so the dialog
+        // stays open with its fields and selected images and "Sačuvaj" can simply be retried.
+        await _service.createWithImages(draft, List<File>.of(_selectedImages));
+        if (!mounted) return;
+        Navigator.of(context).pop(true);
+        return;
+      }
+
+      // Editing: update the text, then add any newly picked images one by one (a notification
+      // that already exists never re-publishes a push).
+      saved = await _service.update(saved.id, draft);
       if (!mounted) return;
       setState(() => _savedNotification = saved);
 
@@ -666,14 +684,6 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
-    final typeOptions = _optionsWithCurrent(
-      _notificationTypeOptions(loc),
-      _type,
-    );
-    final audienceOptions = _optionsWithCurrent(
-      _audienceOptions(loc),
-      _audience,
-    );
     final theme = Theme.of(context);
     final enabled = !_submitting;
     final atImageLimit = _totalImageCount >= _maxNotificationImages;
@@ -722,19 +732,11 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                 Row(
                   children: [
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _type,
-                        decoration: InputDecoration(
-                          labelText: loc.typeFieldLabel,
-                          prefixIcon: const Icon(Icons.category_outlined),
-                        ),
-                        items: [
-                          for (final option in typeOptions)
-                            DropdownMenuItem(
-                              value: option.value,
-                              child: Text(option.label),
-                            ),
-                        ],
+                      child: LookupDropdown(
+                        route: 'NotificationTypes',
+                        value: _type,
+                        label: loc.typeFieldLabel,
+                        icon: Icons.category_outlined,
                         onChanged: enabled
                             ? (value) {
                                 if (value == null) return;
@@ -745,22 +747,15 @@ class _NotificationEditorDialogState extends State<_NotificationEditorDialog> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _audience,
-                        decoration: InputDecoration(
-                          labelText: loc.audienceFieldLabel,
-                          prefixIcon: const Icon(Icons.group_outlined),
-                        ),
-                        items: [
-                          for (final option in audienceOptions)
-                            DropdownMenuItem(
-                              value: option.value,
-                              child: Text(option.label),
-                            ),
-                        ],
+                      child: LookupDropdown(
+                        route: 'NotificationAudiences',
+                        value: _audience,
+                        excludeCodes: const {'Direct'},
+                        label: loc.audienceFieldLabel,
+                        icon: Icons.group_outlined,
                         onChanged: enabled
                             ? (value) {
-                                if (value == null) return;
+                                if (value == null || value.isEmpty) return;
                                 setState(() => _audience = value);
                               }
                             : null,
@@ -996,42 +991,6 @@ class _NewImageThumbnail extends StatelessWidget {
       ],
     );
   }
-}
-
-class _SelectOption {
-  const _SelectOption({required this.value, required this.label});
-
-  final String value;
-  final String label;
-}
-
-List<_SelectOption> _notificationTypeOptions(AppLocalizations loc) => [
-  _SelectOption(value: 'Info', label: loc.notificationTypeInfoLabel),
-  _SelectOption(
-    value: 'PlannedWorks',
-    label: loc.notificationTypePlannedWorksLabel,
-  ),
-  _SelectOption(value: 'Warning', label: loc.notificationTypeWarningLabel),
-];
-
-List<_SelectOption> _audienceOptions(AppLocalizations loc) => [
-  _SelectOption(value: 'All', label: loc.allUsersAudienceLabel),
-  _SelectOption(value: 'Customers', label: loc.customersAudienceLabel),
-  _SelectOption(value: 'Collectors', label: loc.collectorsNavLabel),
-];
-
-List<_SelectOption> _optionsWithCurrent(
-  List<_SelectOption> options,
-  String current,
-) {
-  final value = current.trim();
-  if (value.isEmpty ||
-      options.any(
-        (option) => option.value.toLowerCase() == value.toLowerCase(),
-      )) {
-    return options;
-  }
-  return [...options, _SelectOption(value: value, label: value)];
 }
 
 IconData _typeIcon(String type) {

@@ -7,13 +7,13 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/customer_profile.dart';
 import 'profile_exception.dart';
-import 'token_storage.dart';
+import 'authenticated_client.dart';
 
 /// Loads and saves the signed-in user's profile. Right now only the customer
 /// profile (`/CustomerProfiles`) is needed - it is the only profile that
 /// carries a first/last name.
 ///
-/// The bearer token is read from [TokenStorage] and attached to every request.
+/// The bearer token is attached (and refreshed) by [AuthenticatedClient].
 /// Network/HTTP failures throw [ProfileException] with a user-safe message; a
 /// successful fetch that matches no profile returns null (e.g. an admin or
 /// collector, who have no customer profile). The base URL always comes from
@@ -21,24 +21,16 @@ import 'token_storage.dart';
 class ProfileService {
   ProfileService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  })  : _client = client ?? http.Client(),
-        _tokenStorage = tokenStorage ?? TokenStorage(),
+  })  : _client = client ?? AuthenticatedClient.instance,
         _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   /// Fetches the customer profile owned by [userId], or null when the user has
   /// no customer profile.
   Future<CustomerProfile?> fetchCustomerProfile(int userId) async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const ProfileException('You are not signed in.');
-    }
-
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/CustomerProfiles?UserId=$userId&PageSize=1',
     );
@@ -46,7 +38,7 @@ class ProfileService {
     final http.Response response;
     try {
       response = await _client
-          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .get(uri)
           .timeout(_timeout);
     } on SocketException {
       throw ProfileException(
@@ -81,11 +73,6 @@ class ProfileService {
   /// CustomerProfile's own id, not a `User` id, so this looks up by primary
   /// key instead of by `UserId` like [fetchCustomerProfile].
   Future<CustomerProfile?> fetchById(int customerProfileId) async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const ProfileException('You are not signed in.');
-    }
-
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/CustomerProfiles/$customerProfileId',
     );
@@ -93,7 +80,7 @@ class ProfileService {
     final http.Response response;
     try {
       response = await _client
-          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .get(uri)
           .timeout(_timeout);
     } on SocketException {
       throw ProfileException(
@@ -132,17 +119,11 @@ class ProfileService {
     String? houseNumber,
     int? existingProfileId,
   }) async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const ProfileException('You are not signed in.');
-    }
-
     final isCreate = existingProfileId == null;
     final uri = isCreate
         ? Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles')
         : Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles/$existingProfileId');
     final headers = {
-      'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
     };
     final body = jsonEncode({

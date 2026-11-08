@@ -8,12 +8,28 @@ public class Notification : EntityBase
     [MaxLength(150)]
     public string Title { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
-    [MaxLength(40)]
+    [MaxLength(50)]
     public string Type { get; set; } = "Info";
-    [MaxLength(40)]
+    // Same length as NotificationAudiences.Code (FK by code): SQL Server requires equal lengths.
+    [MaxLength(50)]
     public string Audience { get; set; } = "All";
     public int CreatedById { get; set; }
     public User? CreatedBy { get; set; }
+
+    // Set only by SystemNotificationService (Audience = NotificationAudience.Direct, recipients
+    // written as UserNotification rows up front). System notifications are excluded from the admin
+    // /Notifications CRUD and from the audience-based inbox backfill.
+    public bool IsSystem { get; set; }
+
+    // The business record a system notification is about - a RelatedEntityTypes value plus its id.
+    // Deliberately not a foreign key: it points at different tables depending on the type.
+    [MaxLength(40)]
+    public string? RelatedEntityType { get; set; }
+    public int? RelatedEntityId { get; set; }
+
+    // Set by AquaFlow.Subscriber once FCM delivery succeeded; makes redelivered messages idempotent.
+    public DateTime? PushDispatchedAt { get; set; }
+
     public ICollection<UserNotification> UserNotifications { get; set; } = new List<UserNotification>();
     public ICollection<NotificationImage> Images { get; set; } = new List<NotificationImage>();
 }

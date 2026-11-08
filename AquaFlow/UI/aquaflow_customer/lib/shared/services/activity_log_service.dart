@@ -8,27 +8,22 @@ import '../config/api_config.dart';
 import '../models/activity_log_item.dart';
 import '../models/activity_log_page.dart';
 import 'activity_log_exception.dart';
-import 'token_storage.dart';
+import 'authenticated_client.dart';
 
 class ActivityLogService {
   ActivityLogService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<ActivityLogPage> fetchMine({
     required int page,
     required int pageSize,
   }) async {
-    final token = await _requireToken();
-
     final uri = Uri.parse('${ApiConfig.baseUrl}/ActivityLogs/mine').replace(
       queryParameters: {
         'Page': '$page',
@@ -40,7 +35,7 @@ class ActivityLogService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -68,14 +63,6 @@ class ActivityLogService {
       items: items,
       totalCount: (decoded['totalCount'] as num?)?.toInt() ?? items.length,
     );
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const ActivityLogException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

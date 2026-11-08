@@ -1,13 +1,16 @@
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.FaultReportStateMachine;
+using AquaFlow.Services.Tests.Notifications;
 using AquaFlow.Services.Validators;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -550,10 +553,92 @@ public class FaultReportServiceTests
         Assert.Contains("Unknown fault report status", exception.Message);
     }
 
-    private static AquaFlowDbContext CreateContext()
+    // A fault report is never physically removed - it is closed through the state machine (Resolve),
+    // which keeps its FaultStatusHistory trail. DeleteAsync is blocked in the service too, not just by
+    // the controller no longer routing DELETE.
+    [Fact]
+    public async Task DeleteAsync_AnyReport_ThrowsClientExceptionAndKeepsRow()
     {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.DeleteAsync(2));
+
+        Assert.Contains("not deleted", exception.Message);
+        Assert.True(await context.FaultReports.AnyAsync(f => f.Id == 2));
+    }
+
+    // A Resolved report is closed history, so neither PUT nor PATCH may rewrite it (neither request
+    // carries Status - that only changes through the state machine - but the other fields are still
+    // part of the record).
+    [Fact]
+    public async Task UpdateAsync_ResolvedReport_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        await MarkResolvedAsync(context, reportId: 1);
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(() => service.UpdateAsync(1, new FaultReportUpdateRequest
+        {
+            ReportedById = 1,
+            CustomerId = 1,
+            SettlementId = 1,
+            Title = "Rewritten title",
+            Description = "Rewritten description."
+        }));
+
+        Assert.Contains(FaultReportStatus.Resolved, exception.Message);
+        var stored = await context.FaultReports.AsNoTracking().SingleAsync(f => f.Id == 1);
+        Assert.Equal("Leak in the basement", stored.Title);
+    }
+
+    [Fact]
+    public async Task PatchAsync_ResolvedReport_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        await MarkResolvedAsync(context, reportId: 1);
+        var service = CreateService(context);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(
+            () => service.PatchAsync(1, new FaultReportPatchRequest { Title = "Rewritten title" }));
+
+        Assert.Contains(FaultReportStatus.Resolved, exception.Message);
+        var stored = await context.FaultReports.AsNoTracking().SingleAsync(f => f.Id == 1);
+        Assert.Equal("Leak in the basement", stored.Title);
+    }
+
+    // The terminal-status guard must not lock out editing an open report.
+    [Fact]
+    public async Task PatchAsync_NewReport_StillEditable()
+    {
+        await using var context = CreateContext();
+        SeedTwoReportsInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var response = await service.PatchAsync(2, new FaultReportPatchRequest { Title = "Corrected title" });
+
+        Assert.Equal("Corrected title", response.Title);
+    }
+
+    private static async Task MarkResolvedAsync(AquaFlowDbContext context, int reportId)
+    {
+        var report = await context.FaultReports.SingleAsync(f => f.Id == reportId);
+        report.Status = FaultReportStatus.Resolved;
+        report.ResolvedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+    }
+
+    internal static AquaFlowDbContext CreateContext()
+    {
+        // Creating a report commits the report and its staff notification in one explicit
+        // transaction, which InMemory ignores.
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new AquaFlowDbContext(options);
@@ -610,7 +695,7 @@ public class FaultReportServiceTests
     // populate from the loaded navigations, and builds a real IServiceProvider with the same keyed
     // BaseFaultReportState registrations as Program.cs so the transition tests exercise the actual
     // state machine instead of a stub - same template as WaterMeterRequestServiceTests.CreateService.
-    private static FaultReportService CreateService(AquaFlowDbContext context)
+    internal static FaultReportService CreateService(AquaFlowDbContext context, IMessagePublisher? publisher = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<FaultReport, Model.Responses.FaultReportResponse>()
@@ -626,11 +711,13 @@ public class FaultReportServiceTests
             .IgnoreNullValues(true);
         IMapper mapper = new Mapper(mapperConfig);
 
+        var systemNotifications = TestSystemNotifications.Create(context, publisher);
+
         var stateServices = new ServiceCollection();
-        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.New, (_, _) => new NewFaultReportState(context, mapper));
-        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.Assigned, (_, _) => new AssignedFaultReportState(context, mapper));
-        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.InProgress, (_, _) => new InProgressFaultReportState(context, mapper));
-        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.Resolved, (_, _) => new ResolvedFaultReportState(context, mapper));
+        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.New, (_, _) => new NewFaultReportState(context, mapper, systemNotifications));
+        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.Assigned, (_, _) => new AssignedFaultReportState(context, mapper, systemNotifications));
+        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.InProgress, (_, _) => new InProgressFaultReportState(context, mapper, systemNotifications));
+        stateServices.AddKeyedSingleton<BaseFaultReportState>(FaultReportStatus.Resolved, (_, _) => new ResolvedFaultReportState(context, mapper, systemNotifications));
         var stateResolver = new FaultReportStateResolver(stateServices.BuildServiceProvider());
 
         return new FaultReportService(
@@ -639,6 +726,7 @@ public class FaultReportServiceTests
             new IValidator<Model.Requests.FaultReportInsertRequest>[] { new FaultReportInsertValidator() },
             new IValidator<Model.Requests.FaultReportUpdateRequest>[] { new FaultReportUpdateValidator() },
             new IValidator<Model.Requests.FaultReportPatchRequest>[] { new FaultReportPatchValidator() },
-            stateResolver);
+            stateResolver,
+            systemNotifications);
     }
 }

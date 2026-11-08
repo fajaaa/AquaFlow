@@ -59,52 +59,6 @@ namespace AquaFlow.Services.Migrations
                     b.ToTable("ActivityLogs");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.Attachment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("EntityId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("EntityType")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("FileUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UploadedById")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UploadedById");
-
-                    b.ToTable("Attachments");
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.City", b =>
                 {
                     b.Property<int>("Id")
@@ -275,6 +229,66 @@ namespace AquaFlow.Services.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.ConsumptionAlertTypeLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ConsumptionAlertTypes", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "UnusualConsumptionSpike",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Neuobičajena potrošnja",
+                            NameDe = "Ungewöhnlicher Verbrauch",
+                            NameEn = "Unusual consumption",
+                            SortOrder = 10
+                        });
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.CustomerProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -290,11 +304,6 @@ namespace AquaFlow.Services.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("DefaultLanguage")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -317,10 +326,9 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("Theme")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<string>("StripeCustomerId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -335,6 +343,10 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasIndex("SettlementId");
 
+                    b.HasIndex("StripeCustomerId")
+                        .IsUnique()
+                        .HasFilter("[StripeCustomerId] IS NOT NULL");
+
                     b.HasIndex("UserId")
                         .IsUnique();
 
@@ -346,13 +358,11 @@ namespace AquaFlow.Services.Migrations
                             Id = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerCode = "CUS-0001",
-                            DefaultLanguage = "bs",
                             FirstName = "Denis",
                             HouseNumber = "15",
                             LastName = "Music",
                             SettlementId = 8,
                             Street = "Ozrenska",
-                            Theme = "light",
                             UserId = 4
                         },
                         new
@@ -360,13 +370,11 @@ namespace AquaFlow.Services.Migrations
                             Id = 2,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerCode = "CUS-0002",
-                            DefaultLanguage = "bs",
                             FirstName = "Elmir",
                             HouseNumber = "7",
                             LastName = "Babovic",
                             SettlementId = 6,
                             Street = "Dobrinjske bolnice",
-                            Theme = "light",
                             UserId = 5
                         },
                         new
@@ -374,13 +382,11 @@ namespace AquaFlow.Services.Migrations
                             Id = 3,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerCode = "CUS-0003",
-                            DefaultLanguage = "bs",
                             FirstName = "Adil",
                             HouseNumber = "22",
                             LastName = "Joldic",
                             SettlementId = 11,
                             Street = "Saraci",
-                            Theme = "light",
                             UserId = 6
                         });
                 });
@@ -424,47 +430,6 @@ namespace AquaFlow.Services.Migrations
                     b.ToTable("DeviceTokens");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.Document", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedById")
-                        .HasColumnType("int");
-
-                    b.Property<string>("DocumentType")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.Property<int>("EntityId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("EntityType")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
-
-                    b.Property<string>("FileUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedById");
-
-                    b.ToTable("Documents");
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.FaultReport", b =>
                 {
                     b.Property<int>("Id")
@@ -504,8 +469,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Street")
                         .HasMaxLength(200)
@@ -531,6 +496,8 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("ReportedById");
 
                     b.HasIndex("SettlementId");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("WaterMeterId");
 
@@ -592,6 +559,102 @@ namespace AquaFlow.Services.Migrations
                     b.ToTable("FaultReportPhotos");
                 });
 
+            modelBuilder.Entity("AquaFlow.Services.Database.FaultReportStatusLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FaultReportStatuses", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "New",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Nova",
+                            NameDe = "Neu",
+                            NameEn = "New",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Assigned",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Dodijeljena",
+                            NameDe = "Zugewiesen",
+                            NameEn = "Assigned",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "InProgress",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "U toku",
+                            NameDe = "In Bearbeitung",
+                            NameEn = "In progress",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "Resolved",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Riješena",
+                            NameDe = "Gelöst",
+                            NameEn = "Resolved",
+                            SortOrder = 40
+                        });
+                });
+
             modelBuilder.Entity("AquaFlow.Services.Database.FaultStatusHistory", b =>
                 {
                     b.Property<int>("Id")
@@ -614,16 +677,16 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("NewStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OldStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -633,6 +696,10 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("ChangedById");
 
                     b.HasIndex("FaultReportId");
+
+                    b.HasIndex("NewStatus");
+
+                    b.HasIndex("OldStatus");
 
                     b.ToTable("FaultStatusHistories");
                 });
@@ -682,8 +749,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<decimal>("Subtotal")
                         .HasColumnType("decimal(18,2)");
@@ -703,6 +770,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasIndex("CustomerId");
 
+                    b.HasIndex("Status");
+
                     b.HasIndex("WaterMeterId");
 
                     b.ToTable("Invoices");
@@ -711,6 +780,40 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 1,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 5, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 11.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 64.00m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0001",
+                            PreviousReading = 53.00m,
+                            Status = "Paid",
+                            Subtotal = 18.3500m,
+                            TotalAmount = 18.3500m,
+                            WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 16.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 80.00m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0002",
+                            PreviousReading = 64.00m,
+                            Status = "Paid",
+                            Subtotal = 25.1000m,
+                            TotalAmount = 25.1000m,
+                            WaterMeterId = 1
+                        },
+                        new
+                        {
+                            Id = 3,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 12.20m,
@@ -718,7 +821,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 92.20m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0001",
+                            InvoiceNumber = "INV-2026-0003",
                             PreviousReading = 80.00m,
                             Status = "Paid",
                             Subtotal = 19.9700m,
@@ -727,7 +830,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 2,
+                            Id = 4,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 15.80m,
@@ -735,7 +838,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 108.00m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0002",
+                            InvoiceNumber = "INV-2026-0004",
                             PreviousReading = 92.20m,
                             Status = "Paid",
                             Subtotal = 24.8300m,
@@ -744,7 +847,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 3,
+                            Id = 5,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 10.40m,
@@ -752,7 +855,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 118.40m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0003",
+                            InvoiceNumber = "INV-2026-0005",
                             PreviousReading = 108.00m,
                             Status = "Paid",
                             Subtotal = 17.5400m,
@@ -761,7 +864,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 4,
+                            Id = 6,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 16.60m,
@@ -769,7 +872,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 135.00m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0004",
+                            InvoiceNumber = "INV-2026-0006",
                             PreviousReading = 118.40m,
                             Status = "Paid",
                             Subtotal = 25.9100m,
@@ -778,7 +881,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 5,
+                            Id = 7,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 14.20m,
@@ -786,7 +889,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 149.20m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0005",
+                            InvoiceNumber = "INV-2026-0007",
                             PreviousReading = 135.00m,
                             Status = "Issued",
                             Subtotal = 22.6700m,
@@ -795,7 +898,41 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 6,
+                            Id = 8,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 5, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 8.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 48.00m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0008",
+                            PreviousReading = 39.40m,
+                            Status = "Paid",
+                            Subtotal = 15.1100m,
+                            TotalAmount = 15.1100m,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 9,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 12.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 60.00m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0009",
+                            PreviousReading = 48.00m,
+                            Status = "Paid",
+                            Subtotal = 19.7000m,
+                            TotalAmount = 19.7000m,
+                            WaterMeterId = 2
+                        },
+                        new
+                        {
+                            Id = 10,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 8.20m,
@@ -803,7 +940,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 68.20m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0006",
+                            InvoiceNumber = "INV-2026-0010",
                             PreviousReading = 60.00m,
                             Status = "Paid",
                             Subtotal = 14.5700m,
@@ -812,7 +949,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 7,
+                            Id = 11,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 11.40m,
@@ -820,7 +957,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 79.60m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0007",
+                            InvoiceNumber = "INV-2026-0011",
                             PreviousReading = 68.20m,
                             Status = "Paid",
                             Subtotal = 18.8900m,
@@ -829,7 +966,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 8,
+                            Id = 12,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 9.80m,
@@ -837,7 +974,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 89.40m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0008",
+                            InvoiceNumber = "INV-2026-0012",
                             PreviousReading = 79.60m,
                             Status = "Paid",
                             Subtotal = 16.7300m,
@@ -846,7 +983,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 9,
+                            Id = 13,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 7.60m,
@@ -854,7 +991,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 97.00m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0009",
+                            InvoiceNumber = "INV-2026-0013",
                             PreviousReading = 89.40m,
                             Status = "Paid",
                             Subtotal = 13.7600m,
@@ -863,7 +1000,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 10,
+                            Id = 14,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 10.60m,
@@ -871,7 +1008,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 107.60m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0010",
+                            InvoiceNumber = "INV-2026-0014",
                             PreviousReading = 97.00m,
                             Status = "Issued",
                             Subtotal = 17.8100m,
@@ -880,7 +1017,41 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 11,
+                            Id = 15,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 5, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 15.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 86.00m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0015",
+                            PreviousReading = 70.80m,
+                            Status = "Paid",
+                            Subtotal = 24.0200m,
+                            TotalAmount = 24.0200m,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 16,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 9.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 95.00m,
+                            CustomerId = 1,
+                            InvoiceNumber = "INV-2026-0016",
+                            PreviousReading = 86.00m,
+                            Status = "Paid",
+                            Subtotal = 15.6500m,
+                            TotalAmount = 15.6500m,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 17,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 13.00m,
@@ -888,7 +1059,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 108.00m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0011",
+                            InvoiceNumber = "INV-2026-0017",
                             PreviousReading = 95.00m,
                             Status = "Paid",
                             Subtotal = 21.0500m,
@@ -897,7 +1068,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 12,
+                            Id = 18,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 9.40m,
@@ -905,7 +1076,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 117.40m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0012",
+                            InvoiceNumber = "INV-2026-0018",
                             PreviousReading = 108.00m,
                             Status = "Paid",
                             Subtotal = 16.1900m,
@@ -914,7 +1085,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 13,
+                            Id = 19,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 12.80m,
@@ -922,7 +1093,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 130.20m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0013",
+                            InvoiceNumber = "INV-2026-0019",
                             PreviousReading = 117.40m,
                             Status = "Paid",
                             Subtotal = 20.7800m,
@@ -931,7 +1102,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 14,
+                            Id = 20,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 14.60m,
@@ -939,7 +1110,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 144.80m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0014",
+                            InvoiceNumber = "INV-2026-0020",
                             PreviousReading = 130.20m,
                             Status = "Paid",
                             Subtotal = 23.2100m,
@@ -948,7 +1119,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 15,
+                            Id = 21,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 10.20m,
@@ -956,7 +1127,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 155.00m,
                             CustomerId = 1,
-                            InvoiceNumber = "INV-2026-0015",
+                            InvoiceNumber = "INV-2026-0021",
                             PreviousReading = 144.80m,
                             Status = "Issued",
                             Subtotal = 17.2700m,
@@ -965,7 +1136,41 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 16,
+                            Id = 22,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 5, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 12.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 56.40m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0022",
+                            PreviousReading = 44.00m,
+                            Status = "Paid",
+                            Subtotal = 20.2400m,
+                            TotalAmount = 20.2400m,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 23,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 13.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 70.00m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0023",
+                            PreviousReading = 56.40m,
+                            Status = "Paid",
+                            Subtotal = 21.8600m,
+                            TotalAmount = 21.8600m,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 24,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 11.80m,
@@ -973,7 +1178,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 81.80m,
                             CustomerId = 2,
-                            InvoiceNumber = "INV-2026-0016",
+                            InvoiceNumber = "INV-2026-0024",
                             PreviousReading = 70.00m,
                             Status = "Paid",
                             Subtotal = 19.4300m,
@@ -982,7 +1187,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 17,
+                            Id = 25,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 14.20m,
@@ -990,7 +1195,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 96.00m,
                             CustomerId = 2,
-                            InvoiceNumber = "INV-2026-0017",
+                            InvoiceNumber = "INV-2026-0025",
                             PreviousReading = 81.80m,
                             Status = "Paid",
                             Subtotal = 22.6700m,
@@ -999,7 +1204,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 18,
+                            Id = 26,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 12.60m,
@@ -1007,7 +1212,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 108.60m,
                             CustomerId = 2,
-                            InvoiceNumber = "INV-2026-0018",
+                            InvoiceNumber = "INV-2026-0026",
                             PreviousReading = 96.00m,
                             Status = "Paid",
                             Subtotal = 20.5100m,
@@ -1016,7 +1221,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 19,
+                            Id = 27,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 15.40m,
@@ -1024,7 +1229,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 124.00m,
                             CustomerId = 2,
-                            InvoiceNumber = "INV-2026-0019",
+                            InvoiceNumber = "INV-2026-0027",
                             PreviousReading = 108.60m,
                             Status = "Paid",
                             Subtotal = 24.2900m,
@@ -1033,7 +1238,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 20,
+                            Id = 28,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 10.00m,
@@ -1041,7 +1246,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 134.00m,
                             CustomerId = 2,
-                            InvoiceNumber = "INV-2026-0020",
+                            InvoiceNumber = "INV-2026-0028",
                             PreviousReading = 124.00m,
                             Status = "Issued",
                             Subtotal = 17.0000m,
@@ -1050,7 +1255,41 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 21,
+                            Id = 29,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 5, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 9.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 42.60m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0029",
+                            PreviousReading = 33.00m,
+                            Status = "Paid",
+                            Subtotal = 16.4600m,
+                            TotalAmount = 16.4600m,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 30,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 12.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 55.00m,
+                            CustomerId = 2,
+                            InvoiceNumber = "INV-2026-0030",
+                            PreviousReading = 42.60m,
+                            Status = "Paid",
+                            Subtotal = 20.2400m,
+                            TotalAmount = 20.2400m,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 31,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 9.00m,
@@ -1058,7 +1297,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 64.00m,
                             CustomerId = 2,
-                            InvoiceNumber = "INV-2026-0021",
+                            InvoiceNumber = "INV-2026-0031",
                             PreviousReading = 55.00m,
                             Status = "Paid",
                             Subtotal = 15.6500m,
@@ -1067,7 +1306,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 22,
+                            Id = 32,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 11.60m,
@@ -1075,7 +1314,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 75.60m,
                             CustomerId = 2,
-                            InvoiceNumber = "INV-2026-0022",
+                            InvoiceNumber = "INV-2026-0032",
                             PreviousReading = 64.00m,
                             Status = "Paid",
                             Subtotal = 19.1600m,
@@ -1084,7 +1323,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 23,
+                            Id = 33,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 8.40m,
@@ -1092,7 +1331,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 84.00m,
                             CustomerId = 2,
-                            InvoiceNumber = "INV-2026-0023",
+                            InvoiceNumber = "INV-2026-0033",
                             PreviousReading = 75.60m,
                             Status = "Paid",
                             Subtotal = 14.8400m,
@@ -1101,7 +1340,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 24,
+                            Id = 34,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 12.20m,
@@ -1109,7 +1348,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 96.20m,
                             CustomerId = 2,
-                            InvoiceNumber = "INV-2026-0024",
+                            InvoiceNumber = "INV-2026-0034",
                             PreviousReading = 84.00m,
                             Status = "Paid",
                             Subtotal = 19.9700m,
@@ -1118,7 +1357,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 25,
+                            Id = 35,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 10.80m,
@@ -1126,7 +1365,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 107.00m,
                             CustomerId = 2,
-                            InvoiceNumber = "INV-2026-0025",
+                            InvoiceNumber = "INV-2026-0035",
                             PreviousReading = 96.20m,
                             Status = "Paid",
                             Subtotal = 18.0800m,
@@ -1135,7 +1374,41 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 26,
+                            Id = 36,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 5, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 11.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 26.40m,
+                            CustomerId = 3,
+                            InvoiceNumber = "INV-2026-0036",
+                            PreviousReading = 14.80m,
+                            Status = "Paid",
+                            Subtotal = 19.1600m,
+                            TotalAmount = 19.1600m,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 37,
+                            BillingPeriodFrom = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            BillingPeriodTo = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ConsumptionM3 = 13.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedById = 1,
+                            CurrentReading = 40.00m,
+                            CustomerId = 3,
+                            InvoiceNumber = "INV-2026-0037",
+                            PreviousReading = 26.40m,
+                            Status = "Paid",
+                            Subtotal = 21.8600m,
+                            TotalAmount = 21.8600m,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 38,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 10.60m,
@@ -1143,7 +1416,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 50.60m,
                             CustomerId = 3,
-                            InvoiceNumber = "INV-2026-0026",
+                            InvoiceNumber = "INV-2026-0038",
                             PreviousReading = 40.00m,
                             Status = "Paid",
                             Subtotal = 17.8100m,
@@ -1152,7 +1425,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 27,
+                            Id = 39,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 13.40m,
@@ -1160,7 +1433,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 64.00m,
                             CustomerId = 3,
-                            InvoiceNumber = "INV-2026-0027",
+                            InvoiceNumber = "INV-2026-0039",
                             PreviousReading = 50.60m,
                             Status = "Paid",
                             Subtotal = 21.5900m,
@@ -1169,7 +1442,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 28,
+                            Id = 40,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 11.20m,
@@ -1177,7 +1450,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 75.20m,
                             CustomerId = 3,
-                            InvoiceNumber = "INV-2026-0028",
+                            InvoiceNumber = "INV-2026-0040",
                             PreviousReading = 64.00m,
                             Status = "Paid",
                             Subtotal = 18.6200m,
@@ -1186,7 +1459,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 29,
+                            Id = 41,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 14.80m,
@@ -1194,7 +1467,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 90.00m,
                             CustomerId = 3,
-                            InvoiceNumber = "INV-2026-0029",
+                            InvoiceNumber = "INV-2026-0041",
                             PreviousReading = 75.20m,
                             Status = "Issued",
                             Subtotal = 23.4800m,
@@ -1203,7 +1476,7 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 30,
+                            Id = 42,
                             BillingPeriodFrom = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             BillingPeriodTo = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ConsumptionM3 = 9.60m,
@@ -1211,7 +1484,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedById = 1,
                             CurrentReading = 99.60m,
                             CustomerId = 3,
-                            InvoiceNumber = "INV-2026-0030",
+                            InvoiceNumber = "INV-2026-0042",
                             PreviousReading = 90.00m,
                             Status = "Issued",
                             Subtotal = 16.4600m,
@@ -1266,11 +1539,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 1,
-                            Amount = 16.4700m,
+                            Amount = 14.8500m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 1,
-                            Quantity = 12.20m,
+                            Quantity = 11.00m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1288,11 +1561,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 3,
-                            Amount = 21.3300m,
+                            Amount = 21.6000m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 2,
-                            Quantity = 15.80m,
+                            Quantity = 16.00m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1310,11 +1583,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 5,
-                            Amount = 14.0400m,
+                            Amount = 16.4700m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 3,
-                            Quantity = 10.40m,
+                            Quantity = 12.20m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1332,11 +1605,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 7,
-                            Amount = 22.4100m,
+                            Amount = 21.3300m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 4,
-                            Quantity = 16.60m,
+                            Quantity = 15.80m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1354,11 +1627,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 9,
-                            Amount = 19.1700m,
+                            Amount = 14.0400m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 5,
-                            Quantity = 14.20m,
+                            Quantity = 10.40m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1376,11 +1649,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 11,
-                            Amount = 11.0700m,
+                            Amount = 22.4100m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 6,
-                            Quantity = 8.20m,
+                            Quantity = 16.60m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1398,11 +1671,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 13,
-                            Amount = 15.3900m,
+                            Amount = 19.1700m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 7,
-                            Quantity = 11.40m,
+                            Quantity = 14.20m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1420,11 +1693,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 15,
-                            Amount = 13.2300m,
+                            Amount = 11.6100m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 8,
-                            Quantity = 9.80m,
+                            Quantity = 8.60m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1442,11 +1715,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 17,
-                            Amount = 10.2600m,
+                            Amount = 16.2000m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 9,
-                            Quantity = 7.60m,
+                            Quantity = 12.00m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1464,11 +1737,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 19,
-                            Amount = 14.3100m,
+                            Amount = 11.0700m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 10,
-                            Quantity = 10.60m,
+                            Quantity = 8.20m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1486,11 +1759,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 21,
-                            Amount = 17.5500m,
+                            Amount = 15.3900m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 11,
-                            Quantity = 13.00m,
+                            Quantity = 11.40m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1508,11 +1781,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 23,
-                            Amount = 12.6900m,
+                            Amount = 13.2300m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 12,
-                            Quantity = 9.40m,
+                            Quantity = 9.80m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1530,11 +1803,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 25,
-                            Amount = 17.2800m,
+                            Amount = 10.2600m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 13,
-                            Quantity = 12.80m,
+                            Quantity = 7.60m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1552,11 +1825,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 27,
-                            Amount = 19.7100m,
+                            Amount = 14.3100m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 14,
-                            Quantity = 14.60m,
+                            Quantity = 10.60m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1574,11 +1847,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 29,
-                            Amount = 13.7700m,
+                            Amount = 20.5200m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 15,
-                            Quantity = 10.20m,
+                            Quantity = 15.20m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1596,11 +1869,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 31,
-                            Amount = 15.9300m,
+                            Amount = 12.1500m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 16,
-                            Quantity = 11.80m,
+                            Quantity = 9.00m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1618,11 +1891,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 33,
-                            Amount = 19.1700m,
+                            Amount = 17.5500m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 17,
-                            Quantity = 14.20m,
+                            Quantity = 13.00m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1640,11 +1913,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 35,
-                            Amount = 17.0100m,
+                            Amount = 12.6900m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 18,
-                            Quantity = 12.60m,
+                            Quantity = 9.40m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1662,11 +1935,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 37,
-                            Amount = 20.7900m,
+                            Amount = 17.2800m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 19,
-                            Quantity = 15.40m,
+                            Quantity = 12.80m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1684,11 +1957,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 39,
-                            Amount = 13.5000m,
+                            Amount = 19.7100m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 20,
-                            Quantity = 10.00m,
+                            Quantity = 14.60m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1706,11 +1979,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 41,
-                            Amount = 12.1500m,
+                            Amount = 13.7700m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 21,
-                            Quantity = 9.00m,
+                            Quantity = 10.20m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1728,11 +2001,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 43,
-                            Amount = 15.6600m,
+                            Amount = 16.7400m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 22,
-                            Quantity = 11.60m,
+                            Quantity = 12.40m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1750,11 +2023,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 45,
-                            Amount = 11.3400m,
+                            Amount = 18.3600m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 23,
-                            Quantity = 8.40m,
+                            Quantity = 13.60m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1772,11 +2045,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 47,
-                            Amount = 16.4700m,
+                            Amount = 15.9300m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 24,
-                            Quantity = 12.20m,
+                            Quantity = 11.80m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1794,11 +2067,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 49,
-                            Amount = 14.5800m,
+                            Amount = 19.1700m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 25,
-                            Quantity = 10.80m,
+                            Quantity = 14.20m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1816,11 +2089,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 51,
-                            Amount = 14.3100m,
+                            Amount = 17.0100m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 26,
-                            Quantity = 10.60m,
+                            Quantity = 12.60m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1838,11 +2111,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 53,
-                            Amount = 18.0900m,
+                            Amount = 20.7900m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 27,
-                            Quantity = 13.40m,
+                            Quantity = 15.40m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1860,11 +2133,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 55,
-                            Amount = 15.1200m,
+                            Amount = 13.5000m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 28,
-                            Quantity = 11.20m,
+                            Quantity = 10.00m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1882,11 +2155,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 57,
-                            Amount = 19.9800m,
+                            Amount = 12.9600m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 29,
-                            Quantity = 14.80m,
+                            Quantity = 9.60m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1904,11 +2177,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 59,
-                            Amount = 12.9600m,
+                            Amount = 16.7400m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Potrosnja vode",
                             InvoiceId = 30,
-                            Quantity = 9.60m,
+                            Quantity = 12.40m,
                             TariffId = 1,
                             UnitPrice = 1.35m
                         },
@@ -1919,6 +2192,270 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Fiksna naknada",
                             InvoiceId = 30,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 61,
+                            Amount = 12.1500m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 31,
+                            Quantity = 9.00m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 62,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 31,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 63,
+                            Amount = 15.6600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 32,
+                            Quantity = 11.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 64,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 32,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 65,
+                            Amount = 11.3400m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 33,
+                            Quantity = 8.40m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 66,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 33,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 67,
+                            Amount = 16.4700m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 34,
+                            Quantity = 12.20m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 68,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 34,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 69,
+                            Amount = 14.5800m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 35,
+                            Quantity = 10.80m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 70,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 35,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 71,
+                            Amount = 15.6600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 36,
+                            Quantity = 11.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 72,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 36,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 73,
+                            Amount = 18.3600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 37,
+                            Quantity = 13.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 74,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 37,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 75,
+                            Amount = 14.3100m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 38,
+                            Quantity = 10.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 76,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 38,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 77,
+                            Amount = 18.0900m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 39,
+                            Quantity = 13.40m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 78,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 39,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 79,
+                            Amount = 15.1200m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 40,
+                            Quantity = 11.20m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 80,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 40,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 81,
+                            Amount = 19.9800m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 41,
+                            Quantity = 14.80m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 82,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 41,
+                            Quantity = 1m,
+                            TariffId = 1,
+                            UnitPrice = 3.50m
+                        },
+                        new
+                        {
+                            Id = 83,
+                            Amount = 12.9600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Potrosnja vode",
+                            InvoiceId = 42,
+                            Quantity = 9.60m,
+                            TariffId = 1,
+                            UnitPrice = 1.35m
+                        },
+                        new
+                        {
+                            Id = 84,
+                            Amount = 3.50m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Fiksna naknada",
+                            InvoiceId = 42,
                             Quantity = 1m,
                             TariffId = 1,
                             UnitPrice = 3.50m
@@ -1947,16 +2484,16 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("NewStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OldStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1967,10 +2504,14 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasIndex("InvoiceId");
 
+                    b.HasIndex("NewStatus");
+
+                    b.HasIndex("OldStatus");
+
                     b.ToTable("InvoiceStatusHistories");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.MeterAssignment", b =>
+            modelBuilder.Entity("AquaFlow.Services.Database.InvoiceStatusLookup", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1978,14 +2519,10 @@ namespace AquaFlow.Services.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("AssignedFrom")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("AssignedTo")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CollectorId")
-                        .HasColumnType("int");
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -1993,19 +2530,69 @@ namespace AquaFlow.Services.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("WaterMeterId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectorId");
+                    b.ToTable("InvoiceStatuses", (string)null);
 
-                    b.HasIndex("WaterMeterId");
-
-                    b.ToTable("MeterAssignments");
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Issued",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Izdana",
+                            NameDe = "Ausgestellt",
+                            NameEn = "Issued",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Paid",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Plaćena",
+                            NameDe = "Bezahlt",
+                            NameEn = "Paid",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Cancelled",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Stornirana",
+                            NameDe = "Storniert",
+                            NameEn = "Cancelled",
+                            SortOrder = 30
+                        });
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.MeterReading", b =>
@@ -2047,19 +2634,6 @@ namespace AquaFlow.Services.Migrations
                     b.Property<decimal>("ReadingValue")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("SyncStatus")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<DateTime?>("SyncedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<int?>("TariffId")
                         .HasColumnType("int");
 
@@ -2092,16 +2666,13 @@ namespace AquaFlow.Services.Migrations
                             Id = 1,
                             ClientUuid = "reading-wm0001-h01",
                             CollectorId = 1,
-                            ConsumptionM3 = 12.20m,
+                            ConsumptionM3 = 11.00m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 1,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 80.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 92.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 53.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 64.00m,
                             TariffId = 1,
                             WaterMeterId = 1
                         },
@@ -2110,16 +2681,13 @@ namespace AquaFlow.Services.Migrations
                             Id = 2,
                             ClientUuid = "reading-wm0001-h02",
                             CollectorId = 1,
-                            ConsumptionM3 = 15.80m,
+                            ConsumptionM3 = 16.00m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 2,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 92.20m,
-                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 108.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 64.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 80.00m,
                             TariffId = 1,
                             WaterMeterId = 1
                         },
@@ -2128,16 +2696,13 @@ namespace AquaFlow.Services.Migrations
                             Id = 3,
                             ClientUuid = "reading-wm0001-h03",
                             CollectorId = 1,
-                            ConsumptionM3 = 10.40m,
+                            ConsumptionM3 = 12.20m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 3,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 108.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 118.40m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 80.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 92.20m,
                             TariffId = 1,
                             WaterMeterId = 1
                         },
@@ -2146,16 +2711,13 @@ namespace AquaFlow.Services.Migrations
                             Id = 4,
                             ClientUuid = "reading-wm0001-h04",
                             CollectorId = 1,
-                            ConsumptionM3 = 16.60m,
+                            ConsumptionM3 = 15.80m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 4,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 118.40m,
-                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 135.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 92.20m,
+                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 108.00m,
                             TariffId = 1,
                             WaterMeterId = 1
                         },
@@ -2164,466 +2726,568 @@ namespace AquaFlow.Services.Migrations
                             Id = 5,
                             ClientUuid = "reading-wm0001-h05",
                             CollectorId = 1,
-                            ConsumptionM3 = 14.20m,
+                            ConsumptionM3 = 10.40m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 5,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 135.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 149.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 108.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 118.40m,
                             TariffId = 1,
                             WaterMeterId = 1
                         },
                         new
                         {
                             Id = 6,
-                            ClientUuid = "reading-wm0002-h01",
+                            ClientUuid = "reading-wm0001-h06",
                             CollectorId = 1,
-                            ConsumptionM3 = 8.20m,
+                            ConsumptionM3 = 16.60m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 6,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 60.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 68.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 118.40m,
+                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 135.00m,
                             TariffId = 1,
-                            WaterMeterId = 2
+                            WaterMeterId = 1
                         },
                         new
                         {
                             Id = 7,
-                            ClientUuid = "reading-wm0002-h02",
+                            ClientUuid = "reading-wm0001-h07",
                             CollectorId = 1,
-                            ConsumptionM3 = 11.40m,
+                            ConsumptionM3 = 14.20m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 7,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 68.20m,
-                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 79.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 135.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 149.20m,
                             TariffId = 1,
-                            WaterMeterId = 2
+                            WaterMeterId = 1
                         },
                         new
                         {
                             Id = 8,
-                            ClientUuid = "reading-wm0002-h03",
+                            ClientUuid = "reading-wm0002-h01",
                             CollectorId = 1,
-                            ConsumptionM3 = 9.80m,
+                            ConsumptionM3 = 8.60m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 8,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 79.60m,
-                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 89.40m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 39.40m,
+                            ReadingDate = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 48.00m,
                             TariffId = 1,
                             WaterMeterId = 2
                         },
                         new
                         {
                             Id = 9,
-                            ClientUuid = "reading-wm0002-h04",
+                            ClientUuid = "reading-wm0002-h02",
                             CollectorId = 1,
-                            ConsumptionM3 = 7.60m,
+                            ConsumptionM3 = 12.00m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 9,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 89.40m,
-                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 97.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 48.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 60.00m,
                             TariffId = 1,
                             WaterMeterId = 2
                         },
                         new
                         {
                             Id = 10,
-                            ClientUuid = "reading-wm0002-h05",
+                            ClientUuid = "reading-wm0002-h03",
                             CollectorId = 1,
-                            ConsumptionM3 = 10.60m,
+                            ConsumptionM3 = 8.20m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 10,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 97.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 107.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 60.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 68.20m,
                             TariffId = 1,
                             WaterMeterId = 2
                         },
                         new
                         {
                             Id = 11,
-                            ClientUuid = "reading-wm0003-h01",
+                            ClientUuid = "reading-wm0002-h04",
                             CollectorId = 1,
-                            ConsumptionM3 = 13.00m,
+                            ConsumptionM3 = 11.40m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 11,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 95.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 108.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 68.20m,
+                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 79.60m,
                             TariffId = 1,
-                            WaterMeterId = 3
+                            WaterMeterId = 2
                         },
                         new
                         {
                             Id = 12,
-                            ClientUuid = "reading-wm0003-h02",
+                            ClientUuid = "reading-wm0002-h05",
                             CollectorId = 1,
-                            ConsumptionM3 = 9.40m,
+                            ConsumptionM3 = 9.80m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 12,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 108.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 117.40m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 79.60m,
+                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 89.40m,
                             TariffId = 1,
-                            WaterMeterId = 3
+                            WaterMeterId = 2
                         },
                         new
                         {
                             Id = 13,
-                            ClientUuid = "reading-wm0003-h03",
+                            ClientUuid = "reading-wm0002-h06",
                             CollectorId = 1,
-                            ConsumptionM3 = 12.80m,
+                            ConsumptionM3 = 7.60m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 13,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 117.40m,
-                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 130.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 89.40m,
+                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 97.00m,
                             TariffId = 1,
-                            WaterMeterId = 3
+                            WaterMeterId = 2
                         },
                         new
                         {
                             Id = 14,
-                            ClientUuid = "reading-wm0003-h04",
+                            ClientUuid = "reading-wm0002-h07",
                             CollectorId = 1,
-                            ConsumptionM3 = 14.60m,
+                            ConsumptionM3 = 10.60m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 14,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 130.20m,
-                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 144.80m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 97.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 107.60m,
                             TariffId = 1,
-                            WaterMeterId = 3
+                            WaterMeterId = 2
                         },
                         new
                         {
                             Id = 15,
-                            ClientUuid = "reading-wm0003-h05",
+                            ClientUuid = "reading-wm0003-h01",
                             CollectorId = 1,
-                            ConsumptionM3 = 10.20m,
+                            ConsumptionM3 = 15.20m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 15,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 144.80m,
-                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 155.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 70.80m,
+                            ReadingDate = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 86.00m,
                             TariffId = 1,
                             WaterMeterId = 3
                         },
                         new
                         {
                             Id = 16,
-                            ClientUuid = "reading-wm0004-h01",
-                            CollectorId = 2,
-                            ConsumptionM3 = 11.80m,
+                            ClientUuid = "reading-wm0003-h02",
+                            CollectorId = 1,
+                            ConsumptionM3 = 9.00m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 16,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 70.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 81.80m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 86.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 95.00m,
                             TariffId = 1,
-                            WaterMeterId = 4
+                            WaterMeterId = 3
                         },
                         new
                         {
                             Id = 17,
-                            ClientUuid = "reading-wm0004-h02",
-                            CollectorId = 2,
-                            ConsumptionM3 = 14.20m,
+                            ClientUuid = "reading-wm0003-h03",
+                            CollectorId = 1,
+                            ConsumptionM3 = 13.00m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 17,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 81.80m,
-                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 96.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 95.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 108.00m,
                             TariffId = 1,
-                            WaterMeterId = 4
+                            WaterMeterId = 3
                         },
                         new
                         {
                             Id = 18,
-                            ClientUuid = "reading-wm0004-h03",
-                            CollectorId = 2,
-                            ConsumptionM3 = 12.60m,
+                            ClientUuid = "reading-wm0003-h04",
+                            CollectorId = 1,
+                            ConsumptionM3 = 9.40m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 18,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 96.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 108.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 108.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 117.40m,
                             TariffId = 1,
-                            WaterMeterId = 4
+                            WaterMeterId = 3
                         },
                         new
                         {
                             Id = 19,
-                            ClientUuid = "reading-wm0004-h04",
-                            CollectorId = 2,
-                            ConsumptionM3 = 15.40m,
+                            ClientUuid = "reading-wm0003-h05",
+                            CollectorId = 1,
+                            ConsumptionM3 = 12.80m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 19,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 108.60m,
-                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 124.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 117.40m,
+                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 130.20m,
                             TariffId = 1,
-                            WaterMeterId = 4
+                            WaterMeterId = 3
                         },
                         new
                         {
                             Id = 20,
-                            ClientUuid = "reading-wm0004-h05",
-                            CollectorId = 2,
-                            ConsumptionM3 = 10.00m,
+                            ClientUuid = "reading-wm0003-h06",
+                            CollectorId = 1,
+                            ConsumptionM3 = 14.60m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 20,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 124.00m,
+                            PreviousReadingValue = 130.20m,
+                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 144.80m,
+                            TariffId = 1,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 21,
+                            ClientUuid = "reading-wm0003-h07",
+                            CollectorId = 1,
+                            ConsumptionM3 = 10.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 21,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 144.80m,
                             ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 134.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 155.00m,
+                            TariffId = 1,
+                            WaterMeterId = 3
+                        },
+                        new
+                        {
+                            Id = 22,
+                            ClientUuid = "reading-wm0004-h01",
+                            CollectorId = 2,
+                            ConsumptionM3 = 12.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 22,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 44.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 56.40m,
                             TariffId = 1,
                             WaterMeterId = 4
                         },
                         new
                         {
-                            Id = 21,
-                            ClientUuid = "reading-wm0005-h01",
-                            CollectorId = 2,
-                            ConsumptionM3 = 9.00m,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            InvoiceId = 21,
-                            Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 55.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 64.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
-                            TariffId = 1,
-                            WaterMeterId = 5
-                        },
-                        new
-                        {
-                            Id = 22,
-                            ClientUuid = "reading-wm0005-h02",
-                            CollectorId = 2,
-                            ConsumptionM3 = 11.60m,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            InvoiceId = 22,
-                            Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 64.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 75.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
-                            TariffId = 1,
-                            WaterMeterId = 5
-                        },
-                        new
-                        {
                             Id = 23,
-                            ClientUuid = "reading-wm0005-h03",
+                            ClientUuid = "reading-wm0004-h02",
                             CollectorId = 2,
-                            ConsumptionM3 = 8.40m,
+                            ConsumptionM3 = 13.60m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 23,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 75.60m,
-                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 84.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 56.40m,
+                            ReadingDate = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 70.00m,
                             TariffId = 1,
-                            WaterMeterId = 5
+                            WaterMeterId = 4
                         },
                         new
                         {
                             Id = 24,
-                            ClientUuid = "reading-wm0005-h04",
+                            ClientUuid = "reading-wm0004-h03",
                             CollectorId = 2,
-                            ConsumptionM3 = 12.20m,
+                            ConsumptionM3 = 11.80m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 24,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 84.00m,
-                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 96.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
+                            PreviousReadingValue = 70.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 81.80m,
                             TariffId = 1,
-                            WaterMeterId = 5
+                            WaterMeterId = 4
                         },
                         new
                         {
                             Id = 25,
-                            ClientUuid = "reading-wm0005-h05",
+                            ClientUuid = "reading-wm0004-h04",
                             CollectorId = 2,
-                            ConsumptionM3 = 10.80m,
+                            ConsumptionM3 = 14.20m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             InvoiceId = 25,
                             Note = "Redovno satno ocitanje.",
-                            PreviousReadingValue = 96.20m,
+                            PreviousReadingValue = 81.80m,
+                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 96.00m,
+                            TariffId = 1,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 26,
+                            ClientUuid = "reading-wm0004-h05",
+                            CollectorId = 2,
+                            ConsumptionM3 = 12.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 26,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 96.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 108.60m,
+                            TariffId = 1,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 27,
+                            ClientUuid = "reading-wm0004-h06",
+                            CollectorId = 2,
+                            ConsumptionM3 = 15.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 27,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 108.60m,
+                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 124.00m,
+                            TariffId = 1,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 28,
+                            ClientUuid = "reading-wm0004-h07",
+                            CollectorId = 2,
+                            ConsumptionM3 = 10.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 28,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 124.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
-                            ReadingValue = 107.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 134.00m,
+                            TariffId = 1,
+                            WaterMeterId = 4
+                        },
+                        new
+                        {
+                            Id = 29,
+                            ClientUuid = "reading-wm0005-h01",
+                            CollectorId = 2,
+                            ConsumptionM3 = 9.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 29,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 33.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 42.60m,
                             TariffId = 1,
                             WaterMeterId = 5
                         },
                         new
                         {
-                            Id = 26,
+                            Id = 30,
+                            ClientUuid = "reading-wm0005-h02",
+                            CollectorId = 2,
+                            ConsumptionM3 = 12.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 30,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 42.60m,
+                            ReadingDate = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 55.00m,
+                            TariffId = 1,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 31,
+                            ClientUuid = "reading-wm0005-h03",
+                            CollectorId = 2,
+                            ConsumptionM3 = 9.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 31,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 55.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 64.00m,
+                            TariffId = 1,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 32,
+                            ClientUuid = "reading-wm0005-h04",
+                            CollectorId = 2,
+                            ConsumptionM3 = 11.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 32,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 64.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 75.60m,
+                            TariffId = 1,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 33,
+                            ClientUuid = "reading-wm0005-h05",
+                            CollectorId = 2,
+                            ConsumptionM3 = 8.40m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 33,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 75.60m,
+                            ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 84.00m,
+                            TariffId = 1,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 34,
+                            ClientUuid = "reading-wm0005-h06",
+                            CollectorId = 2,
+                            ConsumptionM3 = 12.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 34,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 84.00m,
+                            ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 96.20m,
+                            TariffId = 1,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 35,
+                            ClientUuid = "reading-wm0005-h07",
+                            CollectorId = 2,
+                            ConsumptionM3 = 10.80m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 35,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 96.20m,
+                            ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 107.00m,
+                            TariffId = 1,
+                            WaterMeterId = 5
+                        },
+                        new
+                        {
+                            Id = 36,
                             ClientUuid = "reading-wm0006-h01",
+                            CollectorId = 2,
+                            ConsumptionM3 = 11.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 36,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 14.80m,
+                            ReadingDate = new DateTime(2026, 6, 1, 6, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 26.40m,
+                            TariffId = 1,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 37,
+                            ClientUuid = "reading-wm0006-h02",
+                            CollectorId = 2,
+                            ConsumptionM3 = 13.60m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 37,
+                            Note = "Redovno satno ocitanje.",
+                            PreviousReadingValue = 26.40m,
+                            ReadingDate = new DateTime(2026, 6, 1, 7, 0, 0, 0, DateTimeKind.Utc),
+                            ReadingValue = 40.00m,
+                            TariffId = 1,
+                            WaterMeterId = 6
+                        },
+                        new
+                        {
+                            Id = 38,
+                            ClientUuid = "reading-wm0006-h03",
                             CollectorId = 2,
                             ConsumptionM3 = 10.60m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            InvoiceId = 26,
+                            InvoiceId = 38,
                             Note = "Redovno satno ocitanje.",
                             PreviousReadingValue = 40.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 50.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 8, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 6
                         },
                         new
                         {
-                            Id = 27,
-                            ClientUuid = "reading-wm0006-h02",
+                            Id = 39,
+                            ClientUuid = "reading-wm0006-h04",
                             CollectorId = 2,
                             ConsumptionM3 = 13.40m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            InvoiceId = 27,
+                            InvoiceId = 39,
                             Note = "Redovno satno ocitanje.",
                             PreviousReadingValue = 50.60m,
                             ReadingDate = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 64.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 9, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 6
                         },
                         new
                         {
-                            Id = 28,
-                            ClientUuid = "reading-wm0006-h03",
+                            Id = 40,
+                            ClientUuid = "reading-wm0006-h05",
                             CollectorId = 2,
                             ConsumptionM3 = 11.20m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            InvoiceId = 28,
+                            InvoiceId = 40,
                             Note = "Redovno satno ocitanje.",
                             PreviousReadingValue = 64.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 75.20m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 10, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 6
                         },
                         new
                         {
-                            Id = 29,
-                            ClientUuid = "reading-wm0006-h04",
+                            Id = 41,
+                            ClientUuid = "reading-wm0006-h06",
                             CollectorId = 2,
                             ConsumptionM3 = 14.80m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            InvoiceId = 29,
+                            InvoiceId = 41,
                             Note = "Redovno satno ocitanje.",
                             PreviousReadingValue = 75.20m,
                             ReadingDate = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 90.00m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 11, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 6
                         },
                         new
                         {
-                            Id = 30,
-                            ClientUuid = "reading-wm0006-h05",
+                            Id = 42,
+                            ClientUuid = "reading-wm0006-h07",
                             CollectorId = 2,
                             ConsumptionM3 = 9.60m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            InvoiceId = 30,
+                            InvoiceId = 42,
                             Note = "Redovno satno ocitanje.",
                             PreviousReadingValue = 90.00m,
                             ReadingDate = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             ReadingValue = 99.60m,
-                            Source = "Collector",
-                            SyncStatus = "Synced",
-                            SyncedAt = new DateTime(2026, 6, 1, 12, 10, 0, 0, DateTimeKind.Utc),
                             TariffId = 1,
                             WaterMeterId = 6
                         });
@@ -2751,8 +3415,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Audience")
                         .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Body")
                         .IsRequired()
@@ -2764,6 +3428,19 @@ namespace AquaFlow.Services.Migrations
                     b.Property<int>("CreatedById")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("PushDispatchedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RelatedEntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RelatedEntityType")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -2771,15 +3448,19 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Audience");
+
                     b.HasIndex("CreatedById");
+
+                    b.HasIndex("Type");
 
                     b.ToTable("Notifications");
 
@@ -2791,8 +3472,105 @@ namespace AquaFlow.Services.Migrations
                             Body = "Planirani radovi na mrezi.",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CreatedById = 1,
+                            IsSystem = false,
                             Title = "Planirani radovi",
                             Type = "Info"
+                        });
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.NotificationAudienceLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("NotificationAudiences", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "All",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Svi korisnici",
+                            NameDe = "Alle Benutzer",
+                            NameEn = "All users",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Customers",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Kupci",
+                            NameDe = "Kunden",
+                            NameEn = "Customers",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Collectors",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Inkasanti",
+                            NameDe = "Ableser",
+                            NameEn = "Collectors",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "Direct",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Direktno - sistemske",
+                            NameDe = "Direkt - System",
+                            NameEn = "Direct - system",
+                            SortOrder = 40
                         });
                 });
 
@@ -2837,7 +3615,7 @@ namespace AquaFlow.Services.Migrations
                     b.ToTable("NotificationImages");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.NotificationTemplate", b =>
+            modelBuilder.Entity("AquaFlow.Services.Database.NotificationTypeLookup", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -2845,9 +3623,10 @@ namespace AquaFlow.Services.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("BodyTemplate")
+                    b.Property<string>("Code")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -2855,26 +3634,81 @@ namespace AquaFlow.Services.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("TitleTemplate")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.ToTable("NotificationTemplates");
+                    b.ToTable("NotificationTypes", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Info",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Informacija",
+                            NameDe = "Information",
+                            NameEn = "Information",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Billing",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Naplata",
+                            NameDe = "Abrechnung",
+                            NameEn = "Billing",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Warning",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Upozorenje",
+                            NameDe = "Warnung",
+                            NameEn = "Warning",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "PlannedWorks",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Planirani radovi",
+                            NameDe = "Geplante Arbeiten",
+                            NameEn = "Planned works",
+                            SortOrder = 40
+                        });
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Payment", b =>
@@ -2902,8 +3736,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Provider")
                         .IsRequired()
@@ -2916,8 +3750,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -2927,6 +3761,10 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("InvoiceId");
+
+                    b.HasIndex("PaymentMethod");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("Provider", "ProviderTransactionId")
                         .IsUnique()
@@ -2938,11 +3776,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 1,
-                            Amount = 19.9700m,
+                            Amount = 18.3500m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             InvoiceId = 1,
-                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            PaidAt = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "BankTransfer",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0001",
@@ -2951,11 +3789,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 2,
-                            Amount = 24.8300m,
+                            Amount = 25.1000m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             InvoiceId = 2,
-                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            PaidAt = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Card",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0002",
@@ -2964,11 +3802,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 3,
-                            Amount = 17.5400m,
+                            Amount = 19.9700m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             InvoiceId = 3,
-                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Cash",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0003",
@@ -2977,11 +3815,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 4,
-                            Amount = 25.9100m,
+                            Amount = 24.8300m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             InvoiceId = 4,
-                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
+                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "BankTransfer",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0004",
@@ -2990,11 +3828,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 5,
-                            Amount = 14.5700m,
+                            Amount = 17.5400m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
-                            InvoiceId = 6,
-                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 5,
+                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Card",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0005",
@@ -3003,11 +3841,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 6,
-                            Amount = 18.8900m,
+                            Amount = 25.9100m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
-                            InvoiceId = 7,
-                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 6,
+                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Cash",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0006",
@@ -3016,11 +3854,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 7,
-                            Amount = 16.7300m,
+                            Amount = 15.1100m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             InvoiceId = 8,
-                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            PaidAt = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "BankTransfer",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0007",
@@ -3029,11 +3867,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 8,
-                            Amount = 13.7600m,
+                            Amount = 19.7000m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             InvoiceId = 9,
-                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
+                            PaidAt = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Card",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0008",
@@ -3042,10 +3880,10 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 9,
-                            Amount = 21.0500m,
+                            Amount = 14.5700m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
-                            InvoiceId = 11,
+                            InvoiceId = 10,
                             PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Cash",
                             Provider = "Manual",
@@ -3055,10 +3893,10 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 10,
-                            Amount = 16.1900m,
+                            Amount = 18.8900m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
-                            InvoiceId = 12,
+                            InvoiceId = 11,
                             PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "BankTransfer",
                             Provider = "Manual",
@@ -3068,10 +3906,10 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 11,
-                            Amount = 20.7800m,
+                            Amount = 16.7300m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
-                            InvoiceId = 13,
+                            InvoiceId = 12,
                             PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Card",
                             Provider = "Manual",
@@ -3081,10 +3919,10 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 12,
-                            Amount = 23.2100m,
+                            Amount = 13.7600m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
-                            InvoiceId = 14,
+                            InvoiceId = 13,
                             PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Cash",
                             Provider = "Manual",
@@ -3094,11 +3932,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 13,
-                            Amount = 19.4300m,
+                            Amount = 24.0200m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CustomerId = 2,
-                            InvoiceId = 16,
-                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 15,
+                            PaidAt = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "BankTransfer",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0013",
@@ -3107,11 +3945,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 14,
-                            Amount = 22.6700m,
+                            Amount = 15.6500m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CustomerId = 2,
-                            InvoiceId = 17,
-                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 16,
+                            PaidAt = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Card",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0014",
@@ -3120,11 +3958,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 15,
-                            Amount = 20.5100m,
+                            Amount = 21.0500m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CustomerId = 2,
-                            InvoiceId = 18,
-                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 17,
+                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Cash",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0015",
@@ -3133,11 +3971,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 16,
-                            Amount = 24.2900m,
+                            Amount = 16.1900m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CustomerId = 2,
-                            InvoiceId = 19,
-                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 18,
+                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "BankTransfer",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0016",
@@ -3146,11 +3984,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 17,
-                            Amount = 15.6500m,
+                            Amount = 20.7800m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CustomerId = 2,
-                            InvoiceId = 21,
-                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 19,
+                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Card",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0017",
@@ -3159,11 +3997,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 18,
-                            Amount = 19.1600m,
+                            Amount = 23.2100m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CustomerId = 2,
-                            InvoiceId = 22,
-                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 1,
+                            InvoiceId = 20,
+                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Cash",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0018",
@@ -3172,11 +4010,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 19,
-                            Amount = 14.8400m,
+                            Amount = 20.2400m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 2,
-                            InvoiceId = 23,
-                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 22,
+                            PaidAt = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "BankTransfer",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0019",
@@ -3185,11 +4023,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 20,
-                            Amount = 19.9700m,
+                            Amount = 21.8600m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 2,
-                            InvoiceId = 24,
-                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 23,
+                            PaidAt = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Card",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0020",
@@ -3198,11 +4036,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 21,
-                            Amount = 18.0800m,
+                            Amount = 19.4300m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 2,
-                            InvoiceId = 25,
-                            PaidAt = new DateTime(2026, 6, 1, 14, 0, 0, 0, DateTimeKind.Utc),
+                            InvoiceId = 24,
+                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Cash",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0021",
@@ -3211,11 +4049,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 22,
-                            Amount = 17.8100m,
+                            Amount = 22.6700m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CustomerId = 3,
-                            InvoiceId = 26,
-                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 25,
+                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "BankTransfer",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0022",
@@ -3224,11 +4062,11 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 23,
-                            Amount = 21.5900m,
+                            Amount = 20.5100m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CustomerId = 3,
-                            InvoiceId = 27,
-                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 26,
+                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Card",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0023",
@@ -3237,19 +4075,175 @@ namespace AquaFlow.Services.Migrations
                         new
                         {
                             Id = 24,
-                            Amount = 18.6200m,
+                            Amount = 24.2900m,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CustomerId = 3,
-                            InvoiceId = 28,
-                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 27,
+                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
                             PaymentMethod = "Cash",
                             Provider = "Manual",
                             ProviderTransactionId = "PAY-2026-0024",
                             Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Amount = 16.4600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 29,
+                            PaidAt = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "BankTransfer",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0025",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 26,
+                            Amount = 20.2400m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 30,
+                            PaidAt = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0026",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 27,
+                            Amount = 15.6500m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 31,
+                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0027",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 28,
+                            Amount = 19.1600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 32,
+                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "BankTransfer",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0028",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 29,
+                            Amount = 14.8400m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 33,
+                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0029",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 30,
+                            Amount = 19.9700m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 34,
+                            PaidAt = new DateTime(2026, 6, 1, 13, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0030",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 31,
+                            Amount = 18.0800m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 2,
+                            InvoiceId = 35,
+                            PaidAt = new DateTime(2026, 6, 1, 14, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "BankTransfer",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0031",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 32,
+                            Amount = 19.1600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 3,
+                            InvoiceId = 36,
+                            PaidAt = new DateTime(2026, 6, 1, 8, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0032",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 33,
+                            Amount = 21.8600m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 3,
+                            InvoiceId = 37,
+                            PaidAt = new DateTime(2026, 6, 1, 9, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0033",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 34,
+                            Amount = 17.8100m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 3,
+                            InvoiceId = 38,
+                            PaidAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "BankTransfer",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0034",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 35,
+                            Amount = 21.5900m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 3,
+                            InvoiceId = 39,
+                            PaidAt = new DateTime(2026, 6, 1, 11, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Card",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0035",
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = 36,
+                            Amount = 18.6200m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CustomerId = 3,
+                            InvoiceId = 40,
+                            PaidAt = new DateTime(2026, 6, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+                            PaymentMethod = "Cash",
+                            Provider = "Manual",
+                            ProviderTransactionId = "PAY-2026-0036",
+                            Status = "Completed"
                         });
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.PaymentSettings", b =>
+            modelBuilder.Entity("AquaFlow.Services.Database.PaymentMethodLookup", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -3257,53 +4251,187 @@ namespace AquaFlow.Services.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("AllowCardPayments")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("AllowPayPalPayments")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("CardProvider")
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsTestMode")
+                    b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<string>("PayPalClientId")
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
 
-                    b.Property<string>("PayPalMerchantEmail")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("UpdatedById")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("UpdatedById");
-
-                    b.ToTable("PaymentSettings");
+                    b.ToTable("PaymentMethods", (string)null);
 
                     b.HasData(
                         new
                         {
                             Id = 1,
-                            AllowCardPayments = true,
-                            AllowPayPalPayments = false,
-                            CardProvider = "DemoPay",
+                            Code = "Manual",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsTestMode = true,
-                            UpdatedAt = new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UpdatedById = 1
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Ručno evidentirano",
+                            NameDe = "Manuell erfasst",
+                            NameEn = "Manual",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Online",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Online",
+                            NameDe = "Online",
+                            NameEn = "Online",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Cash",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Gotovina",
+                            NameDe = "Bargeld",
+                            NameEn = "Cash",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "BankTransfer",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = false,
+                            Name = "Bankovni transfer",
+                            NameDe = "Banküberweisung",
+                            NameEn = "Bank transfer",
+                            SortOrder = 40
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Code = "Card",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = false,
+                            Name = "Kartica",
+                            NameDe = "Karte",
+                            NameEn = "Card",
+                            SortOrder = 50
+                        });
+                });
+
+            modelBuilder.Entity("AquaFlow.Services.Database.PaymentStatusLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PaymentStatuses", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Pending",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Na čekanju",
+                            NameDe = "Ausstehend",
+                            NameEn = "Pending",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Completed",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Završena",
+                            NameDe = "Abgeschlossen",
+                            NameEn = "Completed",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Failed",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Neuspješna",
+                            NameDe = "Fehlgeschlagen",
+                            NameEn = "Failed",
+                            SortOrder = 30
                         });
                 });
 
@@ -3331,6 +4459,9 @@ namespace AquaFlow.Services.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Module")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -3356,6 +4487,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows reading user accounts.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Users",
                             Name = "View users"
                         },
@@ -3366,6 +4498,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting user accounts.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Users",
                             Name = "Manage users"
                         },
@@ -3376,6 +4509,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows collectors to create and update meter readings.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "MeterReadings",
                             Name = "Manage meter readings"
                         },
@@ -3386,6 +4520,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows reading invoices.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Invoices",
                             Name = "View invoices"
                         },
@@ -3396,6 +4531,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows reading payment records.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Payments",
                             Name = "View payments"
                         },
@@ -3406,6 +4542,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows managing fault reports and related work.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "FaultReports",
                             Name = "Manage fault reports"
                         },
@@ -3416,6 +4553,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows publishing and updating notifications.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Notifications",
                             Name = "Manage notifications"
                         },
@@ -3426,6 +4564,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows managing user roles, permissions, and their assignments.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Roles",
                             Name = "Manage roles and permissions"
                         },
@@ -3436,6 +4575,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows assigning and rejecting water meter requests.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "WaterMeterRequests",
                             Name = "Manage water meter requests"
                         },
@@ -3446,6 +4586,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting settlements and service locations.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Locations",
                             Name = "Manage locations"
                         },
@@ -3456,6 +4597,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting tariffs.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Tariffs",
                             Name = "Manage tariffs"
                         },
@@ -3466,6 +4608,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows issuing, cancelling, and recording payments against invoices.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Invoices",
                             Name = "Manage invoices"
                         },
@@ -3476,18 +4619,9 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows viewing and editing company-wide settings.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "CompanySettings",
                             Name = "Manage company settings"
-                        },
-                        new
-                        {
-                            Id = 15,
-                            Code = "PaymentSettings.Manage",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Allows viewing and editing payment gateway settings.",
-                            IsActive = true,
-                            Module = "PaymentSettings",
-                            Name = "Manage payment settings"
                         },
                         new
                         {
@@ -3496,6 +4630,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows reading the security/activity audit trail for all users.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "ActivityLogs",
                             Name = "Pregled aktivnosti korisnika"
                         },
@@ -3506,6 +4641,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows reading and responding to customer support tickets.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "SupportTickets",
                             Name = "Manage support tickets"
                         },
@@ -3516,6 +4652,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting customer profiles.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Customers",
                             Name = "Manage customers"
                         },
@@ -3526,6 +4663,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting collector profiles.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Collectors",
                             Name = "Manage collectors"
                         },
@@ -3536,6 +4674,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows creating, updating, and deleting water meters.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "WaterMeters",
                             Name = "Manage water meters"
                         },
@@ -3546,6 +4685,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows a customer to check out and pay their own issued invoices.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "Invoices",
                             Name = "Pay own invoices"
                         },
@@ -3556,8 +4696,31 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Allows viewing, resolving, and recomputing water consumption anomaly alerts.",
                             IsActive = true,
+                            IsSystem = true,
                             Module = "ConsumptionAlerts",
                             Name = "Manage consumption alerts"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            Code = "Dashboard.Read",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows viewing company-wide dashboard statistics (revenue, invoices, consumption, fault reports, user growth).",
+                            IsActive = true,
+                            IsSystem = true,
+                            Module = "Dashboard",
+                            Name = "View dashboard"
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Code = "Codebooks.Manage",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Allows creating, updating, and deleting codebook values (statuses, payment methods, notification and alert types).",
+                            IsActive = true,
+                            IsSystem = true,
+                            Module = "Codebooks",
+                            Name = "Manage codebooks"
                         });
                 });
 
@@ -3850,8 +5013,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Subject")
                         .IsRequired()
@@ -3864,6 +5027,8 @@ namespace AquaFlow.Services.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("SupportTickets");
                 });
@@ -3945,7 +5110,7 @@ namespace AquaFlow.Services.Migrations
                     b.ToTable("SupportTicketMessagePhotos");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.SyncOperation", b =>
+            modelBuilder.Entity("AquaFlow.Services.Database.SupportTicketStatusLookup", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -3953,50 +5118,68 @@ namespace AquaFlow.Services.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ClientUuid")
+                    b.Property<string>("Code")
                         .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
-
-                    b.Property<int>("CollectorId")
-                        .HasColumnType("int");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("EntityName")
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("OperationType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("PayloadJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<DateTime?>("SyncedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CollectorId");
+                    b.ToTable("SupportTicketStatuses", (string)null);
 
-                    b.ToTable("SyncOperations");
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Open",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Otvoren",
+                            NameDe = "Offen",
+                            NameEn = "Open",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Closed",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Zatvoren",
+                            NameDe = "Geschlossen",
+                            NameEn = "Closed",
+                            SortOrder = 20
+                        });
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Tariff", b =>
@@ -4099,6 +5282,11 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -4128,6 +5316,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38762111000",
+                            SecurityStamp = "seedsecuritystamp000000000000001",
                             UserRoleId = 1
                         },
                         new
@@ -4142,6 +5331,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38761111001",
+                            SecurityStamp = "seedsecuritystamp000000000000002",
                             UserRoleId = 2
                         },
                         new
@@ -4156,6 +5346,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38761111002",
+                            SecurityStamp = "seedsecuritystamp000000000000003",
                             UserRoleId = 2
                         },
                         new
@@ -4170,6 +5361,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38762111004",
+                            SecurityStamp = "seedsecuritystamp000000000000004",
                             UserRoleId = 3
                         },
                         new
@@ -4184,6 +5376,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38762111005",
+                            SecurityStamp = "seedsecuritystamp000000000000005",
                             UserRoleId = 3
                         },
                         new
@@ -4198,6 +5391,7 @@ namespace AquaFlow.Services.Migrations
                             PasswordHash = "ILjw1fxwixrewU7K3VLOIm/0INU=",
                             PasswordSalt = "AquaFlowSalt2026==",
                             Phone = "+38762111006",
+                            SecurityStamp = "seedsecuritystamp000000000000006",
                             UserRoleId = 3
                         });
                 });
@@ -4260,9 +5454,6 @@ namespace AquaFlow.Services.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
-                    b.Property<bool>("ReceiveEmailNotifications")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("ReceivePushNotifications")
                         .HasColumnType("bit");
 
@@ -4304,6 +5495,9 @@ namespace AquaFlow.Services.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -4323,6 +5517,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "System administrator with full access.",
                             IsActive = true,
+                            IsSystem = true,
                             Name = "Admin"
                         },
                         new
@@ -4331,6 +5526,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Field collector responsible for meter readings.",
                             IsActive = true,
+                            IsSystem = true,
                             Name = "Collector"
                         },
                         new
@@ -4339,6 +5535,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Customer portal user.",
                             IsActive = true,
+                            IsSystem = true,
                             Name = "Customer"
                         });
                 });
@@ -4486,13 +5683,6 @@ namespace AquaFlow.Services.Migrations
                         },
                         new
                         {
-                            Id = 19,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            PermissionId = 15,
-                            UserRoleId = 1
-                        },
-                        new
-                        {
                             Id = 20,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 16,
@@ -4539,6 +5729,20 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PermissionId = 23,
                             UserRoleId = 1
+                        },
+                        new
+                        {
+                            Id = 28,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 24,
+                            UserRoleId = 1
+                        },
+                        new
+                        {
+                            Id = 29,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PermissionId = 25,
+                            UserRoleId = 1
                         });
                 });
 
@@ -4552,14 +5756,23 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("AlertType")
                         .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
+
+                    b.Property<decimal?>("ExpectedLowerBound")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal?>("ExpectedUpperBound")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal?>("ExpectedValue")
+                        .HasColumnType("decimal(18,3)");
 
                     b.Property<bool>("IsResolved")
                         .HasColumnType("bit");
@@ -4584,6 +5797,8 @@ namespace AquaFlow.Services.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AlertType");
 
                     b.HasIndex("CustomerId");
 
@@ -4629,8 +5844,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Street")
                         .HasMaxLength(200)
@@ -4645,6 +5860,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasIndex("SettlementId");
 
+                    b.HasIndex("Status");
+
                     b.ToTable("WaterMeters");
 
                     b.HasData(
@@ -4654,7 +5871,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             HouseNumber = "15",
-                            InitialReading = 80.00m,
+                            InitialReading = 53.00m,
                             InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             LastReading = 149.20m,
                             SerialNumber = "WM-2026-0001",
@@ -4668,7 +5885,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             HouseNumber = "4",
-                            InitialReading = 60.00m,
+                            InitialReading = 39.40m,
                             InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             LastReading = 107.60m,
                             SerialNumber = "WM-2026-0002",
@@ -4682,7 +5899,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 1,
                             HouseNumber = "9",
-                            InitialReading = 95.00m,
+                            InitialReading = 70.80m,
                             InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             LastReading = 155.00m,
                             SerialNumber = "WM-2026-0003",
@@ -4696,7 +5913,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 2,
                             HouseNumber = "7",
-                            InitialReading = 70.00m,
+                            InitialReading = 44.00m,
                             InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             LastReading = 134.00m,
                             SerialNumber = "WM-2026-0004",
@@ -4710,7 +5927,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 2,
                             HouseNumber = "3",
-                            InitialReading = 55.00m,
+                            InitialReading = 33.00m,
                             InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             LastReading = 107.00m,
                             SerialNumber = "WM-2026-0005",
@@ -4724,7 +5941,7 @@ namespace AquaFlow.Services.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CustomerId = 3,
                             HouseNumber = "22",
-                            InitialReading = 40.00m,
+                            InitialReading = 14.80m,
                             InstalledAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             LastReading = 99.60m,
                             SerialNumber = "WM-2026-0006",
@@ -4768,8 +5985,8 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Street")
                         .IsRequired()
@@ -4788,6 +6005,8 @@ namespace AquaFlow.Services.Migrations
                     b.HasIndex("ResultingWaterMeterId");
 
                     b.HasIndex("SettlementId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("WaterMeterRequests");
                 });
@@ -4811,16 +6030,16 @@ namespace AquaFlow.Services.Migrations
 
                     b.Property<string>("NewStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OldStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -4832,12 +6051,16 @@ namespace AquaFlow.Services.Migrations
 
                     b.HasIndex("ChangedById");
 
+                    b.HasIndex("NewStatus");
+
+                    b.HasIndex("OldStatus");
+
                     b.HasIndex("WaterMeterRequestId");
 
                     b.ToTable("WaterMeterRequestStatusHistories");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.WorkOrder", b =>
+            modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterRequestStatusLookup", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -4845,42 +6068,188 @@ namespace AquaFlow.Services.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AssignedToId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("FaultReportId")
-                        .HasColumnType("int");
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
-                    b.Property<string>("Note")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
 
-                    b.Property<DateTime?>("ScheduledAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("StartedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
+                    b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AssignedToId");
+                    b.ToTable("WaterMeterRequestStatuses", (string)null);
 
-                    b.HasIndex("FaultReportId");
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Pending",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Na čekanju",
+                            NameDe = "Ausstehend",
+                            NameEn = "Pending",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Assigned",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Dodijeljen",
+                            NameDe = "Zugewiesen",
+                            NameEn = "Assigned",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Registered",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Registrovan",
+                            NameDe = "Registriert",
+                            NameEn = "Registered",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "Rejected",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Odbijen",
+                            NameDe = "Abgelehnt",
+                            NameEn = "Rejected",
+                            SortOrder = 40
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Code = "Cancelled",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Otkazan",
+                            NameDe = "Storniert",
+                            NameEn = "Cancelled",
+                            SortOrder = 50
+                        });
+                });
 
-                    b.ToTable("WorkOrders");
+            modelBuilder.Entity("AquaFlow.Services.Database.WaterMeterStatusLookup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameDe")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameEn")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WaterMeterStatuses", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "Active",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Aktivan",
+                            NameDe = "Aktiv",
+                            NameEn = "Active",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "Inactive",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Neaktivan",
+                            NameDe = "Inaktiv",
+                            NameEn = "Inactive",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Removed",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsSystem = true,
+                            Name = "Uklonjen",
+                            NameDe = "Entfernt",
+                            NameEn = "Removed",
+                            SortOrder = 30
+                        });
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.ActivityLog", b =>
@@ -4892,17 +6261,6 @@ namespace AquaFlow.Services.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.Attachment", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.User", "UploadedBy")
-                        .WithMany()
-                        .HasForeignKey("UploadedById")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("UploadedBy");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.CollectorProfile", b =>
@@ -4945,17 +6303,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.Document", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.User", "CreatedBy")
-                        .WithMany()
-                        .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CreatedBy");
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.FaultReport", b =>
                 {
                     b.HasOne("AquaFlow.Services.Database.CollectorProfile", "AssignedCollector")
@@ -4977,6 +6324,13 @@ namespace AquaFlow.Services.Migrations
                     b.HasOne("AquaFlow.Services.Database.Settlement", "Settlement")
                         .WithMany("FaultReports")
                         .HasForeignKey("SettlementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.FaultReportStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -5021,6 +6375,20 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AquaFlow.Services.Database.FaultReportStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("NewStatus")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.FaultReportStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("OldStatus")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("ChangedBy");
 
                     b.Navigation("FaultReport");
@@ -5037,6 +6405,13 @@ namespace AquaFlow.Services.Migrations
                     b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
                         .WithMany("Invoices")
                         .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.InvoiceStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -5086,28 +6461,23 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AquaFlow.Services.Database.InvoiceStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("NewStatus")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.InvoiceStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("OldStatus")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("ChangedBy");
 
                     b.Navigation("Invoice");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.MeterAssignment", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.CollectorProfile", "Collector")
-                        .WithMany("MeterAssignments")
-                        .HasForeignKey("CollectorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AquaFlow.Services.Database.WaterMeter", "WaterMeter")
-                        .WithMany("MeterAssignments")
-                        .HasForeignKey("WaterMeterId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Collector");
-
-                    b.Navigation("WaterMeter");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.MeterReading", b =>
@@ -5156,9 +6526,23 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.Notification", b =>
                 {
+                    b.HasOne("AquaFlow.Services.Database.NotificationAudienceLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Audience")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AquaFlow.Services.Database.User", "CreatedBy")
                         .WithMany()
                         .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.NotificationTypeLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Type")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -5190,20 +6574,23 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Customer");
-
-                    b.Navigation("Invoice");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.PaymentSettings", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.User", "UpdatedBy")
+                    b.HasOne("AquaFlow.Services.Database.PaymentMethodLookup", null)
                         .WithMany()
-                        .HasForeignKey("UpdatedById")
+                        .HasForeignKey("PaymentMethod")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("UpdatedBy");
+                    b.HasOne("AquaFlow.Services.Database.PaymentStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Invoice");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.RefreshToken", b =>
@@ -5233,6 +6620,13 @@ namespace AquaFlow.Services.Migrations
                     b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
                         .WithMany("SupportTickets")
                         .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.SupportTicketStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -5267,17 +6661,6 @@ namespace AquaFlow.Services.Migrations
                         .IsRequired();
 
                     b.Navigation("SupportTicketMessage");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.SyncOperation", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.CollectorProfile", "Collector")
-                        .WithMany()
-                        .HasForeignKey("CollectorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Collector");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.User", b =>
@@ -5342,6 +6725,13 @@ namespace AquaFlow.Services.Migrations
 
             modelBuilder.Entity("AquaFlow.Services.Database.WaterConsumptionAlert", b =>
                 {
+                    b.HasOne("AquaFlow.Services.Database.ConsumptionAlertTypeLookup", null)
+                        .WithMany()
+                        .HasForeignKey("AlertType")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AquaFlow.Services.Database.CustomerProfile", "Customer")
                         .WithMany("WaterConsumptionAlerts")
                         .HasForeignKey("CustomerId")
@@ -5370,6 +6760,13 @@ namespace AquaFlow.Services.Migrations
                     b.HasOne("AquaFlow.Services.Database.Settlement", "Settlement")
                         .WithMany("WaterMeters")
                         .HasForeignKey("SettlementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.WaterMeterStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -5402,6 +6799,13 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AquaFlow.Services.Database.WaterMeterRequestStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("Status")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("AssignedCollector");
 
                     b.Navigation("Customer");
@@ -5419,6 +6823,20 @@ namespace AquaFlow.Services.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AquaFlow.Services.Database.WaterMeterRequestStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("NewStatus")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AquaFlow.Services.Database.WaterMeterRequestStatusLookup", null)
+                        .WithMany()
+                        .HasForeignKey("OldStatus")
+                        .HasPrincipalKey("Code")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AquaFlow.Services.Database.WaterMeterRequest", "WaterMeterRequest")
                         .WithMany("StatusHistory")
                         .HasForeignKey("WaterMeterRequestId")
@@ -5430,33 +6848,9 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("WaterMeterRequest");
                 });
 
-            modelBuilder.Entity("AquaFlow.Services.Database.WorkOrder", b =>
-                {
-                    b.HasOne("AquaFlow.Services.Database.User", "AssignedTo")
-                        .WithMany()
-                        .HasForeignKey("AssignedToId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AquaFlow.Services.Database.FaultReport", "FaultReport")
-                        .WithMany("WorkOrders")
-                        .HasForeignKey("FaultReportId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("AssignedTo");
-
-                    b.Navigation("FaultReport");
-                });
-
             modelBuilder.Entity("AquaFlow.Services.Database.City", b =>
                 {
                     b.Navigation("Municipalities");
-                });
-
-            modelBuilder.Entity("AquaFlow.Services.Database.CollectorProfile", b =>
-                {
-                    b.Navigation("MeterAssignments");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.CustomerProfile", b =>
@@ -5475,8 +6869,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("Photos");
 
                     b.Navigation("StatusHistory");
-
-                    b.Navigation("WorkOrders");
                 });
 
             modelBuilder.Entity("AquaFlow.Services.Database.Invoice", b =>
@@ -5556,8 +6948,6 @@ namespace AquaFlow.Services.Migrations
                     b.Navigation("FaultReports");
 
                     b.Navigation("Invoices");
-
-                    b.Navigation("MeterAssignments");
 
                     b.Navigation("MeterReadings");
                 });

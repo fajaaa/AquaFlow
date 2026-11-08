@@ -8,7 +8,10 @@ import '../config/api_config.dart';
 import '../models/auth_result.dart';
 import 'auth_exception.dart';
 
-/// Talks to the backend `AccessController` (`/Access/login`, `/Access/refresh`).
+/// Talks to the backend `AccessController` (`/Access/login`, `/Access/refresh`,
+/// `/Access/register`, `/Access/logout`). Deliberately stays on a plain
+/// `http.Client` (not `AuthenticatedClient`): these routes are anonymous, and
+/// `SessionManager` uses this service to perform the refresh itself.
 ///
 /// Every network/HTTP failure is translated into an [AuthException] with a
 /// message that is safe to show to the user, so callers only deal with one
@@ -36,6 +39,25 @@ class AuthApiService {
   /// pair, so the response carries a fresh access AND refresh token.
   Future<AuthResult> refresh(String refreshToken) {
     return _postForTokens('/Access/refresh', {'refreshToken': refreshToken});
+  }
+
+  /// `POST /Access/logout` with `{ "refreshToken": ... }`: revokes this
+  /// device's refresh token (the backend answers 204 even for an unknown or
+  /// already-revoked token). [timeout] overrides the default so a logout can
+  /// fail fast instead of keeping the user waiting.
+  Future<void> logout(String refreshToken, {Duration? timeout}) async {
+    final response = await _post(
+      '/Access/logout',
+      {'refreshToken': refreshToken},
+      timeout: timeout,
+    );
+
+    if (response.statusCode == 204 || response.statusCode == 200) return;
+
+    throw AuthException(
+      'Logout failed (HTTP ${response.statusCode}).',
+      statusCode: response.statusCode,
+    );
   }
 
   /// `POST /Access/register` with `{ email, password, phone, firstName,
@@ -86,13 +108,17 @@ class AuthApiService {
     );
   }
 
-  Future<http.Response> _post(String path, Map<String, dynamic> body) async {
+  Future<http.Response> _post(
+    String path,
+    Map<String, dynamic> body, {
+    Duration? timeout,
+  }) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}$path');
 
     try {
       return await _client
           .post(uri, headers: _jsonHeaders, body: jsonEncode(body))
-          .timeout(_timeout);
+          .timeout(timeout ?? _timeout);
     } on SocketException {
       throw AuthException(
         'Cannot reach the server at ${ApiConfig.baseUrl}. '

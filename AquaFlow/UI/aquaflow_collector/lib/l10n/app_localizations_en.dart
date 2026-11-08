@@ -142,6 +142,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get defaultLanguageLabel => 'Language';
 
   @override
+  String get defaultLanguageHelper =>
+      'Language new users start with when they register';
+
+  @override
   String get defaultCurrencyLabel => 'Currency';
 
   @override
@@ -468,6 +472,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get faultReportsTooltip => 'Fault reports';
 
   @override
+  String get readingHistoryTooltip => 'Reading history';
+
+  @override
+  String get readingHistoryTitle => 'Reading history';
+
+  @override
+  String get readingHistoryEmptyMessage =>
+      'No readings recorded for this meter yet.';
+
+  @override
+  String get readingHistoryVoidedPill => 'Voided';
+
+  @override
+  String readingHistoryConsumption(String value) {
+    return 'Consumption: $value m³';
+  }
+
+  @override
+  String readingHistoryPageIndicator(int page, int total) {
+    return 'Page $page / $total';
+  }
+
+  @override
   String get collectorMeterSearchHint =>
       'Owner name, settlement, serial number, or address';
 
@@ -578,6 +605,26 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String readingSubmittedPaidInCashSuccess(String invoiceNumber, String total) {
+    return 'Reading saved. Invoice $invoiceNumber ($total BAM) was paid in cash.';
+  }
+
+  @override
+  String get paidInCashCheckboxLabel => 'Customer pays in cash';
+
+  @override
+  String get paidInCashCheckboxSubtitle =>
+      'The invoice will be recorded as paid right away.';
+
+  @override
+  String get paidInCashConfirmTitle => 'Confirm cash payment';
+
+  @override
+  String paidInCashConfirmMessage(String total) {
+    return 'Confirm that you received $total BAM in cash from the customer? The invoice will be recorded as paid.';
+  }
+
+  @override
   String readingSubmittedNoInvoiceSuccess(String consumption) {
     return 'Reading saved. Consumption: $consumption m³. No invoice created (consumption is 0).';
   }
@@ -668,4 +715,77 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resolveActionButton => 'Resolve';
+
+  @override
+  String get sessionExpiredMessage =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get passwordChangedSignInAgain =>
+      'Your password has been changed. Please sign in again.';
+
+  @override
+  String get notificationsNewBanner => 'You have new notifications';
+
+  @override
+  String get notificationOpenAction => 'Open';
+
+  @override
+  String get notificationOpenRelatedFailed =>
+      'The related item couldn\'t be opened. It may no longer be available.';
+
+  @override
+  String get newFaultReportTooltip => 'New fault report';
+
+  @override
+  String get newFaultReportDialogTitle => 'New fault report';
+
+  @override
+  String get newFaultReportSubmitButton => 'Submit report';
+
+  @override
+  String get newFaultReportCreatedMessage => 'Fault report submitted.';
+
+  @override
+  String get faultReportTitleLabel => 'Title';
+
+  @override
+  String get faultReportDescriptionLabel => 'Description';
+
+  @override
+  String get faultReportTitleTooLongError =>
+      'Title can be at most 150 characters.';
+
+  @override
+  String get waterMeterOptionalLabel => 'Water meter (optional)';
+
+  @override
+  String get waterMeterSearchHint =>
+      'Search water meter (serial, owner, address)';
+
+  @override
+  String get waterMeterNoResults => 'No water meters found.';
+
+  @override
+  String get waterMeterClearTooltip => 'Remove water meter';
+
+  @override
+  String get streetOptionalLabel => 'Street (optional)';
+
+  @override
+  String get houseNumberOptionalLabel => 'House number (optional)';
+
+  @override
+  String photoCountLabel(int count, int max) {
+    return 'Photos: $count/$max';
+  }
+
+  @override
+  String get addPhotoButtonLabel => 'Add photo';
+
+  @override
+  String get takePhotoOption => 'Take photo';
+
+  @override
+  String get chooseFromGalleryOption => 'From gallery';
 }

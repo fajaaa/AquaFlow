@@ -12,19 +12,16 @@ import 'package:aquaflow_desktop/models/admin_user_page.dart';
 import 'package:aquaflow_desktop/models/admin_user_role_option.dart';
 import 'package:aquaflow_desktop/services/admin_user_exception.dart';
 import 'package:aquaflow_desktop/shared/config/api_config.dart';
-import 'package:aquaflow_desktop/shared/services/token_storage.dart';
+import 'package:aquaflow_desktop/shared/services/authenticated_client.dart';
 
 class AdminUserService {
   AdminUserService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<AdminUserPage> fetch({
@@ -35,7 +32,6 @@ class AdminUserService {
     String? userRole,
     bool? isActive,
   }) async {
-    final token = await _requireToken();
     final query = <String, String>{
       'Page': '$page',
       'PageSize': '$pageSize',
@@ -63,7 +59,7 @@ class AdminUserService {
     ).replace(queryParameters: query);
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -94,14 +90,12 @@ class AdminUserService {
   }
 
   Future<AdminUser> create(AdminUserDraft draft) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Users');
 
     final response = await _send(
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(draft.toJson()),
@@ -130,14 +124,12 @@ class AdminUserService {
     AdminUserDraft draft, {
     int? existingProfileId,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Users/$id');
 
     final response = await _send(
       () => _client.patch(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(draft.toJson()),
@@ -165,13 +157,12 @@ class AdminUserService {
   /// Fetches the CustomerProfile owned by [userId], or null if they don't
   /// have one (not a customer, or a customer with no profile yet).
   Future<AdminCustomerProfile?> fetchCustomerProfile(int userId) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles').replace(
       queryParameters: {'UserId': '$userId', 'PageSize': '1'},
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -193,14 +184,12 @@ class AdminUserService {
     int userId,
     AdminCustomerProfileDraft profile,
   ) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles');
 
     final response = await _send(
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(profile.toJson(userId)),
@@ -219,14 +208,12 @@ class AdminUserService {
     int userId,
     AdminCustomerProfileDraft profile,
   ) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/CustomerProfiles/$profileId');
 
     final response = await _send(
       () => _client.patch(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(profile.toJson(userId)),
@@ -241,11 +228,10 @@ class AdminUserService {
   }
 
   Future<void> delete(int id) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/Users/$id');
 
     final response = await _send(
-      () => _client.delete(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.delete(uri),
     );
 
     if (response.statusCode != 204) {
@@ -256,13 +242,12 @@ class AdminUserService {
   }
 
   Future<List<AdminUserRoleOption>> fetchRoles() async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/UserRoles').replace(
       queryParameters: {'PageSize': '100', 'IncludeTotalCount': 'true'},
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -293,14 +278,6 @@ class AdminUserService {
       throw const AdminUserException('Korisnik je u neispravnom formatu.');
     }
     return AdminUser.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const AdminUserException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

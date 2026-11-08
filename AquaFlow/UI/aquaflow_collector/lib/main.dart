@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -19,8 +21,9 @@ final _navigatorKey = GlobalKey<NavigatorState>();
 final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 /// Created here rather than inside [AquaFlowApp]'s `build` so
-/// [PushMessageHandler] - which lives outside the widget tree - can bump the
-/// "Obavijesti" tab badge directly from FCM's `onMessage` callback.
+/// [PushMessageHandler] - which lives outside the widget tree - can trigger an
+/// immediate inbox re-probe (badge + open list) from FCM's `onMessage`
+/// callback. Polling itself is started/stopped by the role shell.
 final _notificationBadgeProvider = NotificationBadgeProvider();
 
 /// Created here (not inside [AquaFlowApp]'s `build`) so the same instance can
@@ -33,6 +36,20 @@ final _themeProvider = ThemeProvider();
 /// `UserPreference.Language` to it after login/session restore.
 final _localeProvider = LocaleProvider();
 
+/// Involuntary sign-out (the refresh token was rejected while the app was in
+/// use - see `SessionManager`): `AuthProvider` has already swapped `_AuthGate`
+/// to the login flow, so drop any pushed routes/dialogs left above it and tell
+/// the user why. Runs outside any screen, hence the root keys.
+void _handleSessionExpired() {
+  _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+  final messenger = _scaffoldMessengerKey.currentState;
+  if (messenger == null) return;
+  final loc = lookupAppLocalizations(_localeProvider.locale);
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(loc.sessionExpiredMessage)));
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -42,7 +59,9 @@ Future<void> main() async {
   await PushMessageHandler(
     navigatorKey: _navigatorKey,
     scaffoldMessengerKey: _scaffoldMessengerKey,
-    onForegroundMessage: _notificationBadgeProvider.increment,
+    // Re-probes the inbox right away (badge + an open list), instead of
+    // waiting for the next poll tick.
+    onForegroundMessage: () => unawaited(_notificationBadgeProvider.refresh()),
   ).init();
 }
 
@@ -58,11 +77,12 @@ class AquaFlowApp extends StatelessWidget {
           create: (_) => AuthProvider(
             themeProvider: _themeProvider,
             localeProvider: _localeProvider,
+            onSessionExpired: _handleSessionExpired,
           )..bootstrap(),
         ),
         // Shared instance (not `create`) so PushMessageHandler's onMessage
-        // callback in `main()`, which runs outside the widget tree, bumps the
-        // exact same badge state the shell reads.
+        // callback in `main()`, which runs outside the widget tree, refreshes
+        // the exact same badge state the shell reads.
         ChangeNotifierProvider.value(value: _notificationBadgeProvider),
         // Shared instance (not `create`) - see the comment on [_themeProvider].
         ChangeNotifierProvider.value(value: _themeProvider),
@@ -86,6 +106,13 @@ class AquaFlowApp extends StatelessWidget {
             locale: locale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
+            localeResolutionCallback: (locale, supported) {
+              if (locale != null &&
+                  supported.any((l) => l.languageCode == locale.languageCode)) {
+                return locale;
+              }
+              return const Locale('bs');
+            },
             home: const _AuthGate(),
           );
         },

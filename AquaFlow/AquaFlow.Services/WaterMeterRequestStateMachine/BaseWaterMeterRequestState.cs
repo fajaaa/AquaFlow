@@ -1,3 +1,4 @@
+using AquaFlow.Model;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Model.Responses;
@@ -16,10 +17,16 @@ public abstract class BaseWaterMeterRequestState
     protected AquaFlowDbContext DbContext { get; }
     protected IMapper Mapper { get; }
 
-    public BaseWaterMeterRequestState(AquaFlowDbContext dbContext, IMapper mapper)
+    // Stages the business event's in-app notification into the same SaveChanges as the transition
+    // (see SystemNotificationService for why); the service that drove the transition dispatches
+    // the push after it returns.
+    protected ISystemNotificationService SystemNotifications { get; }
+
+    public BaseWaterMeterRequestState(AquaFlowDbContext dbContext, IMapper mapper, ISystemNotificationService systemNotifications)
     {
         DbContext = dbContext;
         Mapper = mapper;
+        SystemNotifications = systemNotifications;
     }
 
     // The WaterMeterRequestStatus this state represents (must be one of the WaterMeterRequestStatus
@@ -76,6 +83,26 @@ public abstract class BaseWaterMeterRequestState
 
         await DbContext.SaveChangesAsync();
     }
+
+    // Stages a system notification about this request for one recipient (the requesting customer
+    // or the assigned collector). Called by a state right before its TransitionAsync, i.e. after every
+    // guard passed, so the notification lands in the transition's own SaveChanges. A missing profile
+    // (null user id) or the actor themselves simply gets nothing.
+    protected void StageNotification(WaterMeterRequest request, int? recipientUserId, string title, string body, string type, int changedById)
+    {
+        if (recipientUserId is null)
+        {
+            return;
+        }
+
+        SystemNotifications.Stage(
+            new SystemNotificationMessage(title, body, type, RelatedEntityTypes.WaterMeterRequest, request.Id),
+            new[] { recipientUserId.Value },
+            changedById);
+    }
+
+    protected Task<int?> GetRequesterUserIdAsync(WaterMeterRequest request) =>
+        SystemNotifications.GetCustomerUserIdAsync(request.CustomerId);
 
     private ClientException NotAllowed(string action)
     {

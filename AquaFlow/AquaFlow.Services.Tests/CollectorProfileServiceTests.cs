@@ -1,5 +1,6 @@
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
+using AquaFlow.Model.SearchObjects;
 using AquaFlow.Services.Database;
 using AquaFlow.Services.Validators;
 using FluentValidation;
@@ -153,6 +154,44 @@ public class CollectorProfileServiceTests
         }));
 
         Assert.Equal(1, await context.CollectorProfiles.CountAsync(profile => profile.UserId == 2));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_Term_MatchesEmailAndEmployeeCode()
+    {
+        await using var context = CreateContext();
+        SeedRolesAndUsers(context);
+        context.CollectorProfiles.AddRange(
+            new CollectorProfile { Id = 1, UserId = 2, EmployeeCode = "COL-0001" },
+            new CollectorProfile { Id = 2, UserId = 4, EmployeeCode = "COL-0002" });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var byEmail = await service.GetAllAsync(new CollectorProfileSearchObject { Term = "COLLECTOR2@" });
+        var byCode = await service.GetAllAsync(new CollectorProfileSearchObject { Term = "col-0001" });
+
+        Assert.Equal(2, Assert.Single(byEmail.Items).Id);
+        Assert.Equal(1, Assert.Single(byCode.Items).Id);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_IsActive_FiltersByUserStatus()
+    {
+        await using var context = CreateContext();
+        SeedRolesAndUsers(context);
+        context.CollectorProfiles.AddRange(
+            new CollectorProfile { Id = 1, UserId = 2, EmployeeCode = "COL-0001" },
+            new CollectorProfile { Id = 2, UserId = 4, EmployeeCode = "COL-0002" });
+        await context.SaveChangesAsync();
+        (await context.Users.SingleAsync(user => user.Id == 4)).IsActive = false;
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var active = await service.GetAllAsync(new CollectorProfileSearchObject { IsActive = true });
+        var inactive = await service.GetAllAsync(new CollectorProfileSearchObject { IsActive = false });
+
+        Assert.Equal(1, Assert.Single(active.Items).Id);
+        Assert.Equal(2, Assert.Single(inactive.Items).Id);
     }
 
     private static AquaFlowDbContext CreateContext()

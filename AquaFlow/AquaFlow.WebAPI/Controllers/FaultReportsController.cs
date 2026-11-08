@@ -62,23 +62,20 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
         {
             search ??= new FaultReportSearchObject();
             search.ReportedById = userId;
+            search.OrReportedById = null;
             return await base.GetAll(search);
         }
 
         if (IsCollector())
         {
             var collectorId = await ResolveCollectorProfileIdAsync(userId);
-            if (collectorId is null)
-            {
-                return Ok(new PageResult<FaultReportResponse>
-                {
-                    Items = new List<FaultReportResponse>(),
-                    TotalCount = search?.IncludeTotalCount == true ? 0 : null
-                });
-            }
 
+            // Assigned to the caller's profile OR filed by the caller (OR-ed in the service). Both
+            // are overwritten from the JWT, so the client cannot widen them; a collector without
+            // a profile still sees the reports they filed.
             search ??= new FaultReportSearchObject();
             search.AssignedCollectorId = collectorId;
+            search.OrReportedById = userId;
             return await base.GetAll(search);
         }
 
@@ -115,6 +112,11 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
 
             if (IsCollector())
             {
+                if (result.ReportedById == userId)
+                {
+                    return Ok(result);
+                }
+
                 var collectorId = await ResolveCollectorProfileIdAsync(userId);
                 if (collectorId is null || result.AssignedCollectorId != collectorId.Value)
                 {
@@ -172,7 +174,129 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
             request.ResolvedAt = null;
         }
 
-        return await base.Create(request);
+        // CreateAsync rather than base.Create's InsertAsync: the service needs the acting user (from
+        // the JWT) to keep them out of the "new report" staff notification - for an admin filing on
+        // behalf of a customer, ReportedById is the customer, not the actor.
+        try
+        {
+            var result = await Service.CreateAsync(request, userId);
+            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+        }
+        catch (FluentValidation.ValidationException exception)
+        {
+            return BadRequest(CreateValidationErrorResponse(exception));
+        }
+        catch (ClientException exception)
+        {
+            return BadRequest(CreateClientErrorResponse(exception));
+        }
+    }
+
+    // Create with 0..5 photos in one atomic call (multipart form; photo files named "photos").
+    // Same self-service rules as Create, except a collector may attach ANY existing meter (there is
+    // no meter assignment) and the report's CustomerId is that meter's owner. Every check - body,
+    // meter, photo count, each file's size/type/magic bytes - runs before the single service call,
+    // which stores report + photos in one transaction, so a 400 leaves nothing in the DB. The
+    // report starts New and goes to the admin for assignment (no auto-assign).
+    [HttpPost("with-photos")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<FaultReportResponse>> CreateWithPhotos(
+        [FromForm] FaultReportWithPhotosRequest form,
+        IFormFileCollection? photos)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var request = new FaultReportInsertRequest
+        {
+            ReportedById = userId,
+            WaterMeterId = form.WaterMeterId,
+            SettlementId = form.SettlementId,
+            Street = form.Street,
+            HouseNumber = form.HouseNumber,
+            Title = form.Title,
+            Description = form.Description,
+            Status = FaultReportStatus.New,
+            ResolvedAt = null
+        };
+
+        try
+        {
+            if (!HasManagePermission())
+            {
+                if (IsCollector())
+                {
+                    if (form.WaterMeterId is not null)
+                    {
+                        request.CustomerId = (await GetExistingWaterMeterAsync(form.WaterMeterId.Value)).CustomerId;
+                    }
+                }
+                else
+                {
+                    var customerId = await ResolveCustomerProfileIdAsync(userId);
+                    if (form.WaterMeterId is not null)
+                    {
+                        if (customerId is null)
+                        {
+                            throw new ClientException("Water meter does not belong to the caller.");
+                        }
+
+                        await EnsureWaterMeterOwnedByCustomerAsync(form.WaterMeterId.Value, customerId.Value);
+                    }
+
+                    request.CustomerId = customerId;
+                }
+            }
+
+            var uploads = await ReadValidatedPhotosAsync(photos);
+            var result = await Service.CreateWithPhotosAsync(request, uploads, userId);
+            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+        }
+        catch (FluentValidation.ValidationException exception)
+        {
+            return BadRequest(CreateValidationErrorResponse(exception));
+        }
+        catch (ClientException exception)
+        {
+            return BadRequest(CreateClientErrorResponse(exception));
+        }
+    }
+
+    private async Task<WaterMeterResponse> GetExistingWaterMeterAsync(int waterMeterId)
+    {
+        try
+        {
+            return await _waterMeterService.GetByIdAsync(waterMeterId);
+        }
+        catch (KeyNotFoundException)
+        {
+            throw new ClientException("Water meter not found.");
+        }
+    }
+
+    private static async Task<List<FaultReportPhotoUpload>> ReadValidatedPhotosAsync(IFormFileCollection? files)
+    {
+        var uploads = new List<FaultReportPhotoUpload>();
+        if (files is null)
+        {
+            return uploads;
+        }
+
+        if (files.Count > MaxPhotosPerReport)
+        {
+            throw new ClientException("A fault report can have at most 5 photos.");
+        }
+
+        foreach (var file in files)
+        {
+            var (data, contentType) = await ImageUploadHelper.ReadValidatedImageAsync(file);
+            uploads.Add(new FaultReportPhotoUpload(data, contentType, file.FileName));
+        }
+
+        return uploads;
     }
 
     [RequirePermission(ManagePermission)]
@@ -183,9 +307,15 @@ public class FaultReportsController : BaseCRUDController<FaultReportResponse, Fa
     public override Task<ActionResult<FaultReportResponse>> Patch(int id, [FromBody] FaultReportPatchRequest request)
         => base.Patch(id, request);
 
-    [RequirePermission(ManagePermission)]
+    // No DELETE /FaultReports/{id}: a report is closed through the state machine (Resolve), which keeps
+    // its FaultStatusHistory trail, never physically removed. [NonAction] takes the inherited
+    // BaseCRUDController.Delete out of MVC action discovery, so the route is not registered at all;
+    // the override exists only because a C# override cannot remove a virtual member. Photo deletion
+    // (DELETE {id}/photos/{photoId}, DeletePhoto below) is a separate action and is unaffected.
+    // FaultReportService.DeleteAsync also throws, as defense in depth.
+    [NonAction]
     public override Task<IActionResult> Delete(int id)
-        => base.Delete(id);
+        => throw new NotSupportedException("Fault reports cannot be deleted.");
 
     [HttpPost("{id:int}/assign")]
     [RequirePermission(ManagePermission)]

@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:aquaflow_collector/models/collector_water_meter.dart';
 import 'package:aquaflow_collector/services/collector_water_meter_exception.dart';
 import 'package:aquaflow_collector/shared/config/api_config.dart';
-import 'package:aquaflow_collector/shared/services/token_storage.dart';
+import 'package:aquaflow_collector/shared/services/authenticated_client.dart';
 
 /// Free-text water meter search for the collector search screen. `term` maps
 /// to `WaterMeterSearchObject.Term`, an OR'd Contains match across serial
@@ -17,18 +17,14 @@ import 'package:aquaflow_collector/shared/services/token_storage.dart';
 class CollectorWaterMeterService {
   CollectorWaterMeterService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<List<CollectorWaterMeter>> search(String term) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeters').replace(
       queryParameters: {
         'Term': term,
@@ -38,7 +34,7 @@ class CollectorWaterMeterService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -77,7 +73,6 @@ class CollectorWaterMeterService {
     required int waterMeterId,
     required String reason,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/WaterMeters/$waterMeterId/mark-broken',
     );
@@ -86,7 +81,6 @@ class CollectorWaterMeterService {
       () => _client.post(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({'reason': reason.trim()}),
@@ -106,14 +100,6 @@ class CollectorWaterMeterService {
       );
     }
     return CollectorWaterMeter.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CollectorWaterMeterException('Niste prijavljeni.');
-    }
-    return token;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

@@ -8,7 +8,7 @@ import 'package:aquaflow_collector/models/collector_meter_reading.dart';
 import 'package:aquaflow_collector/models/collector_meter_reading_result.dart';
 import 'package:aquaflow_collector/services/collector_meter_reading_exception.dart';
 import 'package:aquaflow_collector/shared/config/api_config.dart';
-import 'package:aquaflow_collector/shared/services/token_storage.dart';
+import 'package:aquaflow_collector/shared/services/authenticated_client.dart';
 
 /// Submits a collector-entered meter reading. Deliberately sends no
 /// `CollectorId`/`PreviousReadingValue`/`ConsumptionM3`/`ReadingDate`/`Source`
@@ -17,16 +17,11 @@ import 'package:aquaflow_collector/shared/services/token_storage.dart';
 /// Also fetches the last reading of a meter to suggest a tariff and check
 /// minimum spacing before the next reading.
 class CollectorMeterReadingService {
-  CollectorMeterReadingService({
-    http.Client? client,
-    TokenStorage? tokenStorage,
-    Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
-       _timeout = timeout ?? const Duration(seconds: 15);
+  CollectorMeterReadingService({http.Client? client, Duration? timeout})
+    : _client = client ?? AuthenticatedClient.instance,
+      _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   Future<CollectorMeterReadingResult> submit({
@@ -36,22 +31,22 @@ class CollectorMeterReadingService {
     required String clientUuid,
     String? note,
     String? photoUrl,
+    bool paidInCash = false,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/MeterReadings/collector-entry');
 
     final response = await _send(
       () => _client.post(
         uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'waterMeterId': waterMeterId,
           'readingValue': readingValue,
           'tariffId': tariffId,
           'clientUuid': clientUuid,
+          // Only a flag: the server pays the invoice's own total, never an
+          // amount sent by the app.
+          'paidInCash': paidInCash,
           if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
           if (photoUrl != null && photoUrl.trim().isNotEmpty)
             'photoUrl': photoUrl.trim(),
@@ -81,14 +76,11 @@ class CollectorMeterReadingService {
   /// the current last reading (which would otherwise block a new reading the
   /// server would actually accept).
   Future<CollectorMeterReading?> fetchLastReading(int waterMeterId) async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/MeterReadings/last-counting',
     ).replace(queryParameters: {'waterMeterId': '$waterMeterId'});
 
-    final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
-    );
+    final response = await _send(() => _client.get(uri));
 
     if (response.statusCode != 200) {
       throw CollectorMeterReadingException(
@@ -103,12 +95,46 @@ class CollectorMeterReadingService {
     return CollectorMeterReading.fromJson(decoded);
   }
 
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CollectorMeterReadingException('Niste prijavljeni.');
+  /// Reading history of one meter, newest first (voided rows included so the
+  /// UI can flag them). Sorting is opt-in server-side, hence `SortBy`.
+  Future<({List<CollectorMeterReading> items, int totalCount})> fetchHistory({
+    required int waterMeterId,
+    required int page,
+    required int pageSize,
+  }) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/MeterReadings').replace(
+      queryParameters: {
+        'WaterMeterId': '$waterMeterId',
+        'SortBy': 'ReadingDate',
+        'SortDescending': 'true',
+        'Page': '$page',
+        'PageSize': '$pageSize',
+      },
+    );
+
+    final response = await _send(() => _client.get(uri));
+
+    if (response.statusCode != 200) {
+      throw CollectorMeterReadingException(
+        _messageFor(response, 'Historiju očitanja nije moguće učitati'),
+      );
     }
-    return token;
+
+    final decoded = jsonDecode(response.body);
+    final itemsJson = decoded is Map<String, dynamic> ? decoded['items'] : null;
+    if (itemsJson is! List) {
+      throw const CollectorMeterReadingException(
+        'Odgovor servera je u neispravnom formatu.',
+      );
+    }
+    final items = itemsJson
+        .whereType<Map<String, dynamic>>()
+        .map(CollectorMeterReading.fromJson)
+        .toList();
+    return (
+      items: items,
+      totalCount: (decoded['totalCount'] as num?)?.toInt() ?? items.length,
+    );
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

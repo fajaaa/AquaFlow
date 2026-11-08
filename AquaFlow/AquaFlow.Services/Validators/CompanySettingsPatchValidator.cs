@@ -1,3 +1,4 @@
+using AquaFlow.Model;
 using AquaFlow.Model.Requests;
 using FluentValidation;
 
@@ -10,6 +11,7 @@ public class CompanySettingsPatchValidator : AbstractValidator<CompanySettingsPa
         RuleFor(x => x.CompanyName).NotEmpty().MaximumLength(150).When(x => x.CompanyName != null);
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(150).When(x => x.Email != null);
         RuleFor(x => x.DefaultCurrency).NotEmpty().MaximumLength(10).When(x => x.DefaultCurrency != null);
-        RuleFor(x => x.DefaultLanguage).NotEmpty().MaximumLength(10).When(x => x.DefaultLanguage != null);
+        RuleFor(x => x.DefaultLanguage).NotEmpty().MaximumLength(10)
+            .Must(SupportedLanguages.IsSupported).WithMessage(SupportedLanguages.Message).When(x => x.DefaultLanguage != null);
     }
 }

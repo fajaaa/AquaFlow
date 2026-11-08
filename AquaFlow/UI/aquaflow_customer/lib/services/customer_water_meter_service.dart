@@ -4,11 +4,12 @@ import 'dart:io' show SocketException;
 
 import 'package:http/http.dart' as http;
 
+import 'package:aquaflow_customer/models/consumption_insight.dart';
 import 'package:aquaflow_customer/models/customer_water_meter.dart';
 import 'package:aquaflow_customer/models/customer_water_meter_page.dart';
 import 'package:aquaflow_customer/services/customer_water_meter_exception.dart';
 import 'package:aquaflow_customer/shared/config/api_config.dart';
-import 'package:aquaflow_customer/shared/services/token_storage.dart';
+import 'package:aquaflow_customer/shared/services/authenticated_client.dart';
 
 /// Loads the signed-in customer's own water meters - [fetchPage] for the
 /// paginated "Vodomjeri" tab list, [fetchMine] for callers that need every
@@ -19,14 +20,11 @@ import 'package:aquaflow_customer/shared/services/token_storage.dart';
 class CustomerWaterMeterService {
   CustomerWaterMeterService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? TokenStorage(),
+  }) : _client = client ?? AuthenticatedClient.instance,
        _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   /// One page of the caller's water meters, newest-installed first. The
@@ -36,7 +34,6 @@ class CustomerWaterMeterService {
     required int page,
     int pageSize = 10,
   }) async {
-    final token = await _requireToken();
     final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeters').replace(
       queryParameters: {
         'Page': '$page',
@@ -48,7 +45,7 @@ class CustomerWaterMeterService {
     );
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -81,13 +78,12 @@ class CustomerWaterMeterService {
   }
 
   Future<List<CustomerWaterMeter>> fetchMine() async {
-    final token = await _requireToken();
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/WaterMeters',
     ).replace(queryParameters: {'PageSize': '100'});
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -114,12 +110,48 @@ class CustomerWaterMeterService {
         .toList();
   }
 
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CustomerWaterMeterException('Niste prijavljeni.');
+  /// One of the caller's meters by id (the backend answers 404 for a meter
+  /// that is not theirs) - used to open a meter from a notification.
+  Future<CustomerWaterMeter> fetchById(int id) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/WaterMeters/$id');
+    final response = await _send(() => _client.get(uri));
+
+    if (response.statusCode != 200) {
+      throw CustomerWaterMeterException(
+        _messageFor(response, 'Vodomjer nije moguće učitati'),
+      );
     }
-    return token;
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const CustomerWaterMeterException(
+        'Vodomjer je u neispravnom formatu.',
+      );
+    }
+    return CustomerWaterMeter.fromJson(decoded);
+  }
+
+  /// Forecast and personalised recommendations for the caller's meter
+  /// [waterMeterId].
+  Future<ConsumptionInsight> fetchInsight(int waterMeterId) async {
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/ConsumptionInsights/water-meters/$waterMeterId',
+    );
+    final response = await _send(() => _client.get(uri));
+
+    if (response.statusCode != 200) {
+      throw CustomerWaterMeterException(
+        _messageFor(response, 'Prognozu nije moguće učitati'),
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const CustomerWaterMeterException(
+        'Prognoza je u neispravnom formatu.',
+      );
+    }
+    return ConsumptionInsight.fromJson(decoded);
   }
 
   Future<http.Response> _send(Future<http.Response> Function() call) async {

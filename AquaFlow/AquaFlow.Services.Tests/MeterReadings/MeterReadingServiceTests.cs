@@ -1,11 +1,16 @@
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.InvoiceStateMachine;
+using AquaFlow.Services.Tests.Notifications;
 using AquaFlow.Services.Validators;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace AquaFlow.Services.Tests.MeterReadings;
@@ -35,34 +40,146 @@ public class MeterReadingServiceTests
         Assert.Equal(InvoiceStatus.Issued, invoice.Status);
     }
 
-    // BillingPeriodFrom is 1st day of reading month, BillingPeriodTo is last day
+    // Spike detection runs automatically for the read meter once the reading is committed.
     [Fact]
-    public async Task CreateForCollectorAsync_SetsBillingPeriodFromFirstToLastDayOfMonth()
+    public async Task CreateForCollectorAsync_Success_TriggersConsumptionAlertRecomputeForThatMeter()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var alerts = new RecordingConsumptionAlertService();
+        var service = CreateService(context, consumptionAlerts: alerts);
+
+        await service.CreateForCollectorAsync(callerUserId: 3, new MeterReadingCollectorEntryRequest { WaterMeterId = 1, ReadingValue = 100, TariffId = 1 });
+
+        Assert.Equal((1, 3), Assert.Single(alerts.RecomputeCalls));
+    }
+
+    // A failing recompute is logged only: the reading and its invoice stay saved and the entry succeeds.
+    [Fact]
+    public async Task CreateForCollectorAsync_RecomputeThrows_EntryStillSucceeds()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var alerts = new RecordingConsumptionAlertService(new InvalidOperationException("ML failure"));
+        var service = CreateService(context, consumptionAlerts: alerts);
+
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, new MeterReadingCollectorEntryRequest { WaterMeterId = 1, ReadingValue = 100, TariffId = 1 });
+
+        Assert.Single(alerts.RecomputeCalls);
+        Assert.NotNull(response.InvoiceId);
+        Assert.Single(await context.MeterReadings.Where(reading => reading.WaterMeterId == 1 && reading.ReadingValue == 100).ToListAsync());
+        Assert.NotNull(await context.Invoices.FirstOrDefaultAsync(invoice => invoice.Id == response.InvoiceId));
+    }
+
+    // A ClientUuid replay returns the original response without re-running the analysis.
+    [Fact]
+    public async Task CreateForCollectorAsync_IdempotentReplay_DoesNotTriggerRecomputeAgain()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var alerts = new RecordingConsumptionAlertService();
+        var service = CreateService(context, consumptionAlerts: alerts);
+        var request = new MeterReadingCollectorEntryRequest { WaterMeterId = 1, ReadingValue = 100, TariffId = 1, ClientUuid = Guid.NewGuid().ToString() };
+
+        await service.CreateForCollectorAsync(callerUserId: 3, request);
+        await service.CreateForCollectorAsync(callerUserId: 3, request);
+
+        Assert.Single(alerts.RecomputeCalls);
+    }
+
+    // Reading-to-reading billing: the first reading on a meter bills InstalledAt .. reading date.
+    [Fact]
+    public async Task CreateForCollectorAsync_FirstReading_PeriodRunsFromInstalledAtToReadingDate()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var installedAt = DateTime.UtcNow.AddDays(-90);
+        context.WaterMeters.First(m => m.Id == 1).InstalledAt = installedAt;
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(100));
+
+        var invoice = await context.Invoices.FirstAsync(i => i.Id == response.InvoiceId);
+        var reading = await context.MeterReadings.FirstAsync(r => r.Id == response.Id);
+        Assert.Equal(installedAt, invoice.BillingPeriodFrom);
+        Assert.Equal(reading.ReadingDate, invoice.BillingPeriodTo);
+    }
+
+    // The next period starts exactly where the previous invoice ended (contiguous, no overlap).
+    [Fact]
+    public async Task CreateForCollectorAsync_PreviousCountingReading_PeriodIsContiguousWithPreviousInvoice()
     {
         await using var context = CreateContext();
         SeedTestData(context);
         var service = CreateService(context);
+        var first = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(50));
+        var firstInvoice = await context.Invoices.FirstAsync(i => i.Id == first.InvoiceId);
+        var firstReading = await context.MeterReadings.FirstAsync(r => r.Id == first.Id);
+        var sixteenDaysAgo = DateTime.UtcNow.AddDays(-16);
+        firstReading.ReadingDate = sixteenDaysAgo;
+        firstInvoice.BillingPeriodTo = sixteenDaysAgo;
+        context.SaveChanges();
 
-        var request = new MeterReadingCollectorEntryRequest
-        {
-            WaterMeterId = 1,
-            ReadingValue = 100,
-            TariffId = 1,
-            Note = null
-        };
+        var second = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(80));
 
-        var response = await service.CreateForCollectorAsync(callerUserId: 3, request);
-
-        var invoice = await context.Invoices.FirstOrDefaultAsync(i => i.Id == response.InvoiceId);
-        Assert.NotNull(invoice);
-
-        var now = DateTime.UtcNow;
-        var expectedFrom = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var expectedTo = expectedFrom.AddMonths(1).AddDays(-1);
-
-        Assert.Equal(expectedFrom, invoice.BillingPeriodFrom);
-        Assert.Equal(expectedTo, invoice.BillingPeriodTo);
+        var secondInvoice = await context.Invoices.FirstAsync(i => i.Id == second.InvoiceId);
+        var secondReading = await context.MeterReadings.FirstAsync(r => r.Id == second.Id);
+        Assert.Equal(sixteenDaysAgo, secondInvoice.BillingPeriodFrom);
+        Assert.Equal(firstInvoice.BillingPeriodTo, secondInvoice.BillingPeriodFrom);
+        Assert.Equal(secondReading.ReadingDate, secondInvoice.BillingPeriodTo);
     }
+
+    // A cancelled invoice's reading stops counting, so the next period starts at the older counting reading.
+    [Fact]
+    public async Task CreateForCollectorAsync_NewestInvoiceCancelled_PeriodStartsAtOlderCountingReading()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var service = CreateService(context);
+        var first = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(50));
+        var firstReading = await context.MeterReadings.FirstAsync(r => r.Id == first.Id);
+        var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+        firstReading.ReadingDate = thirtyDaysAgo;
+        context.SaveChanges();
+
+        var second = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(80));
+        var secondInvoice = await context.Invoices.FirstAsync(i => i.Id == second.InvoiceId);
+        var invoiceState = new IssuedInvoiceState(context, new Mapper(new TypeAdapterConfig()), TestSystemNotifications.Create(context));
+        await invoiceState.CancelAsync(secondInvoice, changedById: 2);
+
+        var third = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(90));
+
+        var thirdInvoice = await context.Invoices.FirstAsync(i => i.Id == third.InvoiceId);
+        Assert.Equal(thirtyDaysAgo, thirdInvoice.BillingPeriodFrom);
+    }
+
+    // Item description and the "invoice issued" notification both carry the dd.MM.yyyy. period.
+    [Fact]
+    public async Task CreateForCollectorAsync_DescriptionAndNotificationContainBothPeriodDates()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        context.WaterMeters.First(m => m.Id == 1).InstalledAt = DateTime.UtcNow.AddDays(-40);
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var response = await service.CreateForCollectorAsync(callerUserId: 3, NewRequest(100));
+
+        var invoice = await context.Invoices.Include(i => i.InvoiceItems).FirstAsync(i => i.Id == response.InvoiceId);
+        var expected = $"{invoice.BillingPeriodFrom:dd.MM.yyyy.} - {invoice.BillingPeriodTo:dd.MM.yyyy.}";
+        Assert.Equal($"Potrošnja vode {expected}", Assert.Single(invoice.InvoiceItems).Description);
+        var notification = await context.Notifications.SingleAsync(n => n.IsSystem);
+        Assert.Contains(expected, notification.Body);
+    }
+
+    private static MeterReadingCollectorEntryRequest NewRequest(decimal value) => new()
+    {
+        WaterMeterId = 1,
+        ReadingValue = value,
+        TariffId = 1,
+        Note = null
+    };
 
     // Last reading exactly 15 days ago: reading is accepted
     [Fact]
@@ -83,7 +200,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = fifteenDaysAgo,
-            Source = "Collector",
             CreatedAt = fifteenDaysAgo
         });
         context.WaterMeters.First(m => m.Id == 1).LastReading = 50;
@@ -131,7 +247,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = fourteenDaysAgo,
-            Source = "Collector",
             CreatedAt = fourteenDaysAgo
         });
         var waterMeter = context.WaterMeters.First(m => m.Id == 1);
@@ -398,7 +513,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = DateTime.UtcNow.AddDays(-30),
-            Source = "Collector"
         });
         context.MeterReadings.Add(new MeterReading
         {
@@ -410,7 +524,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 50,
             ConsumptionM3 = 30,
             ReadingDate = DateTime.UtcNow.AddDays(-2),
-            Source = "Collector"
         });
         context.SaveChanges();
 
@@ -441,7 +554,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = DateTime.UtcNow.AddDays(-30),
-            Source = "Collector"
         });
         context.MeterReadings.Add(new MeterReading
         {
@@ -453,7 +565,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 50,
             ConsumptionM3 = 30,
             ReadingDate = DateTime.UtcNow.AddDays(-2),
-            Source = "Collector",
             VoidedAt = DateTime.UtcNow.AddDays(-1)
         });
         context.SaveChanges();
@@ -498,7 +609,6 @@ public class MeterReadingServiceTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = DateTime.UtcNow.AddDays(-2),
-            Source = "Collector",
             InvoiceId = 1
         });
         context.SaveChanges();
@@ -509,16 +619,19 @@ public class MeterReadingServiceTests
         Assert.Null(result);
     }
 
-    private static AquaFlowDbContext CreateContext()
+    internal static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            // A billed reading commits with the customer's invoice notification in one explicit
+            // transaction, which InMemory ignores.
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new AquaFlowDbContext(options);
     }
 
-    private static void SeedTestData(AquaFlowDbContext context)
+    internal static void SeedTestData(AquaFlowDbContext context)
     {
         context.Settlements.Add(new Settlement { Id = 1, Name = "Sarajevo", MunicipalityId = 1, PostalCode = "71000" });
 
@@ -570,18 +683,27 @@ public class MeterReadingServiceTests
         context.SaveChanges();
     }
 
-    private static MeterReadingService CreateService(AquaFlowDbContext context)
+    // issuedStateOverride lets a test swap in its own Issued invoice state (e.g. one whose payment step
+    // throws); otherwise the real states are used.
+    internal static MeterReadingService CreateService(
+        AquaFlowDbContext context,
+        IMessagePublisher? publisher = null,
+        Func<AquaFlowDbContext, IMapper, ISystemNotificationService, BaseInvoiceState>? issuedStateOverride = null,
+        IWaterConsumptionAlertService? consumptionAlerts = null)
     {
         var mapperConfig = new TypeAdapterConfig();
         mapperConfig.NewConfig<MeterReading, Model.Responses.MeterReadingResponse>();
+        mapperConfig.NewConfig<Invoice, Model.Responses.InvoiceResponse>();
         IMapper mapper = new Mapper(mapperConfig);
+        var systemNotifications = TestSystemNotifications.Create(context, publisher);
 
         return new MeterReadingService(
             context,
             mapper,
-            new IValidator<MeterReadingInsertRequest>[] { new MeterReadingInsertValidator() },
-            new IValidator<MeterReadingUpdateRequest>[] { new MeterReadingUpdateValidator() },
-            new IValidator<MeterReadingPatchRequest>[] { new MeterReadingPatchValidator() },
-            new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() });
+            new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() },
+            systemNotifications,
+            new TestInvoiceStateResolver(context, mapper, systemNotifications, issuedStateOverride?.Invoke(context, mapper, systemNotifications)),
+            consumptionAlerts ?? new RecordingConsumptionAlertService(),
+            NullLogger<MeterReadingService>.Instance);
     }
 }

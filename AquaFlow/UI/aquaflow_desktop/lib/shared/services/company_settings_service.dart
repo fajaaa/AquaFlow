@@ -7,38 +7,33 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/company_settings.dart';
 import 'company_settings_exception.dart';
-import 'token_storage.dart';
+import 'authenticated_client.dart';
 
 /// Loads and saves the company-wide settings (`/CompanySettings`). Only an admin
 /// reaches this from the account screen, but the backend endpoint is the same
 /// authenticated CRUD resource as any other.
 ///
-/// The bearer token is read from [TokenStorage] and attached to every request.
+/// The bearer token is attached (and refreshed) by [AuthenticatedClient].
 /// Network/HTTP failures throw [CompanySettingsException] with a user-safe
 /// message. The base URL always comes from [ApiConfig.baseUrl] - the host is
 /// never hardcoded here.
 class CompanySettingsService {
   CompanySettingsService({
     http.Client? client,
-    TokenStorage? tokenStorage,
     Duration? timeout,
-  })  : _client = client ?? http.Client(),
-        _tokenStorage = tokenStorage ?? TokenStorage(),
+  })  : _client = client ?? AuthenticatedClient.instance,
         _timeout = timeout ?? const Duration(seconds: 15);
 
   final http.Client _client;
-  final TokenStorage _tokenStorage;
   final Duration _timeout;
 
   /// Fetches the single company-settings row. Throws
   /// [CompanySettingsException] when the list is empty (no settings seeded).
   Future<CompanySettings> fetch() async {
-    final token = await _requireToken();
-
     final uri = Uri.parse('${ApiConfig.baseUrl}/CompanySettings?PageSize=1');
 
     final response = await _send(
-      () => _client.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      () => _client.get(uri),
     );
 
     if (response.statusCode != 200) {
@@ -64,15 +59,12 @@ class CompanySettingsService {
   /// Saves [settings] via `PUT /CompanySettings/{id}` and returns the updated
   /// row echoed back by the backend.
   Future<CompanySettings> update(CompanySettings settings) async {
-    final token = await _requireToken();
-
     final uri = Uri.parse('${ApiConfig.baseUrl}/CompanySettings/${settings.id}');
 
     final response = await _send(
       () => _client.put(
         uri,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(settings.toUpdateJson()),
@@ -90,14 +82,6 @@ class CompanySettingsService {
       throw const CompanySettingsException('Company settings are malformed.');
     }
     return CompanySettings.fromJson(decoded);
-  }
-
-  Future<String> _requireToken() async {
-    final token = await _tokenStorage.getAccessToken();
-    if (token == null) {
-      throw const CompanySettingsException('You are not signed in.');
-    }
-    return token;
   }
 
   /// Runs an HTTP call, mapping transport failures to a user-safe exception.

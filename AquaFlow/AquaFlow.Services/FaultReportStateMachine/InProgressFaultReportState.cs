@@ -6,8 +6,8 @@ namespace AquaFlow.Services.FaultReportStateMachine;
 
 public class InProgressFaultReportState : BaseFaultReportState
 {
-    public InProgressFaultReportState(AquaFlowDbContext dbContext, IMapper mapper)
-        : base(dbContext, mapper)
+    public InProgressFaultReportState(AquaFlowDbContext dbContext, IMapper mapper, ISystemNotificationService systemNotifications)
+        : base(dbContext, mapper, systemNotifications)
     {
     }
 
@@ -16,6 +16,7 @@ public class InProgressFaultReportState : BaseFaultReportState
     public override Task<FaultReportResponse> ResolveAsync(FaultReport report, int changedById)
     {
         report.ResolvedAt = DateTime.UtcNow;
+        StageResolvedNotification(report, changedById);
         return TransitionAsync(report, FaultReportStatus.Resolved, "Report resolved.", changedById);
     }
 

@@ -1,59 +1,39 @@
-using AquaFlow.Model.Messages;
+using Microsoft.Extensions.Hosting;
+using AquaFlow.Common.Services.PushNotificationService;
+using AquaFlow.Services;
+using AquaFlow.Services.Database;
+using AquaFlow.Subscriber;
 using EasyNetQ;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
-var connectionString = Environment.GetEnvironmentVariable("RABBITMQ_CONNECTIONSTRING")
+// Same convention as AquaFlow.WebAPI: load a developer-local .env into process environment
+// variables before configuration is built.
+DotNetEnv.Env.Load();
+
+var builder = Host.CreateApplicationBuilder(args);
+
+var connectionString = builder.Configuration["ConnectionStrings:DefaultConnection"];
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'DefaultConnection' is required. " +
+        "Set it with the ConnectionStrings__DefaultConnection environment variable.");
+}
+
+var rabbitMqConnectionString = builder.Configuration["RabbitMQ:ConnectionString"]
+    ?? Environment.GetEnvironmentVariable("RABBITMQ_CONNECTIONSTRING")
     ?? "host=localhost;username=admin;password=admin";
 
-const string subscriptionId = "aquaflow-notification-subscriber";
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
-using var cancellationSource = new CancellationTokenSource();
-Console.CancelKeyPress += (_, args) =>
-{
-    args.Cancel = true;
-    cancellationSource.Cancel();
-};
-AppDomain.CurrentDomain.ProcessExit += (_, _) => cancellationSource.Cancel();
+builder.Services.AddDbContext<AquaFlowDbContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddFirebasePush(builder.Configuration);
+builder.Services.AddScoped<NotificationPushDispatcher>();
+builder.Services.AddScoped<NotificationPushHandler>();
+builder.Services.AddSingleton<IBus>(_ => RabbitHutch.CreateBus(rabbitMqConnectionString));
+builder.Services.AddHostedService<NotificationPushWorker>();
 
-// RabbitMQ may still be starting up when this container does (e.g. under docker compose),
-// so connecting is retried with exponential backoff instead of crashing on the first attempt.
-var backoff = TimeSpan.FromSeconds(1);
-var maxBackoff = TimeSpan.FromSeconds(30);
-IBus? bus = null;
-
-while (bus is null && !cancellationSource.IsCancellationRequested)
-{
-    try
-    {
-        bus = RabbitHutch.CreateBus(connectionString);
-        bus.PubSub.Subscribe<NotificationCreated>(subscriptionId, message =>
-            Console.WriteLine($"[Notification #{message.Id}] {message.Data.Title} -> audience: {message.Data.Audience}"));
-        Console.WriteLine("AquaFlow.Subscriber connected to RabbitMQ and is listening for messages. Press Ctrl+C to exit...");
-    }
-    catch (Exception ex)
-    {
-        bus?.Dispose();
-        bus = null;
-        Console.WriteLine($"Failed to connect/subscribe to RabbitMQ: {ex.Message}. Retrying in {backoff.TotalSeconds:0}s...");
-        try
-        {
-            await Task.Delay(backoff, cancellationSource.Token);
-        }
-        catch (TaskCanceledException)
-        {
-            break;
-        }
-        backoff = TimeSpan.FromSeconds(Math.Min(backoff.TotalSeconds * 2, maxBackoff.TotalSeconds));
-    }
-}
-
-try
-{
-    await Task.Delay(Timeout.Infinite, cancellationSource.Token);
-}
-catch (TaskCanceledException)
-{
-    // Expected on shutdown (Ctrl+C or container stop).
-}
-
-bus?.Dispose();
-Console.WriteLine("AquaFlow.Subscriber is shutting down.");
+await builder.Build().RunAsync();

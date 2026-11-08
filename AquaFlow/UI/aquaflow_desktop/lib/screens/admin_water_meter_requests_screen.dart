@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:aquaflow_desktop/widgets/lookup_dropdown.dart';
 import 'package:aquaflow_desktop/l10n/app_localizations.dart';
 import 'package:aquaflow_desktop/models/admin_collector_profile.dart';
 import 'package:aquaflow_desktop/models/admin_water_meter_request.dart';
@@ -167,35 +168,12 @@ class _AdminWaterMeterRequestsScreenState
       children: [
         SizedBox(
           width: 240,
-          child: DropdownButtonFormField<String>(
-            initialValue: _statusFilter ?? '',
-            decoration: InputDecoration(
-              labelText: loc.statusFieldLabel,
-              prefixIcon: const Icon(Icons.filter_alt_outlined),
-            ),
-            items: [
-              DropdownMenuItem(value: '', child: Text(loc.allStatusesOption)),
-              DropdownMenuItem(
-                value: 'Pending',
-                child: Text(loc.requestStatusPending),
-              ),
-              DropdownMenuItem(
-                value: 'Assigned',
-                child: Text(loc.requestStatusAwaitingRegistration),
-              ),
-              DropdownMenuItem(
-                value: 'Registered',
-                child: Text(loc.requestStatusRegistered),
-              ),
-              DropdownMenuItem(
-                value: 'Rejected',
-                child: Text(loc.requestStatusRejected),
-              ),
-              DropdownMenuItem(
-                value: 'Cancelled',
-                child: Text(loc.requestStatusCancelled),
-              ),
-            ],
+          child: LookupDropdown(
+            route: 'WaterMeterRequestStatuses',
+            value: _statusFilter ?? '',
+            includeAllOption: true,
+            label: loc.statusFieldLabel,
+            icon: Icons.filter_alt_outlined,
             onChanged: loading || mutating
                 ? null
                 : (value) => _setStatusFilter(value ?? ''),

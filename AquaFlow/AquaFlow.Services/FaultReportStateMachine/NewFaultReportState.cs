@@ -6,17 +6,18 @@ namespace AquaFlow.Services.FaultReportStateMachine;
 
 public class NewFaultReportState : BaseFaultReportState
 {
-    public NewFaultReportState(AquaFlowDbContext dbContext, IMapper mapper)
-        : base(dbContext, mapper)
+    public NewFaultReportState(AquaFlowDbContext dbContext, IMapper mapper, ISystemNotificationService systemNotifications)
+        : base(dbContext, mapper, systemNotifications)
     {
     }
 
     public override string Status => FaultReportStatus.New;
 
-    public override Task<FaultReportResponse> AssignAsync(FaultReport report, int collectorId, string? note, int changedById)
+    public override async Task<FaultReportResponse> AssignAsync(FaultReport report, int collectorId, string? note, int changedById)
     {
+        await StageAssignmentNotificationsAsync(report, collectorId, changedById);
         report.AssignedCollectorId = collectorId;
-        return TransitionAsync(report, FaultReportStatus.Assigned, AssignmentNote(collectorId, note), changedById);
+        return await TransitionAsync(report, FaultReportStatus.Assigned, AssignmentNote(collectorId, note), changedById);
     }
 
     // Start straight from New stays allowed so an admin can begin work without first assigning a
@@ -24,6 +25,7 @@ public class NewFaultReportState : BaseFaultReportState
     public override Task<FaultReportResponse> StartAsync(FaultReport report, int changedById)
     {
         report.ResolvedAt = null;
+        StageStartedNotification(report, changedById);
         return TransitionAsync(report, FaultReportStatus.InProgress, "Work on the report started.", changedById);
     }
 
@@ -32,6 +34,7 @@ public class NewFaultReportState : BaseFaultReportState
     public override Task<FaultReportResponse> ResolveAsync(FaultReport report, int changedById)
     {
         report.ResolvedAt = DateTime.UtcNow;
+        StageResolvedNotification(report, changedById);
         return TransitionAsync(report, FaultReportStatus.Resolved, "Report resolved.", changedById);
     }
 

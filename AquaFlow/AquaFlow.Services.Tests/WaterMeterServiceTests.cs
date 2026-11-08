@@ -156,6 +156,135 @@ public class WaterMeterServiceTests
         Assert.Equal("WM-1", item.SerialNumber);
     }
 
+    [Fact]
+    public async Task PatchAsync_InitialReadingWithExistingReadings_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        context.MeterReadings.Add(new MeterReading { Id = 1, WaterMeterId = 1, CollectorId = 1, ReadingValue = 10, PreviousReadingValue = 0 });
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(
+            () => service.PatchAsync(1, new WaterMeterPatchRequest { InitialReading = 5 }));
+
+        var meter = await context.WaterMeters.AsNoTracking().FirstAsync(m => m.Id == 1);
+        Assert.Equal(0, meter.InitialReading);
+    }
+
+    [Fact]
+    public async Task PatchAsync_InstalledAtWithExistingReadings_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        context.MeterReadings.Add(new MeterReading { Id = 1, WaterMeterId = 1, CollectorId = 1, ReadingValue = 10, PreviousReadingValue = 0 });
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(
+            () => service.PatchAsync(1, new WaterMeterPatchRequest { InstalledAt = new DateTime(2000, 1, 1) }));
+    }
+
+    [Fact]
+    public async Task PatchAsync_InitialReadingWithoutReadings_UpdatesInitialAndLastReading()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var result = await service.PatchAsync(1, new WaterMeterPatchRequest { InitialReading = 25 });
+
+        Assert.Equal(25, result.InitialReading);
+        var meter = await context.WaterMeters.AsNoTracking().FirstAsync(m => m.Id == 1);
+        Assert.Equal(25, meter.InitialReading);
+        Assert.Equal(25, meter.LastReading);
+    }
+
+    [Fact]
+    public async Task PatchAsync_DescriptiveFieldWithExistingReadings_Succeeds()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        context.MeterReadings.Add(new MeterReading { Id = 1, WaterMeterId = 1, CollectorId = 1, ReadingValue = 10, PreviousReadingValue = 0 });
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        var result = await service.PatchAsync(1, new WaterMeterPatchRequest { Street = "Titova" });
+
+        Assert.Equal("Titova", result.Street);
+    }
+
+    [Fact]
+    public async Task PatchAsync_RemovedMeter_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        context.WaterMeters.First(m => m.Id == 1).Status = WaterMeterStatus.Removed;
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(
+            () => service.PatchAsync(1, new WaterMeterPatchRequest { Street = "Titova" }));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_RemovedMeter_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        context.WaterMeters.First(m => m.Id == 1).Status = WaterMeterStatus.Removed;
+        context.SaveChanges();
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(
+            () => service.UpdateAsync(1, new WaterMeterUpdateRequest { SerialNumber = "WM-1", SettlementId = 1 }));
+    }
+
+    [Fact]
+    public async Task PatchAsync_SerialNumberOfAnotherMeter_ThrowsClientException()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(
+            () => service.PatchAsync(1, new WaterMeterPatchRequest { SerialNumber = "WM-2" }));
+    }
+
+    [Fact]
+    public async Task InsertAsync_ClientSuppliedStatusAndLastReading_AreIgnored()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        var result = await service.InsertAsync(new WaterMeterInsertRequest
+        {
+            SerialNumber = "WM-3",
+            CustomerId = 1,
+            SettlementId = 1,
+            InitialReading = 12,
+            Status = "Removed",
+            LastReading = 999
+        });
+
+        var meter = await context.WaterMeters.AsNoTracking().FirstAsync(m => m.Id == result.Id);
+        Assert.Equal(WaterMeterStatus.Active, meter.Status);
+        Assert.Equal(12, meter.LastReading);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ThrowsClientExceptionAndKeepsMeter()
+    {
+        await using var context = CreateContext();
+        SeedTwoMetersInDifferentSettlements(context);
+        var service = CreateService(context);
+
+        await Assert.ThrowsAsync<ClientException>(() => service.DeleteAsync(1));
+
+        Assert.True(await context.WaterMeters.AnyAsync(m => m.Id == 1));
+    }
+
     private static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
@@ -216,6 +345,7 @@ public class WaterMeterServiceTests
             .Map(destination => destination.SettlementName, source => source.Settlement == null ? string.Empty : source.Settlement.Name)
             .Map(destination => destination.CustomerFirstName, source => source.Customer == null ? string.Empty : source.Customer.FirstName)
             .Map(destination => destination.CustomerLastName, source => source.Customer == null ? string.Empty : source.Customer.LastName);
+        mapperConfig.NewConfig<Model.Requests.WaterMeterPatchRequest, WaterMeter>().IgnoreNullValues(true);
         IMapper mapper = new Mapper(mapperConfig);
 
         return new WaterMeterService(

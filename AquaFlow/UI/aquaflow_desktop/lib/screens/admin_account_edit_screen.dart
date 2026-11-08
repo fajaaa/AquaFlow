@@ -137,7 +137,6 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
         const UserPreferences(
           theme: 'light',
           language: 'bs',
-          receiveEmailNotifications: true,
           receivePushNotifications: true,
         );
     final updated = current.copyWith(theme: isDark ? 'dark' : 'light');
@@ -163,7 +162,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
     }
   }
 
-  /// Applies [code] ('bs'/'en') to the shared [LocaleProvider] immediately,
+  /// Applies [code] ('bs'/'de'/'en') to the shared [LocaleProvider] immediately,
   /// then persists it via `PUT /Account/preferences` in the background. On
   /// save failure the app language stays changed (better than reverting under
   /// the admin), but a snackbar reports that the choice wasn't saved.
@@ -173,7 +172,6 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
         const UserPreferences(
           theme: 'light',
           language: 'bs',
-          receiveEmailNotifications: true,
           receivePushNotifications: true,
         );
     final updated = current.copyWith(language: code);
@@ -226,6 +224,16 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
         _currentPasswordCtrl.clear();
         _newPasswordCtrl.clear();
         _confirmPasswordCtrl.clear();
+
+        // The backend ended every session of this user, this one included
+        // (`PUT /Account/me/password` revokes them all), so sign in again.
+        if (!mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        final message = AppLocalizations.of(context).passwordChangedSignInAgain;
+        final auth = context.read<AuthProvider>();
+        messenger.showSnackBar(SnackBar(content: Text(message)));
+        await auth.logout();
+        return;
       }
 
       if (!mounted) return;
@@ -372,6 +380,7 @@ class _AdminAccountEditScreenState extends State<AdminAccountEditScreen> {
                   SegmentedButton<String>(
                     segments: const [
                       ButtonSegment(value: 'bs', label: Text('Bosanski')),
+                      ButtonSegment(value: 'de', label: Text('Deutsch')),
                       ButtonSegment(value: 'en', label: Text('English')),
                     ],
                     selected: {_preferences?.language ?? 'bs'},

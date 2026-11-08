@@ -1,12 +1,15 @@
+using AquaFlow.Common.Services.MessageBus;
 using AquaFlow.Model.Exceptions;
 using AquaFlow.Model.Requests;
 using AquaFlow.Services.Database;
+using AquaFlow.Services.Tests.Notifications;
 using AquaFlow.Services.InvoiceStateMachine;
 using AquaFlow.Services.Validators;
 using FluentValidation;
 using Mapster;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
 namespace AquaFlow.Services.Tests.MeterReadings;
@@ -47,7 +50,6 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = fourteenDaysAgo,
-            Source = "Collector",
             CreatedAt = fourteenDaysAgo,
             InvoiceId = 1
         });
@@ -89,7 +91,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         };
         var firstResponse = await service.CreateForCollectorAsync(callerUserId: 3, firstRequest);
 
-        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper());
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
         var invoice = await context.Invoices.FirstAsync(i => i.Id == firstResponse.InvoiceId);
         await invoiceState.CancelAsync(invoice, changedById: 2);
 
@@ -134,7 +136,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         context.WaterMeters.First(m => m.Id == 1).LastReading = 50;
         context.SaveChanges();
 
-        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper());
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
         var invoice = await context.Invoices.FirstAsync(i => i.Id == 1);
         await invoiceState.CancelAsync(invoice, changedById: 2);
 
@@ -145,10 +147,11 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         Assert.Equal(0, waterMeter.LastReading);
     }
 
-    // A newer reading already landed after the one being cancelled, so WaterMeter.LastReading reflects
-    // that newer reading, not the cancelled one - it must be left alone (only voiding happens).
+    // A newer counting reading (R2, 50->80) took the reading being cancelled (R1, 0->50) as its baseline, so
+    // cancelling A would leave 0->50 billed by no active invoice. Cancel must be rejected and nothing may
+    // change: A stays Issued, R1 is not voided, WaterMeter.LastReading is untouched.
     [Fact]
-    public async Task CancelAsync_DoesNotRevertWaterMeterLastReading_WhenNewerReadingExists()
+    public async Task CancelAsync_ThrowsClientException_WhenNewerCountingReadingExists()
     {
         await using var context = CreateContext();
         SeedTestData(context);
@@ -163,20 +166,115 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             PreviousReadingValue = 50,
             ConsumptionM3 = 30,
             ReadingDate = DateTime.UtcNow,
-            Source = "Collector"
         });
         context.WaterMeters.First(m => m.Id == 1).LastReading = 80;
         context.SaveChanges();
 
-        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper());
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
         var invoice = await context.Invoices.FirstAsync(i => i.Id == 1);
-        await invoiceState.CancelAsync(invoice, changedById: 2);
+
+        var exception = await Assert.ThrowsAsync<ClientException>(() => invoiceState.CancelAsync(invoice, changedById: 2));
+        Assert.Contains("newer meter reading", exception.Message);
+
+        var reloadedInvoice = await context.Invoices.FirstAsync(i => i.Id == 1);
+        Assert.Equal(InvoiceStatus.Issued, reloadedInvoice.Status);
 
         var reading = await context.MeterReadings.FirstAsync(r => r.Id == 1);
-        Assert.NotNull(reading.VoidedAt);
+        Assert.Null(reading.VoidedAt);
 
         var waterMeter = await context.WaterMeters.FirstAsync(m => m.Id == 1);
         Assert.Equal(80, waterMeter.LastReading);
+    }
+
+    // Professor's scenario end to end: R1 0->50 bills A, R2 50->80 bills B, then cancelling A is rejected.
+    // The invariant that matters is conservation of billed consumption - the active (non-cancelled)
+    // invoices must together cover exactly last counting reading - initial reading, with no gap.
+    [Fact]
+    public async Task CancelAsync_OlderInvoiceWhileNewerReadingCounts_IsRejectedAndBilledConsumptionIsPreserved()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var service = CreateService(context);
+
+        var first = await CreateReadingAsync(service, readingValue: 50);
+        await BackdateReadingAsync(context, first.Id, days: 20);
+        var second = await CreateReadingAsync(service, readingValue: 80);
+        Assert.NotNull(first.InvoiceId);
+        Assert.NotNull(second.InvoiceId);
+
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
+        var invoiceA = await context.Invoices.FirstAsync(i => i.Id == first.InvoiceId);
+
+        await Assert.ThrowsAsync<ClientException>(() => invoiceState.CancelAsync(invoiceA, changedById: 2));
+
+        Assert.Equal(InvoiceStatus.Issued, (await context.Invoices.FirstAsync(i => i.Id == first.InvoiceId)).Status);
+        Assert.Null((await context.MeterReadings.FirstAsync(r => r.Id == first.Id)).VoidedAt);
+
+        var waterMeter = await context.WaterMeters.FirstAsync(m => m.Id == 1);
+        var lastCounting = await service.GetLastCountingReadingAsync(1);
+        Assert.NotNull(lastCounting);
+        Assert.Equal(80, lastCounting.ReadingValue);
+        Assert.Equal(80, waterMeter.LastReading);
+        Assert.Equal(lastCounting.ReadingValue - waterMeter.InitialReading, await SumActiveInvoicedConsumptionAsync(context));
+    }
+
+    // Cancelling newest-to-oldest still works: B first (nothing newer), then A (R2 is voided by now, so it
+    // no longer counts). The next reading re-bills the full range from the initial reading.
+    [Fact]
+    public async Task CancelAsync_NewestThenOlder_BothSucceedAndNextReadingRebillsFullRange()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var service = CreateService(context);
+
+        var first = await CreateReadingAsync(service, readingValue: 50);
+        await BackdateReadingAsync(context, first.Id, days: 20);
+        var second = await CreateReadingAsync(service, readingValue: 80);
+
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
+        var invoiceB = await context.Invoices.FirstAsync(i => i.Id == second.InvoiceId);
+        await invoiceState.CancelAsync(invoiceB, changedById: 2);
+        Assert.Equal(50, (await context.WaterMeters.FirstAsync(m => m.Id == 1)).LastReading);
+
+        var invoiceA = await context.Invoices.FirstAsync(i => i.Id == first.InvoiceId);
+        await invoiceState.CancelAsync(invoiceA, changedById: 2);
+        Assert.Equal(0, (await context.WaterMeters.FirstAsync(m => m.Id == 1)).LastReading);
+
+        Assert.Equal(InvoiceStatus.Cancelled, invoiceA.Status);
+        Assert.Equal(InvoiceStatus.Cancelled, invoiceB.Status);
+
+        var third = await CreateReadingAsync(service, readingValue: 100);
+
+        Assert.NotNull(third.InvoiceId);
+        var invoiceC = await context.Invoices.FirstAsync(i => i.Id == third.InvoiceId);
+        Assert.Equal(0, invoiceC.PreviousReading);
+        Assert.Equal(100, invoiceC.ConsumptionM3);
+        Assert.Equal(100, await SumActiveInvoicedConsumptionAsync(context));
+    }
+
+    // A newer zero-consumption reading has no invoice of its own but still counts and still used R1 as its
+    // baseline, so it blocks cancelling R1's invoice exactly like a billed one would.
+    [Fact]
+    public async Task CancelAsync_ThrowsClientException_WhenNewerZeroConsumptionReadingExists()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        var service = CreateService(context);
+
+        var first = await CreateReadingAsync(service, readingValue: 50);
+        await BackdateReadingAsync(context, first.Id, days: 20);
+        var zero = await CreateReadingAsync(service, readingValue: 50);
+        Assert.Null(zero.InvoiceId);
+        Assert.Equal(0, zero.ConsumptionM3);
+
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
+        var invoiceA = await context.Invoices.FirstAsync(i => i.Id == first.InvoiceId);
+
+        await Assert.ThrowsAsync<ClientException>(() => invoiceState.CancelAsync(invoiceA, changedById: 2));
+
+        Assert.Equal(InvoiceStatus.Issued, (await context.Invoices.FirstAsync(i => i.Id == first.InvoiceId)).Status);
+        Assert.Null((await context.MeterReadings.FirstAsync(r => r.Id == first.Id)).VoidedAt);
+        Assert.Equal(50, (await context.WaterMeters.FirstAsync(m => m.Id == 1)).LastReading);
     }
 
     // Money already collected cannot be un-invoiced by a status flip: Cancel must be rejected once a
@@ -198,7 +296,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         });
         context.SaveChanges();
 
-        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper());
+        var invoiceState = new IssuedInvoiceState(context, CreateInvoiceMapper(), TestSystemNotifications.Create(context));
         var invoice = await context.Invoices.FirstAsync(i => i.Id == 1);
 
         await Assert.ThrowsAsync<ClientException>(() => invoiceState.CancelAsync(invoice, changedById: 2));
@@ -210,8 +308,9 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         Assert.Null(reading.VoidedAt);
     }
 
-    // Last reading has no invoice at all (e.g. admin backfill via InsertAsync): cooldown still enforced,
-    // since there's no cancelled invoice to bypass it
+    // Last reading has no invoice at all (e.g. a zero-consumption reading, or a historical seed row):
+    // cooldown still enforced, since there's no cancelled invoice to bypass it. Seeded straight through
+    // the DbContext - there is no generic insert path on MeterReadingService any more.
     [Fact]
     public async Task CreateForCollectorAsync_LastReadingHasNoInvoice_ThrowsClientException()
     {
@@ -219,7 +318,7 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         SeedTestData(context);
         var service = CreateService(context);
 
-        var backfillRequest = new MeterReadingInsertRequest
+        context.MeterReadings.Add(new MeterReading
         {
             WaterMeterId = 1,
             CollectorId = 1,
@@ -228,13 +327,11 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             PreviousReadingValue = 0,
             ConsumptionM3 = 50,
             ReadingDate = DateTime.UtcNow.AddDays(-5),
-            Source = "Collector",
-            SyncStatus = "Synced"
-        };
-        await service.InsertAsync(backfillRequest);
+        });
+        await context.SaveChangesAsync();
 
-        var backfilledReading = await context.MeterReadings.FirstAsync();
-        Assert.Null(backfilledReading.InvoiceId);
+        var seededReading = await context.MeterReadings.FirstAsync();
+        Assert.Null(seededReading.InvoiceId);
 
         var request = new MeterReadingCollectorEntryRequest
         {
@@ -250,10 +347,48 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
         Assert.Contains("day(s) ago", exception.Message);
     }
 
+    // History listing used by the collector app: only the requested meter, newest first, VoidedAt mapped.
+    [Fact]
+    public async Task GetAllAsync_FilterByWaterMeter_ReturnsOnlyThatMeterNewestFirstWithVoidedAt()
+    {
+        await using var context = CreateContext();
+        SeedTestData(context);
+        context.WaterMeters.Add(new WaterMeter
+        {
+            Id = 2, SerialNumber = "WM-2", CustomerId = 1, SettlementId = 1,
+            Street = "X", HouseNumber = "1", Status = "Active", InitialReading = 0, LastReading = 0
+        });
+        var voidedAt = DateTime.UtcNow.AddDays(-30);
+        MeterReading Make(int id, int meterId, int daysAgo, DateTime? voided = null) => new()
+        {
+            Id = id, WaterMeterId = meterId, CollectorId = 1, TariffId = 1,
+            ReadingValue = id * 10, PreviousReadingValue = 0, ConsumptionM3 = id * 10,
+            ReadingDate = DateTime.UtcNow.AddDays(-daysAgo),
+            CreatedAt = DateTime.UtcNow.AddDays(-daysAgo), VoidedAt = voided
+        };
+        context.MeterReadings.AddRange(
+            Make(1, 1, 60, voidedAt), Make(2, 1, 20), Make(3, 2, 10), Make(4, 1, 5));
+        context.SaveChanges();
+
+        var result = await CreateService(context).GetAllAsync(new Model.SearchObjects.MeterReadingSearchObject
+        {
+            WaterMeterId = 1,
+            SortBy = "ReadingDate",
+            SortDescending = true
+        });
+
+        Assert.Equal(new[] { 4, 2, 1 }, result.Items.Select(r => r.Id).ToArray());
+        Assert.NotNull(result.Items.Last().VoidedAt);
+        Assert.Null(result.Items.First().VoidedAt);
+    }
+
     private static AquaFlowDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AquaFlowDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            // A billed reading commits with the customer's invoice notification in one explicit
+            // transaction, which InMemory ignores.
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new AquaFlowDbContext(options);
@@ -343,25 +478,34 @@ public class MeterReadingServiceCancelledInvoiceCooldownTests
             PreviousReadingValue = previousReading,
             ConsumptionM3 = readingValue - previousReading,
             ReadingDate = readingDate,
-            Source = "Collector",
             InvoiceId = invoiceId
         });
     }
 
-    private static MeterReadingService CreateService(AquaFlowDbContext context)
-    {
-        var mapperConfig = new TypeAdapterConfig();
-        mapperConfig.NewConfig<MeterReading, Model.Responses.MeterReadingResponse>();
-        IMapper mapper = new Mapper(mapperConfig);
+    private static Task<Model.Responses.MeterReadingCollectorEntryResponse> CreateReadingAsync(
+        MeterReadingService service, decimal readingValue)
+        => service.CreateForCollectorAsync(callerUserId: 3, new MeterReadingCollectorEntryRequest
+        {
+            WaterMeterId = 1,
+            ReadingValue = readingValue,
+            TariffId = 1
+        });
 
-        return new MeterReadingService(
-            context,
-            mapper,
-            new IValidator<MeterReadingInsertRequest>[] { new MeterReadingInsertValidator() },
-            new IValidator<MeterReadingUpdateRequest>[] { new MeterReadingUpdateValidator() },
-            new IValidator<MeterReadingPatchRequest>[] { new MeterReadingPatchValidator() },
-            new IValidator<MeterReadingCollectorEntryRequest>[] { new MeterReadingCollectorEntryValidator() });
+    // Moves a reading back in time so the next CreateForCollectorAsync call clears the 15-day cooldown.
+    private static async Task BackdateReadingAsync(AquaFlowDbContext context, int readingId, int days)
+    {
+        var reading = await context.MeterReadings.FirstAsync(r => r.Id == readingId);
+        reading.ReadingDate = reading.ReadingDate.AddDays(-days);
+        await context.SaveChangesAsync();
     }
+
+    private static Task<decimal> SumActiveInvoicedConsumptionAsync(AquaFlowDbContext context)
+        => context.Invoices
+            .Where(i => i.WaterMeterId == 1 && i.Status != InvoiceStatus.Cancelled)
+            .SumAsync(i => i.ConsumptionM3);
+
+    internal static MeterReadingService CreateService(AquaFlowDbContext context, IMessagePublisher? publisher = null)
+        => MeterReadingServiceTests.CreateService(context, publisher);
 
     private static IMapper CreateInvoiceMapper()
     {

@@ -131,6 +131,7 @@ public class NotificationsControllerTests
     [InlineData(nameof(NotificationsController.Update))]
     [InlineData(nameof(NotificationsController.Patch))]
     [InlineData(nameof(NotificationsController.Delete))]
+    [InlineData(nameof(NotificationsController.CreateWithImages))]
     [InlineData(nameof(NotificationsController.UploadImage))]
     [InlineData(nameof(NotificationsController.DeleteImage))]
     public void Action_RequiresNotificationsManagePermission(string methodName)
@@ -196,6 +197,78 @@ public class NotificationsControllerTests
         var file = CreateFormFile(new byte[] { 1, 2, 3 }, "image/jpeg", "sixth.jpg");
 
         await Assert.ThrowsAsync<ClientException>(() => controller.UploadImage(1, file));
+    }
+
+    [Fact]
+    public async Task CreateWithImages_ValidImages_CreatesWithCallersJwtIdAndSniffedContentType()
+    {
+        var service = new FakeNotificationCrudService([]);
+        var controller = CreateWithImagesController(service, userId: 42);
+        var images = new FormFileCollection
+        {
+            // Declared as PNG but the bytes are JPEG: the stored type must come from the signature.
+            CreateFormFile(new byte[] { 0xFF, 0xD8, 0xFF, 1 }, "image/png", "a.png"),
+            CreateFormFile(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }, "image/png", "b.png")
+        };
+
+        var result = await controller.CreateWithImages(
+            new NotificationWithImagesRequest { Title = "T", Body = "B", Type = "Info", Audience = "All" },
+            images);
+
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        Assert.Equal(42, Assert.IsType<NotificationResponse>(created.Value).CreatedById);
+        Assert.NotNull(service.LastImages);
+        Assert.Equal(2, service.LastImages!.Count);
+        Assert.Equal("image/jpeg", service.LastImages[0].ContentType);
+    }
+
+    [Fact]
+    public async Task CreateWithImages_InvalidImage_ThrowsClientExceptionAndServiceIsNeverCalled()
+    {
+        var service = new FakeNotificationCrudService([]);
+        var controller = CreateWithImagesController(service, userId: 42);
+        var images = new FormFileCollection
+        {
+            CreateFormFile(new byte[] { 0xFF, 0xD8, 0xFF, 1 }, "image/jpeg", "ok.jpg"),
+            // Right declared type, but the bytes are not an image.
+            CreateFormFile(new byte[] { 1, 2, 3, 4 }, "image/jpeg", "fake.jpg")
+        };
+
+        await Assert.ThrowsAsync<ClientException>(() => controller.CreateWithImages(
+            new NotificationWithImagesRequest { Title = "T", Body = "B" },
+            images));
+
+        Assert.Null(service.LastImages);
+        Assert.Empty((await service.GetAllAsync()).Items);
+    }
+
+    [Fact]
+    public async Task CreateWithImages_SixImages_ThrowsClientException()
+    {
+        var service = new FakeNotificationCrudService([]);
+        var controller = CreateWithImagesController(service, userId: 42);
+        var images = new FormFileCollection();
+        for (var i = 0; i < 6; i++)
+        {
+            images.Add(CreateFormFile(new byte[] { 0xFF, 0xD8, 0xFF, 1 }, "image/jpeg", $"{i}.jpg"));
+        }
+
+        await Assert.ThrowsAsync<ClientException>(() => controller.CreateWithImages(
+            new NotificationWithImagesRequest { Title = "T", Body = "B" },
+            images));
+
+        Assert.Null(service.LastImages);
+    }
+
+    private static NotificationsController CreateWithImagesController(FakeNotificationCrudService service, int userId)
+    {
+        return new NotificationsController(service, new FakeNotificationImageService(), new FakeUserNotificationCrudService([]))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = BuildUser(userId, ManagePermission) }
+            }
+        };
     }
 
     [Fact]
