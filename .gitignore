@@ -410,3 +410,5 @@ FodyWeavers.xsd
 
 # Local-only documentation (not published to the repo)
 recommender-dokumentacija.md
+# Claude Code local project notes
+CLAUDE.md
