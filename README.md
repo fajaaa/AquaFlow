@@ -427,7 +427,7 @@ shared or public environment:
    secret supplied by the platform's secret store — at minimum the connection string, the JWT
    signing key, and the Stripe keys.
 2. Remove or reset the seeded demo accounts and any seeded credential.
-3. Serve the API over HTTPS only, and remove the clients' development cleartext-HTTP
+3. Serve the API over HTTPS only, and remove the clients' development cleartext-HTTP (the debug-manifest flag and the release `network_security_config.xml` allowance for `10.0.2.2`/`localhost`/`127.0.0.1`)
    exceptions (see [AquaFlow/UI/README.md](AquaFlow/UI/README.md)).
 4. Replace the wildcard `AllowedHosts` with the real host list.
 5. Confirm `ASPNETCORE_ENVIRONMENT` is not `Development` in the deployed environment: the

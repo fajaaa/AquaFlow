@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Required on Android 13+ (API 33) to show push notifications; the app must
          also request this permission at runtime (see UI/README.md - Push notifications). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
@@ -7,6 +8,7 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <application
+        android:networkSecurityConfig="@xml/network_security_config"
         android:label="AquaFlow"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

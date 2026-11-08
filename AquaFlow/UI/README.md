@@ -66,10 +66,10 @@ A real device cannot reach your PC via `localhost`/`10.0.2.2`. Set `ApiConfig.la
 
 The backend serves plain **HTTP** in local dev, and mobile platforms block cleartext traffic by default. These **DEV-ONLY** exceptions are already in place in `aquaflow_customer` and `aquaflow_collector` (not needed on `aquaflow_desktop`, which never talks to an emulator's loopback restriction):
 
-- **Android** - `android/app/src/debug/AndroidManifest.xml` sets `android:usesCleartextTraffic="true"` on `<application>`. It lives in the **debug** manifest, so release builds are unaffected.
+- **Android** - `android/app/src/debug/AndroidManifest.xml` sets `android:usesCleartextTraffic="true"` on `<application>` (debug builds only). Release builds use `android/app/src/main/res/xml/network_security_config.xml` (referenced from the main manifest via `android:networkSecurityConfig`), which blocks cleartext everywhere except `10.0.2.2`, `localhost` and `127.0.0.1` (`includeSubdomains="false"`), so release APKs can still reach the local HTTP backend from the Android emulator. The main manifest also declares the `INTERNET` permission.
 - **iOS** - `ios/Runner/Info.plist` adds `NSAppTransportSecurity` > `NSAllowsLocalNetworking` (allows local/LAN cleartext without disabling ATS globally).
 
-> ⚠️ **Production:** these are local development conveniences only. In production the backend must be served over **HTTPS**, and both exceptions must be removed (delete `usesCleartextTraffic` from the debug manifest / the `NSAppTransportSecurity` block from `Info.plist`) so the app rejects cleartext.
+> ⚠️ **Production:** these are local development conveniences only. In production the backend must be served over **HTTPS**, and these exceptions must be removed (delete `usesCleartextTraffic` from the debug manifest, the cleartext `domain-config` from `network_security_config.xml`, and the `NSAppTransportSecurity` block from `Info.plist`) so the app rejects cleartext.
 
 ## Push notifications (Firebase Cloud Messaging)
 

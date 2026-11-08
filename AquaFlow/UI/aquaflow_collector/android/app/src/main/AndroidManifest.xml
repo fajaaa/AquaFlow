@@ -1,8 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Required on Android 13+ (API 33) to show push notifications; the app must
          also request this permission at runtime (see UI/README.md - Push notifications). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
+        android:networkSecurityConfig="@xml/network_security_config"
         android:label="AquaFlow for Collectors"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
